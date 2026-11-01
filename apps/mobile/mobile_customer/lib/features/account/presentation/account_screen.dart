@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../auth/presentation/auth_cubit.dart';
+import '../../content/presentation/content_widgets.dart';
 import '../../notifications/presentation/unread_count_cubit.dart';
 import '../../notifications/presentation/widgets/customer_notification_button.dart';
 
@@ -57,6 +58,10 @@ class _AccountScreenState extends State<AccountScreen> {
               _SectionLabel(title: l10n.accountSectionServices),
               const SizedBox(height: AppSpacing.sm),
               _ServicesListCard(l10n: l10n),
+              const SizedBox(height: AppSpacing.xl),
+
+              // ── عن الشركة: the company's published pages (CMS1) ─────────
+              CompanyPagesCard(title: l10n.contentAboutCompany),
               const SizedBox(height: AppSpacing.xl),
 
               // ── الإعدادات ────────────────────────────────────────────────

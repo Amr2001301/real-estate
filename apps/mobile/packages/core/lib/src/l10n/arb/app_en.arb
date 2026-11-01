@@ -1382,5 +1382,7 @@
   "unitOrientationNorthEast": "North-east",
   "unitOrientationNorthWest": "North-west",
   "unitOrientationSouthEast": "South-east",
-  "unitOrientationSouthWest": "South-west"
+  "unitOrientationSouthWest": "South-west",
+  "contentAboutCompany": "About the company",
+  "contentPageEmpty": "This page is empty for now."
 }

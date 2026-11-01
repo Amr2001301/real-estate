@@ -1374,5 +1374,7 @@
   "unitOrientationNorthEast": "بحري شرقي",
   "unitOrientationNorthWest": "بحري غربي",
   "unitOrientationSouthEast": "قبلي شرقي",
-  "unitOrientationSouthWest": "قبلي غربي"
+  "unitOrientationSouthWest": "قبلي غربي",
+  "contentAboutCompany": "عن الشركة",
+  "contentPageEmpty": "الصفحة دي لسه فاضية."
 }

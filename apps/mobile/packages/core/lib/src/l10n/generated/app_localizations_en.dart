@@ -3997,4 +3997,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unitOrientationSouthWest => 'South-west';
+
+  @override
+  String get contentAboutCompany => 'About the company';
+
+  @override
+  String get contentPageEmpty => 'This page is empty for now.';
 }

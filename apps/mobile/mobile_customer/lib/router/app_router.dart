@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../startup/customer_startup_service.dart';
 import '../startup/startup_retry_screen.dart';
 
+import '../features/content/presentation/content_widgets.dart';
 import '../features/account/presentation/account_screen.dart';
 import '../features/auth/domain/repositories/auth_repository.dart';
 import '../features/auth/domain/usecases/forgot_password.dart';
@@ -650,6 +651,12 @@ GoRouter createCustomerRouter(
             ),
           );
         },
+      ),
+
+      // ── CMS1: a published page of the company (public) ──────────────────
+      GoRoute(
+        path: '/pages/:slug',
+        builder: (context, state) => ContentPageScreen(slug: state.pathParameters['slug']!),
       ),
 
       // ── Public catalog (details — list/compare are shell branches above) ─
