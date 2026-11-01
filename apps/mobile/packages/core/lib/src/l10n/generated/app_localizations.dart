@@ -6319,6 +6319,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cheque clearing recorded'**
   String get chequeClearedDone;
+
+  /// No description provided for @assistantTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI assistant'**
+  String get assistantTitle;
+
+  /// No description provided for @assistantNewChat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get assistantNewChat;
+
+  /// No description provided for @assistantWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about your company\'s data'**
+  String get assistantWelcome;
+
+  /// No description provided for @assistantScopeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue installments, available units, leads, reservations and visits. It answers only from the data you can see and changes nothing. Each question counts against the company\'s package.'**
+  String get assistantScopeHint;
+
+  /// No description provided for @assistantPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your question…'**
+  String get assistantPlaceholder;
+
+  /// No description provided for @assistantSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get assistantSend;
+
+  /// No description provided for @assistantThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking through the data…'**
+  String get assistantThinking;
+
+  /// No description provided for @assistantSuggestOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Which customers have overdue installments?'**
+  String get assistantSuggestOverdue;
+
+  /// No description provided for @assistantSuggestUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Which units with 3+ bedrooms are available?'**
+  String get assistantSuggestUnits;
+
+  /// No description provided for @assistantSuggestSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick summary of sales and reservations'**
+  String get assistantSuggestSummary;
+
+  /// No description provided for @assistantSuggestVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'What visits do I have today and tomorrow?'**
+  String get assistantSuggestVisits;
+
+  /// No description provided for @assistantNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'The AI assistant is not available on the platform right now.'**
+  String get assistantNotConfigured;
+
+  /// No description provided for @assistantNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'The assistant isn\'t enabled for your company or its package ended — contact your company admin.'**
+  String get assistantNotActive;
+
+  /// No description provided for @assistantExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'This month\'s questions are used up — contact your company admin.'**
+  String get assistantExhausted;
+
+  /// No description provided for @assistantErrorExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'This month\'s questions are used up.'**
+  String get assistantErrorExhausted;
+
+  /// No description provided for @assistantErrorNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'The assistant isn\'t enabled or its package ended.'**
+  String get assistantErrorNotActive;
+
+  /// No description provided for @assistantErrorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the assistant — the question was not counted; try again.'**
+  String get assistantErrorUnavailable;
+
+  /// No description provided for @assistantErrorRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many questions in a short time — wait a minute and try again.'**
+  String get assistantErrorRate;
 }
 
 class _AppLocalizationsDelegate

@@ -7,6 +7,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/assistant/domain/assistant.dart';
+import '../features/assistant/presentation/assistant_cubit.dart';
+import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/calendar/domain/calendar_event.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
@@ -373,6 +376,15 @@ GoRouter createStaffRouter(
         builder: (context, state) => BlocProvider(
           create: (ctx) => CalendarCubit(ctx.read<CalendarRepository>()),
           child: const CalendarScreen(),
+        ),
+      ),
+
+      // ── AI assistant (AI2): read-only questions about the company's data ─
+      GoRoute(
+        path: '/assistant',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => AssistantCubit(ctx.read<AssistantRepository>()),
+          child: const AssistantScreen(),
         ),
       ),
 

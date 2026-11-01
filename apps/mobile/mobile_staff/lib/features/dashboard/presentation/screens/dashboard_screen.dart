@@ -900,6 +900,14 @@ class _SecondaryActionsGrid extends StatelessWidget {
           onTap: () => context.push('/reservations/new'),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // AI2 — the company's read-only assistant (sales, manager, admin).
+        _SecondaryActionCell(
+          key: const Key('dashboard-assistant'),
+          icon: Icons.auto_awesome_outlined,
+          label: l10n.assistantTitle,
+          onTap: () => context.push('/assistant'),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(
@@ -1008,6 +1016,7 @@ class _SecondaryActionsGrid extends StatelessWidget {
 
 class _SecondaryActionCell extends StatefulWidget {
   const _SecondaryActionCell({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
