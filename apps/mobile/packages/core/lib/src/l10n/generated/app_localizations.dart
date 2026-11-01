@@ -6025,6 +6025,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When'**
   String get activityNextWhen;
+
+  /// No description provided for @calendarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get calendarTitle;
+
+  /// No description provided for @calendarEmptyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on this day'**
+  String get calendarEmptyDay;
+
+  /// No description provided for @calendarEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits, follow-ups, reservations running out and contract signings show here on their day.'**
+  String get calendarEmptyHint;
+
+  /// No description provided for @calendarTypeVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get calendarTypeVisit;
+
+  /// No description provided for @calendarTypeFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up'**
+  String get calendarTypeFollowUp;
+
+  /// No description provided for @calendarTypeReservationExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation expires'**
+  String get calendarTypeReservationExpiry;
+
+  /// No description provided for @calendarTypeContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract signed'**
+  String get calendarTypeContract;
+
+  /// No description provided for @calendarDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get calendarDone;
+
+  /// No description provided for @calendarPrevWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous week'**
+  String get calendarPrevWeek;
+
+  /// No description provided for @calendarNextWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next week'**
+  String get calendarNextWeek;
 }
 
 class _AppLocalizationsDelegate

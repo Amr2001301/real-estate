@@ -1107,5 +1107,16 @@
   "activitySectionDetailsSubtitle": "What happened and what you agreed",
   "activitySectionNextSubtitle": "When will you contact the customer again?",
   "activityNextSet": "Set a time",
-  "activityNextWhen": "When"
+  "activityNextWhen": "When",
+
+  "calendarTitle": "Calendar",
+  "calendarEmptyDay": "Nothing on this day",
+  "calendarEmptyHint": "Visits, follow-ups, reservations running out and contract signings show here on their day.",
+  "calendarTypeVisit": "Visit",
+  "calendarTypeFollowUp": "Follow-up",
+  "calendarTypeReservationExpiry": "Reservation expires",
+  "calendarTypeContract": "Contract signed",
+  "calendarDone": "Done",
+  "calendarPrevWeek": "Previous week",
+  "calendarNextWeek": "Next week"
 }

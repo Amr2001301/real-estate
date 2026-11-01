@@ -3140,4 +3140,35 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get activityNextWhen => 'الميعاد';
+
+  @override
+  String get calendarTitle => 'التقويم';
+
+  @override
+  String get calendarEmptyDay => 'مفيش مواعيد في اليوم ده';
+
+  @override
+  String get calendarEmptyHint =>
+      'الزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود بتظهر هنا في ميعادها.';
+
+  @override
+  String get calendarTypeVisit => 'زيارة';
+
+  @override
+  String get calendarTypeFollowUp => 'متابعة';
+
+  @override
+  String get calendarTypeReservationExpiry => 'انتهاء حجز';
+
+  @override
+  String get calendarTypeContract => 'توقيع عقد';
+
+  @override
+  String get calendarDone => 'تمّت';
+
+  @override
+  String get calendarPrevWeek => 'الأسبوع اللي فات';
+
+  @override
+  String get calendarNextWeek => 'الأسبوع الجاي';
 }

@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'features/calendar/data/calendar_repository_impl.dart';
+import 'features/calendar/domain/calendar_event.dart';
 import 'features/auth/data/datasources/staff_auth_remote_data_source.dart';
 import 'features/auth/data/repositories/staff_auth_repository_impl.dart';
 import 'features/auth/domain/repositories/staff_auth_repository.dart';
@@ -119,6 +121,9 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<LeadsRepository>(
           create: (ctx) => LeadsRepositoryImpl(LeadsRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<CalendarRepository>(
+          create: (ctx) => CalendarRepositoryImpl(ctx.read<Dio>()),
         ),
         RepositoryProvider<NotificationsRepository>(
           create: (ctx) => NotificationsRepositoryImpl(

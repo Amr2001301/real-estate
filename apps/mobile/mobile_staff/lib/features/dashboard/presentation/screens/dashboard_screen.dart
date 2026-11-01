@@ -920,6 +920,27 @@ class _SecondaryActionsGrid extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
+        // FU1 / CAL1 — the diary and the follow-up lists.
+        Row(
+          children: [
+            Expanded(
+              child: _SecondaryActionCell(
+                icon: Icons.calendar_month_outlined,
+                label: l10n.calendarTitle,
+                onTap: () => context.push('/calendar'),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _SecondaryActionCell(
+                icon: Icons.event_repeat_outlined,
+                label: l10n.followUpsTitle,
+                onTap: () => context.push('/follow-ups'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
             Expanded(

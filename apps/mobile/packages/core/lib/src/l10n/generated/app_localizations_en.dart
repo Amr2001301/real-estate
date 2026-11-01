@@ -3174,4 +3174,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get activityNextWhen => 'When';
+
+  @override
+  String get calendarTitle => 'Calendar';
+
+  @override
+  String get calendarEmptyDay => 'Nothing on this day';
+
+  @override
+  String get calendarEmptyHint =>
+      'Visits, follow-ups, reservations running out and contract signings show here on their day.';
+
+  @override
+  String get calendarTypeVisit => 'Visit';
+
+  @override
+  String get calendarTypeFollowUp => 'Follow-up';
+
+  @override
+  String get calendarTypeReservationExpiry => 'Reservation expires';
+
+  @override
+  String get calendarTypeContract => 'Contract signed';
+
+  @override
+  String get calendarDone => 'Done';
+
+  @override
+  String get calendarPrevWeek => 'Previous week';
+
+  @override
+  String get calendarNextWeek => 'Next week';
 }
