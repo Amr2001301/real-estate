@@ -84,6 +84,7 @@ class StaffUnit extends Equatable {
     this.latitude,
     this.longitude,
     this.address,
+    this.specs = const UnitSpecs(),
   });
 
   final String id;
@@ -106,6 +107,9 @@ class StaffUnit extends Equatable {
   final double? latitude;
   final double? longitude;
   final String? address;
+
+  /// Areas, finishing, view, orientation, handover (only those it has).
+  final UnitSpecs specs;
 
   String? get heroImageUrl => coverImage ?? projectCoverImageUrl;
   bool get hasLocation => latitude != null && longitude != null;
@@ -132,6 +136,7 @@ class StaffUnit extends Equatable {
         latitude,
         longitude,
         address,
+        specs,
       ];
 }
 

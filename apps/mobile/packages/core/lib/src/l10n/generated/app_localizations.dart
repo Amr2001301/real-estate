@@ -7309,6 +7309,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{days} days late'**
   String contractDeliveryLate(int days);
+
+  /// No description provided for @unitSpecsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit specs'**
+  String get unitSpecsTitle;
+
+  /// No description provided for @unitAreaValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} m²'**
+  String unitAreaValue(String n);
+
+  /// No description provided for @unitSpecNetArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Net area'**
+  String get unitSpecNetArea;
+
+  /// No description provided for @unitSpecGarden.
+  ///
+  /// In en, this message translates to:
+  /// **'Garden'**
+  String get unitSpecGarden;
+
+  /// No description provided for @unitSpecRoof.
+  ///
+  /// In en, this message translates to:
+  /// **'Roof'**
+  String get unitSpecRoof;
+
+  /// No description provided for @unitSpecTerrace.
+  ///
+  /// In en, this message translates to:
+  /// **'Terrace'**
+  String get unitSpecTerrace;
+
+  /// No description provided for @unitSpecLand.
+  ///
+  /// In en, this message translates to:
+  /// **'Land area'**
+  String get unitSpecLand;
+
+  /// No description provided for @unitSpecFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing'**
+  String get unitSpecFinishing;
+
+  /// No description provided for @unitSpecView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get unitSpecView;
+
+  /// No description provided for @unitSpecOrientation.
+  ///
+  /// In en, this message translates to:
+  /// **'Orientation'**
+  String get unitSpecOrientation;
+
+  /// No description provided for @unitSpecDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover'**
+  String get unitSpecDelivery;
+
+  /// No description provided for @unitDeliveryNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to move in'**
+  String get unitDeliveryNow;
+
+  /// No description provided for @unitFinishingCoreShell.
+  ///
+  /// In en, this message translates to:
+  /// **'Core & shell'**
+  String get unitFinishingCoreShell;
+
+  /// No description provided for @unitFinishingSemi.
+  ///
+  /// In en, this message translates to:
+  /// **'Semi-finished'**
+  String get unitFinishingSemi;
+
+  /// No description provided for @unitFinishingFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Fully finished'**
+  String get unitFinishingFull;
+
+  /// No description provided for @unitFinishingFurnished.
+  ///
+  /// In en, this message translates to:
+  /// **'Furnished'**
+  String get unitFinishingFurnished;
+
+  /// No description provided for @unitViewGarden.
+  ///
+  /// In en, this message translates to:
+  /// **'Garden'**
+  String get unitViewGarden;
+
+  /// No description provided for @unitViewPool.
+  ///
+  /// In en, this message translates to:
+  /// **'Pool'**
+  String get unitViewPool;
+
+  /// No description provided for @unitViewLagoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Lagoon'**
+  String get unitViewLagoon;
+
+  /// No description provided for @unitViewSea.
+  ///
+  /// In en, this message translates to:
+  /// **'Sea'**
+  String get unitViewSea;
+
+  /// No description provided for @unitViewNile.
+  ///
+  /// In en, this message translates to:
+  /// **'Nile'**
+  String get unitViewNile;
+
+  /// No description provided for @unitViewClub.
+  ///
+  /// In en, this message translates to:
+  /// **'Clubhouse'**
+  String get unitViewClub;
+
+  /// No description provided for @unitViewLandscape.
+  ///
+  /// In en, this message translates to:
+  /// **'Landscape'**
+  String get unitViewLandscape;
+
+  /// No description provided for @unitViewMainStreet.
+  ///
+  /// In en, this message translates to:
+  /// **'Main street'**
+  String get unitViewMainStreet;
+
+  /// No description provided for @unitViewSideStreet.
+  ///
+  /// In en, this message translates to:
+  /// **'Side street'**
+  String get unitViewSideStreet;
+
+  /// No description provided for @unitOrientationNorth.
+  ///
+  /// In en, this message translates to:
+  /// **'North'**
+  String get unitOrientationNorth;
+
+  /// No description provided for @unitOrientationSouth.
+  ///
+  /// In en, this message translates to:
+  /// **'South'**
+  String get unitOrientationSouth;
+
+  /// No description provided for @unitOrientationEast.
+  ///
+  /// In en, this message translates to:
+  /// **'East'**
+  String get unitOrientationEast;
+
+  /// No description provided for @unitOrientationWest.
+  ///
+  /// In en, this message translates to:
+  /// **'West'**
+  String get unitOrientationWest;
+
+  /// No description provided for @unitOrientationNorthEast.
+  ///
+  /// In en, this message translates to:
+  /// **'North-east'**
+  String get unitOrientationNorthEast;
+
+  /// No description provided for @unitOrientationNorthWest.
+  ///
+  /// In en, this message translates to:
+  /// **'North-west'**
+  String get unitOrientationNorthWest;
+
+  /// No description provided for @unitOrientationSouthEast.
+  ///
+  /// In en, this message translates to:
+  /// **'South-east'**
+  String get unitOrientationSouthEast;
+
+  /// No description provided for @unitOrientationSouthWest.
+  ///
+  /// In en, this message translates to:
+  /// **'South-west'**
+  String get unitOrientationSouthWest;
 }
 
 class _AppLocalizationsDelegate

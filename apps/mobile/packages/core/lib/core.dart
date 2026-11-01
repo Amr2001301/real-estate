@@ -61,6 +61,7 @@ export 'src/common/translatable.dart';
 export 'src/common/paginated.dart';
 export 'src/common/price_formatter.dart';
 export 'src/common/date_formatter.dart';
+export 'src/common/unit_specs.dart';
 
 // Contact actions (WhatsApp / call / maps)
 export 'src/contact/contact_actions.dart';
@@ -88,6 +89,7 @@ export 'src/auth/token_storage.dart';
 
 // Widgets
 export 'src/widgets/app_nav_header.dart';
+export 'src/widgets/unit_specs_grid.dart';
 export 'src/widgets/auth_widgets.dart';
 export 'src/widgets/brand_mark.dart';
 export 'src/widgets/adaptive_app_bar.dart';

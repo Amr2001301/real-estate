@@ -9,6 +9,7 @@ export 'package:equatable/equatable.dart';
 
 export 'src/common/translatable.dart';
 export 'src/common/paginated.dart';
+export 'src/common/unit_specs.dart';
 export 'src/error/app_failure.dart';
 export 'src/error/failure_type.dart';
 export 'src/error/result.dart';

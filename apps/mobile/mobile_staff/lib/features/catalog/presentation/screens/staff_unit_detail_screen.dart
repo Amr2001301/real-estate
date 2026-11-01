@@ -209,6 +209,13 @@ class _DetailPage extends StatelessWidget {
               sliver: _SpecsGrid(unit: unit, l10n: l10n),
             ),
 
+            // EE2/EE5 — the specs the website shows (only those it has).
+            if (!unit.specs.isEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                sliver: SliverToBoxAdapter(child: UnitSpecsGrid(specs: unit.specs)),
+              ),
+
             // ── Floor plans section ────────────────────────────────────────
             if (unit.floorPlanUrls.isNotEmpty) ...[
               SliverToBoxAdapter(
