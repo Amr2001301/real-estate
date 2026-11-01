@@ -69,6 +69,24 @@ class _Repo implements ChequesRepository {
 
   @override
   Future<Result<Cheque>> get(String id) async => Ok(detail!);
+
+  final actions = <String>[];
+  AppFailure? refuse;
+
+  @override
+  Future<Result<void>> deposit(String id) async {
+    if (refuse != null) return Err(refuse!);
+    actions.add('deposit:$id');
+    detail = Cheque(id: id, type: 'CHEQUE', status: 'DEPOSITED');
+    return const Ok(null);
+  }
+
+  @override
+  Future<Result<void>> clear(String id, {DateTime? clearingDate}) async {
+    actions.add('clear:$id:${clearingDate == null ? '' : calendarDayOf(clearingDate)}');
+    detail = Cheque(id: id, type: 'CHEQUE', status: 'CLEARED', clearingDate: clearingDate);
+    return const Ok(null);
+  }
 }
 
 Paginated<Cheque> _page(List<String> ids, {int page = 1, int pages = 1}) => Paginated(
@@ -135,6 +153,18 @@ void main() {
     expect(chequeMoney(150000, 'ar'), startsWith('150,000'));
   });
 
+  test('the clearing date goes as a day; deposit and clear hit their endpoints', () async {
+    final adapter = _Adapter({'id': 'pi1'});
+    final repo = ChequesRepositoryImpl(_dio(adapter));
+    await repo.deposit('pi1');
+    await repo.clear('pi1', clearingDate: DateTime(2026, 10, 30, 15));
+    expect(adapter.requests.map((r) => '${r.method} ${r.path}'), [
+      'POST /payment-instruments/pi1/deposit',
+      'POST /payment-instruments/pi1/clear',
+    ]);
+    expect(adapter.requests.last.data, {'clearingDate': '2026-10-30'});
+  });
+
   group('ChequesRepositoryImpl', () {
     test('asks for cheques of one status and reads the page envelope', () async {
       final adapter = _Adapter({
@@ -187,8 +217,39 @@ void main() {
         ..detail = const Cheque(id: 'pi1', type: 'CHEQUE', status: 'CLEARED');
       final cubit = ChequeDetailCubit(repo, id: 'pi1', row: Cheque.fromJson(_row()));
       await cubit.load();
-      expect(cubit.state.data?.status, 'CLEARED');
-      expect(cubit.state.data?.customer, 'Mona');
+      expect(cubit.state.cheque?.status, 'CLEARED');
+      expect(cubit.state.cheque?.customer, 'Mona');
+    });
+
+    test('deposited, then cleared on a day: each step is recorded and the cheque read again', () async {
+      final repo = _Repo({})..detail = const Cheque(id: 'pi1', type: 'CHEQUE', status: 'PENDING_CLEARANCE');
+      final cubit = ChequeDetailCubit(repo, id: 'pi1', row: Cheque.fromJson(_row()));
+      await cubit.load();
+      expect(cubit.state.cheque!.canDeposit, isTrue);
+      expect(cubit.state.cheque!.canClear, isFalse);
+
+      await cubit.deposit();
+      expect(cubit.state.cheque!.status, 'DEPOSITED');
+      expect(cubit.state.cheque!.canClear, isTrue);
+      expect(cubit.state.done, 'deposit');
+      expect(cubit.state.cheque!.customer, 'Mona'); // still from the list row
+
+      await cubit.clear(clearingDate: DateTime(2026, 10, 30));
+      expect(cubit.state.cheque!.status, 'CLEARED');
+      expect(cubit.state.done, 'clear');
+      expect(repo.actions, ['deposit:pi1', 'clear:pi1:2026-10-30']);
+    });
+
+    test('a refused step says why and leaves the cheque as it was', () async {
+      final repo = _Repo({})
+        ..detail = const Cheque(id: 'pi1', type: 'CHEQUE', status: 'PENDING_CLEARANCE')
+        ..refuse = AppFailure(type: FailureType.validation, technicalMessage: 'Invalid transition');
+      final cubit = ChequeDetailCubit(repo, id: 'pi1');
+      await cubit.load();
+      await cubit.deposit();
+      expect(cubit.state.actionFailure, isNotNull);
+      expect(cubit.state.working, isFalse);
+      expect(cubit.state.cheque!.status, 'PENDING_CLEARANCE');
     });
   });
 }

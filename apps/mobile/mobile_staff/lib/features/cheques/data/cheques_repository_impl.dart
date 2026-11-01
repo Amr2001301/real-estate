@@ -25,6 +25,21 @@ class ChequesRepositoryImpl implements ChequesRepository {
   }
 
   @override
+  Future<Result<void>> deposit(String id) => guardApiCall(() async {
+        await _dio.post<Map<String, dynamic>>('/payment-instruments/$id/deposit');
+      });
+
+  @override
+  Future<Result<void>> clear(String id, {DateTime? clearingDate}) => guardApiCall(() async {
+        await _dio.post<Map<String, dynamic>>(
+          '/payment-instruments/$id/clear',
+          data: {
+            if (clearingDate != null) 'clearingDate': calendarDayOf(clearingDate),
+          },
+        );
+      });
+
+  @override
   Future<Result<Cheque>> get(String id) {
     return guardApiCall(() async {
       final res = await _dio.get<Map<String, dynamic>>('/payment-instruments/$id');
@@ -32,3 +47,7 @@ class ChequesRepositoryImpl implements ChequesRepository {
     });
   }
 }
+
+/// The day as the API takes a date: YYYY-MM-DD.
+String calendarDayOf(DateTime d) =>
+    '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

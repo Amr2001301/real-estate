@@ -1149,5 +1149,16 @@
   "chequeReplacedBy": "Replaced by cheque",
   "chequePayments": "Payments it covers",
   "chequeInstallmentDue": "Installment due",
-  "chequeOnDashboard": "Depositing, clearing and bouncing are done on the web dashboard."
+  "chequeOnDashboard": "Bouncing, cancelling and replacing are done on the web dashboard.",
+
+  "chequeActionDeposit": "Deposited at the bank",
+  "chequeDepositTitle": "Record cheque deposit",
+  "chequeDepositHint": "The cheque will be recorded as deposited at the bank, waiting to clear.",
+  "chequeActionClear": "Cleared",
+  "chequeClearTitle": "Record cheque clearing",
+  "chequeClearHint": "The payment the cheque covers will be recorded as paid on the clearing date.",
+  "chequeClearDate": "Clearing date",
+  "chequeConfirm": "Confirm",
+  "chequeDepositedDone": "Cheque deposit recorded",
+  "chequeClearedDone": "Cheque clearing recorded"
 }

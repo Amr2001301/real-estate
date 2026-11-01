@@ -94,19 +94,83 @@ class ChequesCubit extends Cubit<ChequesState> {
   }
 }
 
-/// One cheque, read fresh; the list row fills the customer and contract.
-class ChequeDetailCubit extends Cubit<DataState<Cheque>> {
-  ChequeDetailCubit(this._repo, {required this.id, this.row}) : super(const DataState.initial());
+class ChequeDetailState extends Equatable {
+  const ChequeDetailState({
+    this.status = DataStatus.initial,
+    this.cheque,
+    this.failure,
+    this.working = false,
+    this.actionFailure,
+    this.done,
+  });
+
+  final DataStatus status;
+  final Cheque? cheque;
+  final AppFailure? failure;
+
+  /// A deposit / clearing is being recorded.
+  final bool working;
+  final AppFailure? actionFailure;
+
+  /// What was just recorded: 'deposit' or 'clear' (for the confirmation).
+  final String? done;
+
+  ChequeDetailState copyWith({
+    DataStatus? status,
+    Cheque? cheque,
+    AppFailure? failure,
+    bool? working,
+    AppFailure? actionFailure,
+    bool clearAction = false,
+    String? done,
+  }) =>
+      ChequeDetailState(
+        status: status ?? this.status,
+        cheque: cheque ?? this.cheque,
+        failure: failure ?? this.failure,
+        working: working ?? this.working,
+        actionFailure: clearAction ? null : (actionFailure ?? this.actionFailure),
+        done: clearAction ? null : (done ?? this.done),
+      );
+
+  @override
+  List<Object?> get props => [status, cheque, failure, working, actionFailure, done];
+}
+
+/// One cheque, read fresh (the list row fills the customer and contract),
+/// and the two steps the app records: deposited at the bank, then cleared.
+class ChequeDetailCubit extends Cubit<ChequeDetailState> {
+  ChequeDetailCubit(this._repo, {required this.id, this.row}) : super(const ChequeDetailState());
   final ChequesRepository _repo;
   final String id;
   final Cheque? row;
 
   Future<void> load() async {
-    emit(const DataState.loading());
+    emit(state.copyWith(status: DataStatus.loading));
+    await _read();
+  }
+
+  Future<void> _read() async {
     final result = await _repo.get(id);
     result.when(
-      ok: (c) => emit(DataState.success(row == null ? c : c.withListContext(row!))),
-      err: (f) => emit(DataState.failure(f)),
+      ok: (c) => emit(state.copyWith(status: DataStatus.success, cheque: row == null ? c : c.withListContext(row!))),
+      err: (f) => emit(state.copyWith(status: DataStatus.failure, failure: f)),
     );
+  }
+
+  Future<void> deposit() => _act('deposit', () => _repo.deposit(id));
+
+  Future<void> clear({DateTime? clearingDate}) => _act('clear', () => _repo.clear(id, clearingDate: clearingDate));
+
+  Future<void> _act(String what, Future<Result<void>> Function() call) async {
+    if (state.working) return;
+    emit(state.copyWith(working: true, clearAction: true));
+    final failure = (await call()).failureOrNull;
+    if (failure != null) {
+      emit(state.copyWith(working: false, actionFailure: failure));
+      return;
+    }
+    await _read();
+    emit(state.copyWith(working: false, done: what));
   }
 }

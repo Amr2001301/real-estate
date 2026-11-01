@@ -3259,5 +3259,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get chequeOnDashboard =>
-      'الإيداع والصرف والارتداد بيتعملوا من لوحة التحكم على الويب.';
+      'الارتداد والإلغاء والاستبدال بيتعملوا من لوحة التحكم على الويب.';
+
+  @override
+  String get chequeActionDeposit => 'اتودّع في البنك';
+
+  @override
+  String get chequeDepositTitle => 'تسجيل إيداع الشيك';
+
+  @override
+  String get chequeDepositHint =>
+      'الشيك هيتسجل إنه اتودّع في البنك ومستني الصرف.';
+
+  @override
+  String get chequeActionClear => 'اتصرف';
+
+  @override
+  String get chequeClearTitle => 'تسجيل صرف الشيك';
+
+  @override
+  String get chequeClearHint =>
+      'الدفعة اللي بيغطيها الشيك هتتسجل مدفوعة بتاريخ الصرف.';
+
+  @override
+  String get chequeClearDate => 'تاريخ الصرف';
+
+  @override
+  String get chequeConfirm => 'تأكيد';
+
+  @override
+  String get chequeDepositedDone => 'اتسجل إيداع الشيك';
+
+  @override
+  String get chequeClearedDone => 'اتسجل صرف الشيك';
 }

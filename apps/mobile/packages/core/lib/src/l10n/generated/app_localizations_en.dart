@@ -3293,5 +3293,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chequeOnDashboard =>
-      'Depositing, clearing and bouncing are done on the web dashboard.';
+      'Bouncing, cancelling and replacing are done on the web dashboard.';
+
+  @override
+  String get chequeActionDeposit => 'Deposited at the bank';
+
+  @override
+  String get chequeDepositTitle => 'Record cheque deposit';
+
+  @override
+  String get chequeDepositHint =>
+      'The cheque will be recorded as deposited at the bank, waiting to clear.';
+
+  @override
+  String get chequeActionClear => 'Cleared';
+
+  @override
+  String get chequeClearTitle => 'Record cheque clearing';
+
+  @override
+  String get chequeClearHint =>
+      'The payment the cheque covers will be recorded as paid on the clearing date.';
+
+  @override
+  String get chequeClearDate => 'Clearing date';
+
+  @override
+  String get chequeConfirm => 'Confirm';
+
+  @override
+  String get chequeDepositedDone => 'Cheque deposit recorded';
+
+  @override
+  String get chequeClearedDone => 'Cheque clearing recorded';
 }

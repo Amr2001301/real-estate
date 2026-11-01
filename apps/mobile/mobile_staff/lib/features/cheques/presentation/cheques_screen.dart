@@ -38,7 +38,7 @@ String chequeMoney(num? amount, String lang) =>
     amount == null ? '—' : latinDigits(PriceFormatter.format(amount, languageCode: lang));
 
 /// FG-01 — «الشيكات»: customers' cheques by status, soonest due first, as on
-/// the dashboard. Admin and sales manager only. Read-only for now.
+/// the dashboard. Admin and sales manager only.
 class ChequesScreen extends StatefulWidget {
   const ChequesScreen({super.key});
 
@@ -118,7 +118,11 @@ class _ChequesScreenState extends State<ChequesScreen> {
                           final c = state.items[i];
                           return _ChequeTile(
                             cheque: c,
-                            onTap: () => context.push('/cheques/${c.id}', extra: c),
+                            onTap: () async {
+                              await context.push('/cheques/${c.id}', extra: c);
+                              // A deposit or clearing recorded there moves it.
+                              if (context.mounted) await cubit.load();
+                            },
                           );
                         },
                       ),
