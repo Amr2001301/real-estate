@@ -9,6 +9,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/assistant/data/assistant_repository_impl.dart';
 import 'features/assistant/domain/assistant.dart';
 import 'features/calendar/data/calendar_repository_impl.dart';
+import 'features/campaigns/data/campaigns_repository_impl.dart';
+import 'features/campaigns/domain/campaign.dart';
 import 'features/e_sign/data/signature_requests_repository_impl.dart';
 import 'features/e_sign/domain/signature_request.dart';
 import 'features/calendar/domain/calendar_event.dart';
@@ -136,6 +138,9 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<SignatureRequestsRepository>(
           create: (ctx) => SignatureRequestsRepositoryImpl(ctx.read<Dio>()),
+        ),
+        RepositoryProvider<CampaignsRepository>(
+          create: (ctx) => CampaignsRepositoryImpl(ctx.read<Dio>()),
         ),
         RepositoryProvider<AssistantRepository>(
           create: (ctx) => AssistantRepositoryImpl(ctx.read<Dio>()),

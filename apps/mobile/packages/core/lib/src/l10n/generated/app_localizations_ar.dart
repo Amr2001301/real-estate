@@ -3443,4 +3443,168 @@ class AppLocalizationsAr extends AppLocalizations {
   String signShareMessage(String name, String url) {
     return 'أهلاً $name، ده لينك نموذج الحجز عشان تراجعه وتمضي عليه:\n$url';
   }
+
+  @override
+  String get campaignsTitle => 'الحملات';
+
+  @override
+  String get campaignsEmpty => 'مفيش حملات';
+
+  @override
+  String get campaignsEmptyHint =>
+      'الحملات بتتعمل ويتسجّل صرفها من لوحة التحكم على الويب.';
+
+  @override
+  String get campaignsSpend => 'إجمالي الصرف';
+
+  @override
+  String get campaignsLeads => 'العملاء';
+
+  @override
+  String get campaignsCpl => 'تكلفة العميل';
+
+  @override
+  String get campaignsWon => 'المبيعات';
+
+  @override
+  String get campaignsCpa => 'تكلفة البيعة';
+
+  @override
+  String campaignLeadsCount(String n) {
+    return '$n عميل';
+  }
+
+  @override
+  String campaignWonCount(String n) {
+    return '$n بيعة';
+  }
+
+  @override
+  String campaignLostCount(String n) {
+    return '$n عميل اتقفل خسارة';
+  }
+
+  @override
+  String campaignBudgetOf(String n) {
+    return 'من ميزانية $n';
+  }
+
+  @override
+  String get campaignQualified => 'مؤهلين';
+
+  @override
+  String get campaignChannel => 'القناة';
+
+  @override
+  String get campaignProject => 'المشروع';
+
+  @override
+  String get campaignSource => 'المصدر';
+
+  @override
+  String get campaignPeriod => 'المدة';
+
+  @override
+  String get campaignBudget => 'الميزانية';
+
+  @override
+  String get campaignCode => 'كود الرابط';
+
+  @override
+  String get campaignPlatforms => 'العملاء جم منين';
+
+  @override
+  String get campaignSpendLog => 'الصرف';
+
+  @override
+  String get campaignSpendEmpty => 'لسه مفيش صرف متسجّل.';
+
+  @override
+  String get campaignOnDashboard =>
+      'تعديل الحملة وتسجيل الصرف من لوحة التحكم على الويب.';
+
+  @override
+  String get campaignStatusPlanned => 'مخططة';
+
+  @override
+  String get campaignStatusActive => 'نشطة';
+
+  @override
+  String get campaignStatusPaused => 'متوقفة مؤقتًا';
+
+  @override
+  String get campaignStatusEnded => 'انتهت';
+
+  @override
+  String get campaignChannelFacebook => 'ميتا (فيسبوك + إنستجرام)';
+
+  @override
+  String get campaignChannelInstagram => 'إنستجرام';
+
+  @override
+  String get campaignChannelTiktok => 'تيك توك';
+
+  @override
+  String get campaignChannelGoogle => 'جوجل';
+
+  @override
+  String get campaignChannelSnapchat => 'سناب شات';
+
+  @override
+  String get campaignChannelWhatsapp => 'واتساب';
+
+  @override
+  String get campaignChannelSms => 'رسائل SMS';
+
+  @override
+  String get campaignChannelEmail => 'بريد إلكتروني';
+
+  @override
+  String get campaignChannelBillboard => 'لافتات طرق';
+
+  @override
+  String get campaignChannelEvent => 'معرض / فعالية';
+
+  @override
+  String get campaignChannelOther => 'أخرى';
+
+  @override
+  String get campaignPlatformFacebook => 'فيسبوك';
+
+  @override
+  String get campaignPlatformInstagram => 'إنستجرام';
+
+  @override
+  String get campaignPlatformMessenger => 'ماسنجر';
+
+  @override
+  String get campaignPlatformAudience => 'شبكة الجمهور';
+
+  @override
+  String get campaignPlatformOther => 'مصدر آخر';
+
+  @override
+  String get campaignPlatformUnknown => 'مش معروف';
+
+  @override
+  String get leadCampaign => 'الحملة';
+
+  @override
+  String get leadCampaignHint => 'الحملة اللي جابت العميل (اختياري)';
+
+  @override
+  String get leadCampaignNone => 'من غير حملة';
+
+  @override
+  String get campaignsSubtitle => 'الصرف والعملاء والمبيعات من كل حملة';
+
+  @override
+  String campaignFrom(String n) {
+    return 'من $n';
+  }
+
+  @override
+  String campaignUntil(String n) {
+    return 'لحد $n';
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../campaigns/domain/campaign.dart';
 import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../../domain/usecases/lead_use_cases.dart';
@@ -21,6 +22,8 @@ class CreateLeadState extends Equatable {
     this.clientSearchLoading = false,
     this.clientSearchResults = const [],
     this.selectedClient,
+    this.campaigns = const [],
+    this.selectedCampaignId,
   });
 
   final CreateLeadStatus status;
@@ -33,6 +36,10 @@ class CreateLeadState extends Equatable {
   final bool clientSearchLoading;
   final List<ClientSearchResult> clientSearchResults;
   final ClientSearchResult? selectedClient;
+
+  /// MC1 — the company's campaigns (live first) and the one picked.
+  final List<CampaignOption> campaigns;
+  final String? selectedCampaignId;
 
   CreateLeadState copyWith({
     CreateLeadStatus? status,
@@ -47,6 +54,9 @@ class CreateLeadState extends Equatable {
     List<ClientSearchResult>? clientSearchResults,
     ClientSearchResult? selectedClient,
     bool clearSelectedClient = false,
+    List<CampaignOption>? campaigns,
+    String? selectedCampaignId,
+    bool clearCampaign = false,
   }) =>
       CreateLeadState(
         status: status ?? this.status,
@@ -61,6 +71,8 @@ class CreateLeadState extends Equatable {
         clientSearchResults: clientSearchResults ?? this.clientSearchResults,
         selectedClient:
             clearSelectedClient ? null : (selectedClient ?? this.selectedClient),
+        campaigns: campaigns ?? this.campaigns,
+        selectedCampaignId: clearCampaign ? null : (selectedCampaignId ?? this.selectedCampaignId),
       );
 
   @override
@@ -75,16 +87,36 @@ class CreateLeadState extends Equatable {
         clientSearchLoading,
         clientSearchResults,
         selectedClient,
+        campaigns,
+        selectedCampaignId,
       ];
 }
 
 class CreateLeadCubit extends Cubit<CreateLeadState> {
-  CreateLeadCubit(this._createLead, this._repo) : super(const CreateLeadState()) {
+  CreateLeadCubit(this._createLead, this._repo, {CampaignsRepository? campaigns})
+      : _campaigns = campaigns,
+        super(const CreateLeadState()) {
     _loadSources();
+    _loadCampaigns();
   }
 
   final CreateLead _createLead;
   final LeadsRepository _repo;
+  final CampaignsRepository? _campaigns;
+
+  /// Only the campaigns still running or about to (an ended one did not bring a new lead).
+  Future<void> _loadCampaigns() async {
+    final repo = _campaigns;
+    if (repo == null) return;
+    final result = await repo.options();
+    final list = result.dataOrNull;
+    if (list != null && !isClosed) {
+      emit(state.copyWith(campaigns: list.where((c) => c.status == 'ACTIVE' || c.status == 'PLANNED' || c.status == 'PAUSED').toList()));
+    }
+  }
+
+  void selectCampaign(String? id) =>
+      emit(id == null ? state.copyWith(clearCampaign: true) : state.copyWith(selectedCampaignId: id));
 
   Future<void> _loadSources() async {
     emit(state.copyWith(sourcesLoading: true));
@@ -150,6 +182,7 @@ class CreateLeadCubit extends Cubit<CreateLeadState> {
       projectInterestId: projectInterestId,
       unitInterestId: unitInterestId,
       notes: notes?.isEmpty == true ? null : notes,
+      campaignId: state.selectedCampaignId,
     ));
     result.when(
       ok: (lead) =>

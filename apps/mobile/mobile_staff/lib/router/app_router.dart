@@ -11,6 +11,10 @@ import '../features/assistant/domain/assistant.dart';
 import '../features/assistant/presentation/assistant_cubit.dart';
 import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/calendar/domain/calendar_event.dart';
+import '../features/campaigns/domain/campaign.dart';
+import '../features/campaigns/presentation/campaign_detail_screen.dart';
+import '../features/campaigns/presentation/campaigns_cubit.dart';
+import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/cheques/domain/cheque.dart';
@@ -388,6 +392,22 @@ GoRouter createStaffRouter(
         ),
       ),
 
+      // ── Campaigns (MC1): what each cost and brought — admin, sales manager ─
+      GoRoute(
+        path: '/campaigns',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => CampaignsCubit(ctx.read<CampaignsRepository>()),
+          child: const CampaignsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/campaigns/:id',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => CampaignDetailCubit(ctx.read<CampaignsRepository>(), id: state.pathParameters['id']!),
+          child: CampaignDetailScreen(row: state.extra is Campaign ? state.extra as Campaign : null),
+        ),
+      ),
+
       // ── Cheques (FG-01): admin and sales manager, read-only ─────────────
       GoRoute(
         path: '/cheques',
@@ -428,7 +448,8 @@ GoRouter createStaffRouter(
           return BlocProvider(
             create: (c) => CreateLeadCubit(
                 CreateLead(c.read<LeadsRepository>()),
-                c.read<LeadsRepository>()),
+                c.read<LeadsRepository>(),
+                campaigns: c.read<CampaignsRepository>()),
             child: CreateLeadScreen(interestContext: ctx),
           );
         },
