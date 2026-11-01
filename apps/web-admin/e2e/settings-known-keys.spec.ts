@@ -22,17 +22,25 @@ test('settings offer only what the system reads, named in Arabic', async ({
 }) => {
   const token = (await context.cookies()).find((c) => c.name === 'access_token')?.value;
   const headers = { Authorization: `Bearer ${token}`, 'X-Tenant-Slug': COMPANY_SLUG };
-  // A setting added from the old list: stored, but nothing reads it.
+  // A setting added from the old list (seeded by seed-e2e.ts): stored, but
+  // nothing reads it. The API now refuses to store such a key.
   const legacy = await request.patch(`${API_BASE}/v1/settings/security.requireMfa`, {
     headers,
     data: { value: true },
   });
-  expect(legacy.ok()).toBeTruthy();
+  expect(legacy.status()).toBe(400);
 
   await gotoReady(page, '/dashboard/settings');
   await expect(page.getByText('غرامة إلغاء العقد % من المدفوع')).toBeVisible();
   await expect(page.getByText('القسط بعد ارتداد الشيك', { exact: false })).toBeVisible();
   await expect(page.getByTestId('setting-unused')).toHaveCount(1);
+  // It cannot be saved any more, so it is not offered for editing.
+  await expect(
+    page
+      .getByTestId('setting-row')
+      .filter({ has: page.getByTestId('setting-unused') })
+      .getByRole('button'),
+  ).toHaveCount(0);
 
   // The discount cap is offered until it is set (discount-refusal.spec.ts
   // sets it); once set, it is listed under its Arabic name — and with every

@@ -156,9 +156,18 @@ const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
   ...DISCOUNT_SETTING_VALIDATORS,
 };
 
+/**
+ * Only the keys above can be written here: each is a setting the platform
+ * reads, with its value checked. Any other key is refused, so a typo or a
+ * made-up key cannot be stored as if it meant something. Lead intake
+ * (`leads.*`) has its own endpoint and validation.
+ */
 function validateSettingValue(key: string, value: unknown): void {
-  const validator = SETTING_VALIDATORS[key];
-  if (validator) validator(key, value);
+  const validator = Object.prototype.hasOwnProperty.call(SETTING_VALIDATORS, key)
+    ? SETTING_VALIDATORS[key]
+    : undefined;
+  if (!validator) throw new BadRequestException(`${key}: unknown setting`);
+  validator(key, value);
 }
 
 @Injectable()

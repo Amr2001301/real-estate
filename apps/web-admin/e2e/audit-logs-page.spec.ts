@@ -14,11 +14,11 @@ test.use({ storageState: ADMIN_STORAGE });
  */
 test('the audit log groups events by day and shows them by name', async ({ page, request, context }) => {
   // At least one event to show (on a fresh database the log can be empty):
-  // a settings change is audited. The same unused key settings-known-keys.spec.ts sets.
+  // a settings change is audited. The company's time zone, set to the default.
   const token = (await context.cookies()).find((c) => c.name === 'access_token')?.value;
-  const res = await request.patch(`${API_BASE}/v1/settings/security.requireMfa`, {
+  const res = await request.patch(`${API_BASE}/v1/settings/company.timezone`, {
     headers: { Authorization: `Bearer ${token}`, 'X-Tenant-Slug': COMPANY_SLUG },
-    data: { value: true },
+    data: { value: 'Africa/Cairo' },
   });
   expect(res.ok()).toBeTruthy();
 

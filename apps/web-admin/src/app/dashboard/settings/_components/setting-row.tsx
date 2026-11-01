@@ -179,6 +179,8 @@ export function SettingRow({
           </div>
         )}
 
+        {/* An unused key cannot be saved (the API takes only the keys it reads). */}
+        {!unused && (
         <button
           type="button"
           onClick={() => setEditing((e) => !e)}
@@ -193,6 +195,7 @@ export function SettingRow({
         >
           {editing ? <XIcon className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
         </button>
+        )}
       </div>
 
       {editing && (
