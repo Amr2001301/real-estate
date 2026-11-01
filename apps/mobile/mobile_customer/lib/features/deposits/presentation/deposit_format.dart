@@ -9,5 +9,6 @@ String depositTypeLabel(AppLocalizations l10n, DepositType type) => switch (type
       DepositType.downPayment => l10n.depositTypeDownPayment,
       DepositType.installment => l10n.depositTypeInstallment,
       DepositType.finalPayment => l10n.depositTypeFinal,
+      DepositType.fee => l10n.depositTypeFee,
       DepositType.unknown => l10n.depositTypePayment,
     };

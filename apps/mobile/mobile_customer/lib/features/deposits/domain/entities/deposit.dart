@@ -6,6 +6,9 @@ enum DepositType {
   downPayment('DOWN_PAYMENT'),
   installment('INSTALLMENT'),
   finalPayment('FINAL_PAYMENT'),
+
+  /// A fee or penalty (late fee, bounced cheque, transfer) — not the price.
+  fee('FEE'),
   unknown('');
 
   const DepositType(this.wire);

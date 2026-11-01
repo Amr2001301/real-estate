@@ -796,6 +796,9 @@ class _InstallmentCard extends StatelessWidget {
       InstallmentPaymentType.reservation  => 'مبلغ الحجز',
       InstallmentPaymentType.downPayment  => 'دفعة مقدمة',
       InstallmentPaymentType.finalPayment => 'دفعة أخيرة',
+      InstallmentPaymentType.bouncePenalty => l10n.planTypeBouncePenalty,
+      InstallmentPaymentType.lateFee      => l10n.planTypeLateFee,
+      InstallmentPaymentType.transferFee  => l10n.planTypeTransferFee,
       _                                   => null,
     };
     final seqNum = (rowIndex + 1).toString().padLeft(2, '0');

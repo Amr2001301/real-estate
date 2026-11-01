@@ -600,6 +600,9 @@ class _InstallmentCard extends StatelessWidget {
     InstallmentPaymentType.reservation => l10n.depositTypeBooking,
     InstallmentPaymentType.downPayment => l10n.depositTypeDownPayment,
     InstallmentPaymentType.finalPayment => l10n.depositTypeFinal,
+    InstallmentPaymentType.bouncePenalty => l10n.planTypeBouncePenalty,
+    InstallmentPaymentType.lateFee => l10n.planTypeLateFee,
+    InstallmentPaymentType.transferFee => l10n.planTypeTransferFee,
     _ => l10n.depositTypeInstallment,
   };
 

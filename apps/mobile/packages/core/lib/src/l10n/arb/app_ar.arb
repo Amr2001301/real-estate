@@ -1110,5 +1110,10 @@
   "calendarTypeContract": "توقيع عقد",
   "calendarDone": "تمّت",
   "calendarPrevWeek": "الأسبوع اللي فات",
-  "calendarNextWeek": "الأسبوع الجاي"
+  "calendarNextWeek": "الأسبوع الجاي",
+
+  "depositTypeFee": "رسوم وغرامات",
+  "planTypeBouncePenalty": "غرامة شيك مرتجع",
+  "planTypeLateFee": "غرامة تأخير",
+  "planTypeTransferFee": "رسوم تنازل"
 }

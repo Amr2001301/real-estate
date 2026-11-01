@@ -3205,4 +3205,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calendarNextWeek => 'Next week';
+
+  @override
+  String get depositTypeFee => 'Fees & penalties';
+
+  @override
+  String get planTypeBouncePenalty => 'Bounced-cheque penalty';
+
+  @override
+  String get planTypeLateFee => 'Late fee';
+
+  @override
+  String get planTypeTransferFee => 'Transfer fee';
 }

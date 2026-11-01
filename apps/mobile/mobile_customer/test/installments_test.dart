@@ -182,6 +182,16 @@ void main() {
       expect(entity.canSubmitProof, isFalse);
     });
 
+    test('charges added to the schedule keep their own type', () {
+      for (final (wire, type) in [
+        ('BOUNCE_PENALTY', InstallmentPaymentType.bouncePenalty),
+        ('LATE_FEE', InstallmentPaymentType.lateFee),
+        ('TRANSFER_FEE', InstallmentPaymentType.transferFee),
+      ]) {
+        expect(InstallmentDto.fromJson(_installmentJson(type: wire)).toEntity().type, type);
+      }
+    });
+
     test('unknown enums fall back to .unknown without throwing', () {
       final entity = InstallmentDto.fromJson(
         _installmentJson(status: 'WHO_KNOWS', type: 'WHAT_NOW'),

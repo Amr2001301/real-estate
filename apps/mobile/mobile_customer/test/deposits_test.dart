@@ -53,6 +53,11 @@ void main() {
       expect(d.unitCode, 'A-1');
     });
 
+    test('a fee or penalty payment is its own type, labelled as one', () {
+      final d = DepositDto.fromJson(_json(type: 'FEE')).toEntity();
+      expect(d.type, DepositType.fee);
+    });
+
     test('unknown type falls back to unknown', () {
       final d = DepositDto.fromJson(_json(type: 'WEIRD')).toEntity();
       expect(d.type, DepositType.unknown);

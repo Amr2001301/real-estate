@@ -28,6 +28,12 @@ enum InstallmentPaymentType {
   downPayment('DOWN_PAYMENT'),
   installment('INSTALLMENT'),
   finalPayment('FINAL_PAYMENT'),
+
+  /// Charges added to the schedule — not the price: a bounced cheque's
+  /// penalty, a late fee, the fee for transferring the contract.
+  bouncePenalty('BOUNCE_PENALTY'),
+  lateFee('LATE_FEE'),
+  transferFee('TRANSFER_FEE'),
   unknown('');
 
   const InstallmentPaymentType(this.wire);

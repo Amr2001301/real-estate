@@ -1118,5 +1118,10 @@
   "calendarTypeContract": "Contract signed",
   "calendarDone": "Done",
   "calendarPrevWeek": "Previous week",
-  "calendarNextWeek": "Next week"
+  "calendarNextWeek": "Next week",
+
+  "depositTypeFee": "Fees & penalties",
+  "planTypeBouncePenalty": "Bounced-cheque penalty",
+  "planTypeLateFee": "Late fee",
+  "planTypeTransferFee": "Transfer fee"
 }
