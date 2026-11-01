@@ -3391,4 +3391,95 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantErrorRate =>
       'Too many questions in a short time — wait a minute and try again.';
+
+  @override
+  String get signTitle => 'Customer signature';
+
+  @override
+  String get signNotSent => 'Not sent for signature yet';
+
+  @override
+  String get signNotSentHint =>
+      'Send the booking form to the customer to sign on their phone: a code goes to their number and they sign by hand.';
+
+  @override
+  String get signStatePending => 'Waiting for the customer';
+
+  @override
+  String get signStateSigned => 'Signed by the customer';
+
+  @override
+  String get signStateExpired => 'The link expired';
+
+  @override
+  String get signStateCancelled => 'The request was cancelled';
+
+  @override
+  String signCodeTo(String phone) {
+    return 'The code goes to $phone';
+  }
+
+  @override
+  String signExpires(String when) {
+    return 'The link works until $when';
+  }
+
+  @override
+  String signSignedBy(String name, String when) {
+    return 'Signed as $name — $when';
+  }
+
+  @override
+  String signSentAt(String when) {
+    return 'Sent $when';
+  }
+
+  @override
+  String get signOutdated =>
+      'The booking changed after the customer signed — the signature is on an older version. Send a new link.';
+
+  @override
+  String get signSend => 'Send for signature';
+
+  @override
+  String get signSendNew => 'Send a new link';
+
+  @override
+  String get signCancel => 'Cancel request';
+
+  @override
+  String get signNewLinkTitle => 'Send a new link?';
+
+  @override
+  String get signNewLinkBody => 'The link sent before will stop working.';
+
+  @override
+  String get signCancelTitle => 'Cancel the signature request?';
+
+  @override
+  String get signCancelBody => 'The customer\'s link will stop working.';
+
+  @override
+  String get signCancelConfirm => 'Cancel request';
+
+  @override
+  String get signLinkReady => 'The signing link is ready';
+
+  @override
+  String get signLinkHint =>
+      'Send it to the customer now — the link is not shown again, and works for 72 hours.';
+
+  @override
+  String get signCopy => 'Copy';
+
+  @override
+  String get signCopied => 'Link copied';
+
+  @override
+  String get signShare => 'Share';
+
+  @override
+  String signShareMessage(String name, String url) {
+    return 'Hello $name, here is the link to review and sign your booking form:\n$url';
+  }
 }

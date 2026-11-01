@@ -6427,6 +6427,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too many questions in a short time — wait a minute and try again.'**
   String get assistantErrorRate;
+
+  /// No description provided for @signTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer signature'**
+  String get signTitle;
+
+  /// No description provided for @signNotSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent for signature yet'**
+  String get signNotSent;
+
+  /// No description provided for @signNotSentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the booking form to the customer to sign on their phone: a code goes to their number and they sign by hand.'**
+  String get signNotSentHint;
+
+  /// No description provided for @signStatePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the customer'**
+  String get signStatePending;
+
+  /// No description provided for @signStateSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed by the customer'**
+  String get signStateSigned;
+
+  /// No description provided for @signStateExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The link expired'**
+  String get signStateExpired;
+
+  /// No description provided for @signStateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The request was cancelled'**
+  String get signStateCancelled;
+
+  /// No description provided for @signCodeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'The code goes to {phone}'**
+  String signCodeTo(String phone);
+
+  /// No description provided for @signExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'The link works until {when}'**
+  String signExpires(String when);
+
+  /// No description provided for @signSignedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed as {name} — {when}'**
+  String signSignedBy(String name, String when);
+
+  /// No description provided for @signSentAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {when}'**
+  String signSentAt(String when);
+
+  /// No description provided for @signOutdated.
+  ///
+  /// In en, this message translates to:
+  /// **'The booking changed after the customer signed — the signature is on an older version. Send a new link.'**
+  String get signOutdated;
+
+  /// No description provided for @signSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for signature'**
+  String get signSend;
+
+  /// No description provided for @signSendNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new link'**
+  String get signSendNew;
+
+  /// No description provided for @signCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get signCancel;
+
+  /// No description provided for @signNewLinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new link?'**
+  String get signNewLinkTitle;
+
+  /// No description provided for @signNewLinkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The link sent before will stop working.'**
+  String get signNewLinkBody;
+
+  /// No description provided for @signCancelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel the signature request?'**
+  String get signCancelTitle;
+
+  /// No description provided for @signCancelBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The customer\'s link will stop working.'**
+  String get signCancelBody;
+
+  /// No description provided for @signCancelConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel request'**
+  String get signCancelConfirm;
+
+  /// No description provided for @signLinkReady.
+  ///
+  /// In en, this message translates to:
+  /// **'The signing link is ready'**
+  String get signLinkReady;
+
+  /// No description provided for @signLinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Send it to the customer now — the link is not shown again, and works for 72 hours.'**
+  String get signLinkHint;
+
+  /// No description provided for @signCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get signCopy;
+
+  /// No description provided for @signCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get signCopied;
+
+  /// No description provided for @signShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get signShare;
+
+  /// No description provided for @signShareMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello {name}, here is the link to review and sign your booking form:\n{url}'**
+  String signShareMessage(String name, String url);
 }
 
 class _AppLocalizationsDelegate

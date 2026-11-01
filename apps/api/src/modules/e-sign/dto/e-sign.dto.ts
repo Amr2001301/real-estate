@@ -1,14 +1,17 @@
-import { IsObject, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
- * The document as the customer will read it, laid out by the dashboard from
- * the record and the company's wording. Kept as sent; its hash is what the
+ * A signing link for a booking. The document is laid out by the API from the
+ * booking and the company's wording (the same one the dashboard prints), so
+ * the dashboard and the staff app send the same form; its hash is what the
  * customer signs.
  */
 export class CreateSignatureRequestDto {
-  @IsObject()
-  snapshot!: Record<string, unknown>;
+  /** The language the form is written in (default Arabic). */
+  @IsOptional()
+  @IsIn(['ar', 'en'])
+  locale?: 'ar' | 'en';
 }
 
 export class SignDocumentDto {

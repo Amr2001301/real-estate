@@ -18,7 +18,6 @@ import { bearer, loginAs } from '../helpers/login';
 /** A 1×1 PNG, as the signing page sends it. */
 const SIGNATURE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-const SNAPSHOT = { version: 1, title: 'استمارة حجز', sections: [], amounts: [], clauses: [] };
 
 describe('P5 — customer e-signature on the booking form (e2e)', () => {
   let testApp: TestApp;
@@ -62,8 +61,9 @@ describe('P5 — customer e-signature on the booking form (e2e)', () => {
     reservationIds.push(r.id);
     return r.id;
   };
-  const send = (reservationId: string) =>
-    asAdmin(http().post(`/v1/reservations/${reservationId}/signature-requests`)).send({ snapshot: SNAPSHOT });
+  // The API lays out the form itself (the dashboard and the staff app send the same one).
+  const send = (reservationId: string, body: Record<string, unknown> = {}) =>
+    asAdmin(http().post(`/v1/reservations/${reservationId}/signature-requests`)).send(body);
 
   beforeAll(async () => {
     testApp = await createE2ETestApp();
@@ -102,7 +102,17 @@ describe('P5 — customer e-signature on the booking form (e2e)', () => {
     expect(stored.tokenHash).not.toContain(tokenOf(res.body.url));
 
     const view = await pub(http().get(`/v1/public/e-sign/${tokenOf(res.body.url)}`)).expect(200);
-    expect(view.body.snapshot).toEqual(SNAPSHOT);
+    // The booking form as it prints: the customer, the booking, its amount.
+    const doc = view.body.snapshot;
+    expect(doc.version).toBe(1);
+    expect(doc.locale).toBe('ar');
+    expect(doc.title).toBe('نموذج حجز وحدة عقارية');
+    expect(doc.sections[0].rows).toEqual(expect.arrayContaining([{ label: 'الاسم', value: 'P5 Buyer' }]));
+    expect(doc.amounts[0]).toEqual(expect.objectContaining({ label: 'مبلغ الحجز (العربون)', emphasis: true }));
+    expect(doc.amounts[0].value).toContain('50,000');
+    // Its hash is what the customer signs.
+    const stored2 = await testApp.rawPrisma.signatureRequest.findFirstOrThrow({ where: { documentId: id } });
+    expect(stored2.snapshotHash).toBe(res.body.snapshotHash);
     expect(view.body.state).toBe('PENDING');
     expect(view.body.phone).toMatch(/•••/);
     expect(view.body.phone).not.toContain(stamp);
@@ -225,6 +235,18 @@ describe('P5 — customer e-signature on the booking form (e2e)', () => {
     } finally {
       await testApp.rawPrisma.user.update({ where: { id: clientId }, data: { phone: `+2010${stamp}9`.slice(0, 13) } });
     }
+  });
+
+  it('P5-9: the form can be written in English; a client cannot send its own document', async () => {
+    const id = await newBooking();
+    const res = await send(id, { locale: 'en' }).expect(201);
+    const view = await pub(http().get(`/v1/public/e-sign/${tokenOf(res.body.url)}`)).expect(200);
+    expect(view.body.snapshot.locale).toBe('en');
+    expect(view.body.snapshot.title).toBe('Unit Reservation Form');
+    expect(view.body.snapshot.amounts[0].label).toBe('Booking deposit');
+
+    await send(id, { snapshot: { version: 1, title: 'Anything', sections: [], amounts: [], clauses: [] } }).expect(400);
+    await send(id, { locale: 'fr' }).expect(400);
   });
 
   it('P5-8: a bad link, or a signature that is not a PNG, is refused', async () => {
