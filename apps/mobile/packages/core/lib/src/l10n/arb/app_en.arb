@@ -1344,5 +1344,9 @@
   "reservationRejectTitle": "Reject the reservation",
   "reservationRejectReasonHint": "Reason (the rep sees it)",
   "reservationApprovedDone": "Reservation approved",
-  "reservationRejectedDone": "Reservation rejected"
+  "reservationRejectedDone": "Reservation rejected",
+  "contractDeliveryPromised": "Handover in the contract",
+  "contractDeliveryExpected": "Expected handover now",
+  "contractDeliveryLate": "{days} days late",
+  "@contractDeliveryLate": {"placeholders": {"days": {"type": "int"}}}
 }

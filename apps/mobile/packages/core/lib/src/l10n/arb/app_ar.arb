@@ -1336,5 +1336,9 @@
   "reservationRejectTitle": "رفض الحجز",
   "reservationRejectReasonHint": "السبب (هيظهر للمندوب)",
   "reservationApprovedDone": "تمت الموافقة على الحجز",
-  "reservationRejectedDone": "تم رفض الحجز"
+  "reservationRejectedDone": "تم رفض الحجز",
+  "contractDeliveryPromised": "ميعاد التسليم في العقد",
+  "contractDeliveryExpected": "ميعاد التسليم المتوقع حاليًا",
+  "contractDeliveryLate": "متأخر {days} يوم",
+  "@contractDeliveryLate": {"placeholders": {"days": {"type": "int"}}}
 }

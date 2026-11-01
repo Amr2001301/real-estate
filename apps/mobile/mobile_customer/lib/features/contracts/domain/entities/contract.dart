@@ -15,6 +15,9 @@ class Contract extends Equatable {
     this.signedAt,
     this.createdAt,
     this.handedOverAt,
+    this.deliveryDate,
+    this.expectedDeliveryDate,
+    this.deliveryDelayDays = 0,
   });
 
   final String id;
@@ -28,6 +31,14 @@ class Contract extends Equatable {
   /// When the unit was handed over; maintenance requests open from then.
   final DateTime? handedOverAt;
 
+  /// The handover date the contract promised.
+  final DateTime? deliveryDate;
+  /// The handover date expected now (the unit's, or its phase's).
+  final DateTime? expectedDeliveryDate;
+  /// Days the expected date is past the promised one; 0 when on time.
+  final int deliveryDelayDays;
+
   @override
-  List<Object?> get props => [id, contractNumber, unitCode, status, signedAt, handedOverAt];
+  List<Object?> get props =>
+      [id, contractNumber, unitCode, status, signedAt, handedOverAt, deliveryDate, expectedDeliveryDate, deliveryDelayDays];
 }

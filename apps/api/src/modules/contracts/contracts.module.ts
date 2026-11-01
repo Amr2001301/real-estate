@@ -229,6 +229,26 @@ class CancellationDecisionDto {
   @IsOptional() @IsString() @MaxLength(2000) reason?: string;
 }
 
+
+/**
+ * F10 — the handover date expected now (the unit's own, else its phase's)
+ * and how many days it slipped past the one the contract promised.
+ */
+export function deliverySlip(contract: {
+  deliveryDate: Date | null;
+  unit?: { deliveryDate: Date | null; building?: { phase?: { deliveryDate: Date | null } | null } | null } | null;
+}): { expectedDeliveryDate: string | null; deliveryDelayDays: number } {
+  const expectedDeliveryDate = dateOnlyString(
+    contract.unit?.deliveryDate ?? contract.unit?.building?.phase?.deliveryDate ?? null,
+  );
+  const promised = dateOnlyString(contract.deliveryDate);
+  const deliveryDelayDays =
+    promised && expectedDeliveryDate && expectedDeliveryDate > promised
+      ? Math.round((Date.parse(expectedDeliveryDate) - Date.parse(promised)) / 86_400_000)
+      : 0;
+  return { expectedDeliveryDate, deliveryDelayDays };
+}
+
 @Injectable()
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
@@ -764,18 +784,27 @@ export class ContractsService {
           createdAt: true,
           unit: {
             select: {
-              id: true, code: true, type: true,
-              building: { select: { phase: { select: { project: { select: { id: true, name: true } } } } } },
+              id: true, code: true, type: true, deliveryDate: true,
+              building: {
+                select: { phase: { select: { deliveryDate: true, project: { select: { id: true, name: true } } } } },
+              },
             },
           },
           reservation: { select: { id: true, reservationNumber: true } },
           installmentPlan: { select: { id: true, totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true } },
           handover: { select: { handedOverAt: true } },
+          // F10 — the handover date the contract promised, and the one
+          // expected now (the unit's own, or its phase's).
+          deliveryDate: true,
         },
       }),
       this.prisma.contract.count({ where }),
     ]);
-    return paginate(data, total, opts);
+    return paginate(
+      data.map((c) => ({ ...c, deliveryDate: dateOnlyString(c.deliveryDate), ...deliverySlip(c) })),
+      total,
+      opts,
+    );
   }
 
   async findOne(id: string) {
@@ -815,14 +844,7 @@ export class ContractsService {
     if (!contract) throw new NotFoundException('Contract not found');
     // F10 — the handover date expected now (the unit's own, or its phase's)
     // against the one the contract promises.
-    const expectedDeliveryDate = dateOnlyString(
-      contract.unit?.deliveryDate ?? contract.unit?.building?.phase?.deliveryDate ?? null,
-    );
-    const promised = dateOnlyString(contract.deliveryDate);
-    const deliveryDelayDays =
-      promised && expectedDeliveryDate && expectedDeliveryDate > promised
-        ? Math.round((Date.parse(expectedDeliveryDate) - Date.parse(promised)) / 86_400_000)
-        : 0;
+    const { expectedDeliveryDate, deliveryDelayDays } = deliverySlip(contract);
     // Each payment says plainly whether the money arrived, and each schedule
     // row carries the payment that explains it (paid how and when, a proof
     // or a cheque waiting, or a reversal) — the page showed only the row's

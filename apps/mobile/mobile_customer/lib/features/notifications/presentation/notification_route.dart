@@ -37,6 +37,8 @@ String? customerNotificationRoute(String code, Map<String, dynamic> data) {
     return '/account/installments';
   }
   if (code.startsWith('contract_') ||
+      code == 'delivery_delayed_customer' ||
+      code == 'unit_handed_over' ||
       code == 'broker_contract_signed' ||
       code == 'broker_contract_created' ||
       entityType == 'contract') {

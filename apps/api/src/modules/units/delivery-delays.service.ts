@@ -90,6 +90,9 @@ export class DeliveryDelaysService {
         unitCode: now.unitCode,
         contractDate: now.contractDate,
         expectedDate: now.expected,
+        // Opens the contract in the customer app (its handover dates).
+        entityType: 'contract',
+        entityId: now.contractId,
       });
       sent++;
     }

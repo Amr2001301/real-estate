@@ -3885,4 +3885,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reservationRejectedDone => 'Reservation rejected';
+
+  @override
+  String get contractDeliveryPromised => 'Handover in the contract';
+
+  @override
+  String get contractDeliveryExpected => 'Expected handover now';
+
+  @override
+  String contractDeliveryLate(int days) {
+    return '$days days late';
+  }
 }

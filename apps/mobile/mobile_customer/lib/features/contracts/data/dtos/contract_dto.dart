@@ -15,6 +15,9 @@ class ContractDto {
     this.signedAt,
     this.createdAt,
     this.handedOverAt,
+    this.deliveryDate,
+    this.expectedDeliveryDate,
+    this.deliveryDelayDays = 0,
   });
 
   final String id;
@@ -28,6 +31,11 @@ class ContractDto {
   final String? createdAt;
   /// The unit's handover date — maintenance opens from it. Null until then.
   final String? handedOverAt;
+  /// F10 — the handover date the contract promised, the one expected now,
+  /// and how many days it slipped (0 when on time). Null from an older API.
+  final String? deliveryDate;
+  final String? expectedDeliveryDate;
+  final int deliveryDelayDays;
 
   factory ContractDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unit'] as Map<String, dynamic>?;
@@ -49,6 +57,9 @@ class ContractDto {
       signedAt: json['signedAt'] as String?,
       createdAt: json['createdAt'] as String?,
       handedOverAt: (json['handover'] as Map<String, dynamic>?)?['handedOverAt'] as String?,
+      deliveryDate: json['deliveryDate'] as String?,
+      expectedDeliveryDate: json['expectedDeliveryDate'] as String?,
+      deliveryDelayDays: (json['deliveryDelayDays'] as num?)?.toInt() ?? 0,
     );
   }
 }

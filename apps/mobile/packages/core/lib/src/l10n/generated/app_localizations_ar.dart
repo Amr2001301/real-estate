@@ -3843,4 +3843,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reservationRejectedDone => 'تم رفض الحجز';
+
+  @override
+  String get contractDeliveryPromised => 'ميعاد التسليم في العقد';
+
+  @override
+  String get contractDeliveryExpected => 'ميعاد التسليم المتوقع حاليًا';
+
+  @override
+  String contractDeliveryLate(int days) {
+    return 'متأخر $days يوم';
+  }
 }

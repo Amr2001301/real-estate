@@ -14,5 +14,8 @@ extension ContractDtoMapper on ContractDto {
         signedAt: DateTime.tryParse(signedAt ?? ''),
         createdAt: DateTime.tryParse(createdAt ?? ''),
         handedOverAt: DateTime.tryParse(handedOverAt ?? ''),
+        deliveryDate: DateTime.tryParse(deliveryDate ?? ''),
+        expectedDeliveryDate: DateTime.tryParse(expectedDeliveryDate ?? ''),
+        deliveryDelayDays: deliveryDelayDays,
       );
 }

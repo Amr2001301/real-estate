@@ -7291,6 +7291,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reservation rejected'**
   String get reservationRejectedDone;
+
+  /// No description provided for @contractDeliveryPromised.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover in the contract'**
+  String get contractDeliveryPromised;
+
+  /// No description provided for @contractDeliveryExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected handover now'**
+  String get contractDeliveryExpected;
+
+  /// No description provided for @contractDeliveryLate.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days late'**
+  String contractDeliveryLate(int days);
 }
 
 class _AppLocalizationsDelegate

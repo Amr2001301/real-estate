@@ -6,6 +6,7 @@
  * slip.
  */
 import 'reflect-metadata';
+import * as argon2 from 'argon2';
 import request from 'supertest';
 import { UnitStatus, UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
@@ -71,7 +72,15 @@ describe('EE7 — the contract handover date (e2e)', () => {
     buildingId = (await raw.building.create({ data: { companyId, phaseId, code: 'EE7-B', name: 'B', order: 0 }, select: { id: true } })).id;
     customerId = (
       await raw.user.create({
-        data: { companyId, role: UserRole.CUSTOMER, fullName: `EE7 Customer ${stamp}`, phone: `+2011${stamp}7`.slice(0, 13), locale: 'ar' },
+        data: {
+          companyId,
+          role: UserRole.CUSTOMER,
+          fullName: `EE7 Customer ${stamp}`,
+          phone: `+2011${stamp}7`.slice(0, 13),
+          email: `ee7-${stamp}@example.com`,
+          passwordHash: await argon2.hash('StrongPass1!'),
+          locale: 'ar',
+        },
         select: { id: true },
       })
     ).id;
@@ -139,5 +148,30 @@ describe('EE7 — the contract handover date (e2e)', () => {
     // The contract's date corrected to what was actually agreed.
     await asAdmin(http().patch(`/v1/contracts/${a}`)).send({ deliveryDate: '2027-09-30' }).expect(200);
     expect(await contract(a!)).toMatchObject({ deliveryDelayDays: 0 });
+  });
+
+  it('EE7-4: the customer sees both dates and the delay, and the notice opens the contract', async () => {
+    const [a, b] = contractIds;
+    const token = await loginAs(testApp.app, `ee7-${stamp}@example.com`, 'StrongPass1!', 'customer');
+    const mine = (await http().get('/v1/contracts/me/contracts').set('Authorization', bearer(token)).expect(200)).body
+      .data as Array<{ id: string; deliveryDate: string | null; expectedDeliveryDate: string | null; deliveryDelayDays: number }>;
+    for (const id of [a!, b!]) {
+      const staff = await contract(id);
+      const row = mine.find((c) => c.id === id)!;
+      expect(row).toMatchObject({
+        deliveryDate: staff.deliveryDate.slice(0, 10),
+        expectedDeliveryDate: staff.expectedDeliveryDate,
+        deliveryDelayDays: staff.deliveryDelayDays,
+      });
+    }
+    expect(mine.find((c) => c.id === b)!.deliveryDelayDays).toBeGreaterThan(0);
+
+    const notice = await testApp.rawPrisma.notification.findFirstOrThrow({
+      where: { userId: customerId, templateCode: 'delivery_delayed_customer' },
+      orderBy: { createdAt: 'desc' },
+      select: { payload: true },
+    });
+    expect(notice.payload).toMatchObject({ entityType: 'contract' });
+    expect(contractIds).toContain((notice.payload as { entityId: string }).entityId);
   });
 });
