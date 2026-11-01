@@ -14,6 +14,8 @@ extension LeadRowDtoMapper on LeadRowDto {
         nextActionAt: DateTime.tryParse(nextActionAt ?? '')?.toLocal(),
         nextActionType: nextActionType,
         nextActionNote: nextActionNote,
+        campaignName: campaignName,
+        campaignChannel: campaignChannel,
       );
 }
 

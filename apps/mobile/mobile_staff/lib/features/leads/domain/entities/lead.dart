@@ -15,6 +15,8 @@ class Lead extends Equatable {
     this.nextActionAt,
     this.nextActionType,
     this.nextActionNote,
+    this.campaignName,
+    this.campaignChannel,
   });
 
   final String id;
@@ -32,8 +34,13 @@ class Lead extends Equatable {
   final String? nextActionType;
   final String? nextActionNote;
 
+  /// The marketing campaign that brought the lead, and its channel (FACEBOOK…).
+  final String? campaignName;
+  final String? campaignChannel;
+
   @override
-  List<Object?> get props => [id, fullName, stage, phone, createdAt, nextActionAt, nextActionType, nextActionNote];
+  List<Object?> get props =>
+      [id, fullName, stage, phone, createdAt, nextActionAt, nextActionType, nextActionNote, campaignName];
 }
 
 /// One entry on a lead's timeline — a logged activity (note, call, meeting,

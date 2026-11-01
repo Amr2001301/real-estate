@@ -3482,4 +3482,169 @@ class AppLocalizationsEn extends AppLocalizations {
   String signShareMessage(String name, String url) {
     return 'Hello $name, here is the link to review and sign your booking form:\n$url';
   }
+
+  @override
+  String get campaignsTitle => 'Campaigns';
+
+  @override
+  String get campaignsEmpty => 'No campaigns';
+
+  @override
+  String get campaignsEmptyHint =>
+      'Campaigns are set up and their spend recorded on the web dashboard.';
+
+  @override
+  String get campaignsSpend => 'Total spend';
+
+  @override
+  String get campaignsLeads => 'Leads';
+
+  @override
+  String get campaignsCpl => 'Cost per lead';
+
+  @override
+  String get campaignsWon => 'Sales';
+
+  @override
+  String get campaignsCpa => 'Cost per sale';
+
+  @override
+  String campaignLeadsCount(String n) {
+    return '$n leads';
+  }
+
+  @override
+  String campaignWonCount(String n) {
+    return '$n sales';
+  }
+
+  @override
+  String campaignLostCount(String n) {
+    return '$n leads lost';
+  }
+
+  @override
+  String campaignBudgetOf(String n) {
+    return 'of a $n budget';
+  }
+
+  @override
+  String get campaignQualified => 'Qualified';
+
+  @override
+  String get campaignChannel => 'Channel';
+
+  @override
+  String get campaignProject => 'Project';
+
+  @override
+  String get campaignSource => 'Source';
+
+  @override
+  String get campaignPeriod => 'Period';
+
+  @override
+  String get campaignBudget => 'Budget';
+
+  @override
+  String get campaignCode => 'Link code';
+
+  @override
+  String get campaignPlatforms => 'Where its leads came from';
+
+  @override
+  String get campaignSpendLog => 'Spend';
+
+  @override
+  String get campaignSpendEmpty => 'No spend recorded yet.';
+
+  @override
+  String get campaignOnDashboard =>
+      'Edit the campaign and record spend on the web dashboard.';
+
+  @override
+  String get campaignStatusPlanned => 'Planned';
+
+  @override
+  String get campaignStatusActive => 'Active';
+
+  @override
+  String get campaignStatusPaused => 'Paused';
+
+  @override
+  String get campaignStatusEnded => 'Ended';
+
+  @override
+  String get campaignChannelFacebook => 'Meta (Facebook + Instagram)';
+
+  @override
+  String get campaignChannelInstagram => 'Instagram';
+
+  @override
+  String get campaignChannelTiktok => 'TikTok';
+
+  @override
+  String get campaignChannelGoogle => 'Google';
+
+  @override
+  String get campaignChannelSnapchat => 'Snapchat';
+
+  @override
+  String get campaignChannelWhatsapp => 'WhatsApp';
+
+  @override
+  String get campaignChannelSms => 'SMS';
+
+  @override
+  String get campaignChannelEmail => 'Email';
+
+  @override
+  String get campaignChannelBillboard => 'Billboards';
+
+  @override
+  String get campaignChannelEvent => 'Event';
+
+  @override
+  String get campaignChannelOther => 'Other';
+
+  @override
+  String get campaignPlatformFacebook => 'Facebook';
+
+  @override
+  String get campaignPlatformInstagram => 'Instagram';
+
+  @override
+  String get campaignPlatformMessenger => 'Messenger';
+
+  @override
+  String get campaignPlatformAudience => 'Audience Network';
+
+  @override
+  String get campaignPlatformOther => 'Other source';
+
+  @override
+  String get campaignPlatformUnknown => 'Not known';
+
+  @override
+  String get leadCampaign => 'Campaign';
+
+  @override
+  String get leadCampaignHint =>
+      'The campaign that brought the lead (optional)';
+
+  @override
+  String get leadCampaignNone => 'No campaign';
+
+  @override
+  String get campaignsSubtitle => 'Spend, leads and sales from each campaign';
+
+  @override
+  String campaignFrom(String n) {
+    return 'From $n';
+  }
+
+  @override
+  String campaignUntil(String n) {
+    return 'Until $n';
+  }
 }

@@ -1008,6 +1008,15 @@ class _SecondaryActionsGrid extends StatelessWidget {
             subtitle: 'تحديد الأهداف الشهرية للفريق',
             onTap: () => context.push('/team-targets'),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          // MC1 — what each marketing campaign cost and brought.
+          _ManagerActionCell(
+            key: const Key('dashboard-campaigns'),
+            icon: Icons.campaign_rounded,
+            label: l10n.campaignsTitle,
+            subtitle: l10n.campaignsSubtitle,
+            onTap: () => context.push('/campaigns'),
+          ),
         ],
       ],
     );
@@ -1167,6 +1176,7 @@ class _ManagerSectionDivider extends StatelessWidget {
 
 class _ManagerActionCell extends StatelessWidget {
   const _ManagerActionCell({
+    super.key,
     required this.icon,
     required this.label,
     required this.subtitle,

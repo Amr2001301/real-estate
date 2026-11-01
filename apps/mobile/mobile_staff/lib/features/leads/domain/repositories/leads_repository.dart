@@ -34,6 +34,7 @@ class NewLead {
     this.projectInterestId,
     this.unitInterestId,
     this.notes,
+    this.campaignId,
   });
   final String? clientId;
   final String? fullName;
@@ -43,6 +44,9 @@ class NewLead {
   final String? projectInterestId;
   final String? unitInterestId;
   final String? notes;
+
+  /// The marketing campaign that brought the lead.
+  final String? campaignId;
 }
 
 class LeadSource {

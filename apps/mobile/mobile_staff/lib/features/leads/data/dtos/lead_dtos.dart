@@ -49,6 +49,8 @@ class LeadRowDto {
     this.nextActionAt,
     this.nextActionType,
     this.nextActionNote,
+    this.campaignName,
+    this.campaignChannel,
   });
 
   final String id;
@@ -62,12 +64,15 @@ class LeadRowDto {
   final String? nextActionAt;
   final String? nextActionType;
   final String? nextActionNote;
+  final String? campaignName;
+  final String? campaignChannel;
 
   factory LeadRowDto.fromJson(Map<String, dynamic> json) {
     final client = json['client'] as Map<String, dynamic>?;
     final assigned = json['assignedSales'] as Map<String, dynamic>?;
     final project = json['projectInterest'] as Map<String, dynamic>?;
     final projectName = project?['name'];
+    final campaign = json['campaign'] as Map<String, dynamic>?;
     return LeadRowDto(
       id: json['id'] as String,
       // Prefer the linked client's canonical contact; fall back to the row cache.
@@ -81,6 +86,8 @@ class LeadRowDto {
       nextActionAt: json['nextActionAt'] as String?,
       nextActionType: json['nextActionType'] as String?,
       nextActionNote: json['nextActionNote'] as String?,
+      campaignName: campaign?['name'] as String?,
+      campaignChannel: campaign?['channel'] as String?,
     );
   }
 }

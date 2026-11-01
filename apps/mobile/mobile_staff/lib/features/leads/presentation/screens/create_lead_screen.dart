@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../campaigns/domain/campaign.dart';
+import '../../../campaigns/presentation/campaigns_screen.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../cubit/create_lead_cubit.dart';
 
@@ -120,12 +122,26 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                       step: '02',
                       title: l10n.leadInterestSection,
                       subtitle: l10n.leadInterestSectionSubtitle,
-                      child: _SourcePicker(
-                        sources: state.sources,
-                        loading: state.sourcesLoading,
-                        selected: state.selectedSourceId,
-                        onChanged:
-                            context.read<CreateLeadCubit>().selectSource,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SourcePicker(
+                            sources: state.sources,
+                            loading: state.sourcesLoading,
+                            selected: state.selectedSourceId,
+                            onChanged:
+                                context.read<CreateLeadCubit>().selectSource,
+                          ),
+                          // MC1 — the campaign that brought the lead.
+                          if (state.campaigns.isNotEmpty) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            _CampaignPicker(
+                              campaigns: state.campaigns,
+                              selected: state.selectedCampaignId,
+                              onChanged: context.read<CreateLeadCubit>().selectCampaign,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
 
@@ -771,6 +787,53 @@ class _SourcePicker extends StatelessWidget {
                   child: Text(s.name),
                 ))
             .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Campaign picker
+// ══════════════════════════════════════════════════════════════════════════════
+class _CampaignPicker extends StatelessWidget {
+  const _CampaignPicker({required this.campaigns, required this.selected, required this.onChanged});
+
+  final List<CampaignOption> campaigns;
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    return Container(
+      key: const Key('lead-campaign-picker'),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        border: Border.all(color: colors.hairline),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 4),
+      child: DropdownButton<String?>(
+        value: selected,
+        isExpanded: true,
+        underline: const SizedBox.shrink(),
+        hint: Text(l10n.leadCampaignHint, style: TextStyle(color: colors.inkMuted, fontSize: 14)),
+        items: [
+          DropdownMenuItem<String?>(value: null, child: Text(l10n.leadCampaignNone)),
+          for (final c in campaigns)
+            DropdownMenuItem<String?>(
+              value: c.id,
+              child: Row(
+                children: [
+                  Icon(campaignChannelIcon(c.channel), size: 16, color: campaignChannelColor(c.channel)),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(child: Text(c.name, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+            ),
+        ],
         onChanged: onChanged,
       ),
     );

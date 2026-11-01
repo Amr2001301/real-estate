@@ -297,6 +297,15 @@ class _InfoCard extends StatelessWidget {
                               '${l10n.leadAssignedTo}: ${lead.assignedSalesName as String}',
                         ),
                       ],
+                      // MC1 — the campaign that brought the lead.
+                      if ((lead.campaignName as String?) != null) ...[
+                        const SizedBox(height: 3),
+                        _MetaRow(
+                          key: const Key('lead-campaign'),
+                          icon: Icons.campaign_rounded,
+                          text: '${l10n.leadCampaign}: ${lead.campaignName as String}',
+                        ),
+                      ],
                       if ((lead.email as String?) != null) ...[
                         const SizedBox(height: 3),
                         _MetaRow(
@@ -379,7 +388,7 @@ class _StagePill extends StatelessWidget {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.icon, required this.text});
+  const _MetaRow({super.key, required this.icon, required this.text});
   final IconData icon;
   final String   text;
 

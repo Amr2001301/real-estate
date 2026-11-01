@@ -6583,6 +6583,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hello {name}, here is the link to review and sign your booking form:\n{url}'**
   String signShareMessage(String name, String url);
+
+  /// No description provided for @campaignsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaigns'**
+  String get campaignsTitle;
+
+  /// No description provided for @campaignsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No campaigns'**
+  String get campaignsEmpty;
+
+  /// No description provided for @campaignsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaigns are set up and their spend recorded on the web dashboard.'**
+  String get campaignsEmptyHint;
+
+  /// No description provided for @campaignsSpend.
+  ///
+  /// In en, this message translates to:
+  /// **'Total spend'**
+  String get campaignsSpend;
+
+  /// No description provided for @campaignsLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get campaignsLeads;
+
+  /// No description provided for @campaignsCpl.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost per lead'**
+  String get campaignsCpl;
+
+  /// No description provided for @campaignsWon.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get campaignsWon;
+
+  /// No description provided for @campaignsCpa.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost per sale'**
+  String get campaignsCpa;
+
+  /// No description provided for @campaignLeadsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} leads'**
+  String campaignLeadsCount(String n);
+
+  /// No description provided for @campaignWonCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} sales'**
+  String campaignWonCount(String n);
+
+  /// No description provided for @campaignLostCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} leads lost'**
+  String campaignLostCount(String n);
+
+  /// No description provided for @campaignBudgetOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of a {n} budget'**
+  String campaignBudgetOf(String n);
+
+  /// No description provided for @campaignQualified.
+  ///
+  /// In en, this message translates to:
+  /// **'Qualified'**
+  String get campaignQualified;
+
+  /// No description provided for @campaignChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel'**
+  String get campaignChannel;
+
+  /// No description provided for @campaignProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get campaignProject;
+
+  /// No description provided for @campaignSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get campaignSource;
+
+  /// No description provided for @campaignPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get campaignPeriod;
+
+  /// No description provided for @campaignBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget'**
+  String get campaignBudget;
+
+  /// No description provided for @campaignCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Link code'**
+  String get campaignCode;
+
+  /// No description provided for @campaignPlatforms.
+  ///
+  /// In en, this message translates to:
+  /// **'Where its leads came from'**
+  String get campaignPlatforms;
+
+  /// No description provided for @campaignSpendLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend'**
+  String get campaignSpendLog;
+
+  /// No description provided for @campaignSpendEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No spend recorded yet.'**
+  String get campaignSpendEmpty;
+
+  /// No description provided for @campaignOnDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the campaign and record spend on the web dashboard.'**
+  String get campaignOnDashboard;
+
+  /// No description provided for @campaignStatusPlanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Planned'**
+  String get campaignStatusPlanned;
+
+  /// No description provided for @campaignStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get campaignStatusActive;
+
+  /// No description provided for @campaignStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get campaignStatusPaused;
+
+  /// No description provided for @campaignStatusEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get campaignStatusEnded;
+
+  /// No description provided for @campaignChannelFacebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Meta (Facebook + Instagram)'**
+  String get campaignChannelFacebook;
+
+  /// No description provided for @campaignChannelInstagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram'**
+  String get campaignChannelInstagram;
+
+  /// No description provided for @campaignChannelTiktok.
+  ///
+  /// In en, this message translates to:
+  /// **'TikTok'**
+  String get campaignChannelTiktok;
+
+  /// No description provided for @campaignChannelGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get campaignChannelGoogle;
+
+  /// No description provided for @campaignChannelSnapchat.
+  ///
+  /// In en, this message translates to:
+  /// **'Snapchat'**
+  String get campaignChannelSnapchat;
+
+  /// No description provided for @campaignChannelWhatsapp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get campaignChannelWhatsapp;
+
+  /// No description provided for @campaignChannelSms.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS'**
+  String get campaignChannelSms;
+
+  /// No description provided for @campaignChannelEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get campaignChannelEmail;
+
+  /// No description provided for @campaignChannelBillboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Billboards'**
+  String get campaignChannelBillboard;
+
+  /// No description provided for @campaignChannelEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get campaignChannelEvent;
+
+  /// No description provided for @campaignChannelOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get campaignChannelOther;
+
+  /// No description provided for @campaignPlatformFacebook.
+  ///
+  /// In en, this message translates to:
+  /// **'Facebook'**
+  String get campaignPlatformFacebook;
+
+  /// No description provided for @campaignPlatformInstagram.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram'**
+  String get campaignPlatformInstagram;
+
+  /// No description provided for @campaignPlatformMessenger.
+  ///
+  /// In en, this message translates to:
+  /// **'Messenger'**
+  String get campaignPlatformMessenger;
+
+  /// No description provided for @campaignPlatformAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience Network'**
+  String get campaignPlatformAudience;
+
+  /// No description provided for @campaignPlatformOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other source'**
+  String get campaignPlatformOther;
+
+  /// No description provided for @campaignPlatformUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not known'**
+  String get campaignPlatformUnknown;
+
+  /// No description provided for @leadCampaign.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaign'**
+  String get leadCampaign;
+
+  /// No description provided for @leadCampaignHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The campaign that brought the lead (optional)'**
+  String get leadCampaignHint;
+
+  /// No description provided for @leadCampaignNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No campaign'**
+  String get leadCampaignNone;
+
+  /// No description provided for @campaignsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spend, leads and sales from each campaign'**
+  String get campaignsSubtitle;
+
+  /// No description provided for @campaignFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {n}'**
+  String campaignFrom(String n);
+
+  /// No description provided for @campaignUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {n}'**
+  String campaignUntil(String n);
 }
 
 class _AppLocalizationsDelegate
