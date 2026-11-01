@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-10-28, after #206)
+# Handoff — where the work stands (2026-11-01, after #229)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -15,7 +15,7 @@
 - **U3 العميل والمهام التلقائية:** خلص — #95، #96، #97، #98 (تسليم الوحدة)، وحذف حساب العميل (آخر PR).
 - **U4 التقارير:** خلص — #100، #101، وتوقيت الشركة في التقارير (آخر PR).
 
-ملاحظة: ملفات الترجمة المولّدة في تطبيقات الموبايل (`packages/core/lib/src/l10n/generated/`) اتعدّلت يدوياً لأن Flutter مش متاح في السحابة؛ الـ CI بيشغّل `flutter analyze` عليها.
+ملاحظة: Flutter بقى متاح في بيئة السحابة (`/opt/flutter-sdk/flutter/bin`)، فملفات الترجمة المولّدة (`packages/core/lib/src/l10n/generated/`) بتتعمل بـ `flutter gen-l10n`، و`flutter analyze` و`flutter test` بيشتغلوا محليًا قبل الرفع.
 
 **التصميم الجديد (U5):** خلص كله. اعتمدت شكل جديد للوحة التحكم (أدمن، مبيعات، بروكر): خطوط جديدة، شريط أرقام كحلي، رأس صفحة أبسط، فلتر موحّد، جداول بهيدر كحلي، ووضع داكن — والتصميم نفسه على [هذا اللينك](https://claude.ai/artifact/UPVXRtVxEBMWpmuRMYqb1Z). اتنفّذ في #104 (الأساس والوضع الداكن)، #105 (المكوّنات المشتركة + المشاريع والمخزون والفرص)، #106 (الداشبورد بأرقام صح + صفحة التقارير)، #107 (الألوان القديمة في الداكن، الكروت، تبويب المالي، صفحات المبيعات والبروكر، صفحات التفاصيل، فلاتر البروكر). أي شاشة جديدة تتبني من المكوّنات المشتركة (القسم 3 تحت U5).
 
@@ -43,15 +43,19 @@
 
 **بعد كده (28 أكتوبر، #198–#206):** القسم 2d. باختصار: تنبيهات المتابعة (FU2)، أزرار الاتصال والواتساب وإخفاء أرقام العملاء عن غير المسؤول (#200)، العملاء المكررين ودمجهم (#201)، التقويم بالزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود (#202)، الأجهزة المتصلة وتسجيل الخروج منها (#203)، التحقق بخطوتين بتطبيق مصادقة في لوحة التحكم (#204) وتطبيق الموظفين (#205)، وسبب الخسارة في تطبيق الموظفين (#206). كده قايمة المنافسين اللي اتفقنا عليها خلصت.
 
-**PR #199 (نقل البيانات — MG1، من الأكونت التاني):** لسه مفتوح. قبل الدمج لازم يعمل merge من `main` ويغيّر اسم الـ migration بتاعه. الخطوات بالتفصيل في القسم **2e** تحت، ومتجرّبة على `main` الحالي.
-
-**الخطوة الجاية — الصلاحيات تفتح الصفحات (PRM):** حاليًا الصلاحية بتقلّل من اللي الدور يقدر يعمله بس، ومش بتفتح صفحة مش من صفحات الدور. اتفقنا إن الصلاحية هي اللي تفتح الصفحة، والدور يبقى قالب صلاحيات جاهز، مع إن الصلاحيات الخطيرة تفضل للأدمن بس. الخطة بالتفصيل في القسم **4c**، وهتتعمل من الأكونت التاني على مراحل. قرار نطاق البيانات (28 أكتوبر): اللي ياخد صلاحية فلوس أو تقارير أو إدارة يشوف الشركة كلها؛ صفحات المبيعات وبيانات العملاء تفضل بالفريق أو بتاعة المندوب بس، وأرقام التليفون تفضل مخفية عن اللي مش مسؤول عن العميل.
+**بعد كده (28 أكتوبر → 1 نوفمبر، #199 و#210–#229، من الأكونت التاني):** القسم **2g** تحت. باختصار:
+- **نقل البيانات من نظام تاني (#199، #217):** نظام زي «إنجاز» يبعت بيانات شركة بالـ API بمفتاح، وشاشة عند السوبر أدمن تربط القيم اللي مش متعرّفة بقيمنا مرة واحدة لكل نظام (القسم 2f).
+- **الصلاحيات بقت بتفتح الصفحات (#210–#216):** الصلاحية هي اللي بتدخّل الموظف الصفحة، والصلاحيات الخطيرة للأدمن بس. صفحات الفلوس والتقارير والإدارة بتعرض الشركة كلها لمين ياخدها؛ المبيعات وبيانات العملاء بالفريق أو بتاعة المندوب. والمستندات وإجراءات الأدمن في الزيارات فضلت للأدمن (القسم 4c).
+- **لوحة التحكم والموقع:** القائمة الجانبية أقسام بتتفتح وتتقفل وفيها بحث، والإعدادات في صفحة واحدة (#218)؛ صفحات المحتوى والبانرات بقت تظهر على الموقع (#219)؛ استمارة الحجز للتوقيع الإلكتروني الـ API بقى هو اللي بيجهزها (#226).
+- **تطبيق الموظفين:** المتابعات (#220)، التقويم (#221)، أسماء الرسوم والغرامات بالعربي في التطبيقين (#222)، الشيكات وتسجيل الإيداع والصرف (#223، #224)، المساعد الذكي (#225)، إرسال استمارة الحجز للتوقيع (#226)، الحملات (#227)، العملاء المكررين (#228)، وصفحة «الأمان» (#229).
+- **مفتوح:** #230 — الصلاحيات تفتح الصفحات في تطبيق الموظفين كمان.
+- **ملحوظة:** شاشات الموبايل الجديدة اتختبرت بالاختبارات وبالرسم بس، ما اتجرّبتش على موبايل حقيقي.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #206 مدموج و`main` نضيف (ما عدا #199 من الأكونت التاني — القسم 2e)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #229 مدموج و`main` نضيف (المفتوح: #230)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -259,7 +263,7 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 | #195 | MC1 | Marketing campaigns: `Campaign`, `CampaignSpend` (by date), `Lead.campaignId`, `campaigns:manage`; tracking links; website leads linked by `utm_campaign`. |
 | #196 | MC2 | Automatic lead intake: `LeadIntakeKey`, public `POST /v1/intake/:slug/leads` (Zapier / Make), round-robin over active SALES users (`leads.autoAssign`, `leads.roundRobinCursor`), first call (`leads.firstCallMinutes`); website leads routed the same way. |
 | #197 | MC3 | Campaign reports (`GET campaigns/report` + PDF / Excel; first-touch sales and revenue, CPL, CPA, ROI, by channel / project / month); the Facebook channel is «ميتا (فيسبوك + إنستجرام)» with leads split by platform (`utm_source={{site_source_name}}`); web-public keeps ad tags from any landing page for 30 days. |
-| #199 | MG1 | **Open — other account.** Data migration API. Merge steps in 2e. |
+| #199 | MG1 | Data migration API (merged 2026-10-28 after the steps in 2e; design in 2f). |
 | #200 | QA1 + MP1 | Call / WhatsApp buttons on leads (`POST leads/:id/contact` logs each tap, then the activity form opens); customer phones masked for anyone who is not responsible for the lead (`common/utils/contact-mask.ts`). |
 | #201 | DUP1 | «العملاء المكررين»: open leads that share a customer (`GET leads/duplicates`), merged into one (`POST leads/:id/merge`: notes, activity, visits, chats move; a lead with a reservation or a broker is never merged away). |
 | #202 | CAL1 | «التقويم» (`GET leads/calendar`): visits, follow-ups due, logged calls, reservation expiries and contract signings, a month at a time, in the caller's scope; rep filter for admins and managers. |
@@ -274,7 +278,7 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 
 **Competitor-gap backlog:** done (#200–#206). Resale/rentals is the owner's call. Academy, jobs and a social timeline are not wanted.
 
-### 2e. Merging #199 (MG1 — data migration API, other account) — step by step
+### 2e. Merging #199 (MG1 — data migration API, other account) — step by step (done: #199 merged 2026-10-28)
 
 > For the Claude session on the other account that owns #199 (branch `claude/awesome-galileo-ob9jmm`). Since it was opened, `main` moved by #198 and #200–#206. **This was rehearsed on 2026-10-28 against `main` at `f2615e6`:** merging `main` into the branch conflicts in exactly two files, and after the steps below the API typechecks, the unit suite passes (176 suites / 2,679 tests), e2e `e2e-mg1-data-migration` passes next to `e2e-tfa1-two-factor`, `e2e-ses1-sessions` and `e2e-isolated-apps`, the security suite passes except A9-2 (needs MinIO; local only), and web-admin typechecks.
 
@@ -326,6 +330,36 @@ Then hard-refresh the browser (Ctrl+Shift+R). Being on another branch (e.g. an o
 - API: `GET/PUT super-admin/companies/:companyId/migrations/mapping` (`MigrationMappingService`). Model `MigrationMapping` (PLATFORM_GLOBAL, nullable companyId); migration `20261030090000_migration_mapping`. e2e `e2e-mg2-migration-mapping`.
 
 **Next (not started):** the same mapping on any Excel/CSV file from any system; later, if wanted, contracts/instalments/payments, and the reverse (a company taking its data out over the API).
+
+### 2g. #199, #210–#229 (2026-10-28 → 2026-11-01, other account)
+
+| PR | Slice | Main points |
+|---|---|---|
+| #199 | MG1 | Data migration API: `POST /v1/migration/:slug/{projects\|units\|customers\|leads\|activities}` with a key the platform owner makes on the company page; matched by the other system's id, `?dryRun=true`, nothing lost (`extra` / `unmapped`). Format: `docs/DATA_MIGRATION_API.md`. See 2f. |
+| #210 | PRM1 | `@GrantedBy(code)` lets a staff member into a route outside its `@Roles` when they hold the code; admin-only codes in `common/permissions/staff-codes.ts` (refused on assignment, ignored if held); `GET /me/permissions`; web-admin nav and pages read the codes. Opened: projects/phases/buildings/units/media, campaigns + intake, lead sources + lost reasons, CMS, notification templates and sending. See 4c. |
+| #211 | PRM2a | Reports open by `reports:sales\|operational\|financial:read`, with the admin's figures. |
+| #212 | PRM2b | Contracts and payments: a rep sees their own sales, a manager their team's; `contracts:read:all` / `deposits:read:all` (in no starting set) open the whole company's. Helper `common/permissions/company-wide.ts`. |
+| #213 | PRM2c | Cheques open by `payment-instruments:manage` (bounce stays admin); bonus: own/team by default, `bonus:entries:read:all`, `bonus:rules:manage`, `bonus:entries:create`; approve/pay stay admin. |
+| #214 | PRM2d | Broker leads and reservations are sales data (own/team; before, every rep saw every broker lead with phones); broker admin pages open by their codes; suspending, approvals, payouts and invites stay admin. |
+| #215 | PRM2e | Maintenance: `maintenance:manage:all` opens the dashboard's maintenance (whole company); supervisors keep their own requests. |
+| #216 | PRM2f | Unit export by `units:export`; documents and the admin visit actions stay admin-only (owner's decision). |
+| #217 | MG2 | Mapping screen «ربط البيانات المحفوظة» on the super-admin company page; choices apply to moved records only where nobody changed them by hand. `MigrationMapping`; `GET/PUT super-admin/companies/:id/migrations/mapping`. See 2f. |
+| #218 | web-admin | Sidebar in collapsible sections with search (Ctrl/⌘+K); one settings page `/dashboard/setup`. Same visibility rules. |
+| #219 | CMS1 | Banners (rotating strip on the site home) and published pages (`/pages/<slug>`, `GET /public/pages`, footer and sitemap) reach web-public; page/article slugs unique per company; link and image URLs validated. |
+| #220 | Staff app | Follow-ups: log a call/meeting/WhatsApp with result and next follow-up; «المتابعات» overdue/today/upcoming; home card; morning list opens it. |
+| #221 | Staff app | «التقويم»: a week strip with visits, follow-ups, reservation expiries, contract signings and logged calls. |
+| #222 | Mobile | Fees and penalties named in Arabic in both apps (`FEE`, bounce penalty, late fee, transfer fee); staff payments list names the booking amount. |
+| #223 | Staff app | «الشيكات» list and detail (admin and sales manager). Fixed: leads, visits and follow-ups lists stopped at 20 (read `meta` for paging). |
+| #224 | Staff app | Cheques: «اتودّع في البنك» and «اتصرف» (with clearing date) from the phone; bounce/cancel/replace stay on the dashboard. |
+| #225 | Staff app | The AI assistant chat (`GET /ai/status`, `POST /ai/ask`), with quota and error states. |
+| #226 | E-sign | The booking form for e-signature is built by the API (`e-sign/document/booking-document.ts`; a client can no longer send its own document); the staff app sends it, shows the link, resends, cancels, and shows the signature. The dashboard's print page keeps its own copy of the printing code — a change to the booking form must be made in both. |
+| #227 | Staff app | Campaigns: picker on a new lead, the campaign on the lead, managers' list and detail (read-only). |
+| #228 | Staff app | Duplicate leads: keep one and merge the others (admin, and a manager for their team). |
+| #229 | Staff app | «الأمان»: devices (sign out one / all others), two-step sign-in (turn on/off, recovery codes), password change. |
+
+**Deploy notes (new since #206):** 3 more migrations — `20261029090000_data_migration`, `20261030090000_migration_mapping`, `20261101090000_cms_slug_per_company` (drops and creates indexes only). The data migration needs `PUBLIC_API_URL`. New e2e specs are in the CI e2e-2 list (`e2e-mg1`, `e2e-mg2`, `e2e-prm1`, `e2e-prm2a`–`e2e-prm2f`, `e2e-cms1-pages-banners`).
+
+**Not yet done:** the new staff-app screens were checked by tests and by rendering them, not on a real phone against a real server. Open: #230 (the staff app reads `/me/permissions`, so codes open its screens too).
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -611,10 +645,9 @@ Left for the owner, not in V1–V3:
   - The broker portal does not get the customer's national ID, address or extra fields.
   - An unsigned contract's due rows are not chased until it is signed; they only show in the report and the dashboard tile.
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
-- **Mobile fee labels:** the customer app shows a FEE payment as a normal "payment", the staff app prints `FEE`. Needs Flutter (not available in the cloud container).
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
 - **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**
-  - Production deploy of everything since 2026-09-18 (#114–#206): take a backup first, run the migrations of 2b, 2c and 2d, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
+  - Production deploy of everything since 2026-09-18 (#114–#229): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
   - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`, `TOTP_ENCRYPTION_KEY` (before anyone turns two-step sign-in on).
   - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
