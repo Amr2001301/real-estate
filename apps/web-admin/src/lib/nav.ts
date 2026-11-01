@@ -196,7 +196,8 @@ export const NAV_SECTIONS: NavSection[] = [
       // Customers' payment proofs waiting for an admin (approve / reject).
       { href: '/dashboard/payments/review', label: 'إيصالات الدفع', labelKey: 'paymentProofs', iconKey: 'Receipt', admin: true },
       // FG-01 — GET /payment-instruments is ADMIN + SALES_MANAGER.
-      { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, manager: true, perm: ['payment-instruments:manage'] },
+      // Admin, or the code — the API asks a sales manager for it too.
+      { href: '/dashboard/cheques', label: 'الشيكات', labelKey: 'cheques', iconKey: 'Landmark', admin: true, perm: ['payment-instruments:manage'] },
       // Receivables and payables (GET /reports/ledger: ADMIN, or reports:financial:read).
       { href: '/dashboard/ledger', label: 'المستحقات والالتزامات', labelKey: 'ledger', iconKey: 'Scale', admin: true, perm: ['reports:financial:read'] },
     ],

@@ -29,7 +29,9 @@ void main() {
   test('managers see the money pages by role; a rep only with the code', () {
     const none = StaffPermissions();
     expect(StaffAccess.cheques(AppRole.admin, none), isTrue);
-    expect(StaffAccess.cheques(AppRole.salesManager, none), isTrue);
+    // The API asks a sales manager for the code too (not in their starting set).
+    expect(StaffAccess.cheques(AppRole.salesManager, none), isFalse);
+    expect(StaffAccess.cheques(AppRole.salesManager, const StaffPermissions({'payment-instruments:manage'})), isTrue);
     expect(StaffAccess.cheques(AppRole.sales, none), isFalse);
     expect(StaffAccess.campaigns(AppRole.sales, none), isFalse);
     expect(StaffAccess.paymentsReview(AppRole.sales, none), isFalse);

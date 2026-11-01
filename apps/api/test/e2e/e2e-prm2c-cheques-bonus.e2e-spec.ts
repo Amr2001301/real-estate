@@ -133,4 +133,25 @@ describe('PRM2c — cheques and bonus open by their codes (e2e)', () => {
       .expect(403);
     await grant(['bonus:rules:manage', 'bonus:entries:approve', 'bonus:entries:pay'], true);
   });
+  it('PRM2c-5: a sales manager opens the cheques only with the code (it is not in their starting set)', async () => {
+    const created = await as(adminToken, http().post('/v1/users'))
+      .send({ role: 'SALES_MANAGER', fullName: 'PRM2c Manager', email: `prm2c-mgr-${stamp}@example.com`, password: 'Prm2cMgrPass123!' })
+      .expect(201);
+    const managerId = created.body.id as string;
+    try {
+      const token = await testApp.signAccessToken(managerId, 'SALES_MANAGER');
+      const codes = (await as(token, http().get('/v1/me/permissions')).expect(200)).body.codes as string[];
+      expect(codes).not.toContain('payment-instruments:manage');
+      await as(token, http().get('/v1/payment-instruments')).expect(403);
+      await as(adminToken, http().patch(`/v1/users/${managerId}/permissions`))
+        .send({ addPermissionCodes: ['payment-instruments:manage'] })
+        .expect(200);
+      await as(token, http().get('/v1/payment-instruments')).expect(200);
+    } finally {
+      const raw = testApp.rawPrisma;
+      await raw.userPermission.deleteMany({ where: { userId: managerId } });
+      await raw.auditLog.deleteMany({ where: { OR: [{ entityId: managerId }, { actorId: managerId }] } });
+      await raw.user.deleteMany({ where: { id: managerId } });
+    }
+  });
 });

@@ -22,8 +22,10 @@ abstract final class StaffAccess {
   /// «مراجعة الإيصالات» — the review queue (deposits:read:all).
   static bool paymentsReview(AppRole? r, StaffPermissions p) => _manager(r) || p.has('deposits:read:all');
 
-  /// «الشيكات» (payment-instruments:manage).
-  static bool cheques(AppRole? r, StaffPermissions p) => _manager(r) || p.has('payment-instruments:manage');
+  /// «الشيكات» (payment-instruments:manage). The admin, or whoever holds the
+  /// code: the API asks a sales manager for the code too, and it is not in
+  /// their starting set, so the role alone would open a page that answers 403.
+  static bool cheques(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('payment-instruments:manage');
 
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
