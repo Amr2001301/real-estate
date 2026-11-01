@@ -3710,4 +3710,127 @@ class AppLocalizationsEn extends AppLocalizations {
   String duplicatesMerged(String n) {
     return '$n merged';
   }
+
+  @override
+  String get securityDevices => 'Devices';
+
+  @override
+  String get securityDevicesHint =>
+      'The devices signed in to your account. If one isn\'t yours, sign it out and change your password.';
+
+  @override
+  String get securityThisDevice => 'This device';
+
+  @override
+  String securityLastSeen(String when) {
+    return 'Last used $when';
+  }
+
+  @override
+  String get securityDeviceIphone => 'iPhone';
+
+  @override
+  String get securityDeviceAndroid => 'Android';
+
+  @override
+  String get securityDeviceBrowser => 'Browser';
+
+  @override
+  String get securityDeviceUnknown => 'Device';
+
+  @override
+  String securityBrowserOn(String browser, String os) {
+    return '$browser on $os';
+  }
+
+  @override
+  String get securitySignOut => 'Sign out';
+
+  @override
+  String get securitySignOutTitle => 'Sign this device out?';
+
+  @override
+  String securitySignOutBody(String device) {
+    return '$device will have to sign in again.';
+  }
+
+  @override
+  String get securitySignedOut => 'The device was signed out';
+
+  @override
+  String get securitySignOutOthers => 'Sign out all other devices';
+
+  @override
+  String get securitySignOutOthersTitle => 'Sign out all other devices?';
+
+  @override
+  String get securitySignOutOthersBody =>
+      'Every device but this phone will have to sign in again.';
+
+  @override
+  String securitySignedOutOthers(String n) {
+    return '$n devices signed out';
+  }
+
+  @override
+  String get securityOn => 'On';
+
+  @override
+  String get securityOff => 'Off';
+
+  @override
+  String get securityTfaHint =>
+      'A code from an authenticator app with your password at each sign-in.';
+
+  @override
+  String get securityTfaRequired =>
+      'Your company requires two-step sign-in, so it can\'t be turned off.';
+
+  @override
+  String get securityTfaTurnOn => 'Turn on two-step sign-in';
+
+  @override
+  String get securityTfaTurnOff => 'Turn off';
+
+  @override
+  String get securityTfaSetupHint =>
+      'Add this key to an authenticator app (Google or Microsoft Authenticator), then type the code it shows.';
+
+  @override
+  String get securityTfaOffBody =>
+      'Enter your password and a code from the app to turn two-step sign-in off.';
+
+  @override
+  String get securityTfaOffDone => 'Two-step sign-in is off';
+
+  @override
+  String securityRecoveryLeft(String n) {
+    return '$n recovery codes left';
+  }
+
+  @override
+  String get securityNewCodes => 'New recovery codes';
+
+  @override
+  String get securityNewCodesBody =>
+      'The old codes stop working. Enter a code from the app to get new ones.';
+
+  @override
+  String get securityPasswordHint =>
+      'A strong password of at least 8 characters.';
+
+  @override
+  String get securityChangePassword => 'Change password';
+
+  @override
+  String get securityCurrentPassword => 'Current password';
+
+  @override
+  String get securityPasswordAgain => 'Type the new password again';
+
+  @override
+  String get securityPasswordMismatch => 'The passwords don\'t match';
+
+  @override
+  String get securityPasswordChanged => 'Password changed';
 }

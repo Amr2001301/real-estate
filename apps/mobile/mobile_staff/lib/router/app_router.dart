@@ -11,6 +11,9 @@ import '../features/assistant/domain/assistant.dart';
 import '../features/assistant/presentation/assistant_cubit.dart';
 import '../features/assistant/presentation/assistant_screen.dart';
 import '../features/calendar/domain/calendar_event.dart';
+import '../features/security/domain/security.dart';
+import '../features/security/presentation/security_cubit.dart';
+import '../features/security/presentation/security_screen.dart';
 import '../features/duplicates/domain/duplicates.dart';
 import '../features/duplicates/presentation/duplicates_cubit.dart';
 import '../features/duplicates/presentation/duplicates_screen.dart';
@@ -175,7 +178,7 @@ String? staffRedirect(SessionState session, String loc) {
 
   // `/notifications` is a shared inbox; the backend scopes results to the
   // signed-in user regardless of role.
-  const sharedPaths = {'/notifications', '/notifications/preferences'};
+  const sharedPaths = {'/notifications', '/notifications/preferences', '/security'};
 
   // Broker workspace: brokers may only navigate within `/broker/*` (+ shared).
   if (role.isBroker) {
@@ -417,6 +420,15 @@ GoRouter createStaffRouter(
         builder: (context, state) => BlocProvider(
           create: (ctx) => DuplicatesCubit(ctx.read<DuplicatesRepository>()),
           child: const DuplicatesScreen(),
+        ),
+      ),
+
+      // ── Security (SES1/TFA1): own devices, two-step sign-in, password ───
+      GoRoute(
+        path: '/security',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => SecurityCubit(ctx.read<SecurityRepository>()),
+          child: const SecurityScreen(),
         ),
       ),
 

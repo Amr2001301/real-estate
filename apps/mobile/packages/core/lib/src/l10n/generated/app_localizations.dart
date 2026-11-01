@@ -6985,6 +6985,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n} merged'**
   String duplicatesMerged(String n);
+
+  /// No description provided for @securityDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get securityDevices;
+
+  /// No description provided for @securityDevicesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The devices signed in to your account. If one isn\'t yours, sign it out and change your password.'**
+  String get securityDevicesHint;
+
+  /// No description provided for @securityThisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get securityThisDevice;
+
+  /// No description provided for @securityLastSeen.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used {when}'**
+  String securityLastSeen(String when);
+
+  /// No description provided for @securityDeviceIphone.
+  ///
+  /// In en, this message translates to:
+  /// **'iPhone'**
+  String get securityDeviceIphone;
+
+  /// No description provided for @securityDeviceAndroid.
+  ///
+  /// In en, this message translates to:
+  /// **'Android'**
+  String get securityDeviceAndroid;
+
+  /// No description provided for @securityDeviceBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser'**
+  String get securityDeviceBrowser;
+
+  /// No description provided for @securityDeviceUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Device'**
+  String get securityDeviceUnknown;
+
+  /// No description provided for @securityBrowserOn.
+  ///
+  /// In en, this message translates to:
+  /// **'{browser} on {os}'**
+  String securityBrowserOn(String browser, String os);
+
+  /// No description provided for @securitySignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get securitySignOut;
+
+  /// No description provided for @securitySignOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign this device out?'**
+  String get securitySignOutTitle;
+
+  /// No description provided for @securitySignOutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{device} will have to sign in again.'**
+  String securitySignOutBody(String device);
+
+  /// No description provided for @securitySignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'The device was signed out'**
+  String get securitySignedOut;
+
+  /// No description provided for @securitySignOutOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out all other devices'**
+  String get securitySignOutOthers;
+
+  /// No description provided for @securitySignOutOthersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out all other devices?'**
+  String get securitySignOutOthersTitle;
+
+  /// No description provided for @securitySignOutOthersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every device but this phone will have to sign in again.'**
+  String get securitySignOutOthersBody;
+
+  /// No description provided for @securitySignedOutOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} devices signed out'**
+  String securitySignedOutOthers(String n);
+
+  /// No description provided for @securityOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get securityOn;
+
+  /// No description provided for @securityOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get securityOff;
+
+  /// No description provided for @securityTfaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A code from an authenticator app with your password at each sign-in.'**
+  String get securityTfaHint;
+
+  /// No description provided for @securityTfaRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your company requires two-step sign-in, so it can\'t be turned off.'**
+  String get securityTfaRequired;
+
+  /// No description provided for @securityTfaTurnOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on two-step sign-in'**
+  String get securityTfaTurnOn;
+
+  /// No description provided for @securityTfaTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off'**
+  String get securityTfaTurnOff;
+
+  /// No description provided for @securityTfaSetupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add this key to an authenticator app (Google or Microsoft Authenticator), then type the code it shows.'**
+  String get securityTfaSetupHint;
+
+  /// No description provided for @securityTfaOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password and a code from the app to turn two-step sign-in off.'**
+  String get securityTfaOffBody;
+
+  /// No description provided for @securityTfaOffDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Two-step sign-in is off'**
+  String get securityTfaOffDone;
+
+  /// No description provided for @securityRecoveryLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} recovery codes left'**
+  String securityRecoveryLeft(String n);
+
+  /// No description provided for @securityNewCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'New recovery codes'**
+  String get securityNewCodes;
+
+  /// No description provided for @securityNewCodesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The old codes stop working. Enter a code from the app to get new ones.'**
+  String get securityNewCodesBody;
+
+  /// No description provided for @securityPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A strong password of at least 8 characters.'**
+  String get securityPasswordHint;
+
+  /// No description provided for @securityChangePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get securityChangePassword;
+
+  /// No description provided for @securityCurrentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get securityCurrentPassword;
+
+  /// No description provided for @securityPasswordAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the new password again'**
+  String get securityPasswordAgain;
+
+  /// No description provided for @securityPasswordMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The passwords don\'t match'**
+  String get securityPasswordMismatch;
+
+  /// No description provided for @securityPasswordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get securityPasswordChanged;
 }
 
 class _AppLocalizationsDelegate
