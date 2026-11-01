@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../content/presentation/content_widgets.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../../home_summary/presentation/home_summary_cubit.dart';
 import '../../../notifications/presentation/widgets/customer_notification_button.dart';
@@ -127,6 +128,10 @@ class HomeScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: AppSpacing.lg),
+            // CMS1 — the company's banners, as on its website.
+            const HomeBanners(
+              padding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+            ),
             AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle.dark.copyWith(
                 statusBarColor: Colors.transparent,

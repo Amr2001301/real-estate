@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../content/presentation/content_widgets.dart';
 import '../../../../common/plan_banner.dart';
 import '../../../home_summary/domain/entities/home_summary.dart';
 import '../../../home_summary/presentation/home_summary_cubit.dart';
@@ -102,6 +103,8 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // CMS1 — the company's banners, as on its website.
+          const HomeBanners(padding: EdgeInsets.only(bottom: AppSpacing.md)),
           // 1 · Action card
           _ActionCard(action: summary.primaryAction),
           const SizedBox(height: AppSpacing.md),

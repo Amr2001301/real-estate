@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'features/content/data/content_repository_impl.dart';
+import 'features/content/domain/content.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
@@ -96,6 +98,10 @@ class CustomerApp extends StatelessWidget {
             AuthRemoteDataSourceImpl(ctx.read<Dio>()),
             ctx.read<TokenStorage>(),
           ),
+        ),
+        // CMS1 — the company's banners and published pages.
+        RepositoryProvider<ContentRepository>(
+          create: (ctx) => ContentRepositoryImpl(ctx.read<Dio>()),
         ),
         RepositoryProvider<CatalogRepository>(
           create: (ctx) {

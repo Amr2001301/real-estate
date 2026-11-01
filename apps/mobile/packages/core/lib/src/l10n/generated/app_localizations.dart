@@ -7507,6 +7507,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'South-west'**
   String get unitOrientationSouthWest;
+
+  /// No description provided for @contentAboutCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'About the company'**
+  String get contentAboutCompany;
+
+  /// No description provided for @contentPageEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This page is empty for now.'**
+  String get contentPageEmpty;
 }
 
 class _AppLocalizationsDelegate

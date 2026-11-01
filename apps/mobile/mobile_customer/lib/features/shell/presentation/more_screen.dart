@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../content/presentation/content_widgets.dart';
+
 // Navy depth tokens — shared design language with projects/units/compare.
 const _navyDeep = Color(0xFF0B1726);
 const _navyMid = Color(0xFF14273F);
@@ -67,6 +69,9 @@ class MoreScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.xl),
+                  // CMS1 — the company's published pages (about, terms…).
+                  CompanyPagesCard(title: l10n.contentAboutCompany),
                   const SizedBox(height: AppSpacing.xl),
 
                   // ── Settings ─────────────────────────────────────────────

@@ -3955,4 +3955,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get unitOrientationSouthWest => 'قبلي غربي';
+
+  @override
+  String get contentAboutCompany => 'عن الشركة';
+
+  @override
+  String get contentPageEmpty => 'الصفحة دي لسه فاضية.';
 }
