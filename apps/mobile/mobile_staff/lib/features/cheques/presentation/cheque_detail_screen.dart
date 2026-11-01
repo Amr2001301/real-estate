@@ -10,7 +10,9 @@ import 'cheques_cubit.dart';
 import 'cheques_screen.dart';
 
 /// FG-01 — one cheque: its amount and status, the bank and due date, whose
-/// it is and what it pays. Read-only: the actions stay on the dashboard.
+/// it is and what it pays; and the two steps recorded from the phone —
+/// deposited at the bank, then cleared. Bouncing, cancelling and replacing
+/// stay on the dashboard.
 class ChequeDetailScreen extends StatefulWidget {
   const ChequeDetailScreen({super.key});
 
@@ -35,9 +37,9 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
       backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
-          BlocBuilder<ChequeDetailCubit, DataState<Cheque>>(
+          BlocBuilder<ChequeDetailCubit, ChequeDetailState>(
             builder: (context, state) {
-              final number = state.data?.number ?? row?.number;
+              final number = state.cheque?.number ?? row?.number;
               return AppNavHeader(
                 title: number != null ? '${l10n.chequeNumberLabel} $number' : l10n.chequesTitle,
                 compact: true,
@@ -49,12 +51,26 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
             },
           ),
           Expanded(
-            child: BlocBuilder<ChequeDetailCubit, DataState<Cheque>>(
+            child: BlocConsumer<ChequeDetailCubit, ChequeDetailState>(
+              listenWhen: (a, b) => a.actionFailure != b.actionFailure || a.done != b.done,
+              listener: (context, state) {
+                if (state.actionFailure != null) {
+                  showFailureSnackBar(context, state.actionFailure!);
+                } else if (state.done != null) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(
+                      content: Text(state.done == 'clear' ? l10n.chequeClearedDone : l10n.chequeDepositedDone),
+                    ));
+                }
+              },
               builder: (context, state) {
-                if (state.isFailure) return ErrorState(failure: state.failure, onRetry: cubit.load);
-                final c = state.data;
+                final c = state.cheque;
+                if (state.status == DataStatus.failure && c == null) {
+                  return ErrorState(failure: state.failure, onRetry: cubit.load);
+                }
                 if (c == null) return const StaffListSkeleton(rows: 4, lines: 3);
-                return RefreshIndicator(onRefresh: cubit.load, child: _Body(cheque: c));
+                return RefreshIndicator(onRefresh: cubit.load, child: _Body(cheque: c, working: state.working));
               },
             ),
           ),
@@ -65,8 +81,9 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.cheque});
+  const _Body({required this.cheque, required this.working});
   final Cheque cheque;
+  final bool working;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +142,22 @@ class _Body extends StatelessWidget {
         if (dueNow) ...[
           const SizedBox(height: AppSpacing.sm),
           _Banner(icon: Icons.account_balance_rounded, text: l10n.chequeDueForDeposit, color: colors.error),
+        ],
+        // ── The next step: deposited at the bank, then cleared ──────────
+        if (c.canDeposit || c.canClear) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppButton(
+            key: Key(c.canDeposit ? 'cheque-deposit' : 'cheque-clear'),
+            label: c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear,
+            icon: c.canDeposit ? Icons.account_balance_rounded : Icons.task_alt_rounded,
+            variant: AppButtonVariant.gold,
+            size: AppButtonSize.large,
+            expand: true,
+            isLoading: working,
+            onPressed: working
+                ? null
+                : () => c.canDeposit ? _confirmDeposit(context) : _confirmClear(context),
+          ),
         ],
         if (c.status == 'BOUNCED' && (c.bounceReason?.trim().isNotEmpty ?? false)) ...[
           const SizedBox(height: AppSpacing.sm),
@@ -188,6 +221,74 @@ class _Body extends StatelessWidget {
       ],
     );
   }
+}
+
+Future<void> _confirmDeposit(BuildContext context) async {
+  final l10n = context.l10n;
+  final cubit = context.read<ChequeDetailCubit>();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.chequeDepositTitle),
+      content: Text(l10n.chequeDepositHint),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.actionCancel)),
+        FilledButton(
+          key: const Key('cheque-deposit-confirm'),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(l10n.chequeConfirm),
+        ),
+      ],
+    ),
+  );
+  if (ok == true) await cubit.deposit();
+}
+
+Future<void> _confirmClear(BuildContext context) async {
+  final l10n = context.l10n;
+  final cubit = context.read<ChequeDetailCubit>();
+  final lang = Localizations.localeOf(context).languageCode;
+  final today = DateUtils.dateOnly(DateTime.now());
+  var date = today;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => AlertDialog(
+        title: Text(l10n.chequeClearTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.chequeClearHint),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              key: const Key('cheque-clear-date'),
+              icon: const Icon(Icons.event_rounded, size: 18),
+              label: Text('${l10n.chequeClearDate}: ${followUpDate(date, lang)}'),
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: ctx,
+                  initialDate: date,
+                  firstDate: today.subtract(const Duration(days: 365)),
+                  lastDate: today,
+                );
+                if (picked != null) setState(() => date = picked);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.actionCancel)),
+          FilledButton(
+            key: const Key('cheque-clear-confirm'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.chequeConfirm),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (ok == true) await cubit.clear(clearingDate: date);
 }
 
 class _Card extends StatelessWidget {

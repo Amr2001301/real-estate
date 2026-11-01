@@ -1,8 +1,8 @@
 import 'package:core/core_domain.dart';
 
 /// FG-01 — a customer's cheque (or bank transfer) as the treasurer follows it
-/// (GET /payment-instruments). Read-only in the app: depositing, clearing
-/// and bouncing stay on the dashboard for now.
+/// (GET /payment-instruments). The app records a deposit and a clearing;
+/// bouncing, cancelling and replacing stay on the dashboard.
 class Cheque extends Equatable {
   const Cheque({
     required this.id,
@@ -53,6 +53,12 @@ class Cheque extends Equatable {
   final String? replacedByNumber;
 
   bool get isCheque => type == 'CHEQUE';
+
+  /// Still with the company: can be recorded as deposited at the bank.
+  bool get canDeposit => status == 'PENDING_CLEARANCE';
+
+  /// At the bank: can be recorded as cleared.
+  bool get canClear => status == 'DEPOSITED';
 
   /// Waiting with the company past its due date: time to take it to the bank.
   bool dueForDeposit(DateTime now) =>
@@ -156,4 +162,11 @@ abstract interface class ChequesRepository {
   /// Cheques only, soonest due first; [status] null = all.
   Future<Result<Paginated<Cheque>>> list({String? status, String? q, int page = 1});
   Future<Result<Cheque>> get(String id);
+
+  /// PENDING_CLEARANCE → DEPOSITED.
+  Future<Result<void>> deposit(String id);
+
+  /// DEPOSITED → CLEARED, on [clearingDate] (today when null); the payments
+  /// it covers are marked paid on that date.
+  Future<Result<void>> clear(String id, {DateTime? clearingDate});
 }

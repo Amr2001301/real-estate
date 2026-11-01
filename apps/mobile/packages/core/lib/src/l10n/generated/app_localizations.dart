@@ -6257,8 +6257,68 @@ abstract class AppLocalizations {
   /// No description provided for @chequeOnDashboard.
   ///
   /// In en, this message translates to:
-  /// **'Depositing, clearing and bouncing are done on the web dashboard.'**
+  /// **'Bouncing, cancelling and replacing are done on the web dashboard.'**
   String get chequeOnDashboard;
+
+  /// No description provided for @chequeActionDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposited at the bank'**
+  String get chequeActionDeposit;
+
+  /// No description provided for @chequeDepositTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record cheque deposit'**
+  String get chequeDepositTitle;
+
+  /// No description provided for @chequeDepositHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The cheque will be recorded as deposited at the bank, waiting to clear.'**
+  String get chequeDepositHint;
+
+  /// No description provided for @chequeActionClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get chequeActionClear;
+
+  /// No description provided for @chequeClearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record cheque clearing'**
+  String get chequeClearTitle;
+
+  /// No description provided for @chequeClearHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The payment the cheque covers will be recorded as paid on the clearing date.'**
+  String get chequeClearHint;
+
+  /// No description provided for @chequeClearDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing date'**
+  String get chequeClearDate;
+
+  /// No description provided for @chequeConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get chequeConfirm;
+
+  /// No description provided for @chequeDepositedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque deposit recorded'**
+  String get chequeDepositedDone;
+
+  /// No description provided for @chequeClearedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque clearing recorded'**
+  String get chequeClearedDone;
 }
 
 class _AppLocalizationsDelegate

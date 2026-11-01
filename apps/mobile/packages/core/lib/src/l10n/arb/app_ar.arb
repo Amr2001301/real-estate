@@ -1141,5 +1141,16 @@
   "chequeReplacedBy": "اتستبدل بشيك",
   "chequePayments": "الدفعات اللي بيغطيها",
   "chequeInstallmentDue": "قسط مستحق",
-  "chequeOnDashboard": "الإيداع والصرف والارتداد بيتعملوا من لوحة التحكم على الويب."
+  "chequeOnDashboard": "الارتداد والإلغاء والاستبدال بيتعملوا من لوحة التحكم على الويب.",
+
+  "chequeActionDeposit": "اتودّع في البنك",
+  "chequeDepositTitle": "تسجيل إيداع الشيك",
+  "chequeDepositHint": "الشيك هيتسجل إنه اتودّع في البنك ومستني الصرف.",
+  "chequeActionClear": "اتصرف",
+  "chequeClearTitle": "تسجيل صرف الشيك",
+  "chequeClearHint": "الدفعة اللي بيغطيها الشيك هتتسجل مدفوعة بتاريخ الصرف.",
+  "chequeClearDate": "تاريخ الصرف",
+  "chequeConfirm": "تأكيد",
+  "chequeDepositedDone": "اتسجل إيداع الشيك",
+  "chequeClearedDone": "اتسجل صرف الشيك"
 }
