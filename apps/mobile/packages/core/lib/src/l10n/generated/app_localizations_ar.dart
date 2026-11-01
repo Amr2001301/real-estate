@@ -3292,4 +3292,64 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get chequeClearedDone => 'اتسجل صرف الشيك';
+
+  @override
+  String get assistantTitle => 'المساعد الذكي';
+
+  @override
+  String get assistantNewChat => 'محادثة جديدة';
+
+  @override
+  String get assistantWelcome => 'اسأل عن بيانات شركتك';
+
+  @override
+  String get assistantScopeHint =>
+      'الأقساط المتأخرة، الوحدات المتاحة، الفرص والحجوزات والزيارات. بيرد من البيانات اللي متاحة ليك بس، ومبيغيّرش أي حاجة. كل سؤال بيتحسب من باقة الشركة.';
+
+  @override
+  String get assistantPlaceholder => 'اكتب سؤالك…';
+
+  @override
+  String get assistantSend => 'إرسال';
+
+  @override
+  String get assistantThinking => 'بيدوّر في البيانات…';
+
+  @override
+  String get assistantSuggestOverdue => 'مين العملاء اللي عليهم أقساط متأخرة؟';
+
+  @override
+  String get assistantSuggestUnits => 'إيه الوحدات المتاحة بـ 3 غرف أو أكتر؟';
+
+  @override
+  String get assistantSuggestSummary => 'ملخص سريع للمبيعات والحجوزات';
+
+  @override
+  String get assistantSuggestVisits => 'إيه الزيارات اللي عندي النهارده وبكرة؟';
+
+  @override
+  String get assistantNotConfigured =>
+      'المساعد الذكي مش متاح على المنصة دلوقتي.';
+
+  @override
+  String get assistantNotActive =>
+      'المساعد مش مفعّل لشركتك أو باقته خلصت — كلّم مدير الشركة.';
+
+  @override
+  String get assistantExhausted =>
+      'أسئلة الباقة خلصت الشهر ده — كلّم مدير الشركة.';
+
+  @override
+  String get assistantErrorExhausted => 'أسئلة الباقة خلصت الشهر ده.';
+
+  @override
+  String get assistantErrorNotActive => 'المساعد مش مفعّل أو مدة الباقة خلصت.';
+
+  @override
+  String get assistantErrorUnavailable =>
+      'معرفناش نوصل للمساعد — السؤال ما اتحسبش، جرّب تاني.';
+
+  @override
+  String get assistantErrorRate =>
+      'أسئلة كتير في وقت قصير — استنى دقيقة وجرّب تاني.';
 }

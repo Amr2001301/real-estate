@@ -3326,4 +3326,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chequeClearedDone => 'Cheque clearing recorded';
+
+  @override
+  String get assistantTitle => 'AI assistant';
+
+  @override
+  String get assistantNewChat => 'New chat';
+
+  @override
+  String get assistantWelcome => 'Ask about your company\'s data';
+
+  @override
+  String get assistantScopeHint =>
+      'Overdue installments, available units, leads, reservations and visits. It answers only from the data you can see and changes nothing. Each question counts against the company\'s package.';
+
+  @override
+  String get assistantPlaceholder => 'Type your question…';
+
+  @override
+  String get assistantSend => 'Send';
+
+  @override
+  String get assistantThinking => 'Looking through the data…';
+
+  @override
+  String get assistantSuggestOverdue =>
+      'Which customers have overdue installments?';
+
+  @override
+  String get assistantSuggestUnits =>
+      'Which units with 3+ bedrooms are available?';
+
+  @override
+  String get assistantSuggestSummary =>
+      'A quick summary of sales and reservations';
+
+  @override
+  String get assistantSuggestVisits =>
+      'What visits do I have today and tomorrow?';
+
+  @override
+  String get assistantNotConfigured =>
+      'The AI assistant is not available on the platform right now.';
+
+  @override
+  String get assistantNotActive =>
+      'The assistant isn\'t enabled for your company or its package ended — contact your company admin.';
+
+  @override
+  String get assistantExhausted =>
+      'This month\'s questions are used up — contact your company admin.';
+
+  @override
+  String get assistantErrorExhausted => 'This month\'s questions are used up.';
+
+  @override
+  String get assistantErrorNotActive =>
+      'The assistant isn\'t enabled or its package ended.';
+
+  @override
+  String get assistantErrorUnavailable =>
+      'Couldn\'t reach the assistant — the question was not counted; try again.';
+
+  @override
+  String get assistantErrorRate =>
+      'Too many questions in a short time — wait a minute and try again.';
 }
