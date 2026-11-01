@@ -6,6 +6,7 @@ import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { getContactPhone, getContactEmail } from '@/lib/contact';
 import type { BrandingData } from '@/lib/branding';
+import type { PublicPageLink } from '@/lib/cms';
 import { Container } from '@/components/ui/Container';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -35,7 +36,7 @@ function ColumnHeading({ children }: { children: React.ReactNode }) {
   return <span className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gold-200">{children}</span>;
 }
 
-export function Footer({ locale, branding }: { locale: Locale; branding?: BrandingData }) {
+export function Footer({ locale, branding, pages = [] }: { locale: Locale; branding?: BrandingData; pages?: PublicPageLink[] }) {
   const m = siteT(locale);
 
   const companyName = branding?.displayName ?? branding?.name ?? SITE.name;
@@ -97,6 +98,10 @@ export function Footer({ locale, branding }: { locale: Locale; branding?: Brandi
                 href={item.href}
                 label={locale === 'ar' ? item.label : item.labelEn}
               />
+            ))}
+            {/* The company's own published pages (dashboard → المحتوى → الصفحات). */}
+            {pages.map((p) => (
+              <FooterLink key={p.slug} href={routes.page(p.slug)} label={p.title} />
             ))}
           </nav>
 

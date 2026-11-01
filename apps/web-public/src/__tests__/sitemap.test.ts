@@ -170,16 +170,25 @@ describe('sitemap URL policy', () => {
     const availableUnit = makeUnit({ id: 'unit-available', status: 'AVAILABLE', updatedAt: '2026-05-15T00:00:00.000Z' });
     const soldUnit = makeUnit({ id: 'unit-sold', status: 'SOLD', updatedAt: '2026-04-01T00:00:00.000Z' });
 
-    // fetchAll calls: projects (1 page), available (1 page), sold (1 page)
+    // fetchAll calls: projects (1 page), available (1 page), sold (1 page);
+    // then the company's published pages.
     mockFetch
       .mockResolvedValueOnce(makePage([proj], 1, 1))
       .mockResolvedValueOnce(makePage([availableUnit], 1, 1))
-      .mockResolvedValueOnce(makePage([soldUnit], 1, 1));
+      .mockResolvedValueOnce(makePage([soldUnit], 1, 1))
+      .mockResolvedValueOnce({ ok: true, data: [{ slug: 'about', title: 'من نحن', updatedAt: '2026-03-01T00:00:00.000Z' }] });
 
     // Import sitemap() fresh each time (it uses module-level safeFetch mock)
     const { default: sitemapFn } = await import('@/app/sitemap');
     return sitemapFn();
   }
+
+  it('includes the company\'s published pages', async () => {
+    const entries = await buildSitemap();
+    const page = entries.find((e) => e.url === siteUrl('/pages/about'));
+    expect(page).toBeDefined();
+    expect(page!.lastModified).toBe('2026-03-01T00:00:00.000Z');
+  });
 
   it('includes all expected static URLs', async () => {
     const entries = await buildSitemap();
@@ -234,7 +243,8 @@ describe('sitemap URL policy', () => {
     mockFetch
       .mockResolvedValueOnce(makePage([makeProject()], 1, 1))
       .mockResolvedValueOnce(makePage([dupUnit], 1, 1))
-      .mockResolvedValueOnce(makePage([{ ...dupUnit, status: 'SOLD' }], 1, 1));
+      .mockResolvedValueOnce(makePage([{ ...dupUnit, status: 'SOLD' }], 1, 1))
+      .mockResolvedValueOnce({ ok: true, data: [] });
 
     const { default: sitemapFn } = await import('@/app/sitemap');
     const entries = await sitemapFn();

@@ -5,8 +5,10 @@ import {
   Get,
   Injectable,
   Module,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -15,6 +17,8 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Prisma, UserRole } from '@prisma/client';
@@ -24,8 +28,14 @@ import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
+/** A page's address on the site: lower-case letters, digits and dashes (about, privacy-policy). */
+const PAGE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** Where a banner may send the visitor: a page of the site (/projects) or a web address. */
+const BANNER_LINK = /^(\/(?!\/)\S*|https?:\/\/\S+)$/;
+
 class UpsertPageDto {
-  @IsString() slug!: string;
+  @IsString() @MaxLength(80) @Matches(PAGE_SLUG, { message: 'رابط الصفحة: حروف إنجليزية صغيرة وأرقام وشَرطة فقط (مثال: about)' })
+  slug!: string;
   @IsString() ar_title!: string;
   @IsString() en_title!: string;
   @IsString() ar_body!: string;
@@ -34,10 +44,17 @@ class UpsertPageDto {
 }
 
 class UpsertBannerDto {
-  @IsString() imageUrl!: string;
+  @IsString() @Matches(/^https?:\/\/\S+$/, { message: 'صورة البانر لازم تكون رابط يبدأ بـ http أو https' })
+  imageUrl!: string;
   @IsString() ar_title!: string;
   @IsString() en_title!: string;
-  @IsOptional() @IsString() link?: string;
+  @IsOptional() @IsString() @MaxLength(500) @Matches(BANNER_LINK, { message: 'رابط البانر يبدأ بـ / (صفحة في الموقع) أو بـ https://' })
+  link?: string;
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsInt() @Min(0) order?: number;
+}
+
+class UpdateBannerDto {
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsInt() @Min(0) order?: number;
 }
@@ -58,21 +75,20 @@ class UpsertArticleDto {
 class CmsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Pages
-  upsertPage(dto: UpsertPageDto) {
-    return this.prisma.cmsPage.upsert({
-      where: { slug: dto.slug },
-      create: {
-        slug: dto.slug,
-        title: { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
-        published: dto.published ?? false,
-      },
-      update: {
-        title: { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
-        published: dto.published ?? undefined,
-      },
+  // Pages — a slug is unique per company, so saving finds the company's own
+  // page first (the tenant scope narrows the lookup) and updates or creates it.
+  async upsertPage(dto: UpsertPageDto) {
+    const title = { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue;
+    const body = { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue;
+    const existing = await this.prisma.cmsPage.findFirst({ where: { slug: dto.slug }, select: { id: true } });
+    if (existing) {
+      return this.prisma.cmsPage.update({
+        where: { id: existing.id },
+        data: { title, body, published: dto.published ?? undefined },
+      });
+    }
+    return this.prisma.cmsPage.create({
+      data: { slug: dto.slug, title, body, published: dto.published ?? false },
     });
   }
 
@@ -80,6 +96,26 @@ class CmsService {
     return this.prisma.cmsPage.findFirst({
       where: { slug, ...(publicOnly ? { published: true } : {}) },
     });
+  }
+
+  async publicPage(slug: string) {
+    const page = await this.getPage(slug, true);
+    if (!page) throw new NotFoundException('الصفحة غير موجودة');
+    return page;
+  }
+
+  /** The published pages, for the site's footer and sitemap. */
+  listPublicPages() {
+    return this.prisma.cmsPage.findMany({
+      where: { published: true },
+      select: { slug: true, title: true, updatedAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async removePage(id: string) {
+    const { count } = await this.prisma.cmsPage.deleteMany({ where: { id } });
+    if (!count) throw new NotFoundException('الصفحة غير موجودة');
   }
 
   listPages(publicOnly = false) {
@@ -109,29 +145,34 @@ class CmsService {
     });
   }
 
-  removeBanner(id: string) {
-    return this.prisma.banner.delete({ where: { id } });
+  async updateBanner(id: string, dto: UpdateBannerDto) {
+    const { count } = await this.prisma.banner.updateMany({
+      where: { id },
+      data: { active: dto.active, order: dto.order },
+    });
+    if (!count) throw new NotFoundException('البانر غير موجود');
+    return this.prisma.banner.findFirst({ where: { id } });
   }
 
-  // Articles
-  upsertArticle(dto: UpsertArticleDto) {
-    return this.prisma.article.upsert({
-      where: { slug: dto.slug },
-      create: {
-        slug: dto.slug,
-        title: { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue,
-        excerpt: { ar: dto.ar_excerpt, en: dto.en_excerpt } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
-        coverUrl: dto.coverUrl ?? null,
-        published: dto.published ?? false,
-      },
-      update: {
-        title: { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue,
-        excerpt: { ar: dto.ar_excerpt, en: dto.en_excerpt } as Prisma.InputJsonValue,
-        body: { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue,
-        coverUrl: dto.coverUrl ?? undefined,
-        published: dto.published ?? undefined,
-      },
+  async removeBanner(id: string) {
+    const { count } = await this.prisma.banner.deleteMany({ where: { id } });
+    if (!count) throw new NotFoundException('البانر غير موجود');
+  }
+
+  // Articles — a slug is unique per company, as for pages.
+  async upsertArticle(dto: UpsertArticleDto) {
+    const title = { ar: dto.ar_title, en: dto.en_title } as Prisma.InputJsonValue;
+    const excerpt = { ar: dto.ar_excerpt, en: dto.en_excerpt } as Prisma.InputJsonValue;
+    const body = { ar: dto.ar_body, en: dto.en_body } as Prisma.InputJsonValue;
+    const existing = await this.prisma.article.findFirst({ where: { slug: dto.slug }, select: { id: true } });
+    if (existing) {
+      return this.prisma.article.update({
+        where: { id: existing.id },
+        data: { title, excerpt, body, coverUrl: dto.coverUrl ?? undefined, published: dto.published ?? undefined },
+      });
+    }
+    return this.prisma.article.create({
+      data: { slug: dto.slug, title, excerpt, body, coverUrl: dto.coverUrl ?? null, published: dto.published ?? false },
     });
   }
 
@@ -162,9 +203,15 @@ class CmsController {
   }
 
   @Public()
+  @Get('public/pages')
+  publicPages() {
+    return this.svc.listPublicPages();
+  }
+
+  @Public()
   @Get('public/pages/:slug')
   publicPage(@Param('slug') slug: string) {
-    return this.svc.getPage(slug, true);
+    return this.svc.publicPage(slug);
   }
 
   @Public()
@@ -196,6 +243,14 @@ class CmsController {
     return this.svc.upsertPage(dto);
   }
 
+  @Roles(UserRole.ADMIN)
+  @Permissions('cms:pages:manage')
+  @GrantedBy('cms:pages:manage')
+  @Delete('cms/pages/:id')
+  removePage(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.removePage(id);
+  }
+
   // Admin — Banners
   @Roles(UserRole.ADMIN)
   @Permissions('cms:banners:manage')
@@ -211,6 +266,14 @@ class CmsController {
   @Post('cms/banners')
   createBanner(@Body() dto: UpsertBannerDto) {
     return this.svc.createBanner(dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('cms:banners:manage')
+  @GrantedBy('cms:banners:manage')
+  @Patch('cms/banners/:id')
+  updateBanner(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBannerDto) {
+    return this.svc.updateBanner(id, dto);
   }
 
   @Roles(UserRole.ADMIN)

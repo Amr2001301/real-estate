@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   // ── CMS Pages ──────────────────────────────────────────────────────────────
 
   await prisma.cmsPage.upsert({
-    where: { slug: PAGE_SLUGS.ABOUT },
+    where: { companyId_slug: { companyId, slug: PAGE_SLUGS.ABOUT } },
     create: {
       companyId,
       slug: PAGE_SLUGS.ABOUT,
@@ -116,7 +116,7 @@ async function main(): Promise<void> {
   });
 
   await prisma.cmsPage.upsert({
-    where: { slug: PAGE_SLUGS.PRIVACY },
+    where: { companyId_slug: { companyId, slug: PAGE_SLUGS.PRIVACY } },
     create: {
       companyId,
       slug: PAGE_SLUGS.PRIVACY,
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   });
 
   await prisma.cmsPage.upsert({
-    where: { slug: PAGE_SLUGS.TERMS },
+    where: { companyId_slug: { companyId, slug: PAGE_SLUGS.TERMS } },
     create: {
       companyId,
       slug: PAGE_SLUGS.TERMS,
@@ -197,7 +197,7 @@ async function main(): Promise<void> {
   // ── Articles ───────────────────────────────────────────────────────────────
 
   await prisma.article.upsert({
-    where: { slug: ARTICLE_SLUGS.A1 },
+    where: { companyId_slug: { companyId, slug: ARTICLE_SLUGS.A1 } },
     create: {
       companyId,
       slug: ARTICLE_SLUGS.A1,
@@ -214,7 +214,7 @@ async function main(): Promise<void> {
   });
 
   await prisma.article.upsert({
-    where: { slug: ARTICLE_SLUGS.A2 },
+    where: { companyId_slug: { companyId, slug: ARTICLE_SLUGS.A2 } },
     create: {
       companyId,
       slug: ARTICLE_SLUGS.A2,
@@ -231,7 +231,7 @@ async function main(): Promise<void> {
   });
 
   await prisma.article.upsert({
-    where: { slug: ARTICLE_SLUGS.A3 },
+    where: { companyId_slug: { companyId, slug: ARTICLE_SLUGS.A3 } },
     create: {
       companyId,
       slug: ARTICLE_SLUGS.A3,

@@ -65,12 +65,10 @@ function makePrismaMock() {
         body: { ar: '', en: '' },
         published: true,
       }),
-      upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
-        id: 'page-new',
-        slug: where.slug,
-        ...create,
-        ...update,
-      })),
+      // A saved slug is looked up first (findFirst above finds it), then updated.
+      update: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'page-1', ...data })),
+      create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'page-new', ...data })),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     banner: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -78,7 +76,7 @@ function makePrismaMock() {
         id: 'banner-new',
         ...data,
       })),
-      delete: jest.fn().mockResolvedValue({ id: 'banner-1' }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     article: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -90,12 +88,8 @@ function makePrismaMock() {
         body: { ar: '', en: '' },
         published: true,
       }),
-      upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
-        id: 'article-new',
-        slug: where.slug,
-        ...create,
-        ...update,
-      })),
+      update: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'article-1', ...data })),
+      create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ id: 'article-new', ...data })),
     },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
@@ -141,10 +135,10 @@ describe('CMS module · permissions enforcement', () => {
   beforeEach(() => {
     FakeAuthGuard.currentUser = null;
     mock.userPermission.findMany.mockClear();
-    mock.cmsPage.upsert.mockClear();
+    mock.cmsPage.update.mockClear();
     mock.banner.create.mockClear();
-    mock.banner.delete.mockClear();
-    mock.article.upsert.mockClear();
+    mock.banner.deleteMany.mockClear();
+    mock.article.update.mockClear();
   });
 
   // ── Internal controller reached via Reflect.getMetadata ───────────────
@@ -243,7 +237,7 @@ describe('CMS module · permissions enforcement', () => {
       expect(mock.userPermission.findMany).not.toHaveBeenCalled();
     });
 
-    it('POST /cms/pages → 201; cmsPage.upsert called', async () => {
+    it('POST /cms/pages → 201; the company\'s page is saved', async () => {
       await request(app.getHttpServer())
         .post('/cms/pages')
         .send({
@@ -253,7 +247,7 @@ describe('CMS module · permissions enforcement', () => {
           published: true,
         })
         .expect(201);
-      expect(mock.cmsPage.upsert).toHaveBeenCalledTimes(1);
+      expect(mock.cmsPage.update).toHaveBeenCalledTimes(1);
     });
 
     it('GET /cms/banners → 200', async () => {
@@ -273,18 +267,18 @@ describe('CMS module · permissions enforcement', () => {
       expect(mock.banner.create).toHaveBeenCalledTimes(1);
     });
 
-    it('DELETE /cms/banners/:id → 200; banner.delete called', async () => {
+    it('DELETE /cms/banners/:id → 200; the banner is deleted', async () => {
       await request(app.getHttpServer())
         .delete('/cms/banners/a1111111-1111-4111-8111-111111111111')
         .expect(200);
-      expect(mock.banner.delete).toHaveBeenCalledTimes(1);
+      expect(mock.banner.deleteMany).toHaveBeenCalledTimes(1);
     });
 
     it('GET /cms/articles → 200', async () => {
       await request(app.getHttpServer()).get('/cms/articles').expect(200);
     });
 
-    it('POST /cms/articles → 201; article.upsert called', async () => {
+    it('POST /cms/articles → 201; the company\'s article is saved', async () => {
       await request(app.getHttpServer())
         .post('/cms/articles')
         .send({
@@ -295,7 +289,7 @@ describe('CMS module · permissions enforcement', () => {
           published: false,
         })
         .expect(201);
-      expect(mock.article.upsert).toHaveBeenCalledTimes(1);
+      expect(mock.article.update).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -324,7 +318,7 @@ describe('CMS module · permissions enforcement', () => {
         .post('/cms/pages')
         .send({ slug: 'x', title: { ar: 'م', en: 'X' }, body: { ar: '', en: '' } })
         .expect(403);
-      expect(mock.cmsPage.upsert).not.toHaveBeenCalled();
+      expect(mock.cmsPage.update).not.toHaveBeenCalled();
     });
 
     it('SALES with cms:banners:manage → let in by the code (PRM)', async () => {
@@ -394,7 +388,7 @@ describe('CMS module · permissions enforcement', () => {
           body: { ar: '', en: '' },
         })
         .expect(403);
-      expect(mock.article.upsert).not.toHaveBeenCalled();
+      expect(mock.article.update).not.toHaveBeenCalled();
     });
   });
 });

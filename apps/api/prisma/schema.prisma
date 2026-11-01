@@ -2792,7 +2792,7 @@ model MaintenanceRequestItem {
 
 model CmsPage {
   id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
+  slug      String // unique per company (CMS1)
   title     Json // Translatable
   body      Json // Translatable
   published Boolean  @default(false)
@@ -2802,6 +2802,7 @@ model CmsPage {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, slug])
   @@index([companyId])
 }
 
@@ -2822,7 +2823,7 @@ model Banner {
 
 model Article {
   id        String   @id @default(uuid()) @db.Uuid
-  slug      String   @unique
+  slug      String // unique per company (CMS1)
   title     Json
   excerpt   Json
   body      Json
@@ -2834,6 +2835,7 @@ model Article {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, slug])
   @@index([companyId])
 }
 

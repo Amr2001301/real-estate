@@ -3,6 +3,7 @@ import { safeFetch } from '@/lib/api';
 import { siteUrl } from '@/lib/seo';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
+import { fetchPageLinks } from '@/lib/cms';
 
 /**
  * Dynamic sitemap — regenerated at most once per hour.
@@ -72,11 +73,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!tenant) return staticEntries;
 
   // Fetch all PUBLISHED projects and AVAILABLE+SOLD units in parallel.
-  const [projects, availableUnits, soldUnits] = await Promise.all([
+  const [projects, availableUnits, soldUnits, pages] = await Promise.all([
     fetchAll<PublicProjectListItem>('/public/projects', tenant.slug),
     fetchAll<PublicUnit>('/public/units?status=AVAILABLE', tenant.slug),
     fetchAll<PublicUnit>('/public/units?status=SOLD', tenant.slug),
+    fetchPageLinks(tenant.slug, 'ar'),
   ]);
+
+  // The company's published pages (about us, policies…).
+  const pageEntries: MetadataRoute.Sitemap = pages.map((p) => ({
+    url: siteUrl(`/pages/${p.slug}`),
+    lastModified: p.updatedAt,
+    changeFrequency: 'monthly',
+    priority: 0.4,
+  }));
 
   const projectEntries: MetadataRoute.Sitemap = projects.map((p) => ({
     url: siteUrl(`/projects/${p.id}`),
@@ -102,5 +112,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  return [...staticEntries, ...projectEntries, ...unitEntries];
+  return [...staticEntries, ...pageEntries, ...projectEntries, ...unitEntries];
 }
