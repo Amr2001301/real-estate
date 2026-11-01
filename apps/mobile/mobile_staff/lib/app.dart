@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/assistant/data/assistant_repository_impl.dart';
 import 'features/assistant/domain/assistant.dart';
 import 'features/calendar/data/calendar_repository_impl.dart';
+import 'features/permissions/staff_permissions.dart';
 import 'features/security/data/security_repository_impl.dart';
 import 'features/security/domain/security.dart';
 import 'features/duplicates/data/duplicates_repository_impl.dart';
@@ -268,6 +269,10 @@ class StaffApp extends StatelessWidget {
             BlocProvider<CompanyCurrencyCubit>(
               create: (ctx) => CompanyCurrencyCubit(ctx.read<Dio>()),
             ),
+            // PRM — the codes that open pages beyond the role.
+            BlocProvider<StaffPermissionsCubit>(
+              create: (ctx) => StaffPermissionsCubit(ctx.read<Dio>()),
+            ),
           ],
           child: const _StaffRoot(),
         ),
@@ -309,6 +314,7 @@ class _StaffRootState extends State<_StaffRoot> {
       if (context.read<SessionCubit>().state.isAuthenticated) {
         context.read<PushRegistrationService>().registerIfPossible();
         context.read<CompanyCurrencyCubit>().load();
+        context.read<StaffPermissionsCubit>().load();
       }
     });
   }
@@ -445,9 +451,11 @@ class _StaffRootState extends State<_StaffRoot> {
           context.read<UnreadCountCubit>().load();
           context.read<PushRegistrationService>().registerIfPossible();
           context.read<CompanyCurrencyCubit>().load();
+          context.read<StaffPermissionsCubit>().load();
         } else {
           context.read<UnreadCountCubit>().clear();
           context.read<CompanyCurrencyCubit>().reset();
+          context.read<StaffPermissionsCubit>().reset();
         }
       },
       child: MaterialApp.router(

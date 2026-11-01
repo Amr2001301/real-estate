@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../permissions/staff_permissions.dart';
 import '../../../../common/lead_stage_label.dart';
 import '../../../bonus/presentation/cubit/bonus_summary_cubit.dart';
 import '../../../catalog/domain/entities/staff_project.dart';
@@ -226,8 +227,11 @@ class _DashboardBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final role = context.read<SessionCubit>().state.role;
-    final canReviewPayments =
-        role == AppRole.admin || role == AppRole.salesManager;
+    // PRM — a permission code opens a page beyond the role, as on the dashboard.
+    final perms = context.watch<StaffPermissionsCubit>().state;
+    final canReviewPayments = StaffAccess.paymentsReview(role, perms);
+    final canCheques = StaffAccess.cheques(role, perms);
+    final canCampaigns = StaffAccess.campaigns(role, perms);
     final canManageSales =
         role == AppRole.admin || role == AppRole.salesManager;
     final lang = Localizations.localeOf(context).languageCode;
@@ -263,6 +267,8 @@ class _DashboardBody extends StatelessWidget {
           _CompactQuickActions(
             l10n: l10n,
             canReviewPayments: canReviewPayments,
+            canCheques: canCheques,
+            canCampaigns: canCampaigns,
             canManageSales: canManageSales,
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -777,10 +783,14 @@ class _CompactQuickActions extends StatelessWidget {
   const _CompactQuickActions({
     required this.l10n,
     required this.canReviewPayments,
+    required this.canCheques,
+    required this.canCampaigns,
     required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
+  final bool canCheques;
+  final bool canCampaigns;
   final bool canManageSales;
 
   @override
@@ -788,6 +798,8 @@ class _CompactQuickActions extends StatelessWidget {
     return _SecondaryActionsGrid(
       l10n: l10n,
       canReviewPayments: canReviewPayments,
+      canCheques: canCheques,
+      canCampaigns: canCampaigns,
       canManageSales: canManageSales,
     );
   }
@@ -882,10 +894,14 @@ class _SecondaryActionsGrid extends StatelessWidget {
   const _SecondaryActionsGrid({
     required this.l10n,
     required this.canReviewPayments,
+    required this.canCheques,
+    required this.canCampaigns,
     required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
+  final bool canCheques;
+  final bool canCampaigns;
   final bool canManageSales;
 
   @override
@@ -968,29 +984,46 @@ class _SecondaryActionsGrid extends StatelessWidget {
             ),
           ],
         ),
-        if (canReviewPayments) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: _SecondaryActionCell(
-                  icon: Icons.receipt_long_outlined,
-                  label: l10n.paymentReviewTitle,
-                  onTap: () => context.push('/payments-review'),
-                ),
+        // Money pages: by role, or a permission code (PRM). A rep given
+        // «الحملات» sees it here; managers find it in their section below.
+        ...() {
+          final cells = <Widget>[
+            if (canReviewPayments)
+              _SecondaryActionCell(
+                key: const Key('dashboard-payments-review'),
+                icon: Icons.receipt_long_outlined,
+                label: l10n.paymentReviewTitle,
+                onTap: () => context.push('/payments-review'),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // FG-01 — customers' cheques (admin and sales manager).
-              Expanded(
-                child: _SecondaryActionCell(
-                  icon: Icons.account_balance_outlined,
-                  label: l10n.chequesTitle,
-                  onTap: () => context.push('/cheques'),
-                ),
+            // FG-01 — customers' cheques.
+            if (canCheques)
+              _SecondaryActionCell(
+                key: const Key('dashboard-cheques'),
+                icon: Icons.account_balance_outlined,
+                label: l10n.chequesTitle,
+                onTap: () => context.push('/cheques'),
+              ),
+            if (canCampaigns && !canManageSales)
+              _SecondaryActionCell(
+                key: const Key('dashboard-campaigns-cell'),
+                icon: Icons.campaign_outlined,
+                label: l10n.campaignsTitle,
+                onTap: () => context.push('/campaigns'),
+              ),
+          ];
+          return [
+            for (var k = 0; k < cells.length; k += 2) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(child: cells[k]),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: k + 1 < cells.length ? cells[k + 1] : const SizedBox.shrink()),
+                ],
               ),
             ],
-          ),
-        ],
+          ];
+        }(),
         if (canManageSales) ...[
           const SizedBox(height: AppSpacing.md),
           _ManagerSectionDivider(),
