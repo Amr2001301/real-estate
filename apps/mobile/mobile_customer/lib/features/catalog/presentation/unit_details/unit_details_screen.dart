@@ -176,6 +176,11 @@ class _DetailPageState extends State<_DetailPage> {
                               _SectionTitle(l10n.unitOverview),
                               const SizedBox(height: AppSpacing.md),
                               _SpecsRow(unit: unit),
+                              // EE2/EE5 — the specs the website shows (only those it has).
+                              if (!unit.specs.isEmpty) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                UnitSpecsGrid(specs: unit.specs),
+                              ],
                               const SizedBox(height: AppSpacing.xl),
                               _SectionTitle(l10n.unitAbout),
                               const SizedBox(height: AppSpacing.md),

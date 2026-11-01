@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 // Wire shapes for the staff `/projects` and `/units` endpoints. Data layer only.
 
 class StaffProjectDto {
@@ -129,6 +131,7 @@ class StaffUnitDto {
     this.latitude,
     this.longitude,
     this.address,
+    this.specs = const UnitSpecs(),
   });
 
   final String id;
@@ -154,6 +157,7 @@ class StaffUnitDto {
   final double? latitude;
   final double? longitude;
   final String? address;
+  final UnitSpecs specs;
 
   factory StaffUnitDto.fromJson(Map<String, dynamic> json) {
     final media = (json['media'] as List?)
@@ -217,6 +221,8 @@ class StaffUnitDto {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       address: json['address'] as String?,
+      // The handover date: the unit's own, else its phase's.
+      specs: UnitSpecs.fromJson(json, deliveryKey: 'effectiveDeliveryDate'),
     );
   }
 

@@ -34,6 +34,7 @@ class UnitDto {
     this.coverImage,
     this.media = const [],
     this.project,
+    this.specs = const UnitSpecs(),
   });
 
   final String id;
@@ -48,6 +49,7 @@ class UnitDto {
   final String? coverImage;
   final List<MediaDto> media;
   final UnitProjectRefDto? project;
+  final UnitSpecs specs;
 
   factory UnitDto.fromJson(Map<String, dynamic> json) => UnitDto(
         id: json['id'] as String,
@@ -67,5 +69,6 @@ class UnitDto {
         project: json['project'] is Map<String, dynamic>
             ? UnitProjectRefDto.fromJson(json['project'] as Map<String, dynamic>)
             : null,
+        specs: UnitSpecs.fromJson(json),
       );
 }

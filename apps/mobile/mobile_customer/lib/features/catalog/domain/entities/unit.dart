@@ -31,6 +31,7 @@ class Unit extends Equatable {
     this.coverImage,
     this.media = const [],
     this.project,
+    this.specs = const UnitSpecs(),
   });
 
   final String id;
@@ -46,10 +47,13 @@ class Unit extends Equatable {
   final List<MediaItem> media;
   final UnitProjectRef? project;
 
+  /// Areas, finishing, view, orientation, handover (only those it has).
+  final UnitSpecs specs;
+
   List<String> get galleryImages => imageUrls(media);
   num? get priceValue => num.tryParse(price);
 
   @override
   List<Object?> get props =>
-      [id, code, type, area, bedrooms, bathrooms, price, status];
+      [id, code, type, area, bedrooms, bathrooms, price, status, specs];
 }

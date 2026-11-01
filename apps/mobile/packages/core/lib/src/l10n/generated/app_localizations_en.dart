@@ -3896,4 +3896,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String contractDeliveryLate(int days) {
     return '$days days late';
   }
+
+  @override
+  String get unitSpecsTitle => 'Unit specs';
+
+  @override
+  String unitAreaValue(String n) {
+    return '$n m²';
+  }
+
+  @override
+  String get unitSpecNetArea => 'Net area';
+
+  @override
+  String get unitSpecGarden => 'Garden';
+
+  @override
+  String get unitSpecRoof => 'Roof';
+
+  @override
+  String get unitSpecTerrace => 'Terrace';
+
+  @override
+  String get unitSpecLand => 'Land area';
+
+  @override
+  String get unitSpecFinishing => 'Finishing';
+
+  @override
+  String get unitSpecView => 'View';
+
+  @override
+  String get unitSpecOrientation => 'Orientation';
+
+  @override
+  String get unitSpecDelivery => 'Handover';
+
+  @override
+  String get unitDeliveryNow => 'Ready to move in';
+
+  @override
+  String get unitFinishingCoreShell => 'Core & shell';
+
+  @override
+  String get unitFinishingSemi => 'Semi-finished';
+
+  @override
+  String get unitFinishingFull => 'Fully finished';
+
+  @override
+  String get unitFinishingFurnished => 'Furnished';
+
+  @override
+  String get unitViewGarden => 'Garden';
+
+  @override
+  String get unitViewPool => 'Pool';
+
+  @override
+  String get unitViewLagoon => 'Lagoon';
+
+  @override
+  String get unitViewSea => 'Sea';
+
+  @override
+  String get unitViewNile => 'Nile';
+
+  @override
+  String get unitViewClub => 'Clubhouse';
+
+  @override
+  String get unitViewLandscape => 'Landscape';
+
+  @override
+  String get unitViewMainStreet => 'Main street';
+
+  @override
+  String get unitViewSideStreet => 'Side street';
+
+  @override
+  String get unitOrientationNorth => 'North';
+
+  @override
+  String get unitOrientationSouth => 'South';
+
+  @override
+  String get unitOrientationEast => 'East';
+
+  @override
+  String get unitOrientationWest => 'West';
+
+  @override
+  String get unitOrientationNorthEast => 'North-east';
+
+  @override
+  String get unitOrientationNorthWest => 'North-west';
+
+  @override
+  String get unitOrientationSouthEast => 'South-east';
+
+  @override
+  String get unitOrientationSouthWest => 'South-west';
 }

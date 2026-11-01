@@ -22,5 +22,6 @@ extension UnitDtoMapper on UnitDto {
         coverImage: coverImage,
         media: media.map((m) => m.toEntity()).toList(),
         project: project?.toEntity(),
+        specs: specs,
       );
 }

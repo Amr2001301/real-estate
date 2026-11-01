@@ -3854,4 +3854,105 @@ class AppLocalizationsAr extends AppLocalizations {
   String contractDeliveryLate(int days) {
     return 'متأخر $days يوم';
   }
+
+  @override
+  String get unitSpecsTitle => 'مواصفات الوحدة';
+
+  @override
+  String unitAreaValue(String n) {
+    return '$n م²';
+  }
+
+  @override
+  String get unitSpecNetArea => 'المساحة الصافية';
+
+  @override
+  String get unitSpecGarden => 'الحديقة';
+
+  @override
+  String get unitSpecRoof => 'الروف';
+
+  @override
+  String get unitSpecTerrace => 'التراس';
+
+  @override
+  String get unitSpecLand => 'مساحة الأرض';
+
+  @override
+  String get unitSpecFinishing => 'التشطيب';
+
+  @override
+  String get unitSpecView => 'الإطلالة';
+
+  @override
+  String get unitSpecOrientation => 'الاتجاه';
+
+  @override
+  String get unitSpecDelivery => 'التسليم';
+
+  @override
+  String get unitDeliveryNow => 'استلام فوري';
+
+  @override
+  String get unitFinishingCoreShell => 'على الطوب';
+
+  @override
+  String get unitFinishingSemi => 'نصف تشطيب';
+
+  @override
+  String get unitFinishingFull => 'تشطيب كامل';
+
+  @override
+  String get unitFinishingFurnished => 'مفروشة';
+
+  @override
+  String get unitViewGarden => 'حديقة';
+
+  @override
+  String get unitViewPool => 'حمام سباحة';
+
+  @override
+  String get unitViewLagoon => 'لاجون';
+
+  @override
+  String get unitViewSea => 'بحر';
+
+  @override
+  String get unitViewNile => 'النيل';
+
+  @override
+  String get unitViewClub => 'النادي';
+
+  @override
+  String get unitViewLandscape => 'مساحات خضراء';
+
+  @override
+  String get unitViewMainStreet => 'شارع رئيسي';
+
+  @override
+  String get unitViewSideStreet => 'شارع جانبي';
+
+  @override
+  String get unitOrientationNorth => 'بحري';
+
+  @override
+  String get unitOrientationSouth => 'قبلي';
+
+  @override
+  String get unitOrientationEast => 'شرقي';
+
+  @override
+  String get unitOrientationWest => 'غربي';
+
+  @override
+  String get unitOrientationNorthEast => 'بحري شرقي';
+
+  @override
+  String get unitOrientationNorthWest => 'بحري غربي';
+
+  @override
+  String get unitOrientationSouthEast => 'قبلي شرقي';
+
+  @override
+  String get unitOrientationSouthWest => 'قبلي غربي';
 }

@@ -51,6 +51,7 @@ extension StaffUnitDtoMapper on StaffUnitDto {
         latitude: latitude,
         longitude: longitude,
         address: address,
+        specs: specs,
       );
 }
 
