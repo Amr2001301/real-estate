@@ -28,6 +28,7 @@ const SITE_MESSAGES = {
       rights: 'جميع الحقوق محفوظة',
       privacy: 'سياسة الخصوصية',
       terms: 'الشروط والأحكام',
+      pages: 'عن الشركة',
       login: 'تسجيل الدخول',
       register: 'إنشاء حساب',
     },
@@ -128,6 +129,12 @@ const SITE_MESSAGES = {
         errorMsg: 'سيتم عرض الوحدات المتاحة فور استعادة الاتصال.',
         emptyTitle: 'لا توجد وحدات متاحة حاليًا',
         emptyMsg: 'تواصل مع مستشار لمعرفة أحدث الإتاحات.',
+      },
+      promos: {
+        label: 'عروض الشركة',
+        prev: 'السابق',
+        next: 'التالي',
+        goTo: (n: number) => `البانر ${n}`,
       },
       banner: {
         eyebrow: 'ابدأ الآن',
@@ -954,6 +961,7 @@ const SITE_MESSAGES = {
       rights: 'All rights reserved',
       privacy: 'Privacy Policy',
       terms: 'Terms & Conditions',
+      pages: 'About',
       login: 'Log in',
       register: 'Create Account',
     },
@@ -1052,6 +1060,12 @@ const SITE_MESSAGES = {
         errorMsg: 'Available units will appear once the connection is restored.',
         emptyTitle: 'No available units at the moment',
         emptyMsg: 'Contact an advisor to learn about the latest availability.',
+      },
+      promos: {
+        label: 'Company offers',
+        prev: 'Previous',
+        next: 'Next',
+        goTo: (n: number) => `Banner ${n}`,
       },
       banner: {
         eyebrow: 'Get Started',

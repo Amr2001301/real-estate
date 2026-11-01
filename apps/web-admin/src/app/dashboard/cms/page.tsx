@@ -1,7 +1,8 @@
 import { revalidatePath } from 'next/cache';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { FileText, Image as ImageIcon, BookOpen, Plus, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { FileText, Image as ImageIcon, BookOpen, Plus, Pencil, Trash2, ExternalLink, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { tx, formatDate } from '@/lib/format';
 import type { Translatable } from '@/lib/types';
@@ -12,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { PremiumPageHero } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { BannerImageField } from './_banner-image-field';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +23,7 @@ interface Banner {
   title: Translatable;
   link: string | null;
   active: boolean;
+  order: number;
 }
 interface Article {
   id: string;
@@ -35,41 +38,68 @@ interface CmsPage {
   id: string;
   slug: string;
   title: Translatable;
+  body: Translatable;
   published: boolean;
   updatedAt: string;
 }
 
-// ── Server actions (names/fields unchanged) ───────────────────────────────────
+// ── Server actions ────────────────────────────────────────────────────────────
+
+/** Runs a change, then returns to the tab — with the API's reason when it refused. */
+async function runOnTab(tab: Tab, change: () => Promise<unknown>) {
+  let error = '';
+  try {
+    await change();
+  } catch (e) {
+    unstable_rethrow(e);
+    error = e instanceof Error ? e.message : String(e);
+  }
+  revalidatePath('/dashboard/cms');
+  redirect(`/dashboard/cms?tab=${tab}${error ? `&error=${encodeURIComponent(error)}` : ''}` as never);
+}
 
 async function deleteBannerAction(id: string) {
   'use server';
-  await api.delete(`/cms/banners/${id}`);
-  revalidatePath('/dashboard/cms');
+  await runOnTab('banners', () => api.delete(`/cms/banners/${id}`));
+}
+
+async function toggleBannerAction(id: string, active: boolean) {
+  'use server';
+  await runOnTab('banners', () => api.patch(`/cms/banners/${id}`, { active }));
 }
 
 async function upsertPageAction(formData: FormData) {
   'use server';
-  await api.post('/cms/pages', {
-    slug: String(formData.get('slug') ?? ''),
-    ar_title: String(formData.get('ar_title') ?? ''),
-    en_title: String(formData.get('en_title') ?? ''),
-    ar_body: String(formData.get('ar_body') ?? ''),
-    en_body: String(formData.get('en_body') ?? ''),
-    published: formData.get('published') === 'on',
-  });
-  revalidatePath('/dashboard/cms');
+  await runOnTab('pages', () =>
+    api.post('/cms/pages', {
+      slug: String(formData.get('slug') ?? '').trim(),
+      ar_title: String(formData.get('ar_title') ?? ''),
+      en_title: String(formData.get('en_title') ?? ''),
+      ar_body: String(formData.get('ar_body') ?? ''),
+      en_body: String(formData.get('en_body') ?? ''),
+      published: formData.get('published') === 'on',
+    }),
+  );
+}
+
+async function deletePageAction(id: string) {
+  'use server';
+  await runOnTab('pages', () => api.delete(`/cms/pages/${id}`));
 }
 
 async function createBannerAction(formData: FormData) {
   'use server';
-  await api.post('/cms/banners', {
-    imageUrl: String(formData.get('imageUrl') ?? ''),
-    ar_title: String(formData.get('ar_title') ?? ''),
-    en_title: String(formData.get('en_title') ?? ''),
-    link: String(formData.get('link') ?? '') || undefined,
-    active: true,
-  });
-  revalidatePath('/dashboard/cms');
+  const order = Number(formData.get('order') ?? 0);
+  await runOnTab('banners', () =>
+    api.post('/cms/banners', {
+      imageUrl: String(formData.get('imageUrl') ?? '').trim(),
+      ar_title: String(formData.get('ar_title') ?? ''),
+      en_title: String(formData.get('en_title') ?? ''),
+      link: String(formData.get('link') ?? '').trim() || undefined,
+      active: true,
+      order: Number.isInteger(order) && order >= 0 ? order : 0,
+    }),
+  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -80,7 +110,7 @@ type Tab = 'articles' | 'pages' | 'banners';
  * Site content in three tabs (articles, pages, banners), one at a time.
  * Each tab lists its items and opens its own create form in place.
  */
-export default async function CmsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function CmsPage({ searchParams }: { searchParams: Promise<{ tab?: string; edit?: string; error?: string }> }) {
   const [pagesRes, bannersRes, articlesRes, locale, sp] = await Promise.all([
     safe(api.get<CmsPage[]>('/cms/pages')),
     safe(api.get<Banner[]>('/cms/banners')),
@@ -94,6 +124,9 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
   const articles = articlesRes.data ?? [];
   const m = uiT(locale).cmsPage;
   const tab: Tab = sp.tab === 'pages' || sp.tab === 'banners' ? sp.tab : 'articles';
+  // A page opened for editing fills the form; its address stays as it is.
+  const editing = tab === 'pages' && sp.edit ? pages.find((p) => p.slug === sp.edit) : undefined;
+  const tr = (v: Translatable | undefined, l: 'ar' | 'en') => (v && typeof v === 'object' ? (v[l] ?? '') : '');
 
   const tabs: Array<{ key: Tab; label: string; icon: ReactNode; count: number; live: number; liveLabel: string }> = [
     { key: 'articles', label: m.sectionArticlesTitle, icon: <BookOpen />, count: articles.length, live: articles.filter((a) => a.published).length, liveLabel: m.badgePublished },
@@ -144,6 +177,13 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
         })}
       </nav>
 
+      {sp.error && (
+        <p role="alert" data-testid="cms-error" className="flex items-center gap-2 rounded-2xl border border-danger-500/30 bg-danger-500/10 px-4 py-3 text-[13px] font-semibold text-danger-600">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {sp.error}
+        </p>
+      )}
+
       {tab === 'articles' && (
         <section data-testid="cms-articles" className="rounded-[22px] border border-hairline bg-surface">
           <SectionHead title={m.sectionArticlesTitle} action={
@@ -188,26 +228,34 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
 
       {tab === 'pages' && (
         <section data-testid="cms-pages" className="rounded-[22px] border border-hairline bg-surface">
-          <details className="group">
+          <details className="group" open={editing ? true : undefined}>
             <SectionHead title={m.sectionPagesTitle} summary action={<span className={ADD_BTN}><Plus className="h-3.5 w-3.5 transition-transform group-open:rotate-45" />{m.createPageLabel}</span>} />
-            <form action={upsertPageAction} className="grid gap-5 border-t border-hairline bg-surface-muted/20 px-6 py-6 md:grid-cols-2">
+            <p className="px-6 pb-4 text-[12.5px] text-slate-500">{m.pagesHint}</p>
+            {/* Keyed by the page so opening another one refills the form. */}
+            <form key={editing?.id ?? 'new'} action={upsertPageAction} className="grid gap-5 border-t border-hairline bg-surface-muted/20 px-6 py-6 md:grid-cols-2">
+              {editing && (
+                <p className="flex items-center justify-between gap-3 rounded-xl bg-[#D8B66A]/[0.12] px-4 py-2.5 text-[13px] font-semibold text-slate-800 md:col-span-2">
+                  <span>{m.editingPage}: {tx(editing.title, locale)}</span>
+                  <Link href={'/dashboard/cms?tab=pages' as never} className="text-[12.5px] text-[#9A7A2E] hover:underline dark:text-[#D8B66A]">{m.cancelEdit}</Link>
+                </p>
+              )}
               <FormField label={m.fieldSlug} hint={m.hintSlug} required className="md:col-span-2">
-                <Input name="slug" required dir="ltr" placeholder="about" className="max-w-sm font-mono" leftAddon={<span className="text-[12px] font-bold">/</span>} />
+                <Input name="slug" required dir="ltr" placeholder="about" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={80} defaultValue={editing?.slug} readOnly={!!editing} className="max-w-sm font-mono" leftAddon={<span className="text-[12px] font-bold">/pages/</span>} />
               </FormField>
               <FormField label={`${m.fieldPageTitle} — العربية`} required>
-                <Input name="ar_title" required dir="rtl" placeholder="من نحن" />
+                <Input name="ar_title" required dir="rtl" placeholder="من نحن" defaultValue={tr(editing?.title, 'ar')} />
               </FormField>
               <FormField label={`${m.fieldPageTitle} — English`} required>
-                <Input name="en_title" required dir="ltr" placeholder="About us" />
+                <Input name="en_title" required dir="ltr" placeholder="About us" defaultValue={tr(editing?.title, 'en')} />
               </FormField>
               <FormField label={`${m.fieldContent} — العربية`}>
-                <Textarea name="ar_body" dir="rtl" rows={6} />
+                <Textarea name="ar_body" dir="rtl" rows={8} defaultValue={tr(editing?.body, 'ar')} />
               </FormField>
               <FormField label={`${m.fieldContent} — English`}>
-                <Textarea name="en_body" dir="ltr" rows={6} />
+                <Textarea name="en_body" dir="ltr" rows={8} defaultValue={tr(editing?.body, 'en')} />
               </FormField>
               <div className="flex items-center justify-between gap-4 md:col-span-2">
-                <PublishToggle name="published" label={m.checkPublish} />
+                <PublishToggle name="published" label={m.checkPublish} defaultChecked={editing ? editing.published : undefined} />
                 <Button type="submit" variant="primary" size="md">{m.btnSavePage}</Button>
               </div>
             </form>
@@ -223,10 +271,18 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-bold text-slate-900">{tx(p.title, locale)}</p>
-                    <p className="mt-0.5 truncate font-mono text-[12px] text-slate-500" dir="ltr">/{p.slug}</p>
+                    <p className="mt-0.5 truncate font-mono text-[12px] text-slate-500" dir="ltr">/pages/{p.slug}</p>
                   </div>
                   <StatusChip on={p.published} onLabel={m.badgePublished} offLabel={m.badgeDraft} />
                   <span className="hidden w-28 text-end text-[12px] text-slate-500 sm:block">{formatDate(p.updatedAt, locale)}</span>
+                  <Link href={`/dashboard/cms?tab=pages&edit=${encodeURIComponent(p.slug)}` as never} aria-label={m.editPageLabel} title={m.editPageLabel} className={ROUND_BTN}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Link>
+                  <form action={deletePageAction.bind(null, p.id)}>
+                    <button type="submit" aria-label={m.deletePageLabel} title={m.deletePageLabel} className={cn(ROUND_BTN, 'hover:border-danger-500/60 hover:text-danger-600')}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </form>
                 </li>
               ))}
             </ul>
@@ -238,9 +294,10 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
         <section data-testid="cms-banners" className="rounded-[22px] border border-hairline bg-surface">
           <details className="group">
             <SectionHead title={m.sectionBannersTitle} summary action={<span className={ADD_BTN}><Plus className="h-3.5 w-3.5 transition-transform group-open:rotate-45" />{m.addBannerLabel}</span>} />
+            <p className="px-6 pb-4 text-[12.5px] text-slate-500">{m.bannersHint}</p>
             <form action={createBannerAction} className="grid gap-5 border-t border-hairline bg-surface-muted/20 px-6 py-6 md:grid-cols-2">
               <FormField label={m.fieldImageUrl} required className="md:col-span-2">
-                <Input name="imageUrl" required dir="ltr" placeholder="https://..." leftAddon={<ImageIcon />} />
+                <BannerImageField uploadLabel={m.uploadBannerImage} pasteLabel={m.orPasteImageUrl} hint={m.bannerImageHint} />
               </FormField>
               <FormField label={`${m.fieldBannerTitle} — العربية`} required>
                 <Input name="ar_title" required dir="rtl" />
@@ -248,8 +305,11 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
               <FormField label={`${m.fieldBannerTitle} — English`} required>
                 <Input name="en_title" required dir="ltr" />
               </FormField>
-              <FormField label={`${m.fieldDestLink} (${m.destLinkOptional})`} className="md:col-span-2">
+              <FormField label={`${m.fieldDestLink} (${m.destLinkOptional})`} hint={m.destLinkHint}>
                 <Input name="link" dir="ltr" placeholder="/projects" leftAddon={<ExternalLink />} />
+              </FormField>
+              <FormField label={m.fieldBannerOrder}>
+                <Input name="order" type="number" min={0} step={1} defaultValue={banners.length} dir="ltr" className="max-w-[120px]" />
               </FormField>
               <div className="flex justify-end md:col-span-2">
                 <Button type="submit" variant="primary" size="md">{m.btnAddBanner}</Button>
@@ -268,11 +328,18 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
                   <span className={cn('absolute start-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur', b.active ? 'bg-emerald-500/25 text-emerald-100' : 'bg-white/20 text-white/80')}>
                     {b.active ? m.badgeActive : m.badgeInactive}
                   </span>
-                  <form action={deleteBannerAction.bind(null, b.id)} className="absolute end-3 top-3">
-                    <button type="submit" aria-label={m.btnDeleteBanner} title={m.btnDeleteBanner} className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/85 backdrop-blur transition-colors hover:bg-danger-600 hover:text-white">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
+                  <div className="absolute end-3 top-3 flex items-center gap-1.5">
+                    <form action={toggleBannerAction.bind(null, b.id, !b.active)}>
+                      <button type="submit" aria-label={b.active ? m.btnHideBanner : m.btnShowBanner} title={b.active ? m.btnHideBanner : m.btnShowBanner} className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/85 backdrop-blur transition-colors hover:bg-black/60 hover:text-white">
+                        {b.active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                    </form>
+                    <form action={deleteBannerAction.bind(null, b.id)}>
+                      <button type="submit" aria-label={m.btnDeleteBanner} title={m.btnDeleteBanner} className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/85 backdrop-blur transition-colors hover:bg-danger-600 hover:text-white">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  </div>
                   <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                     <p className="truncate text-[15px] font-bold">{tx(b.title, locale)}</p>
                     {b.link && <p className="mt-0.5 truncate font-mono text-[11.5px] text-white/70" dir="ltr">{b.link}</p>}

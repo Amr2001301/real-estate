@@ -12,6 +12,8 @@ import { FeaturedUnits } from '@/components/home/FeaturedUnits';
 import { WhyChooseUs } from '@/components/home/WhyChooseUs';
 import { InvestmentCategories } from '@/components/home/InvestmentCategories';
 import { HomeBanner } from '@/components/home/HomeBanner';
+import { HomeBanners } from '@/components/home/HomeBanners';
+import { fetchBanners } from '@/lib/cms';
 import { HowWeHelp } from '@/components/home/HowWeHelp';
 import { HomeContact } from '@/components/home/HomeContact';
 import { LeadCtaBand } from '@/components/home/LeadCtaBand';
@@ -33,8 +35,8 @@ export default async function HomePage() {
   const tenant = await getResolvedTenant();
   if (!tenant) notFound();
 
-  const [locale, projects, units, cities] = await Promise.all([
-    getLocale(),
+  const locale = await getLocale();
+  const [projects, units, cities, banners] = await Promise.all([
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
@@ -53,6 +55,8 @@ export default async function HomePage() {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
+    // The company's own banners (dashboard → المحتوى → البانرات).
+    fetchBanners(tenant.slug, locale),
   ]);
 
   // Use the first featured project's cover as the hero backdrop when available.
@@ -71,6 +75,8 @@ export default async function HomePage() {
       <Container className="relative z-10 -mt-12 sm:-mt-14">
         <SearchPanel locale={locale} cities={cities.ok ? cities.data.cities : []} />
       </Container>
+
+      <HomeBanners banners={banners} locale={locale} />
 
       <InvestmentCategories locale={locale} />
       <FeaturedProjects result={projects} locale={locale} />

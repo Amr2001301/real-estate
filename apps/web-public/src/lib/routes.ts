@@ -33,6 +33,7 @@ export const routes = {
   verifyEmail: '/verify-email',
   privacy: '/privacy',
   terms: '/terms',
+  page: (slug: string) => `/pages/${slug}`,
 } as const;
 
 export interface NavItem {

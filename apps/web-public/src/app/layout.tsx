@@ -6,6 +6,7 @@ import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
 import { fetchBranding, hexToRgbVars } from '@/lib/branding';
+import { fetchPageLinks } from '@/lib/cms';
 import { DEFAULT_CURRENCY } from '@/lib/site-currency';
 import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
 import { Navbar } from '@/components/layout/Navbar';
@@ -40,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [locale, slug] = await Promise.all([getLocale(), getResolvedSlug()]);
-  const branding = slug ? await fetchBranding(slug) : null;
+  const [branding, pages] = slug ? await Promise.all([fetchBranding(slug), fetchPageLinks(slug, locale)]) : [null, []];
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   // Build inline CSS only when the tenant supplies at least one colour.
@@ -89,7 +90,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <CompanyContactProvider contact={companyContact(branding)}>
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
-            <Footer locale={locale} branding={branding ?? undefined} />
+            <Footer locale={locale} branding={branding ?? undefined} pages={pages} />
             <ChatWidget />
           </CompanyContactProvider>
           </FavoritesProvider>
