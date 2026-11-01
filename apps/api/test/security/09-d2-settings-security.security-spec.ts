@@ -13,6 +13,7 @@
  *   DS-8  Seed: both fixture companies have all 8 D2 keys seeded with documented
  *         defaults (verifies the seedCancellationSettingsForCompany path via rawPrisma)
  *   DS-9  New company (created via rawPrisma) that receives seeded settings gets all 8
+ *   DS-10 A key the platform does not know is refused (PUT and PATCH) and nothing is stored
  *
  * Requires TEST_DATABASE_URL pointing at a dedicated e2e/test database.
  * Run with: pnpm --filter @rep/api test -c test/jest-security.json
@@ -366,4 +367,37 @@ it('DS-9b: seeding the same company twice does not duplicate rows', async () => 
     where: { companyId: extraCompanyId, key: { in: CANCELLATION_SETTING_KEYS } },
   });
   expect(count).toBe(8);
+});
+
+// ── DS-10: only known keys can be written ─────────────────────────────────────
+
+it('DS-10: a key the platform does not know is refused and nothing is stored', async () => {
+  const key = 'ds10.unknown.key';
+  const patch = await request(testApp.app.getHttpServer())
+    .patch(`/v1/settings/${key}`)
+    .set('Authorization', bearer(adminAToken))
+    .set('X-Tenant-Slug', SEC_SLUG_A)
+    .send({ value: 'anything' })
+    .expect(400);
+  expect(patch.body.message).toBe(`${key}: unknown setting`);
+
+  await request(testApp.app.getHttpServer())
+    .put(`/v1/settings/${key}`)
+    .set('Authorization', bearer(adminAToken))
+    .set('X-Tenant-Slug', SEC_SLUG_A)
+    .send({ value: { any: 'thing' } })
+    .expect(400);
+
+  // A name that only looks like a key: an object's own built-ins are not settings.
+  await request(testApp.app.getHttpServer())
+    .patch('/v1/settings/constructor')
+    .set('Authorization', bearer(adminAToken))
+    .set('X-Tenant-Slug', SEC_SLUG_A)
+    .send({ value: 1 })
+    .expect(400);
+
+  const rows = await testApp.rawPrisma.setting.count({
+    where: { companyId: fx.companies.aId, key: { in: [key, 'constructor'] } },
+  });
+  expect(rows).toBe(0);
 });

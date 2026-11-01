@@ -171,9 +171,18 @@ describe('Settings module · permissions enforcement', () => {
     it('allows ADMIN (bypass)', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       await request(app.getHttpServer())
+        .patch('/settings/company.timezone')
+        .send({ value: 'Africa/Cairo' })
+        .expect(200);
+    });
+
+    it('refuses a key the platform does not know (400)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const res = await request(app.getHttpServer())
         .patch('/settings/system.locale')
         .send({ value: { en: 'en', ar: 'ar' } })
-        .expect(200);
+        .expect(400);
+      expect(res.body.message).toBe('system.locale: unknown setting');
     });
 
     it('rejects SALES at the @Roles layer', async () => {

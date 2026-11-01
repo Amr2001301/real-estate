@@ -8,7 +8,7 @@
 import 'reflect-metadata';
 import * as argon2 from 'argon2';
 import request from 'supertest';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
@@ -242,17 +242,13 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
 
     const http = request(testApp.app.getHttpServer());
 
-    await http
-      .put(`/v1/settings/${SETTING_KEY_A}`)
-      .set('Authorization', bearer(adminAToken))
-      .send({ value: { source: 'company-a' } })
-      .expect(200);
-
-    await http
-      .put(`/v1/settings/${SETTING_KEY_B}`)
-      .set('Authorization', bearer(adminBToken))
-      .send({ value: { source: 'company-b' } })
-      .expect(200);
+    // Seeded directly: the settings API only writes the keys the platform knows.
+    await raw.setting.upsert({
+      where: { companyId_key: { companyId: companyAId, key: SETTING_KEY_A } },
+      create: { companyId: companyAId, key: SETTING_KEY_A, value: { source: 'company-a' } },
+      update: { value: { source: 'company-a' } },
+    });
+    await raw.setting.create({ data: { companyId: companyBId, key: SETTING_KEY_B, value: { source: 'company-b' } } });
 
     await raw.user.deleteMany({ where: { phone: { in: [LEAD_PHONE_A, LEAD_PHONE_B] } } });
 
@@ -362,15 +358,18 @@ describe('MT-Test-02B — multi-tenant domain isolation Phase 7B (e2e)', () => {
       expect(res.status).toBe(200);
       expect((res.body as { key: string }).key).toBe(SETTING_KEY_A);
     });
-    it('ISO-8: Admin B can create setting with the same key as Admin A (compound PK allows it)', async () => {
+    it('ISO-8: Admin B can write a key Company A also has (compound PK) without touching A', async () => {
+      const key = 'company.timezone';
+      const before = await testApp.rawPrisma.setting.findFirst({ where: { companyId: companyAId, key } });
       const res = await http()
-        .put(`/v1/settings/${SETTING_KEY_A}`)
+        .patch(`/v1/settings/${key}`)
         .set('Authorization', bearer(adminBToken))
-        .send({ value: { source: 'company-b-same-key' } });
+        .send({ value: 'Asia/Riyadh' });
       expect(res.status).toBe(200);
-      const resA = await http().get(`/v1/settings/${SETTING_KEY_A}`).set('Authorization', bearer(adminAToken));
-      expect(resA.status).toBe(200);
-      expect((resA.body as { value: { source: string } }).value).toEqual({ source: 'company-a' });
+      const rowB = await testApp.rawPrisma.setting.findFirst({ where: { companyId: companyBId, key } });
+      expect(rowB?.value).toBe('Asia/Riyadh');
+      const after = await testApp.rawPrisma.setting.findFirst({ where: { companyId: companyAId, key } });
+      expect(after?.value ?? null).toEqual(before?.value ?? null);
     });
   });
 
@@ -429,7 +428,9 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
   const SLUG_B = 'mt-7c-company-b';
   const EMAIL_B = 'admin-7c@mt-test.local';
   const PASS_B = 'Admin7C-123!';
-  const WI_SETTING_KEY = 'mt7c.write.isolation.key';
+  // A key the settings API accepts; Company A's own value is put back afterwards.
+  const WI_SETTING_KEY = 'company.timezone';
+  let wiSettingBefore: { value: unknown } | null = null;
   const WI_PHONE_A = '+966501118800';
   const WI_PHONE_B = '+966501118801';
   const WI_PUBLIC_PHONE = '+966501118802';
@@ -485,6 +486,10 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
     ]);
 
     await raw.user.deleteMany({ where: { phone: { in: [WI_PHONE_A, WI_PHONE_B] } } });
+    wiSettingBefore = await raw.setting.findFirst({
+      where: { companyId: companyAId, key: WI_SETTING_KEY },
+      select: { value: true },
+    });
   }, 60_000);
 
   afterAll(async () => {
@@ -504,7 +509,14 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
       if (row?.clientId)
         await raw.user.delete({ where: { id: row.clientId } }).catch(() => void 0);
     }
-    await raw.setting.deleteMany({ where: { companyId: companyAId, key: WI_SETTING_KEY } });
+    if (wiSettingBefore) {
+      await raw.setting.update({
+        where: { companyId_key: { companyId: companyAId, key: WI_SETTING_KEY } },
+        data: { value: wiSettingBefore.value as Prisma.InputJsonValue },
+      });
+    } else {
+      await raw.setting.deleteMany({ where: { companyId: companyAId, key: WI_SETTING_KEY } });
+    }
   }, 30_000);
 
   const http = () => request(testApp.app.getHttpServer());
@@ -573,11 +585,11 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
     expect(row.companyId).not.toBe(companyAId);
   });
 
-  it('WI-5: Admin A PUT /settings/:key stamps companyId = companyAId in DB', async () => {
+  it('WI-5: Admin A PATCH /settings/:key stamps companyId = companyAId in DB', async () => {
     await http()
-      .put(`/v1/settings/${WI_SETTING_KEY}`)
+      .patch(`/v1/settings/${WI_SETTING_KEY}`)
       .set('Authorization', bearer(adminAToken))
-      .send({ value: { source: 'company-a-write' } })
+      .send({ value: 'Africa/Cairo' })
       .expect(200);
     const row = await testApp.rawPrisma.setting.findFirst({
       where: { companyId: companyAId, key: WI_SETTING_KEY },
@@ -586,11 +598,11 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
     expect(row!.companyId).toBe(companyAId);
   });
 
-  it('WI-6: Admin B PUT /settings with same key creates separate row — no cross-company overwrite', async () => {
+  it('WI-6: Admin B PATCH /settings with same key creates separate row — no cross-company overwrite', async () => {
     await http()
-      .put(`/v1/settings/${WI_SETTING_KEY}`)
+      .patch(`/v1/settings/${WI_SETTING_KEY}`)
       .set('Authorization', bearer(adminBToken))
-      .send({ value: { source: 'company-b-write' } })
+      .send({ value: 'Asia/Riyadh' })
       .expect(200);
     const rows = await testApp.rawPrisma.setting.findMany({
       where: { key: WI_SETTING_KEY },
@@ -600,7 +612,7 @@ describe('MT-Test-03 — multi-tenant write-path isolation Phase 7C (e2e)', () =
     expect(companyIds).toContain(companyAId);
     expect(companyIds).toContain(companyBId);
     const rowA = rows.find((r) => r.companyId === companyAId);
-    expect(rowA?.value).toEqual({ source: 'company-a-write' });
+    expect(rowA?.value).toBe('Africa/Cairo');
   });
 
   it('WI-7: Admin B GET /visit-requests does not include Admin A public visit (write-then-cross-read)', async () => {

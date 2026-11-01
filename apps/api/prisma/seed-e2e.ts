@@ -632,6 +632,15 @@ async function main(): Promise<void> {
     },
   });
 
+  // A setting stored before the settings API took only the keys the platform
+  // reads: nothing reads it, so the dashboard marks it unused
+  // (web-admin settings-known-keys.spec.ts). The API no longer stores such keys.
+  await prisma.setting.upsert({
+    where: { companyId_key: { companyId: defaultCompany.id, key: 'security.requireMfa' } },
+    update: {},
+    create: { companyId: defaultCompany.id, key: 'security.requireMfa', value: true },
+  });
+
   console.log('   Brokers:');
   console.log(`     ${E2E_BROKER_CODES.BROKER_1} → projects [${p1.id}, ${p2.id}]`);
   console.log(`     ${E2E_BROKER_CODES.BROKER_2} → project  [${p3.id}]`);
