@@ -143,16 +143,39 @@ class AppNavHeader extends StatelessWidget {
                           const SizedBox(width: AppSpacing.md),
                         ],
                         Expanded(
-                          child: Text(
-                            title,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              if (subtitle != null && subtitle!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  subtitle!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppPalette.gold400,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        ...actions,
+                        for (final a in actions) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          a,
+                        ],
                       ],
                     ),
                   ] else ...[
@@ -312,6 +335,37 @@ class NavHeaderAction extends StatelessWidget {
   }
 }
 
+/// The one back button of every header in both apps: a glass circle with a
+/// chevron that points the way back in either reading direction. Pops the
+/// route, or goes to [fallbackLocation] (through [onFallback]) when there is
+/// nothing to pop (a screen opened from a link or a notification).
+class NavHeaderBack extends StatelessWidget {
+  const NavHeaderBack({super.key, this.onTap, this.onFallback});
+
+  /// Replaces the default pop.
+  final VoidCallback? onTap;
+
+  /// Called instead of popping when the route cannot be popped.
+  final VoidCallback? onFallback;
+
+  @override
+  Widget build(BuildContext context) {
+    return NavHeaderAction(
+      icon: Icons.arrow_back_ios_new_rounded,
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+      onTap: onTap ??
+          () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.maybePop();
+            } else {
+              onFallback?.call();
+            }
+          },
+    );
+  }
+}
+
 /// Compact gold unread-count badge for [NavHeaderAction].
 class NavHeaderBadge extends StatelessWidget {
   const NavHeaderBadge({super.key, required this.count});
@@ -336,6 +390,150 @@ class NavHeaderBadge extends StatelessWidget {
           fontSize: 8.5,
           fontWeight: FontWeight.w800,
           height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+/// [AppNavHeader] (compact) pinned at the top of a [CustomScrollView]: the
+/// same header, staying in place while the page scrolls under it.
+class AppNavSliverHeader extends StatelessWidget {
+  const AppNavSliverHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.leadingAction,
+    this.actions = const [],
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? leadingAction;
+  final List<Widget> actions;
+
+  /// Content height of a compact header (padding, a 40px button or a title
+  /// with its one-line subtitle).
+  static const double contentHeight = 84;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _NavSliverDelegate(
+        extent: MediaQuery.paddingOf(context).top + contentHeight,
+        header: AppNavHeader(
+          title: title,
+          subtitle: subtitle,
+          compact: true,
+          leadingAction: leadingAction,
+          actions: actions,
+        ),
+      ),
+    );
+  }
+}
+
+class _NavSliverDelegate extends SliverPersistentHeaderDelegate {
+  const _NavSliverDelegate({required this.extent, required this.header});
+
+  final double extent;
+  final AppNavHeader header;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      SizedBox.expand(child: Align(alignment: Alignment.topCenter, child: header));
+
+  @override
+  bool shouldRebuild(_NavSliverDelegate old) =>
+      old.extent != extent ||
+      old.header.title != header.title ||
+      old.header.subtitle != header.subtitle ||
+      old.header.actions != header.actions;
+}
+
+/// A status shown in a header ("مُسند", "موقّع", "محوّل"): a glass pill with
+/// a dot in the status colour, the same in every header of both apps.
+class NavHeaderPill extends StatelessWidget {
+  const NavHeaderPill({super.key, required this.label, this.color});
+
+  final String label;
+
+  /// The status colour (the dot and a faint tint); gold when null.
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppPalette.gold400;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(c.withValues(alpha: 0.16), Colors.white.withValues(alpha: 0.06)),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        border: Border.all(color: c.withValues(alpha: 0.45), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 6, height: 6, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700, height: 1.1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A header's main action with a label ("+ جديد"): a gold pill, the same in
+/// every header that offers one.
+class NavHeaderButton extends StatelessWidget {
+  const NavHeaderButton({super.key, required this.label, required this.onTap, this.icon = Icons.add_rounded});
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: Ink(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppPalette.gold400, AppPalette.gold500],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            boxShadow: [
+              BoxShadow(color: AppPalette.gold400.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: AppPalette.navy, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: const TextStyle(color: AppPalette.navy, fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
         ),
       ),
     );

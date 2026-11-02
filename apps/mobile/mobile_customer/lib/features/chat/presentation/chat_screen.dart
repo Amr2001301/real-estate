@@ -10,8 +10,6 @@ import 'chat_state.dart';
 import 'widgets/chat_widgets.dart';
 
 // Navy depth tokens.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -167,128 +165,12 @@ class _ChatHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_navyDeep, _navyMid],
-        ),
-        border: Border(
-          bottom: BorderSide(color: Color(0x4DB8941F), width: 0.5),
-        ),
-      ),
-      padding: EdgeInsets.only(top: topInset),
-      child: SizedBox(
-        height: 60,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Back button — end side (LEFT in RTL, RIGHT in LTR means wrong
-              // for a back button; we override with explicit position).
-              Align(
-                alignment: rtl ? Alignment.centerRight : Alignment.centerLeft,
-                child: _HeaderBtn(
-                  icon: !rtl
-                      ? Icons.chevron_right_rounded
-                      : Icons.chevron_left_rounded,
-                  onTap: onBack,
-                ),
-              ),
-              // Centred title + AI badge
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    l10n.chatTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  _AiBadge(),
-                ],
-              ),
-              // Restart — opposite side
-              Align(
-                alignment: rtl ? Alignment.centerLeft : Alignment.centerRight,
-                child: _HeaderBtn(
-                  icon: Icons.refresh_rounded,
-                  onTap: onRestart,
-                  tooltip: l10n.chatRestart,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderBtn extends StatelessWidget {
-  const _HeaderBtn({required this.icon, required this.onTap, this.tooltip});
-  final IconData icon;
-  final VoidCallback onTap;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        child: Tooltip(
-          message: tooltip ?? '',
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.md),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.20),
-                width: 0.6,
-              ),
-            ),
-            child: Icon(icon, size: 18, color: Colors.white),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Small gold gradient "AI" badge underneath the title.
-class _AiBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFC8A24B), AppPalette.gold400],
-        ),
-        borderRadius: AppRadii.pillAll,
-      ),
-      child: const Text(
-        'المساعد الذكي',
-        style: TextStyle(
-          color: AppPalette.navy,
-          fontSize: 9.5,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.5,
-        ),
-      ),
+    return AppNavHeader(
+      title: l10n.chatTitle,
+      subtitle: 'المساعد الذكي',
+      compact: true,
+      leadingAction: NavHeaderBack(onTap: onBack),
+      actions: [NavHeaderAction(icon: Icons.refresh_rounded, tooltip: l10n.chatRestart, onTap: onRestart)],
     );
   }
 }

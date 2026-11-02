@@ -31,11 +31,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           AppNavHeader(
             title: l10n.accountNotifications,
             compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_rounded,
-              tooltip: l10n.actionCancel,
-              onTap: () => context.pop(),
-            ),
+            leadingAction: const NavHeaderBack(),
             actions: [
               NavHeaderAction(
                 icon: Icons.tune_rounded,

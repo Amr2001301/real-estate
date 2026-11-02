@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,9 +8,6 @@ import 'notification_route.dart';
 import 'notifications_cubit.dart';
 import 'unread_count_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Notifications Screen
@@ -152,169 +148,19 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [_navyLight, _navyCard, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x35000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
+    return AppNavHeader(
+      title: l10n.accountNotifications,
+      subtitle: unreadCount > 0 ? '$unreadCount ${unreadCount == 1 ? 'إشعار جديد' : 'إشعارات جديدة'}' : null,
+      compact: true,
+      leadingAction: const NavHeaderBack(),
+      actions: [
+        if (canMarkAll) NavHeaderAction(icon: Icons.done_all_rounded, tooltip: l10n.markAllRead, onTap: onMarkAll),
+        NavHeaderAction(
+          icon: Icons.tune_rounded,
+          tooltip: 'تفضيلات الإشعارات',
+          onTap: () => context.push('/account/notifications/preferences'),
         ),
-        child: Stack(
-          children: [
-            const Positioned.fill(
-              child: IgnorePointer(child: _DotTexture()),
-            ),
-            PositionedDirectional(
-              end: 0,
-              top: 0,
-              child: Container(
-                width: 160,
-                height: 130,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.09),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                      AppPalette.gold400.withValues(alpha: 0.5),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _BackBtn(),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.accountNotifications,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                        if (unreadCount > 0) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: const BoxDecoration(
-                                  color: AppPalette.gold300,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                '$unreadCount '
-                                '${unreadCount == 1 ? 'إشعار جديد' : 'إشعارات جديدة'}',
-                                style: const TextStyle(
-                                  color: AppPalette.gold300,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: Localizations.localeOf(context).languageCode == 'ar'
-                        ? 'تفضيلات الإشعارات'
-                        : 'Notification preferences',
-                    onPressed: () => context.push('/account/notifications/preferences'),
-                    icon: const Icon(Icons.tune_rounded, color: Colors.white),
-                  ),
-                  if (canMarkAll) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    GestureDetector(
-                      onTap: onMarkAll,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.markAllRead,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }
@@ -543,52 +389,3 @@ class _NotificationTile extends StatelessWidget {
 
 // ── Shared widgets ────────────────────────────────────────────────────────────
 
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 16,
-        ),
-      ),
-    );
-  }
-}
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}

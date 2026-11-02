@@ -10,6 +10,10 @@ abstract final class DateFormatter {
   static String shortDate(DateTime date, {required String languageCode}) =>
       _western(DateFormat.yMMMd(_locale(languageCode))).format(date);
 
+  /// Day and month only ("2 نوفمبر", "Nov 2").
+  static String dayMonth(DateTime date, {required String languageCode}) =>
+      _western(languageCode == 'ar' ? DateFormat('d MMMM', 'ar') : DateFormat('MMM d', 'en')).format(date);
+
   static String _locale(String languageCode) => languageCode == 'ar' ? 'ar' : 'en';
 
   static DateFormat _western(DateFormat f) => f..useNativeDigits = false;

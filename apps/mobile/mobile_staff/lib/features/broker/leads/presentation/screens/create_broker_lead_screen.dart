@@ -6,9 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../cubit/create_broker_lead_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
-const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Create Broker Lead Screen
@@ -128,177 +125,13 @@ class _FormHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x35000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Dot texture
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          // Gold radial bloom
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.12),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Gold hairline
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Back — circle glass button
-                _GlassBtn(
-                  icon: Directionality.of(context) == TextDirection.ltr
-                      ? Icons.arrow_forward_ios_rounded
-                      : Icons.arrow_back_ios_rounded,
-                  onTap: () => context.pop(),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.brokerLeadNew,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          height: 1.1,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      const Text(
-                        'أضف بيانات العميل المحتمل',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Person-add icon badge
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppPalette.gold400, AppPalette.gold300],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppPalette.gold400.withValues(alpha: 0.40),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.person_add_alt_1_rounded,
-                    color: _navyDeep,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AppNavHeader(
+      title: l10n.brokerLeadNew,
+      subtitle: 'أضف بيانات العميل المحتمل',
+      compact: true,
+      leadingAction: const NavHeaderBack(),
     );
   }
-}
-
-class _GlassBtn extends StatelessWidget {
-  const _GlassBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white.withValues(alpha: 0.10),
-    shape: const CircleBorder(),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.20),
-            width: 0.8,
-          ),
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
-      ),
-    ),
-  );
 }
 
 // ── Grouped field card ────────────────────────────────────────────────────────
@@ -620,28 +453,3 @@ class _NoteCardState extends State<_NoteCard> {
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}

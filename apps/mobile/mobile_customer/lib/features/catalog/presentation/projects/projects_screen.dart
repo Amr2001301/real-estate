@@ -317,10 +317,7 @@ class _ProjectsHeaderDelegate extends SliverPersistentHeaderDelegate {
                   SizedBox(
                     width: 44,
                     child: canPop
-                        ? _HeaderIconButton(
-                            icon: Icons.arrow_back_ios_rounded,
-                            onTap: () => Navigator.of(context).maybePop(),
-                          )
+                        ? const NavHeaderBack()
                         : null,
                   ),
                   // Center: screen title
@@ -409,30 +406,6 @@ class _ProjectsHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Small glass-tinted icon button for the header — back arrow, search, etc.
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.10),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(icon, size: 18, color: Colors.white),
-        ),
       ),
     );
   }

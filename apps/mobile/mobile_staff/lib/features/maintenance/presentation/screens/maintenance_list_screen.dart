@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -203,178 +202,22 @@ class _SupervisorHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme    = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
     final greeting = (displayName?.isNotEmpty == true)
         ? l10n.maintenanceWelcomeUser(displayName!)
         : l10n.maintenanceWelcomeFallback;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [_navyLight, _navyCard, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Dot texture
-            const Positioned.fill(
-                child: IgnorePointer(child: _DotTexture())),
-            // Gold radial bloom (trailing corner)
-            PositionedDirectional(
-              end: 0,
-              top: 0,
-              child: Container(
-                width: 180,
-                height: 140,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.09),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Gold shimmer hairline at bottom
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                      AppPalette.gold400.withValues(alpha: 0.5),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Content — single row keeps actions aligned with title
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Title block (leading / right in RTL)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Role label — shown once, small gold text
-                        Text(
-                          l10n.maintenanceSupervisorRole,
-                          style: const TextStyle(
-                            color: AppPalette.gold300,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Personalised greeting
-                        Text(
-                          greeting,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        // Subtitle
-                        Text(
-                          l10n.maintenanceAssignedSubtitle,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.60),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  // Actions (trailing / left in RTL) — same row as title
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const NotificationsBell(),
-                      const SizedBox(width: AppSpacing.xs),
-                      _GlassIconButton(
-                        icon: Icons.logout_rounded,
-                        onTap: onLogout,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppHomeHeader(
+      title: l10n.navDashboard,
+      greeting: greeting,
+      chips: [HeaderRoleChip(label: l10n.maintenanceSupervisorRole), const HeaderDateChip()],
+      actions: [
+        const NotificationsBell(),
+        NavHeaderAction(icon: Icons.logout_rounded, tooltip: l10n.actionLogout, onTap: onLogout),
+      ],
     );
   }
 }
 
 // ── Glass icon button (logout, etc.) ─────────────────────────────────────────
-
-class _GlassIconButton extends StatelessWidget {
-  const _GlassIconButton({required this.icon, required this.onTap});
-  final IconData     icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 16),
-      ),
-    );
-  }
-}
 
 // ── Summary card ──────────────────────────────────────────────────────────────
 

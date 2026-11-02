@@ -12,7 +12,6 @@ import 'compare_cubit.dart';
 
 // Navy depth tokens — match the projects/units screen language.
 const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
 
 /// Premium compare screen — from-scratch redesign.
 ///
@@ -49,7 +48,6 @@ class _CompareContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     final dockClear = context.isApplePlatform ? bottomInset + 60 : 16.0;
     final l10n = context.l10n;
@@ -57,9 +55,17 @@ class _CompareContent extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _CompareHeaderDelegate(topInset: topInset),
+        AppNavSliverHeader(
+          title: context.l10n.compareTitle,
+          leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
+          actions: [
+            if (units.isNotEmpty)
+              NavHeaderAction(
+                icon: Icons.delete_sweep_rounded,
+                tooltip: context.l10n.clearFilters,
+                onTap: () => context.read<CompareCubit>().clear(),
+              ),
+          ],
         ),
         SliverPadding(
           padding: EdgeInsets.fromLTRB(
@@ -98,108 +104,6 @@ class _CompareContent extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Collapsing navy header (same pattern as projects / units screens)
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _CompareHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _CompareHeaderDelegate({required this.topInset});
-  final double topInset;
-
-  static const double _barH = 56.0;
-
-  @override
-  double get minExtent => topInset + _barH;
-  @override
-  double get maxExtent => topInset + _barH;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final l10n = context.l10n;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_navyDeep, _navyMid],
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: Color(0x4DB8941F), // gold shimmer hairline
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(top: topInset),
-        child: SizedBox(
-          height: _barH,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: [
-                // Back button or fixed-width spacer for visual balance
-                if (Navigator.canPop(context))
-                  SizedBox(
-                    width: 40,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 17, color: Colors.white),
-                      onPressed: () => Navigator.maybePop(context),
-                      padding: EdgeInsets.zero,
-                    ),
-                  )
-                else
-                  const SizedBox(width: 40),
-
-                // Centred title
-                Expanded(
-                  child: Text(
-                    l10n.compareTitle,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
-
-                // Clear-all — reactive so it hides when list drains to empty
-                BlocBuilder<CompareCubit, List<Unit>>(
-                  builder: (context, units) => SizedBox(
-                    width: 52,
-                    child: units.isEmpty
-                        ? const SizedBox.shrink()
-                        : TextButton(
-                            onPressed: () =>
-                                context.read<CompareCubit>().clear(),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppPalette.gold300,
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(40, 40),
-                            ),
-                            child: Text(
-                              l10n.clearFilters,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_CompareHeaderDelegate old) =>
-      old.topInset != topInset;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Unit identity cards row
@@ -748,32 +652,10 @@ class _EmptyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_navyDeep, _navyMid],
-        ),
-        border: Border(
-          bottom: BorderSide(color: Color(0x4DB8941F), width: 0.5),
-        ),
-      ),
-      padding: EdgeInsets.only(top: topInset),
-      child: SizedBox(
-        height: 56,
-        child: Center(
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 17,
-              letterSpacing: -0.2,
-            ),
-          ),
-        ),
-      ),
+    return AppNavHeader(
+      title: title,
+      compact: true,
+      leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
     );
   }
 }

@@ -9,9 +9,6 @@ import '../../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/broker_project.dart';
 import '../cubit/broker_projects_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
-const _navyLight = Color(0xFF243F62);
 
 class BrokerProjectsScreen extends StatefulWidget {
   const BrokerProjectsScreen({super.key});
@@ -93,134 +90,11 @@ class _ProjectsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-              color: Color(0x35000000), blurRadius: 22, offset: Offset(0, 8)),
-        ],
-      ),
-      child: Stack(
-        children: [
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          // Gold radial bloom
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.12),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Gold hairline
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.lg,
-                topInset + AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.navProjects,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'المشاريع المتاحة لك',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (count != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppPalette.gold400, AppPalette.gold500],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(AppRadii.pill),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppPalette.gold400.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: _navyDeep,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AppNavHeader(
+      title: l10n.navProjects,
+      subtitle: count != null ? 'المشاريع المتاحة لك · $count' : 'المشاريع المتاحة لك',
+      compact: true,
+      leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
     );
   }
 }
@@ -530,25 +404,3 @@ class _ProjectCardState extends State<_ProjectCard> {
 
 // ── Dot texture ───────────────────────────────────────────────────────────────
 
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}

@@ -9,7 +9,6 @@ import '../../domain/entities/broker_reservation.dart';
 import '../cubit/broker_reservations_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,186 +232,17 @@ class _ReservationsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x35000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Dot texture
-          const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
-          // Gold radial bloom
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.12),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Gold hairline
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            l10n.navReservations,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              height: 1.1,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            lang == 'ar'
-                                ? 'طلبات الحجز المقدمة'
-                                : 'Your reservation requests',
-                            style: const TextStyle(
-                              color: AppPalette.gold300,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Count badge
-                    if (count != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: AppRadii.pillAll,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.20),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                    ],
-                    // Add button
-                    GestureDetector(
-                      onTap: onAdd,
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppPalette.gold400, AppPalette.gold300],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  AppPalette.gold400.withValues(alpha: 0.40),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.add_rounded,
-                          color: _navyDeep,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                // Search bar
-                _SearchBar(
-                  controller: searchController,
-                  hint: lang == 'ar'
-                      ? 'ابحث بالعميل أو رقم الحجز'
-                      : 'Search by client or number',
-                  onClear: onClearSearch,
-                ),
-              ],
-            ),
-          ),
-        ],
+    final sub = lang == 'ar' ? 'طلبات الحجز المقدمة' : 'Your reservation requests';
+    return AppNavHeader(
+      title: l10n.navReservations,
+      subtitle: count != null ? '$sub · $count' : sub,
+      compact: true,
+      leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
+      actions: [NavHeaderButton(label: lang == 'ar' ? 'جديد' : 'New', onTap: onAdd)],
+      bottom: _SearchBar(
+        controller: searchController,
+        hint: lang == 'ar' ? 'ابحث بالعميل أو رقم الحجز' : 'Search by client or number',
+        onClear: onClearSearch,
       ),
     );
   }
@@ -1009,32 +839,6 @@ class _InfoChip extends StatelessWidget {
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}
 
 // ── Reservations loading skeleton ─────────────────────────────────────────────
 

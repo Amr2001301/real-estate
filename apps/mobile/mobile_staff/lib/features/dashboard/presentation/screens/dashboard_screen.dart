@@ -104,99 +104,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _RoleChip extends StatelessWidget {
-  const _RoleChip({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppPalette.gold400, AppPalette.gold500],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        boxShadow: [
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppPalette.navy,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _DateChip extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final lang = Localizations.localeOf(context).languageCode;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-      ),
-      child: Text(
-        _formatDate(now, lang),
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.80),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  static String _formatDate(DateTime d, String lang) {
-    const ar = [
-      '',
-      'يناير',
-      'فبراير',
-      'مارس',
-      'إبريل',
-      'مايو',
-      'يونيو',
-      'يوليو',
-      'أغسطس',
-      'سبتمبر',
-      'أكتوبر',
-      'نوفمبر',
-      'ديسمبر',
-    ];
-    const en = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return lang == 'ar' ? '${d.day} ${ar[d.month]}' : '${en[d.month]} ${d.day}';
-  }
-}
-
 class _DotPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -2614,9 +2521,9 @@ class _DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _RoleChip(label: roleLabel(l10n, context.read<SessionCubit>().state.role)),
+                              HeaderRoleChip(label: roleLabel(l10n, context.read<SessionCubit>().state.role)),
                               const SizedBox(width: AppSpacing.xs),
-                              _DateChip(),
+                              const HeaderDateChip(),
                             ],
                           ),
                         ],
