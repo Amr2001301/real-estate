@@ -1089,7 +1089,7 @@ class _UnitCardState extends State<_UnitCard> {
                     Row(
                       children: [
                         if (unit.type != null) ...[
-                          _TypeChip(type: unit.type!),
+                          _TypeChip(type: unitTypeLabel(unit.type, languageCode: Localizations.localeOf(context).languageCode)),
                           const SizedBox(width: 6),
                         ],
                         if (unit.price != null)

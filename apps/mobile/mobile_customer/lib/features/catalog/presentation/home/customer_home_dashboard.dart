@@ -627,7 +627,7 @@ class _PropertyUnit extends StatelessWidget {
             onTap: () => context.push('/account/property'),
             child: _CardHeader(
               projectName: property.projectName.resolve(lang),
-              unitType: property.unitType,
+              unitType: unitTypeLabel(property.unitType, languageCode: lang),
               unitCode: property.unitCode,
               city: property.city,
               owned: owned,

@@ -154,7 +154,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get gallerySampleCardSubtitle => 'القاهرة الجديدة · شقة';
 
   @override
-  String get gallerySampleCardPrice => '٥٬٨٠٠٬٠٠٠ ج.م';
+  String get gallerySampleCardPrice => '5,800,000 ج.م';
 
   @override
   String get galleryInputLabel => 'الاسم الكامل';
@@ -629,7 +629,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compareStepSelect => 'اختر';
 
   @override
-  String get compareStepLimit => 'حتى ٤';
+  String get compareStepLimit => 'حتى 4';
 
   @override
   String get compareStepCompare => 'قارن';
@@ -766,7 +766,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get validationPhone => 'أدخل رقم هاتف صحيحًا';
 
   @override
-  String get validationPasswordShort => 'يجب ألا تقل كلمة المرور عن ٨ أحرف';
+  String get validationPasswordShort => 'يجب ألا تقل كلمة المرور عن 8 أحرف';
 
   @override
   String get validationCodeShort => 'أدخل الرمز الذي وصلك';
@@ -1350,7 +1350,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceDescriptionRequired =>
-      'يرجى إضافة وصف مختصر (٥ أحرف على الأقل).';
+      'يرجى إضافة وصف مختصر (5 أحرف على الأقل).';
 
   @override
   String get maintenanceSubmit => 'إرسال الطلب';
@@ -1478,19 +1478,19 @@ class AppLocalizationsAr extends AppLocalizations {
       'جلستك لا تتطابق مع هذه الشركة. يرجى تسجيل الدخول مجددًا.';
 
   @override
-  String get roleSales => 'مبيعات';
+  String get roleSales => 'مستشار مبيعات';
 
   @override
   String get roleSalesManager => 'مدير مبيعات';
 
   @override
-  String get roleBroker => 'وسيط';
+  String get roleBroker => 'وسيط عقاري';
 
   @override
-  String get roleAdmin => 'مشرف';
+  String get roleAdmin => 'مدير النظام';
 
   @override
-  String get roleMaintenance => 'صيانة';
+  String get roleMaintenance => 'مشرف صيانة';
 
   @override
   String get roleStaff => 'موظف';
@@ -1823,7 +1823,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitClientTypeRegistered => 'عميل مسجل';
 
   @override
-  String get visitClientTypeWalkin => 'بدون حساب (Walk-in)';
+  String get visitClientTypeWalkin => 'عميل بدون حساب';
 
   @override
   String get visitLeadRequired => 'يرجى اختيار عميل محتمل.';
@@ -1994,7 +1994,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitFeedbackNotes => 'الملاحظات';
 
   @override
-  String get visitFeedbackRating => 'التقييم (١–٥)';
+  String get visitFeedbackRating => 'التقييم (1–5)';
 
   @override
   String get visitFeedbackSubmit => 'إرسال الملاحظات';
@@ -2218,7 +2218,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calculatorInvalid =>
-      'يرجى التحقق من القيم: عدد الأشهر ١ على الأقل، وألا يتجاوز مجموع الدفعة المقدمة والحجز سعر الوحدة.';
+      'يرجى التحقق من القيم: عدد الأشهر 1 على الأقل، وألا يتجاوز مجموع الدفعة المقدمة والحجز سعر الوحدة.';
 
   @override
   String get calculatorCompute => 'احسب';
@@ -3966,4 +3966,94 @@ class AppLocalizationsAr extends AppLocalizations {
   String installmentPaidOn(String date) {
     return 'تم الدفع في $date';
   }
+
+  @override
+  String get reservationEventCreated => 'تم إنشاء الحجز';
+
+  @override
+  String get reservationEventApproved => 'تمت الموافقة على الحجز';
+
+  @override
+  String get reservationEventRejected => 'تم رفض الحجز';
+
+  @override
+  String get reservationEventCancelled => 'تم إلغاء الحجز';
+
+  @override
+  String get reservationEventExpired => 'انتهت مدة الحجز';
+
+  @override
+  String get reservationEventNoteAdded => 'أُضيفت ملاحظة';
+
+  @override
+  String get reservationEventPaymentConfirmed => 'تم تأكيد دفع مبلغ الحجز';
+
+  @override
+  String get reservationEventPaymentUnconfirmed => 'أُلغي تأكيد دفع مبلغ الحجز';
+
+  @override
+  String get reservationEventConverted => 'تم تحويل الحجز إلى عقد';
+
+  @override
+  String get reservationEventOther => 'تحديث على الحجز';
+
+  @override
+  String get visitEventRequestCreated => 'تم تقديم طلب الزيارة';
+
+  @override
+  String get visitEventRequestReviewed => 'تمت مراجعة طلب الزيارة';
+
+  @override
+  String get visitEventRequestRejected => 'تم رفض طلب الزيارة';
+
+  @override
+  String get visitEventRequestCancelled => 'تم إلغاء طلب الزيارة';
+
+  @override
+  String get visitEventScheduled => 'تمت جدولة الزيارة';
+
+  @override
+  String get visitEventConfirmed => 'تم تأكيد الزيارة';
+
+  @override
+  String get visitEventCompleted => 'تمت الزيارة';
+
+  @override
+  String get visitEventCancelled => 'تم إلغاء الزيارة';
+
+  @override
+  String get visitEventNoShow => 'لم يحضر العميل';
+
+  @override
+  String get visitEventRescheduled => 'تمت إعادة جدولة الزيارة';
+
+  @override
+  String get visitEventSalesAssigned => 'تم إسناد الزيارة إلى مستشار مبيعات';
+
+  @override
+  String get visitEventNoteAdded => 'أُضيفت ملاحظة';
+
+  @override
+  String get visitEventCustomerConfirmed => 'أكّد العميل الموعد';
+
+  @override
+  String get visitEventCustomerRescheduleRequested => 'طلب العميل تغيير الموعد';
+
+  @override
+  String get visitEventReminderSent => 'أُرسل تذكير بالموعد';
+
+  @override
+  String get visitEventSalesReassigned => 'تمت إعادة إسناد الزيارة';
+
+  @override
+  String get visitEventFeedbackSubmitted => 'أُضيف تقييم الزيارة';
+
+  @override
+  String get visitEventOther => 'تحديث على الزيارة';
+
+  @override
+  String get authPhoneTitle => 'تسجيل الدخول برقم الهاتف';
+
+  @override
+  String get fieldFullNameNewAccount => 'الاسم الكامل (للحسابات الجديدة فقط)';
 }

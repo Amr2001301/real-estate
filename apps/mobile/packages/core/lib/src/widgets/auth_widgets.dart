@@ -292,6 +292,11 @@ class AuthField extends StatelessWidget {
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
+          // A phone number reads left to right, kept on the reading side.
+          textDirection: keyboardType == TextInputType.phone ? TextDirection.ltr : null,
+          textAlign: keyboardType == TextInputType.phone && Directionality.of(context) == TextDirection.rtl
+              ? TextAlign.right
+              : TextAlign.start,
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
           autofillHints: autofillHints,

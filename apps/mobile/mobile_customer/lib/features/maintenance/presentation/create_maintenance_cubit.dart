@@ -76,13 +76,17 @@ class PhotoItem extends Equatable {
 
 /// A selectable unit option for the create form (one of the customer's units).
 class UnitOption extends Equatable {
-  const UnitOption({required this.id, required this.projectName, required this.label});
+  const UnitOption({required this.id, required this.projectName, required this.unitType, required this.unitCode});
   final String id;
   final Translatable projectName;
-  final String label;
+  final String unitType;
+  final String unitCode;
+
+  /// "فيلا · PD-V-01": the type's name, never its code.
+  String label(String languageCode) => '${unitTypeLabel(unitType, languageCode: languageCode)} · $unitCode';
 
   @override
-  List<Object?> get props => [id, label];
+  List<Object?> get props => [id, unitType, unitCode];
 }
 
 class CreateMaintenanceState extends Equatable {
@@ -281,7 +285,8 @@ class CreateMaintenanceCubit extends Cubit<CreateMaintenanceState> {
       options.add(UnitOption(
         id: p.unitId,
         projectName: p.projectName,
-        label: '${p.unitType} · ${p.unitCode}',
+        unitType: p.unitType,
+        unitCode: p.unitCode,
       ));
     }
     return options;

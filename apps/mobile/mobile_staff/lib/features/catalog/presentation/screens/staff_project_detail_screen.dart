@@ -1459,7 +1459,7 @@ class _UnitCard extends StatelessWidget {
                                 if (unit.type != null) ...[
                                   const SizedBox(height: 2),
                                   Text(
-                                    unit.type!,
+                                    unit.typeLabel(Localizations.localeOf(context).languageCode),
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: colors.inkMuted),

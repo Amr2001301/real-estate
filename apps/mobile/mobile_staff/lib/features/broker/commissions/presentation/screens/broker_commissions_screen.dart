@@ -873,7 +873,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                       Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.check_circle_rounded, size: 16, color: Colors.white54),
                         const SizedBox(height: 5),
-                        Text('١٢٣٬٤٥٦ ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text('123,456 ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 5),
                         Text('معتمد', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                       ])),
@@ -881,7 +881,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                       Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.schedule_rounded, size: 16, color: Colors.white54),
                         const SizedBox(height: 5),
-                        Text('٦٧٬٨٩٠ ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text('67,890 ${PriceFormatter.symbol('ar')}', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 5),
                         Text('قيد المراجعة', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                       ])),
@@ -889,7 +889,7 @@ class _CommissionsSkeleton extends StatelessWidget {
                       Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         const Icon(Icons.payments_rounded, size: 16, color: Colors.white54),
                         const SizedBox(height: 5),
-                        Text('٥', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                        Text('5', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 5),
                         Text('الإجمالي', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                       ])),
@@ -922,11 +922,11 @@ class _CommissionsSkeleton extends StatelessWidget {
                     ),
                     const SizedBox(width: 13),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('١٢٣٬٤٥٦ ${PriceFormatter.symbol('ar')}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                      Text('123,456 ${PriceFormatter.symbol('ar')}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                       const SizedBox(height: 4),
                       Text('كمبوند الرياض الجديدة', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       const SizedBox(height: 3),
-                      Text('١٥/٠٦/٢٠٢٦', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      Text('15/06/2026', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                     ])),
                     const SizedBox(width: 8),
                     StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),

@@ -2861,7 +2861,7 @@ abstract class AppLocalizations {
   /// No description provided for @roleSales.
   ///
   /// In en, this message translates to:
-  /// **'Sales'**
+  /// **'Sales Advisor'**
   String get roleSales;
 
   /// No description provided for @roleSalesManager.
@@ -2879,13 +2879,13 @@ abstract class AppLocalizations {
   /// No description provided for @roleAdmin.
   ///
   /// In en, this message translates to:
-  /// **'Admin'**
+  /// **'Administrator'**
   String get roleAdmin;
 
   /// No description provided for @roleMaintenance.
   ///
   /// In en, this message translates to:
-  /// **'Maintenance'**
+  /// **'Maintenance Supervisor'**
   String get roleMaintenance;
 
   /// No description provided for @roleStaff.
@@ -7525,6 +7525,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Paid on {date}'**
   String installmentPaidOn(String date);
+
+  /// No description provided for @reservationEventCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation created'**
+  String get reservationEventCreated;
+
+  /// No description provided for @reservationEventApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation approved'**
+  String get reservationEventApproved;
+
+  /// No description provided for @reservationEventRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation rejected'**
+  String get reservationEventRejected;
+
+  /// No description provided for @reservationEventCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation cancelled'**
+  String get reservationEventCancelled;
+
+  /// No description provided for @reservationEventExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation expired'**
+  String get reservationEventExpired;
+
+  /// No description provided for @reservationEventNoteAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get reservationEventNoteAdded;
+
+  /// No description provided for @reservationEventPaymentConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking payment confirmed'**
+  String get reservationEventPaymentConfirmed;
+
+  /// No description provided for @reservationEventPaymentUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking payment unconfirmed'**
+  String get reservationEventPaymentUnconfirmed;
+
+  /// No description provided for @reservationEventConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted to a contract'**
+  String get reservationEventConverted;
+
+  /// No description provided for @reservationEventOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation updated'**
+  String get reservationEventOther;
+
+  /// No description provided for @visitEventRequestCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit requested'**
+  String get visitEventRequestCreated;
+
+  /// No description provided for @visitEventRequestReviewed.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit request reviewed'**
+  String get visitEventRequestReviewed;
+
+  /// No description provided for @visitEventRequestRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit request rejected'**
+  String get visitEventRequestRejected;
+
+  /// No description provided for @visitEventRequestCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit request cancelled'**
+  String get visitEventRequestCancelled;
+
+  /// No description provided for @visitEventScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit scheduled'**
+  String get visitEventScheduled;
+
+  /// No description provided for @visitEventConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit confirmed'**
+  String get visitEventConfirmed;
+
+  /// No description provided for @visitEventCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit completed'**
+  String get visitEventCompleted;
+
+  /// No description provided for @visitEventCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit cancelled'**
+  String get visitEventCancelled;
+
+  /// No description provided for @visitEventNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Client did not show'**
+  String get visitEventNoShow;
+
+  /// No description provided for @visitEventRescheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit rescheduled'**
+  String get visitEventRescheduled;
+
+  /// No description provided for @visitEventSalesAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned to a sales advisor'**
+  String get visitEventSalesAssigned;
+
+  /// No description provided for @visitEventNoteAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get visitEventNoteAdded;
+
+  /// No description provided for @visitEventCustomerConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Client confirmed'**
+  String get visitEventCustomerConfirmed;
+
+  /// No description provided for @visitEventCustomerRescheduleRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Client asked to reschedule'**
+  String get visitEventCustomerRescheduleRequested;
+
+  /// No description provided for @visitEventReminderSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder sent'**
+  String get visitEventReminderSent;
+
+  /// No description provided for @visitEventSalesReassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit reassigned'**
+  String get visitEventSalesReassigned;
+
+  /// No description provided for @visitEventFeedbackSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback added'**
+  String get visitEventFeedbackSubmitted;
+
+  /// No description provided for @visitEventOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit updated'**
+  String get visitEventOther;
+
+  /// No description provided for @authPhoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your phone'**
+  String get authPhoneTitle;
+
+  /// No description provided for @fieldFullNameNewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name (new accounts only)'**
+  String get fieldFullNameNewAccount;
 }
 
 class _AppLocalizationsDelegate

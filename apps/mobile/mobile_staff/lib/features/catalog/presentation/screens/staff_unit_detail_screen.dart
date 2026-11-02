@@ -713,7 +713,7 @@ class _MetaStrip extends StatelessWidget {
                   border: Border.all(color: _navyLight.withValues(alpha: 0.18)),
                 ),
                 child: Text(
-                  unit.type!,
+                  unit.typeLabel(Localizations.localeOf(context).languageCode),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

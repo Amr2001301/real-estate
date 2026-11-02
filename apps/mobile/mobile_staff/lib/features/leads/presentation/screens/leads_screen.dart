@@ -931,7 +931,7 @@ class _LeadCardState extends State<_LeadCard> {
                                 )
                               else if (lead.phone != null)
                                 Text(
-                                  lead.phone!,
+                                  ltr(lead.phone),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: colors.inkMuted,

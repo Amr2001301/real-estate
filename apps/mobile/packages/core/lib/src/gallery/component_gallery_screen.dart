@@ -214,7 +214,7 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
                   icon: AppIcons.installments,
                   value: '12,500',
                   label: 'القسط القادم',
-                  subtitle: 'خلال ٧ أيام',
+                  subtitle: 'خلال 7 أيام',
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),

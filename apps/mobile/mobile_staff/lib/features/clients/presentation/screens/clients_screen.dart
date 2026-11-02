@@ -675,7 +675,7 @@ class _ClientCardState extends State<_ClientCard> {
                               if (client.phone != null) ...[
                                 const SizedBox(height: 2),
                                 Text(
-                                  client.phone!,
+                                  ltr(client.phone),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),

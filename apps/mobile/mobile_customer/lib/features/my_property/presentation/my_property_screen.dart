@@ -489,7 +489,7 @@ class _PropertyCard extends StatelessWidget {
         children: [
           _CardHeader(
             projectName: property.projectName.resolve(lang),
-            unitType: property.unitType,
+            unitType: unitTypeLabel(property.unitType, languageCode: lang),
             unitCode: property.unitCode,
             owned: owned,
             index: index,

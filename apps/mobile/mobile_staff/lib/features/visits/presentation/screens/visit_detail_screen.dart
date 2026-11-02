@@ -1226,17 +1226,25 @@ class _TimelineItem extends StatelessWidget {
         _                    => Icons.history_rounded,
       };
 
-  static String _label(String type) => switch (type) {
-        'VISIT_COMPLETED'    => 'تمت الزيارة',
-        'VISIT_CANCELLED'    => 'تم الإلغاء',
-        'VISIT_NO_SHOW'      => 'لم يحضر العميل',
-        'VISIT_RESCHEDULED'  => 'تمت إعادة الجدولة',
-        'CUSTOMER_CONFIRMED' => 'تأكيد العميل',
-        'VISIT_SCHEDULED'    => 'تمت الجدولة',
-        'VISIT_CONFIRMED'    => 'تم التأكيد',
-        'FEEDBACK_SUBMITTED' => 'تم إرسال التقييم',
-        'REASSIGNED'         => 'تم إعادة الإسناد',
-        _                    => type,
+  static String _label(AppLocalizations l10n, String type) => switch (type) {
+        'REQUEST_CREATED' => l10n.visitEventRequestCreated,
+        'REQUEST_REVIEWED' => l10n.visitEventRequestReviewed,
+        'REQUEST_REJECTED' => l10n.visitEventRequestRejected,
+        'REQUEST_CANCELLED' => l10n.visitEventRequestCancelled,
+        'VISIT_SCHEDULED' => l10n.visitEventScheduled,
+        'VISIT_CONFIRMED' => l10n.visitEventConfirmed,
+        'VISIT_COMPLETED' => l10n.visitEventCompleted,
+        'VISIT_CANCELLED' => l10n.visitEventCancelled,
+        'VISIT_NO_SHOW' => l10n.visitEventNoShow,
+        'VISIT_RESCHEDULED' => l10n.visitEventRescheduled,
+        'SALES_ASSIGNED' => l10n.visitEventSalesAssigned,
+        'NOTE_ADDED' => l10n.visitEventNoteAdded,
+        'CUSTOMER_CONFIRMED' => l10n.visitEventCustomerConfirmed,
+        'CUSTOMER_RESCHEDULE_REQUESTED' => l10n.visitEventCustomerRescheduleRequested,
+        'REMINDER_SENT' => l10n.visitEventReminderSent,
+        'SALES_REASSIGNED' || 'REASSIGNED' => l10n.visitEventSalesReassigned,
+        'FEEDBACK_SUBMITTED' => l10n.visitEventFeedbackSubmitted,
+        _ => l10n.visitEventOther,
       };
 
   @override
@@ -1291,7 +1299,7 @@ class _TimelineItem extends StatelessWidget {
                   Text(
                     entry.note?.isNotEmpty == true
                         ? entry.note!
-                        : _label(entry.type),
+                        : _label(context.l10n, entry.type),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1301,7 +1309,7 @@ class _TimelineItem extends StatelessWidget {
                   if (entry.note?.isNotEmpty == true) ...[
                     const SizedBox(height: 2),
                     Text(
-                      _label(entry.type),
+                      _label(context.l10n, entry.type),
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.inkMuted,

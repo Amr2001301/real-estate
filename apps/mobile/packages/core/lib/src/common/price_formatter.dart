@@ -2,8 +2,10 @@ import 'package:intl/intl.dart';
 
 /// Formats prices for display. The backend returns raw decimal strings; we add
 /// grouping and the company currency as a localized suffix (e.g.
-/// "5,800,000 EGP" / "٥٬٨٠٠٬٠٠٠ ج.م"). Pure Dart utility (presentation
-/// concern, not domain).
+/// "5,800,000 EGP" / "5,800,000 ج.م"). Digits are Western in both languages,
+/// as on the dashboard and the website (an Arabic-Indic zero is a dot, and
+/// "·" next to a digit read as one). Pure Dart utility (presentation concern,
+/// not domain).
 ///
 /// The currency is the company's (`Company.currency`, picked by the admin on
 /// the dashboard branding page). The app sets it once it knows the tenant —
@@ -50,8 +52,7 @@ abstract final class PriceFormatter {
   static String format(num? value,
       {required String languageCode, String? currency}) {
     if (value == null) return '';
-    final locale = languageCode == 'ar' ? 'ar_EG' : 'en_US';
-    final number = NumberFormat.decimalPattern(locale).format(value);
+    final number = NumberFormat.decimalPattern('en_US').format(value);
     return '$number ${symbol(languageCode, currency)}';
   }
 
@@ -61,13 +62,12 @@ abstract final class PriceFormatter {
           languageCode: languageCode, currency: currency);
 
   /// Compact form for dense, multi-column layouts (e.g. the compare matrix):
-  /// "1.6M EGP" / "١٫٦M ج.م", "750K EGP" / "٧٥٠K ج.م". Keeps localized digits
-  /// and the currency suffix; falls back to the full grouped form below 1,000.
+  /// "1.6M EGP" / "1.6M ج.م", "750K EGP" / "750K ج.م". Keeps the currency
+  /// suffix; falls back to the full grouped form below 1,000.
   static String formatCompact(num? value, {required String languageCode}) {
     if (value == null) return '';
-    final locale = languageCode == 'ar' ? 'ar_EG' : 'en_US';
     final currency = symbol(languageCode);
-    final fmt = NumberFormat('#,##0.#', locale);
+    final fmt = NumberFormat('#,##0.#', 'en_US');
     final v = value.toDouble();
     if (v >= 1000000) return '${fmt.format(v / 1000000)}M $currency';
     if (v >= 1000) return '${fmt.format(v / 1000)}K $currency';

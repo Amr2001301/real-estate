@@ -446,6 +446,10 @@ class _FieldRowState extends State<_FieldRow> {
               child: TextField(
                 onChanged: widget.onChanged,
                 keyboardType: widget.keyboardType,
+                textDirection: widget.keyboardType == TextInputType.phone ? TextDirection.ltr : null,
+                textAlign: widget.keyboardType == TextInputType.phone && Directionality.of(context) == TextDirection.rtl
+                    ? TextAlign.right
+                    : TextAlign.start,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w500,

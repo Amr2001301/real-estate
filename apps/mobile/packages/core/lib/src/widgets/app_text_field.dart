@@ -28,6 +28,8 @@ class AppTextField extends StatelessWidget {
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
   final TextInputType? keyboardType;
+
+  bool get _isPhone => keyboardType == TextInputType.phone;
   final bool obscureText;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
@@ -54,6 +56,12 @@ class AppTextField extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           keyboardType: keyboardType,
+          // A phone number reads left to right ("+20 100 …", not "… 100 +20"),
+          // kept on the reading side of the field.
+          textDirection: _isPhone ? TextDirection.ltr : null,
+          textAlign: _isPhone && Directionality.of(context) == TextDirection.rtl
+              ? TextAlign.right
+              : TextAlign.start,
           obscureText: obscureText,
           maxLines: obscureText ? 1 : maxLines,
           enabled: enabled,

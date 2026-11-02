@@ -294,7 +294,7 @@ class _IdentityCard extends StatelessWidget {
           ],
           // Unit type
           Text(
-            unit.type,
+            unit.typeLabel(Localizations.localeOf(context).languageCode),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

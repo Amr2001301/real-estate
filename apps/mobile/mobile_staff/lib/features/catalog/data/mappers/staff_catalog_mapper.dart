@@ -32,6 +32,7 @@ extension StaffUnitDtoMapper on StaffUnitDto {
         code: code,
         status: status,
         type: type,
+        typeName: typeName,
         price: price,
         area: area,
         bedrooms: bedrooms,

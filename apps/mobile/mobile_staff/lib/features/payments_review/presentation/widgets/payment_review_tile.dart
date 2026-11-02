@@ -140,7 +140,7 @@ class PaymentReviewTile extends StatelessWidget {
                                 Text(
                                   [
                                     if (item.contractNumber != null)
-                                      '#${item.contractNumber}',
+                                      ltr('#${item.contractNumber}'),
                                     if (item.unitCode != null) item.unitCode!,
                                   ].join('  ·  '),
                                   style: Theme.of(context)

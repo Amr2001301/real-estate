@@ -986,7 +986,7 @@ class _Units extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                unit.label,
+                                unit.label(Localizations.localeOf(context).languageCode),
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   color: state.selectedUnitId == unit.id
                                       ? Colors.white

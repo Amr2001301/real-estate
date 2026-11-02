@@ -218,7 +218,7 @@ class _DepositTileState extends State<_DepositTile> {
                               Text(
                                 [
                                   if (d.contractNumber != null)
-                                    '#${d.contractNumber}',
+                                    ltr('#${d.contractNumber}'),
                                   if (d.unitCode != null)
                                     d.unitCode!,
                                   ?typeLabel,

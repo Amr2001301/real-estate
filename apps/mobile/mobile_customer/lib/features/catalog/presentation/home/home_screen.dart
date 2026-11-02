@@ -1503,7 +1503,7 @@ class _HomeUnitCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                unit.type,
+                                unit.typeLabel(Localizations.localeOf(context).languageCode),
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: colors.inkStrong,

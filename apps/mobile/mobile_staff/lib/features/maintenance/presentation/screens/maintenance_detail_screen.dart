@@ -916,7 +916,7 @@ class _CustomerInfoCard extends StatelessWidget {
                     Expanded(
                       child: _ContactActionButton(
                         icon: Icons.chat_rounded,
-                        label: 'WhatsApp',
+                        label: context.l10n.contactWhatsapp,
                         color: const Color(0xFF25D366),
                         onTap: () => _openWhatsApp(context),
                       ),

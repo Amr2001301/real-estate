@@ -214,7 +214,7 @@ class UnitCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        unit.type,
+                        unit.typeLabel(Localizations.localeOf(context).languageCode),
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: colors.inkStrong,

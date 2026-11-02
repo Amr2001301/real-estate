@@ -310,7 +310,7 @@ class _HeroCard extends StatelessWidget {
                 // Contract number
                 if (c.contractNumber != null)
                   Text(
-                    '#${c.contractNumber}',
+                    ltr('#${c.contractNumber}'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 22,
@@ -340,7 +340,7 @@ class _HeroCard extends StatelessWidget {
                   Text(
                     [
                       if (c.unitCode != null) c.unitCode!,
-                      if (c.unitType != null) c.unitType!,
+                      if (c.unitType != null) unitTypeLabel(c.unitType, languageCode: lang),
                       if (c.projectName?.resolve(lang) != null)
                         c.projectName!.resolve(lang),
                     ].join(' · '),

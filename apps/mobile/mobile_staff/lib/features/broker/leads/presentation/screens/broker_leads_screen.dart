@@ -767,7 +767,7 @@ class _LeadCardState extends State<_LeadCard> {
     final isRtl = Directionality.of(context) == TextDirection.rtl;
     final statusColor = _statusColor(lead.approvalStatus, colors);
     final initials = _initials(lead.fullName);
-    final subtitle = lead.phone ?? lead.email;
+    final subtitle = lead.phone != null ? ltr(lead.phone) : lead.email;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -1094,7 +1094,7 @@ class _LeadsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٨', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
+                        Text('8', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'الإجمالي' : 'Total', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1103,7 +1103,7 @@ class _LeadsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٥', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
+                        Text('5', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'معتمد' : 'Approved', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1112,7 +1112,7 @@ class _LeadsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٣', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.warning)),
+                        Text('3', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.warning)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'قيد المراجعة' : 'Pending', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1152,7 +1152,7 @@ class _LeadsSkeleton extends StatelessWidget {
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('محمد أحمد العمري', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                         const SizedBox(height: 4),
-                        Text('+٩٦٦ ٥٠ ١٢٣ ٤٥٦٧', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        Text('+966 50 123 4567', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ])),
                       StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
                       const SizedBox(width: AppSpacing.xs),
