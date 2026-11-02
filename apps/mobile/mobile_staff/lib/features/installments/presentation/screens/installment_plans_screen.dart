@@ -7,7 +7,6 @@ import '../../domain/entities/installment.dart';
 import '../cubit/installment_plans_cubit.dart';
 
 const _navy = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 class InstallmentPlansScreen extends StatefulWidget {
@@ -104,108 +103,12 @@ class _PlansHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [_navyLight, _navyCard, _navy],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x40000000),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // gold radial glow top-end
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 160,
-              height: 130,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.10),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // back + title row
-                Row(
-                  children: [
-                    _CircleBack(onTap: () => context.pop()),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.planTemplatesTitle,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.3,
-                              height: 1.1,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            l10n.planTemplatesSubtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.55),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                // Search bar — white pill matching clients/contracts screens
-                _PlansSearchBar(
-                  controller: searchController,
-                  hint: l10n.planTemplatesSearch,
-                  onChanged: onSearch,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AppNavHeader(
+      title: l10n.planTemplatesTitle,
+      subtitle: l10n.planTemplatesSubtitle,
+      compact: true,
+      leadingAction: const NavHeaderBack(),
+      bottom: _PlansSearchBar(controller: searchController, hint: l10n.planTemplatesSearch, onChanged: onSearch),
     );
   }
 }
@@ -699,34 +602,3 @@ class _PlansSearchBarState extends State<_PlansSearchBar> {
 
 // ── Circle back button ────────────────────────────────────────────────────────
 
-class _CircleBack extends StatelessWidget {
-  const _CircleBack({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-        ),
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Icon(
-            isRtl
-                ? Icons.arrow_forward_ios_rounded
-                : Icons.arrow_back_ios_new_rounded,
-            size: 15,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-}

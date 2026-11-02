@@ -88,14 +88,12 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
-    final statusBarH = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
         body: BlocConsumer<MaintenanceDetailCubit, MaintenanceDetailState>(
           listenWhen: (a, b) =>
               a.actionFailure != b.actionFailure && b.actionFailure != null,
@@ -112,15 +110,14 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
             return CustomScrollView(
               slivers: [
                 // Pinned collapsible header — stays visible while scrolling.
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _DetailHeaderDelegate(
-                    statusBarH: statusBarH,
-                    l10n: l10n,
-                    status: status,
-                    gradient: gradient,
-                    accent: accent,
-                  ),
+                AppNavSliverHeader(
+                  title: l10n.maintenanceCompactDetailTitle,
+                  subtitle: l10n.maintenanceDetailSubtitle,
+                  leadingAction: const NavHeaderBack(),
+                  actions: [
+                    if (status != null)
+                      NavHeaderPill(label: maintenanceStatusLabel(status), color: accent),
+                  ],
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
@@ -240,152 +237,6 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 // ── Pinned collapsible header delegate ───────────────────────────────────────
 // Expanded: shows subtitle + large title + status badge.
 // Collapsed (pinned): compact title + status badge always visible.
-class _DetailHeaderDelegate extends SliverPersistentHeaderDelegate {
-  const _DetailHeaderDelegate({
-    required this.statusBarH,
-    required this.l10n,
-    required this.gradient,
-    required this.accent,
-    this.status,
-  });
-
-  final double statusBarH;
-  final AppLocalizations l10n;
-  final List<Color> gradient;
-  final Color accent;
-  final MaintenanceStatus? status;
-
-  static const double _expandedContent = 90.0;
-  static const double _compactContent = 56.0;
-
-  @override
-  double get minExtent => statusBarH + _compactContent;
-
-  @override
-  double get maxExtent => statusBarH + _expandedContent;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final t = (shrinkOffset / (_expandedContent - _compactContent)).clamp(
-      0.0,
-      1.0,
-    );
-    final statusLabel = status != null ? maintenanceStatusLabel(status!) : null;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: gradient,
-        ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Subtle dot texture
-          const IgnorePointer(child: _DotTexture()),
-          // Gold corner glow
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: SizedBox(
-              width: 140,
-              height: statusBarH + _expandedContent,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.08),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Content — below status bar
-          Positioned(
-            top: statusBarH,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                12.0 - (t * 4.0), // 12 → 8 when collapsed
-                16,
-                16.0 - (t * 8.0), // 16 → 8 when collapsed
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _BackBtn(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Subtitle fades out as header collapses
-                        if (t < 0.85)
-                          Opacity(
-                            opacity: (1.0 - t / 0.65).clamp(0.0, 1.0),
-                            child: Text(
-                              l10n.maintenanceDetailSubtitle,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.60),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        const SizedBox(height: 2),
-                        // Title: 20px → 16px as it collapses
-                        Text(
-                          l10n.maintenanceCompactDetailTitle,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20.0 - (t * 4.0),
-                            fontWeight: FontWeight.w800,
-                            height: 1.15,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (statusLabel != null) ...[
-                    const SizedBox(width: 8),
-                    _GlassBadge(label: statusLabel, accent: accent),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_DetailHeaderDelegate old) =>
-      old.status != status ||
-      old.accent != accent ||
-      old.statusBarH != statusBarH ||
-      old.gradient != gradient;
-}
-
 // ── SLA countdown / overdue timer ────────────────────────────────────────────
 class _SlaTimerCard extends StatefulWidget {
   const _SlaTimerCard({required this.r});
@@ -2247,67 +2098,7 @@ class _StatusPill extends StatelessWidget {
 }
 
 // ── Glass badge (header pill) ─────────────────────────────────────────────────
-class _GlassBadge extends StatelessWidget {
-  const _GlassBadge({required this.label, required this.accent});
-  final String label;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: accent.withValues(alpha: 0.40)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: accent,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Back button ───────────────────────────────────────────────────────────────
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-        ),
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 17,
-        ),
-      ),
-    );
-  }
-}
-
 // ── Stars (read-only) ─────────────────────────────────────────────────────────
 class _Stars extends StatelessWidget {
   const _Stars({required this.value});

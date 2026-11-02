@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -138,143 +137,21 @@ class _MyPropertyHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
+    return AppNavHeader(
+      title: showCount && totalCount > 1 ? 'وحداتي' : l10n.accountMyProperty,
+      subtitle: 'محفظتي العقارية',
+      compact: true,
+      leadingAction: GestureDetector(
+        onTap: () => context.push('/account/profile'),
+        child: _GoldRingAvatar(name: displayName),
       ),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [_navyLight, _navyCard, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Dot grid texture
-            const Positioned.fill(
-              child: IgnorePointer(child: _HeaderDots()),
-            ),
-            // Radial highlight — soft glow at top-end corner
-            PositionedDirectional(
-              end: 0,
-              top: 0,
-              child: Container(
-                width: 180,
-                height: 140,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.07),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Gold shimmer hairline at bottom edge
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                      AppPalette.gold400.withValues(alpha: 0.55),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // START (right in RTL): gold-ring avatar → profile
-                  GestureDetector(
-                    onTap: () => context.push('/account/profile'),
-                    child: _GoldRingAvatar(name: displayName),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  // CENTER: eyebrow + title + portfolio pill
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'محفظتي العقارية',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 12,
-                            color: AppPalette.gold300,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          showCount && totalCount > 1
-                              ? 'وحداتي'
-                              : l10n.accountMyProperty,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                        if (showCount) ...[
-                          const SizedBox(height: 8),
-                          _PortfolioPill(
-                            totalCount: totalCount,
-                            ownedCount: ownedCount,
-                            l10n: l10n,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  // END (left in RTL): notification bell
-                  const CustomerNotificationButton(size: 44),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      actions: const [CustomerNotificationButton()],
+      bottom: showCount
+          ? Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _PortfolioPill(totalCount: totalCount, ownedCount: ownedCount, l10n: l10n),
+            )
+          : null,
     );
   }
 }

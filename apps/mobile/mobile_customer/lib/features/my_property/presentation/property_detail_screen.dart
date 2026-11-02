@@ -2046,28 +2046,7 @@ class _DonutPainter extends CustomPainter {
 class _BackBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'العودة',
-      child: GestureDetector(
-        onTap: () => context.pop(),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-            size: 16,
-          ),
-        ),
-      ),
-    );
+    return NavHeaderBack();
   }
 }
 

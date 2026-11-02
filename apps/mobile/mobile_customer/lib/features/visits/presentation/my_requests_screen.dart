@@ -1,8 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../domain/entities/visit_request.dart';
 import 'my_visits_cubit.dart';
@@ -293,146 +291,11 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme    = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [_navyLight, _navyCard, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x35000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            const Positioned.fill(
-                child: IgnorePointer(child: _DotTexture())),
-            PositionedDirectional(
-              end: 0,
-              top: 0,
-              child: Container(
-                width: 160,
-                height: 130,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.09),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                      AppPalette.gold400.withValues(alpha: 0.5),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _BackBtn(),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.myRequestsTitle,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.visitRequestTitle,
-                          style: const TextStyle(
-                            color: AppPalette.gold300,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (count != null) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.event_note_rounded,
-                              color: AppPalette.gold300, size: 13),
-                          const SizedBox(width: 5),
-                          Text(
-                            '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppNavHeader(
+      title: l10n.myRequestsTitle,
+      subtitle: count != null ? '${l10n.visitRequestTitle} · $count' : l10n.visitRequestTitle,
+      compact: true,
+      leadingAction: const NavHeaderBack(),
     );
   }
 }
@@ -1241,29 +1104,6 @@ class _AppointmentActions extends StatelessWidget {
 }
 
 // ─── Shared chrome ────────────────────────────────────────────────────────────
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 16,
-        ),
-      ),
-    );
-  }
-}
-
 class _DotTexture extends StatelessWidget {
   const _DotTexture();
 

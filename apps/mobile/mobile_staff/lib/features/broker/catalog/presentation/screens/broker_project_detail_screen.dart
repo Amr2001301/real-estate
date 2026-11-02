@@ -286,20 +286,7 @@ class _CircleBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-        ),
-        child: const Icon(Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, size: 15),
-      ),
-    );
+    return NavHeaderBack(onTap: onTap);
   }
 }
 

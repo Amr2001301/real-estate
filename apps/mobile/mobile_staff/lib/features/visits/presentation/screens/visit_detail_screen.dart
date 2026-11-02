@@ -804,33 +804,7 @@ class _CircleBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.30),
-            width: 0.8,
-          ),
-        ),
-        // Wrap in LTR to prevent automatic icon mirroring in RTL contexts
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Icon(
-            isRtl
-                ? Icons.arrow_forward_ios_rounded
-                : Icons.arrow_back_ios_new_rounded,
-            size: 16,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
+    return NavHeaderBack(onTap: onTap);
   }
 }
 

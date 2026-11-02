@@ -354,10 +354,7 @@ class _UnitsHeaderDelegate extends SliverPersistentHeaderDelegate {
                   SizedBox(
                     width: 44,
                     child: canPop
-                        ? _HeaderIconButton(
-                            icon: Icons.arrow_back_ios_rounded,
-                            onTap: () => Navigator.of(context).maybePop(),
-                          )
+                        ? const NavHeaderBack()
                         : null,
                   ),
                   Expanded(
@@ -444,29 +441,6 @@ class _UnitsHeaderDelegate extends SliverPersistentHeaderDelegate {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.10),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(icon, size: 18, color: Colors.white),
-        ),
       ),
     );
   }

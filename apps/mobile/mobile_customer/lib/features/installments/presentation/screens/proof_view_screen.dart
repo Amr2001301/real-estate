@@ -1,13 +1,10 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
-import 'package:go_router/go_router.dart';
 
 import '../../../documents/presentation/widgets/documents_list_view.dart';
 import '../../domain/entities/installment.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
@@ -65,152 +62,17 @@ class _ProofHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-    final isApproved =
-        installment.latestProof?.reviewStatus == PaymentProofStatus.approved;
-    final accentColor = isApproved ? _paidAccent : _pendingAccent;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: isApproved
-                ? [
-                    const Color(0xFF1B5E3F),
-                    const Color(0xFF0E3B26),
-                    const Color(0xFF062013),
-                  ]
-                : [_navyLight, _navyCard, _navyDeep],
-            stops: const [0.0, 0.45, 1.0],
-          ),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: (isApproved ? _paidAccent : _navyDeep).withValues(
-                alpha: 0.22,
-              ),
-              blurRadius: 22,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    final isApproved = installment.latestProof?.reviewStatus == PaymentProofStatus.approved;
+    return AppNavHeader(
+      title: l10n.paymentProofTitle,
+      compact: true,
+      leadingAction: const NavHeaderBack(),
+      actions: [
+        NavHeaderPill(
+          label: isApproved ? l10n.paymentProofStatusApproved : l10n.paymentProofStatusPendingReview,
+          color: isApproved ? _paidAccent : _pendingAccent,
         ),
-        child: Stack(
-          children: [
-            const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-            PositionedDirectional(
-              end: 0,
-              top: 0,
-              child: Container(
-                width: 160,
-                height: 130,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topRight,
-                    radius: 1.0,
-                    colors: [
-                      accentColor.withValues(alpha: 0.12),
-                      accentColor.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      accentColor.withValues(alpha: 0.0),
-                      accentColor.withValues(alpha: 0.4),
-                      accentColor.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _BackButton(),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.paymentProofTitle,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: accentColor,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          isApproved
-                              ? l10n.paymentProofStatusApproved
-                              : l10n.paymentProofStatusPendingReview,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BackButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 16,
-        ),
-      ),
+      ],
     );
   }
 }

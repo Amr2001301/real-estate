@@ -1,13 +1,11 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../notifications/presentation/widgets/customer_notification_button.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,124 +78,15 @@ class _FinanceHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
+    return AppNavHeader(
+      title: l10n.navFinance,
+      subtitle: 'خدماتك المالية',
+      compact: true,
+      leadingAction: GestureDetector(
+        onTap: () => context.push('/account/profile'),
+        child: _GoldRingAvatar(name: displayName),
       ),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [_navyLight, _navyCard, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(28),
-            bottomRight: Radius.circular(28),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            const Positioned.fill(child: IgnorePointer(child: _HeaderDots())),
-            // Radial gold glow at start corner
-            PositionedDirectional(
-              start: 0,
-              top: 0,
-              child: Container(
-                width: 160,
-                height: 130,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topLeft,
-                    radius: 1.0,
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.08),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Gold shimmer hairline
-            Positioned(
-              bottom: 0,
-              left: 48,
-              right: 48,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                      AppPalette.gold400.withValues(alpha: 0.55),
-                      AppPalette.gold400.withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topInset + AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.xl,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // START (right in RTL): avatar → profile
-                  GestureDetector(
-                    onTap: () => context.push('/account/profile'),
-                    child: _GoldRingAvatar(name: displayName),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'خدماتك المالية',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppPalette.gold300,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.navFinance,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const CustomerNotificationButton(size: 44),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      actions: const [CustomerNotificationButton()],
     );
   }
 }

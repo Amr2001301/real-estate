@@ -29,10 +29,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     setState(() => _failure = null);
     final result = await widget.api.load();
     if (!mounted) return;
-    result.when(
-      ok: (prefs) => setState(() => _prefs = prefs),
-      err: (failure) => setState(() => _failure = failure),
-    );
+    result.when(ok: (prefs) => setState(() => _prefs = prefs), err: (failure) => setState(() => _failure = failure));
   }
 
   Future<void> _toggle(String channel, String group, bool value) async {
@@ -52,9 +49,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
       if (failure != null) {
         _prefs = previous;
         AppLog.failure(failure);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t(context).saveError)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t(context).saveError)));
       }
     });
   }
@@ -64,45 +59,48 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     final t = _t(context);
     final prefs = _prefs;
     return Scaffold(
-      appBar: AppBar(title: Text(t.title)),
-      body: _failure != null
-          ? ErrorState(failure: _failure, onRetry: _load)
-          : prefs == null
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  children: [
-                    Text(t.hint, style: Theme.of(context).textTheme.bodyMedium),
-                    const SizedBox(height: AppSpacing.md),
-                    for (final group in prefGroups)
-                      Card(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                AppSpacing.md,
-                                AppSpacing.md,
-                                AppSpacing.md,
-                                0,
+      body: Column(
+        children: [
+          AppNavHeader(title: t.title, compact: true, leadingAction: const NavHeaderBack()),
+          Expanded(
+            child: _failure != null
+                ? ErrorState(failure: _failure, onRetry: _load)
+                : prefs == null
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      Text(t.hint, style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: AppSpacing.md),
+                      for (final group in prefGroups)
+                        Card(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsetsDirectional.fromSTEB(
+                                  AppSpacing.md,
+                                  AppSpacing.md,
+                                  AppSpacing.md,
+                                  0,
+                                ),
+                                child: Text(t.groups[group]!, style: Theme.of(context).textTheme.titleSmall),
                               ),
-                              child: Text(
-                                t.groups[group]!,
-                                style: Theme.of(context).textTheme.titleSmall,
-                              ),
-                            ),
-                            for (final channel in prefChannels)
-                              SwitchListTile(
-                                title: Text(channel == 'email' ? t.email : t.push),
-                                value: prefs[channel]![group]!,
-                                onChanged: _saving ? null : (v) => _toggle(channel, group, v),
-                              ),
-                          ],
+                              for (final channel in prefChannels)
+                                SwitchListTile(
+                                  title: Text(channel == 'email' ? t.email : t.push),
+                                  value: prefs[channel]![group]!,
+                                  onChanged: _saving ? null : (v) => _toggle(channel, group, v),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -141,7 +139,8 @@ _Texts _t(BuildContext context) => Localizations.localeOf(context).languageCode 
       )
     : const _Texts(
         title: 'Notification preferences',
-        hint: 'In-app notifications always arrive. Choose which ones also reach you by e-mail or as a phone notification.',
+        hint:
+            'In-app notifications always arrive. Choose which ones also reach you by e-mail or as a phone notification.',
         email: 'E-mail',
         push: 'Phone notification',
         saveError: 'Could not save the change. Please try again.',

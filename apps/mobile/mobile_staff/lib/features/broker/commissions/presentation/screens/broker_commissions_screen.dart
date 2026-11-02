@@ -2,14 +2,12 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../../common/broker_status_label.dart';
 import '../../domain/entities/broker_commission.dart';
 import '../cubit/broker_commissions_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,127 +129,11 @@ class _CommissionsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x35000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          PositionedDirectional(
-            end: 0,
-            top: 0,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.12),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.xl,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _BackBtn(),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.navCommissions,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'سجل العمولات والمستحقات',
-                        style: TextStyle(
-                          color: AppPalette.gold300,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppPalette.gold300.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.payments_rounded,
-                    color: AppPalette.gold300,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return AppNavHeader(
+      title: l10n.navCommissions,
+      subtitle: 'سجل العمولات والمستحقات',
+      compact: true,
+      leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
     );
   }
 }
@@ -775,29 +657,6 @@ class _CommissionTile extends StatelessWidget {
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────
-
-class _BackBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-        ),
-        child: const Icon(
-          Icons.arrow_forward_ios_rounded,
-          color: Colors.white,
-          size: 16,
-        ),
-      ),
-    );
-  }
-}
 
 class _DotTexture extends StatelessWidget {
   const _DotTexture();
