@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-01, after #233)
+# Handoff — where the work stands (2026-11-02, after #240 + PR 3b)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -53,18 +53,31 @@
 - **مراجعة التطبيقين (1 نوفمبر):** كل الطلبات اللي التطبيقين بيبعتوها للـ API موجودة، والتستات كلها شغالة. اتصلح في #233: موافقة مدير المبيعات على حجوزات فريقه من تطبيق الموظفين، وميعاد التسليم وتأخيره في صفحة العقد في تطبيق العميل. **الباقي من المراجعة في القسم 2h** (مواصفات الوحدة في التطبيقين، وصفحات المحتوى في تطبيق العميل).
 - **ملحوظة:** شاشات الموبايل الجديدة اتختبرت بالاختبارات وبالرسم بس، ما اتجرّبتش على موبايل حقيقي.
 
+**بعد كده (1 → 2 نوفمبر، #234–#240 وPR 3b):** القسم **2i** تحت. باختصار:
+- **#234:** مواصفات الوحدة (المساحات، التشطيب، الإطلالة، الاتجاه، ميعاد التسليم) في التطبيقين زي الموقع.
+- **#235:** بانرات الشركة وصفحاتها المنشورة في تطبيق العميل.
+- **#236:** إعدادات الشركة بتقبل بس المفاتيح اللي السيستم بيقراها. **#237:** ملف `.env.example` فيه كل المتغيرات.
+- **اختبار التطبيقين يدوي كامل (1–2 نوفمبر):** لقينا أعطال وحاجات شكلها مش موحّد، واتفقنا على خطة أجزاء:
+  - **PR1 (#238):** الأعطال (شاشة رمادي في تطبيق الموظفين وفي الكتالوج، والمبالغ اللي جاية كنص). خلص.
+  - **PR2a (#239):** أرقام إنجليزي (0-9) في كل التطبيق، وأسماء عربي للأدوار وأنواع الوحدات والأحداث، وأرقام التليفون من الشمال لليمين. خلص.
+  - **PR3a (#240):** هيدر واحد بنفس الشكل في كل الشاشات في التطبيقين. خلص.
+  - **PR3b:** شارات المعلومات وكروت الأرقام موحّدة، ومفيش مبالغ مقطوعة ولا شارات فوق بعض، والكارت الكحلي باين في الوضع الداكن. **مفتوح ومستني موافقتك.**
+  - **PR3c (الجاي):** الفورم وشاشات البروكر (فورم البروكر تبقى خطوات بأرقام)، وتوحيد كارت القسط في تطبيق العميل (نفس اسم الزرار).
+  - **PR2b (بعده):** كل نصوص التطبيق بالفصحى، والنصوص المكتوبة جوه الكود تتنقل لملفات الترجمة.
+- **قراراتك:** كل النصوص فصحى؛ التصميم الأول (3b و3c) وبعده الفصحى (2b)؛ الأرقام إنجليزي.
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #233 مدموج و`main` نضيف، ومفيش PR مفتوح؛ **ابدأ بالقسم 2h**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #240 مدموج. لو PR 3b لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i** (PR3c ثم PR2b)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
 ## 1. Working agreement (how this project is run)
 
-- **Branch:** develop on `claude/great-darwin-cm999x` (or whatever branch the new session is given). After a PR merges, restart the branch from `origin/main` before new work.
-- **One PR at a time.** Each PR is one coherent slice (e.g. "U2 money"). The owner's standing approval: *«لما يخلص و يخضر اعمل ميرج و أبدا في الي بعده»* — when CI is all green, squash-merge (with `expectedHeadSha`), then start the next slice.
+- **Branch:** develop on the branch the session is given (last: `claude/awesome-galileo-ob9jmm`). After a PR merges, restart the branch from `origin/main` before new work.
+- **One PR at a time.** Each PR is one coherent slice. Current rule (2026-11): merge only on the owner's explicit «ادمج» with CI green (squash, with the head SHA); discuss anything new before building it. Talk to the owner in simple Egyptian Arabic; when they say «ترجم» or «اشرح عربي», write fully in Arabic without English terms.
 - **Every fix gets an e2e test that fails on the old code.** Verify by stashing `apps/api/src` (`git stash push --include-untracked -- apps/api/src`), running the new spec (expect failures), then `git stash pop`.
 - **Every new e2e spec must be added to the `ci.yml` e2e-2 `--testPathPattern`** (the long `"…|e2e-plan-amendments"` list, ~line 429), or CI never runs it.
 - **Run the full API unit suite before pushing** — mocks in unrelated specs often need a new Prisma method (e.g. `contractAmendment`, `setting.findMany`, `auditLog`).
@@ -385,7 +398,32 @@ The owner asked whether the two apps keep up with the dashboard and the website.
 
 **Important before shipping new app builds:** production has not been deployed since 2026-09-18 (deferred by the owner). New app builds call endpoints the old server lacks (`/me/permissions`, follow-ups, two-step sign-in, …), so the apps must ship together with, or after, the server deploy.
 
-**Other open items the owner has not decided yet** (ask before starting): settings API accepts any key — limit to `known-settings.ts` (small, no decision needed); `VERCEL_*` missing from `apps/api/.env.example` (small); chasing an unsigned contract's due rows; counting a MANUAL cancellation's commission/bonus as a possible liability; showing the customer's national ID/address/extra fields to the broker; e-signing the contract itself (large).
+**Other open items the owner has not decided yet** (ask before starting; the settings-key and `.env.example` items are done in #236/#237): chasing an unsigned contract's due rows; counting a MANUAL cancellation's commission/bonus as a possible liability; showing the customer's national ID/address/extra fields to the broker; e-signing the contract itself (large).
+
+### 2i. #234–#240 and PR 3b (2026-11-01 → 2026-11-02) — mobile QA and polish
+
+Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h are done (#236, #237).
+
+| PR | Slice | Main points |
+|---|---|---|
+| #234 | Mobile | Unit specs in both apps' catalog (areas, finishing, view, orientation, handover date), only the ones a unit has; labels in core ARB files. |
+| #235 | Customer app | The company's banners on home, published pages from the account menu (`/public/banners`, `/public/pages`). |
+| #236 | API | `PUT` settings accepts only keys in `SETTING_VALIDATORS` (400 `"<key>: unknown setting"`); security DS-10. |
+| #237 | API | `apps/api/.env.example` lists every variable the API reads (`PLATFORM_BASE_DOMAIN`, `DOMAIN_DNS_TIMEOUT_MS`, `VERCEL_*`, `PUBLIC_WEB_URL`, appointment reminders). |
+| #238 | Mobile PR1 | Crashes found by hand-testing both apps in a browser: staff app grey screen (l10n read in `initState`; `TenantMismatchNotifier` is a plain class), customer catalog grey screen (`CustomerTenantStorage` provider first; `provider` is a direct dependency), decimals sent as strings (`readAmount()` in core `json_amount.dart`), reservation notes field, company selector width. |
+| #239 | Mobile PR2a | Western digits everywhere (`PriceFormatter`, `DateFormatter`); Arabic role labels (مستشار مبيعات / مدير مبيعات / مدير النظام / مشرف صيانة / وسيط عقاري); `unitTypeLabel`; `ltr()` isolates for phones; reservation/visit event labels. |
+| #240 | Mobile PR3a | One header design: core `AppNavHeader` (compact mode with gold subtitle, `NavHeaderBack`, `AppNavSliverHeader`, `NavHeaderPill`, `NavHeaderButton`), `AppHomeHeader` (`HeaderRoleChip`, `HeaderDateChip`), glass bell with `NavHeaderBadge`. ~30 custom headers and 25 private back buttons replaced. |
+| PR 3b | Mobile | Core `AppInfoChip` (label ellipsizes) and `AppKpiTile` (value scales down); six staff `_InfoChip` and two `_KpiTile` now render them; reservation chips wrap; cheque amount on one line; `AppTone.navy` lighter on dark surfaces. Open — merge on the owner's «ادمج». |
+
+**Next, in this order (one PR each, owner approves each merge):**
+1. **PR 3c — forms and broker screens.** Same field/section styling across forms in both apps (use core widgets, no private copies); broker forms (new lead, reservation) become numbered steps; the customer app's two installment card designs become one, and one button label («إرسال إثبات الدفع» vs «إرسال إيصال الدفع» — pick one, ARB).
+2. **PR 2b — Modern Standard Arabic (owner: «فصحى»).** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.
+
+**Owner decisions (2026-11-01/02):** all app text in فصحى; design first (3b, 3c), then 2b; Western digits (0-9) for numbers, prices and dates in both languages.
+
+**Mobile checks before every push:** `flutter analyze` and `flutter test` in `packages/core`, `mobile_customer`, `mobile_staff` (flutter at `/opt/flutter-sdk/flutter/bin`). Afterwards `git checkout` `apps/mobile/pubspec.lock` and the three `analysis_options.yaml` files — local tooling rewrites them. Known analyzer warning: customer `image_picker_photo_picker.dart:41`.
+
+**How the apps were hand-tested (QA harness, not in the repo):** a copy of `apps/mobile` with web platforms added (`flutter create --platforms web .` in each app), built with `flutter build web --profile -t lib/main_dev.dart --no-web-resources-cdn`, served with `python3 -m http.server` (customer :8081, staff :8082), against a local API in dev mode on a DB filled by the full demo seed. Playwright drives the apps through Flutter's semantics tree (enable it by clicking `flt-semantics-placeholder`, then find nodes by `aria-label`/text). Logins: `*@demo-full.devora` / `DemoFull@2026!` (mahmoud.sales, hala.manager, sayed.maintenance, karim.broker), `admin@example.com` / `ChangeMe123!` (company code `default`), customer by OTP (code printed in the API log). Screens were checked in light and dark, Arabic and English.
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
@@ -664,8 +702,6 @@ Left for the owner, not in V1–V3:
 
 - **Old contracts that bill the final payment twice** (converted before #83): the owner chose a script — `scripts/fix-double-final-payment.ts` (logic in `src/modules/contracts/double-final-payment.ts`). Run it on production: take a backup (`scripts/db-backup.sh`), then `pnpm --filter @rep/api contracts:fix-double-final-payment:dry-run` to list them, then `pnpm --filter @rep/api contracts:fix-double-final-payment` to correct them. It takes the excess off the unpaid monthly rows (audit `contract.schedule-corrected`); contracts with a payment waiting, or already paid above the price (a refund), are listed for an admin.
 - **Gaps left by #114–#176:**
-  - `VERCEL_*` variables are missing from `apps/api/.env.example`.
-  - The settings API accepts any key; only the UI is limited.
   - A MANUAL cancellation's commission and bonus stay out of liabilities and totals until the admin decides.
   - Only the booking form is e-signed online; the contract is signed in ink.
   - The broker portal does not get the customer's national ID, address or extra fields.
@@ -673,7 +709,7 @@ Left for the owner, not in V1–V3:
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
 - **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**
-  - Production deploy of everything since 2026-09-18 (#114–#232): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
+  - Production deploy of everything since 2026-09-18 (#114–#240): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
   - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`, `TOTP_ENCRYPTION_KEY` (before anyone turns two-step sign-in on).
   - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
