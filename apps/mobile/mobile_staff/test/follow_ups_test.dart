@@ -156,7 +156,7 @@ void main() {
         'nextActionAt': '2026-11-01T07:00:00.000Z',
         'nextActionType': 'WHATSAPP',
         'assignedSales': {'fullName': 'Rep'},
-        'lastActivity': {'kind': 'CALL', 'callResult': 'NO_ANSWER', 'body': 'مردّش', 'createdAt': '2026-10-31T10:00:00.000Z'},
+        'lastActivity': {'kind': 'CALL', 'callResult': 'NO_ANSWER', 'body': 'لم يرد', 'createdAt': '2026-10-31T10:00:00.000Z'},
       }).toEntity();
       expect(fu.lead.id, 'l9');
       expect(fu.lead.nextActionType, 'WHATSAPP');
@@ -341,10 +341,10 @@ void main() {
         }),
       ));
       final now = DateTime(2026, 11, 1, 9);
-      expect(followUpWhen(DateTime(2026, 11, 1, 15, 5), l10n, 'ar', now: now), 'النهارده 3:05 م');
-      expect(followUpWhen(DateTime(2026, 11, 2, 10), l10n, 'ar', now: now), 'بكرة 10:00 ص');
+      expect(followUpWhen(DateTime(2026, 11, 1, 15, 5), l10n, 'ar', now: now), 'اليوم 3:05 م');
+      expect(followUpWhen(DateTime(2026, 11, 2, 10), l10n, 'ar', now: now), 'غدًا 10:00 ص');
       expect(clockTime(DateTime(2026, 1, 1, 0, 30), 'en'), '12:30 AM');
-      expect(callResultLabel(l10n, 'NO_ANSWER'), 'مردّش');
+      expect(callResultLabel(l10n, 'NO_ANSWER'), 'لم يرد');
       expect(noteKindLabel(l10n, 'WHATSAPP'), 'واتساب');
     });
   });

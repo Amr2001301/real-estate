@@ -150,7 +150,7 @@ void main() {
     expect(find.text('Nile Launch'), findsOneWidget);
     await t.scrollUntilVisible(find.text('إنستجرام'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('إنستجرام'), findsOneWidget);
-    expect(find.text('مش معروف'), findsOneWidget);
+    expect(find.text('غير معروف'), findsOneWidget);
     await t.scrollUntilVisible(find.byKey(const Key('campaign-spend')), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('Boost'), findsOneWidget);
   });

@@ -52,8 +52,7 @@ Color noteKindColor(String kind) => switch (kind) {
 /// The follow-up type that goes with what was just logged.
 String nextTypeFor(String kind) => kNextActionTypes.contains(kind) ? kind : 'CALL';
 
-/// When a follow-up is due, the way a rep says it: "النهارده 3:00 م",
-/// "بكرة 10:00 ص", or the date and time.
+/// When a follow-up is due: "اليوم 3:00 م", "غدًا 10:00 ص", or the date and time.
 String followUpWhen(DateTime at, AppLocalizations l10n, String lang, {DateTime? now}) {
   final local = at.toLocal();
   final today = DateUtils.dateOnly(now ?? DateTime.now());
@@ -61,8 +60,8 @@ String followUpWhen(DateTime at, AppLocalizations l10n, String lang, {DateTime? 
   final time = clockTime(local, lang);
   final diff = day.difference(today).inDays;
   if (diff == 0) return '${l10n.followUpsToday} $time';
-  if (diff == 1) return '${lang == 'ar' ? 'بكرة' : 'Tomorrow'} $time';
-  if (diff == -1) return '${lang == 'ar' ? 'امبارح' : 'Yesterday'} $time';
+  if (diff == 1) return '${l10n.activityNextTomorrow} $time';
+  if (diff == -1) return '${l10n.followUpsYesterday} $time';
   return '${followUpDate(local, lang)} $time';
 }
 

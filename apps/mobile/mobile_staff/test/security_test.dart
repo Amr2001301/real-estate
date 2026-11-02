@@ -144,11 +144,11 @@ void main() {
   testWidgets('devices: this phone, another signed out after asking', (t) async {
     final repo = _Repo();
     await _pump(t, repo);
-    expect(find.text('الجهاز ده'), findsOneWidget);
+    expect(find.text('هذا الجهاز'), findsOneWidget);
     expect(find.text('Chrome على Windows'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('session-out-other')));
     await t.pump(const Duration(milliseconds: 300));
-    await t.tap(find.widgetWithText(FilledButton, 'خروج'));
+    await t.tap(find.widgetWithText(FilledButton, 'تسجيل الخروج'));
     await t.pump();
     await t.pump();
     expect(repo.calls, ['out:other']);
@@ -167,23 +167,23 @@ void main() {
     await t.enterText(find.byKey(const Key('security-enable-code')), '000000');
     await t.tap(find.byKey(const Key('security-enable-submit')));
     await t.pump();
-    expect(find.text('الكود غير صحيح — تأكد من الكود الحالي في التطبيق'), findsOneWidget);
+    expect(find.text('الرمز غير صحيح — تحقّق من الرمز الحالي في التطبيق'), findsOneWidget);
 
     await t.enterText(find.byKey(const Key('security-enable-code')), '123456');
     await t.tap(find.byKey(const Key('security-enable-submit')));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('security-codes')), findsOneWidget);
     expect(find.text('aaaa-1111'), findsOneWidget);
-    await t.tap(find.text('حفظتها — متابعة'));
+    await t.tap(find.text('حفظتُها — متابعة'));
     await t.pumpAndSettle();
-    expect(find.text('فاضل 10 كود احتياطي'), findsOneWidget);
-    expect(find.text('شغّال'), findsOneWidget);
+    expect(find.text('الرموز الاحتياطية المتبقية: 10'), findsOneWidget);
+    expect(find.text('مفعّل'), findsOneWidget);
   });
 
   testWidgets('required by the company: no way to turn it off', (t) async {
     await _pump(t, _Repo(tfa: const TwoFactorStatus(available: true, enabled: true, required: true, recoveryCodesLeft: 2)));
     expect(find.byKey(const Key('security-2fa-off')), findsNothing);
-    expect(find.text('شركتك بتطلب التحقق بخطوتين، فمينفعش يتقفل.'), findsOneWidget);
+    expect(find.text('تشترط شركتك التحقق بخطوتين، لذا لا يمكن إيقافه.'), findsOneWidget);
   });
 
   testWidgets('turned off with the password and a code', (t) async {
@@ -196,7 +196,7 @@ void main() {
     await t.tap(find.byKey(const Key('security-dialog-submit')));
     await t.pumpAndSettle();
     expect(repo.calls, ['disable:Secret123!:654321']);
-    expect(find.text('مقفول'), findsOneWidget);
+    expect(find.text('غير مفعّل'), findsOneWidget);
   });
 
   testWidgets('password: the two must match, then it is changed', (t) async {
@@ -209,7 +209,7 @@ void main() {
     await t.enterText(find.byKey(const Key('pw-again')), 'New12345x');
     await t.tap(find.byKey(const Key('pw-save')));
     await t.pump();
-    expect(find.text('كلمتين المرور مش زي بعض'), findsOneWidget);
+    expect(find.text('كلمتا المرور غير متطابقتين'), findsOneWidget);
     await t.enterText(find.byKey(const Key('pw-again')), 'New123456');
     await t.tap(find.byKey(const Key('pw-save')));
     await t.pumpAndSettle();

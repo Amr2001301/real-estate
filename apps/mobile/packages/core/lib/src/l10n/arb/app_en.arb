@@ -1422,5 +1422,6 @@
   "brokerSectionNoteSubtitle": "Anything that helps the sales team reach the client.",
   "brokerReservationClientSubtitle": "Pick one of the leads you added.",
   "brokerReservationNewSubtitle": "Request a unit booking for your client",
-  "brokerLeadNewSubtitle": "Add the prospective client's details"
+  "brokerLeadNewSubtitle": "Add the prospective client's details",
+  "followUpsYesterday": "Yesterday"
 }

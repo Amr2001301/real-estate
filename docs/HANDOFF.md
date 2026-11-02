@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-02, after #241 + PR 3c)
+# Handoff — where the work stands (2026-11-02, after #242 + PR 2b)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -53,7 +53,7 @@
 - **مراجعة التطبيقين (1 نوفمبر):** كل الطلبات اللي التطبيقين بيبعتوها للـ API موجودة، والتستات كلها شغالة. اتصلح في #233: موافقة مدير المبيعات على حجوزات فريقه من تطبيق الموظفين، وميعاد التسليم وتأخيره في صفحة العقد في تطبيق العميل. **الباقي من المراجعة في القسم 2h** (مواصفات الوحدة في التطبيقين، وصفحات المحتوى في تطبيق العميل).
 - **ملحوظة:** شاشات الموبايل الجديدة اتختبرت بالاختبارات وبالرسم بس، ما اتجرّبتش على موبايل حقيقي.
 
-**بعد كده (1 → 2 نوفمبر، #234–#241 وPR 3c):** القسم **2i** تحت. باختصار:
+**بعد كده (1 → 2 نوفمبر، #234–#242 وPR 2b):** القسم **2i** تحت. باختصار:
 - **#234:** مواصفات الوحدة (المساحات، التشطيب، الإطلالة، الاتجاه، ميعاد التسليم) في التطبيقين زي الموقع.
 - **#235:** بانرات الشركة وصفحاتها المنشورة في تطبيق العميل.
 - **#236:** إعدادات الشركة بتقبل بس المفاتيح اللي السيستم بيقراها. **#237:** ملف `.env.example` فيه كل المتغيرات.
@@ -62,15 +62,16 @@
   - **PR2a (#239):** أرقام إنجليزي (0-9) في كل التطبيق، وأسماء عربي للأدوار وأنواع الوحدات والأحداث، وأرقام التليفون من الشمال لليمين. خلص.
   - **PR3a (#240):** هيدر واحد بنفس الشكل في كل الشاشات في التطبيقين. خلص.
   - **PR3b (#241):** شارات المعلومات وكروت الأرقام موحّدة، ومفيش مبالغ مقطوعة ولا شارات فوق بعض، والكارت الكحلي باين في الوضع الداكن. خلص.
-  - **PR3c:** فورم البروكر بقى خطوات بأرقام زي فورم المبيعات، وكارت القسط في تطبيق العميل بقى واحد بنفس اسم الزرار. **مفتوح ومستني موافقتك.**
-  - **PR2b (بعده):** كل نصوص التطبيق بالفصحى، والنصوص المكتوبة جوه الكود تتنقل لملفات الترجمة.
+  - **PR3c (#242):** فورم البروكر بقى خطوات بأرقام زي فورم المبيعات، وكارت القسط في تطبيق العميل بقى واحد بنفس اسم الزرار. خلص.
+  - **PR2b-1:** نصوص ملفات الترجمة بالفصحى. **مفتوح ومستني موافقتك.**
+  - **PR2b-2 (بعده):** النصوص المكتوبة جوه الكود اتنقلت لملفات الترجمة (فصحى + إنجليزي). جاهز.
 - **قراراتك:** كل النصوص فصحى؛ التصميم الأول (3b و3c) وبعده الفصحى (2b)؛ الأرقام إنجليزي.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #241 مدموج. لو PR 3c لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i** (PR2b)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #242 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -400,7 +401,7 @@ The owner asked whether the two apps keep up with the dashboard and the website.
 
 **Other open items the owner has not decided yet** (ask before starting; the settings-key and `.env.example` items are done in #236/#237): chasing an unsigned contract's due rows; counting a MANUAL cancellation's commission/bonus as a possible liability; showing the customer's national ID/address/extra fields to the broker; e-signing the contract itself (large).
 
-### 2i. #234–#241 and PR 3c (2026-11-01 → 2026-11-02) — mobile QA and polish
+### 2i. #234–#242 and PR 2b (2026-11-01 → 2026-11-02) — mobile QA and polish
 
 Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h are done (#236, #237).
 
@@ -414,10 +415,12 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 | #239 | Mobile PR2a | Western digits everywhere (`PriceFormatter`, `DateFormatter`); Arabic role labels (مستشار مبيعات / مدير مبيعات / مدير النظام / مشرف صيانة / وسيط عقاري); `unitTypeLabel`; `ltr()` isolates for phones; reservation/visit event labels. |
 | #240 | Mobile PR3a | One header design: core `AppNavHeader` (compact mode with gold subtitle, `NavHeaderBack`, `AppNavSliverHeader`, `NavHeaderPill`, `NavHeaderButton`), `AppHomeHeader` (`HeaderRoleChip`, `HeaderDateChip`), glass bell with `NavHeaderBadge`. ~30 custom headers and 25 private back buttons replaced. |
 | #241 | Mobile PR3b | Core `AppInfoChip` (label ellipsizes) and `AppKpiTile` (value scales down); six staff `_InfoChip` and two `_KpiTile` now render them; reservation chips wrap; cheque amount on one line; `AppTone.navy` lighter on dark surfaces. |
-| PR 3c | Mobile | Core `AppFormSection` (numbered form step) replaces four private `_SectionCard` copies; broker «إضافة عميل محتمل» and «حجز جديد» are numbered steps with `AppTextField`; the customer app has one `InstallmentCard` (`features/installments/presentation/widgets/installment_card.dart`) for «أقساطي» and a property's installments tab, label «إرسال إثبات الدفع». Open — merge on the owner's «ادمج». |
+| #242 | Mobile PR3c | Core `AppFormSection` (numbered form step) replaces four private `_SectionCard` copies; broker «إضافة عميل محتمل» and «حجز جديد» are numbered steps with `AppTextField`; the customer app has one `InstallmentCard` (`features/installments/presentation/widgets/installment_card.dart`) for «أقساطي» and a property's installments tab, label «إرسال إثبات الدفع». |
+| PR 2b-1 | Mobile | ~170 Arabic ARB values in Egyptian dialect rewritten in MSA (placeholders kept); follow-up "when" reads اليوم / غدًا / أمس from ARB. Open — merge on «ادمج». |
+| PR 2b-2 | Mobile | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. Ready locally; opened after 2b-1 merges. |
 
 **Next, in this order (one PR each, owner approves each merge):**
-1. **PR 2b — Modern Standard Arabic (owner: «فصحى»).** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.
+1. **PR 2b — Modern Standard Arabic (owner: «فصحى») — split into 2b-1 (ARB values) and 2b-2 (strings in the code), see the table.** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.
 
 **Owner decisions (2026-11-01/02):** all app text in فصحى; design first (3b, 3c), then 2b; Western digits (0-9) for numbers, prices and dates in both languages.
 

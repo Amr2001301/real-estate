@@ -143,13 +143,13 @@ void main() {
     expect(find.text('3 فرص مفتوحة'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('dup-tick-l3')));
     await t.pump();
-    expect(find.text('ادمج 1 في اللي بتفضل'), findsOneWidget);
+    expect(find.text('دمج 1 في الفرصة الباقية'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('dup-merge-c1')));
     await t.pump(const Duration(milliseconds: 300));
-    await t.tap(find.widgetWithText(FilledButton, 'ادمج 1 في اللي بتفضل'));
+    await t.tap(find.widgetWithText(FilledButton, 'دمج 1 في الفرصة الباقية'));
     await t.pump();
     await t.pump();
     expect(repo.merges, ['l2<-l1']);
-    expect(find.text('مفيش عملاء مكررين'), findsOneWidget);
+    expect(find.text('لا يوجد عملاء مكررون'), findsOneWidget);
   });
 }
