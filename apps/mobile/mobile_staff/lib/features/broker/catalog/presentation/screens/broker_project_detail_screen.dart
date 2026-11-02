@@ -446,7 +446,7 @@ class _AddLeadCardState extends State<_AddLeadCard> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'إضافة عميل محتمل لهذا المشروع',
+                      context.l10n.brokerAddLeadForProject,
                       style: TextStyle(
                         color: const Color(0xFF0B1726)
                             .withValues(alpha: 0.55),
@@ -500,7 +500,7 @@ class _AboutSectionState extends State<_AboutSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'عن المشروع'),
+          AppSectionHeader(title: context.l10n.aboutTheProject),
           const SizedBox(height: AppSpacing.sm),
           Container(
             width: double.infinity,
@@ -541,7 +541,7 @@ class _AboutSectionState extends State<_AboutSection> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'التفاصيل',
+                      context.l10n.detailsLabel,
                       style: TextStyle(
                         color: AppPalette.gold500,
                         fontSize: 11,
@@ -580,7 +580,7 @@ class _AboutSectionState extends State<_AboutSection> {
                     onTap: () =>
                         setState(() => _expanded = !_expanded),
                     child: Text(
-                      _expanded ? 'عرض أقل' : 'عرض المزيد',
+                      _expanded ? context.l10n.showLess : context.l10n.showMore,
                       style: const TextStyle(
                         color: AppPalette.gold500,
                         fontSize: 12,
@@ -632,7 +632,7 @@ class _ServicesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'مميزات المشروع'),
+          AppSectionHeader(title: context.l10n.projectFeatures),
           const SizedBox(height: AppSpacing.sm),
           Container(
             width: double.infinity,
@@ -723,7 +723,7 @@ class _MapSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'موقع المشروع'),
+          AppSectionHeader(title: context.l10n.projectLocationTitle),
           const SizedBox(height: AppSpacing.sm),
           ClipRRect(
             borderRadius: AppRadii.card,
@@ -909,19 +909,19 @@ class _Units extends StatelessWidget {
                     children: [
                       _UnitCountChip(
                         count: units.length,
-                        label: 'إجمالي',
+                        label: context.l10n.totalLabel,
                         color: const Color(0xFF6B7280),
                       ),
                       const SizedBox(width: 8),
                       _UnitCountChip(
                         count: available,
-                        label: 'متاح',
+                        label: context.l10n.availableLabel,
                         color: const Color(0xFF22C55E),
                       ),
                       const SizedBox(width: 8),
                       _UnitCountChip(
                         count: units.length - available,
-                        label: 'غير متاح',
+                        label: context.l10n.unavailableLabel,
                         color: const Color(0xFFF59E0B),
                       ),
                     ],
@@ -1110,7 +1110,7 @@ class _UnitCardState extends State<_UnitCard> {
                   if (unit.area != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      '${unit.area} م²',
+                      context.l10n.unitAreaValue('${unit.area}'),
                       style: TextStyle(
                         fontSize: 10,
                         color: colors.inkMuted,

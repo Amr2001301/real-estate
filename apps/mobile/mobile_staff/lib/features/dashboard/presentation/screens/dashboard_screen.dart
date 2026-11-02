@@ -938,15 +938,15 @@ class _SecondaryActionsGrid extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           _ManagerActionCell(
             icon: Icons.groups_rounded,
-            label: 'أداء فريق المبيعات',
-            subtitle: 'متابعة أداء المندوبين وإنجازاتهم',
+            label: context.l10n.teamPerfTitle,
+            subtitle: context.l10n.teamPerfSubtitle,
             onTap: () => context.push('/team-performance'),
           ),
           const SizedBox(height: AppSpacing.sm),
           _ManagerActionCell(
             icon: Icons.flag_rounded,
-            label: 'إدارة أهداف المبيعات',
-            subtitle: 'تحديد الأهداف الشهرية للفريق',
+            label: context.l10n.teamTargetsManageTitle,
+            subtitle: context.l10n.teamTargetsSubtitle,
             onTap: () => context.push('/team-targets'),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1104,7 +1104,7 @@ class _ManagerSectionDivider extends StatelessWidget {
                   size: 12, color: AppPalette.gold400),
               const SizedBox(width: 4),
               Text(
-                'إدارة الفريق',
+                context.l10n.teamManagement,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -2168,7 +2168,7 @@ class _PerfMetricTile extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'من ',
+                  '${context.l10n.fromLabel} ',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.30),
                     fontSize: 10,

@@ -145,7 +145,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: l10n.maintenanceNewRequest,
-      subtitle: 'أبلغنا عن المشكلة وسنتولى أمرها',
+      subtitle: l10n.maintenanceNewSubtitle,
       compact: true,
       leadingAction: const NavHeaderBack(),
     );
@@ -550,7 +550,7 @@ class _PhotoSourceSheet extends StatelessWidget {
                   ),
                   iconColor: AppPalette.gold300,
                   title: l10n.maintenanceFromCamera,
-                  subtitle: 'التقط صورة الآن مباشرةً',
+                  subtitle: l10n.maintenanceFromCameraHint,
                   onTap: () {
                     Navigator.of(context).pop();
                     cubit.addFromCamera();
@@ -566,7 +566,7 @@ class _PhotoSourceSheet extends StatelessWidget {
                   ),
                   iconColor: AppPalette.gold300,
                   title: l10n.maintenanceFromGallery,
-                  subtitle: 'اختر من معرض الصور',
+                  subtitle: l10n.maintenanceFromGalleryHint,
                   onTap: () {
                     Navigator.of(context).pop();
                     cubit.addFromGallery();

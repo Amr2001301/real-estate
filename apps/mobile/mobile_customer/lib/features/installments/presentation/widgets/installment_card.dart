@@ -355,7 +355,7 @@ class InstallmentCard extends StatelessWidget {
                       Expanded(
                         child: _DateCell(
                           icon: Icons.check_circle_outline_rounded,
-                          label: 'تاريخ السداد',
+                          label: l10n.paidDateLabel,
                           value: DateFormatter.shortDate(
                             installment.paidAt!,
                             languageCode: lang,
@@ -537,7 +537,7 @@ class _ViewProofCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'عرض إثبات الدفع المعتمد',
+                      context.l10n.viewApprovedProof,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colors.inkStrong,
                         fontWeight: FontWeight.w800,
@@ -545,7 +545,7 @@ class _ViewProofCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'اضغط لعرض أو تحميل الملف المرفق',
+                      context.l10n.tapToViewAttachment,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
                         fontSize: 12,
@@ -595,10 +595,9 @@ class _SubmitProofButton extends StatelessWidget {
     final accent = isResubmit ? _resubmitAccent : AppPalette.gold300;
     final iconBgGradient = isResubmit ? _resubmitGradient : _pendingGradient;
     final icon = isResubmit ? Icons.refresh_rounded : Icons.upload_file_rounded;
-    final title = isResubmit ? 'إعادة إرسال إثبات الدفع' : 'إرسال إثبات الدفع';
-    final subtitle = isResubmit
-        ? 'تم رفض إثباتك السابق — أرفق مستندًا جديدًا'
-        : 'أرفق صورة أو ملف PDF كإثبات للدفع';
+    final l10n = context.l10n;
+    final title = isResubmit ? l10n.paymentProofResubmitTitle : l10n.paymentProofSubmit;
+    final subtitle = isResubmit ? l10n.paymentProofResubmitHint : l10n.paymentProofSubmitHint;
 
     return GestureDetector(
       onTap: onTap,

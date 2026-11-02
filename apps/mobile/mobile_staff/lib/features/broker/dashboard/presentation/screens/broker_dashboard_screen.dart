@@ -237,9 +237,9 @@ class _BrokerHeaderDelegate extends SliverPersistentHeaderDelegate {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const _RoleChip(),
+                                  HeaderRoleChip(label: l10n.roleBroker),
                                   const SizedBox(width: AppSpacing.xs),
-                                  const _DateChip(),
+                                  const HeaderDateChip(),
                                 ],
                               ),
                             ],
@@ -293,101 +293,6 @@ class _BrokerHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _RoleChip extends StatelessWidget {
-  const _RoleChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppPalette.gold400, AppPalette.gold500],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        boxShadow: [
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: const Text(
-        'وسيط عقاري',
-        style: TextStyle(
-          color: _navyDeep,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _DateChip extends StatelessWidget {
-  const _DateChip();
-
-  static const _ar = [
-    '',
-    'يناير',
-    'فبراير',
-    'مارس',
-    'إبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
-  ];
-  static const _en = [
-    '',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final lang = Localizations.localeOf(context).languageCode;
-    final label = lang == 'ar'
-        ? '${now.day} ${_ar[now.month]}'
-        : '${_en[now.month]} ${now.day}';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.80),
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-}
-
 // ── Dashboard body ─────────────────────────────────────────────────────────────
 
 class _Body extends StatelessWidget {
@@ -419,7 +324,7 @@ class _Body extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
 
           // ── 2. Today's priorities ─────────────────────────────────────────
-          AppSectionHeader(title: 'أولويات اليوم'),
+          AppSectionHeader(title: l10n.dashboardTodayFocus),
           const SizedBox(height: AppSpacing.xs),
           _PrioritySection(data: data, onSwitchTab: onSwitchTab),
           const SizedBox(height: AppSpacing.lg),
@@ -436,11 +341,11 @@ class _Body extends StatelessWidget {
 
           // ── 4. Available projects ─────────────────────────────────────────
           AppSectionHeader(
-            title: 'المشاريع المتاحة',
+            title: l10n.brokerAvailableProjects,
             action: TextButton(
               onPressed: () => onSwitchTab?.call(1),
               child: Text(
-                'عرض الكل',
+                context.l10n.viewAll,
                 style: TextStyle(
                   color: AppPalette.gold500,
                   fontSize: 12,
@@ -471,7 +376,7 @@ class _Body extends StatelessWidget {
               action: TextButton(
                 onPressed: () => onSwitchTab?.call(2),
                 child: Text(
-                  'عرض الكل',
+                  context.l10n.viewAll,
                   style: TextStyle(
                     color: AppPalette.gold500,
                     fontSize: 12,
@@ -493,7 +398,7 @@ class _Body extends StatelessWidget {
               action: TextButton(
                 onPressed: () => onSwitchTab?.call(3),
                 child: Text(
-                  'عرض الكل',
+                  context.l10n.viewAll,
                   style: TextStyle(
                     color: AppPalette.gold500,
                     fontSize: 12,
@@ -574,7 +479,7 @@ class _SnapshotCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'لقطة الإنجاز',
+                      context.l10n.brokerAchievementSnapshot,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.65),
                         fontSize: 13,
@@ -598,8 +503,8 @@ class _SnapshotCard extends StatelessWidget {
                           const Icon(Icons.circle,
                               size: 6, color: AppPalette.gold300),
                           const SizedBox(width: 4),
-                          const Text(
-                            'نشاط',
+                          Text(
+                            context.l10n.brokerActivityBadge,
                             style: TextStyle(
                               color: AppPalette.gold300,
                               fontSize: 11,
@@ -622,7 +527,7 @@ class _SnapshotCard extends StatelessWidget {
                     children: [
                       _DarkMetric(
                         value: '${data.leadsTotal}',
-                        label: 'الفرص المُرسلة',
+                        label: context.l10n.brokerLeadsSent,
                         onTap: onSwitchTab != null
                             ? () => onSwitchTab!(2)
                             : null,
@@ -630,7 +535,7 @@ class _SnapshotCard extends StatelessWidget {
                       _DarkDivider(),
                       _DarkMetric(
                         value: '$approvalRate%',
-                        label: 'نسبة القبول',
+                        label: context.l10n.brokerAcceptanceRate,
                         isGold: true,
                       ),
                       _DarkDivider(),
@@ -644,7 +549,7 @@ class _SnapshotCard extends StatelessWidget {
                       _DarkDivider(),
                       _DarkMetric(
                         value: '${data.contractsSigned}',
-                        label: 'عقود موقعة',
+                        label: context.l10n.brokerSignedContracts,
                         isGold: data.contractsSigned > 0,
                       ),
                     ],
@@ -734,10 +639,8 @@ class _PrioritySection extends StatelessWidget {
     if (pendingLeads > 0) {
       items.add(_PriorityItem(
         icon: Icons.person_search_outlined,
-        label: pendingLeads == 1
-            ? 'عميل محتمل واحد ينتظر الموافقة'
-            : '$pendingLeads عملاء ينتظرون الموافقة',
-        chipLabel: 'في الانتظار',
+        label: context.l10n.brokerPendingLeads(pendingLeads),
+        chipLabel: context.l10n.brokerChipWaiting,
         color: AppPalette.gold400,
         onTap: onSwitchTab != null ? () => onSwitchTab!(2) : null,
       ));
@@ -748,20 +651,18 @@ class _PrioritySection extends StatelessWidget {
     if (pendingReservations > 0) {
       items.add(_PriorityItem(
         icon: Icons.bookmark_border_rounded,
-        label: pendingReservations == 1
-            ? 'حجز واحد ينتظر المراجعة'
-            : '$pendingReservations حجوزات تنتظر المراجعة',
-        chipLabel: 'مراجعة',
+        label: context.l10n.brokerPendingReservations(pendingReservations),
+        chipLabel: context.l10n.brokerChipReview,
         color: const Color(0xFF60A5FA),
         onTap: onSwitchTab != null ? () => onSwitchTab!(3) : null,
       ));
     }
 
     if (items.isEmpty) {
-      items.add(const _PriorityItem(
+      items.add(_PriorityItem(
         icon: Icons.check_circle_outline,
-        label: 'لا توجد أولويات عاجلة — أداء ممتاز!',
-        chipLabel: 'جيد',
+        label: context.l10n.brokerFocusAllClear,
+        chipLabel: context.l10n.brokerChipGood,
         color: Color(0xFF4ADE80),
       ));
     }
@@ -1162,7 +1063,7 @@ class _ProjectsSection extends StatelessWidget {
                       color: context.appColors.inkMuted, size: 28),
                   const SizedBox(height: 8),
                   Text(
-                    'لا توجد مشاريع متاحة',
+                    context.l10n.brokerNoProjects,
                     style: TextStyle(
                       color: context.appColors.inkMuted,
                       fontSize: 13,
@@ -1545,7 +1446,7 @@ class _CommissionCard extends StatelessWidget {
                           fontWeight: FontWeight.w800)),
                   const SizedBox(height: 2),
                   Text(
-                    amount > 0 ? 'إجمالي العمولات المستحقة' : 'لا توجد عمولات بعد',
+                    amount > 0 ? context.l10n.brokerCommissionsDue : context.l10n.brokerCommissionsNone,
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.55),
                         fontSize: 11,
@@ -1625,13 +1526,13 @@ class _SalesVolumeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('حجم المبيعات',
+                Text(context.l10n.brokerSalesVolume,
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
-                Text('إجمالي قيمة العقود الموقعة',
+                Text(context.l10n.brokerSignedValue,
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.55),
                         fontSize: 11,
@@ -1664,7 +1565,7 @@ class _RecentLeadTile extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
-    final dateLabel = _relativeDate(lead.createdAt);
+    final dateLabel = _relativeDate(lead.createdAt, l10n);
 
     return GestureDetector(
       onTap: () => context.push('/broker/leads/${lead.id}'),
@@ -1785,7 +1686,7 @@ class _RecentReservationTile extends StatelessWidget {
     final subtitle = (reservation.reservationNumber != null && reservation.unitCode != null)
         ? reservation.unitCode
         : null;
-    final dateLabel = _relativeDate(reservation.createdAt);
+    final dateLabel = _relativeDate(reservation.createdAt, l10n);
 
     return GestureDetector(
       onTap: () => context.push('/broker/reservations/${reservation.id}'),
@@ -1973,15 +1874,15 @@ class _Skeleton extends StatelessWidget {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-String? _relativeDate(String? iso) {
+String? _relativeDate(String? iso, AppLocalizations l10n) {
   if (iso == null) return null;
   try {
     final d = DateTime.parse(iso).toLocal();
     final now = DateTime.now();
     final diff = now.difference(d);
-    if (diff.inDays == 0) return 'اليوم';
-    if (diff.inDays == 1) return 'أمس';
-    if (diff.inDays < 7) return 'منذ ${diff.inDays} أيام';
+    if (diff.inDays == 0) return l10n.followUpsToday;
+    if (diff.inDays == 1) return l10n.followUpsYesterday;
+    if (diff.inDays < 7) return l10n.daysAgo(diff.inDays);
     return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
   } catch (_) {
     return null;

@@ -63,15 +63,15 @@
   - **PR3a (#240):** هيدر واحد بنفس الشكل في كل الشاشات في التطبيقين. خلص.
   - **PR3b (#241):** شارات المعلومات وكروت الأرقام موحّدة، ومفيش مبالغ مقطوعة ولا شارات فوق بعض، والكارت الكحلي باين في الوضع الداكن. خلص.
   - **PR3c (#242):** فورم البروكر بقى خطوات بأرقام زي فورم المبيعات، وكارت القسط في تطبيق العميل بقى واحد بنفس اسم الزرار. خلص.
-  - **PR2b-1:** نصوص ملفات الترجمة بالفصحى. **مفتوح ومستني موافقتك.**
-  - **PR2b-2 (بعده):** النصوص المكتوبة جوه الكود اتنقلت لملفات الترجمة (فصحى + إنجليزي). جاهز.
+  - **PR2b-1 (#243):** نصوص ملفات الترجمة بالفصحى. خلص.
+  - **PR2b-2:** النصوص المكتوبة جوه الكود اتنقلت لملفات الترجمة (فصحى + إنجليزي). **مفتوح ومستني موافقتك.** بعده خطة مراجعة التطبيقين تكون خلصت.
 - **قراراتك:** كل النصوص فصحى؛ التصميم الأول (3b و3c) وبعده الفصحى (2b)؛ الأرقام إنجليزي.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #242 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #243 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -416,8 +416,8 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 | #240 | Mobile PR3a | One header design: core `AppNavHeader` (compact mode with gold subtitle, `NavHeaderBack`, `AppNavSliverHeader`, `NavHeaderPill`, `NavHeaderButton`), `AppHomeHeader` (`HeaderRoleChip`, `HeaderDateChip`), glass bell with `NavHeaderBadge`. ~30 custom headers and 25 private back buttons replaced. |
 | #241 | Mobile PR3b | Core `AppInfoChip` (label ellipsizes) and `AppKpiTile` (value scales down); six staff `_InfoChip` and two `_KpiTile` now render them; reservation chips wrap; cheque amount on one line; `AppTone.navy` lighter on dark surfaces. |
 | #242 | Mobile PR3c | Core `AppFormSection` (numbered form step) replaces four private `_SectionCard` copies; broker «إضافة عميل محتمل» and «حجز جديد» are numbered steps with `AppTextField`; the customer app has one `InstallmentCard` (`features/installments/presentation/widgets/installment_card.dart`) for «أقساطي» and a property's installments tab, label «إرسال إثبات الدفع». |
-| PR 2b-1 | Mobile | ~170 Arabic ARB values in Egyptian dialect rewritten in MSA (placeholders kept); follow-up "when" reads اليوم / غدًا / أمس from ARB. Open — merge on «ادمج». |
-| PR 2b-2 | Mobile | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. Ready locally; opened after 2b-1 merges. |
+| #243 | Mobile PR2b-1 | ~170 Arabic ARB values in Egyptian dialect rewritten in MSA (placeholders kept); follow-up "when" reads اليوم / غدًا / أمس from ARB. |
+| PR 2b-2 | Mobile | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. Open — merge on «ادمج». After it: the mobile QA plan is done; next items are in 2h ("Other open items") and section 5. |
 
 **Next, in this order (one PR each, owner approves each merge):**
 1. **PR 2b — Modern Standard Arabic (owner: «فصحى») — split into 2b-1 (ARB values) and 2b-2 (strings in the code), see the table.** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.

@@ -167,7 +167,7 @@ class _ChatHeader extends StatelessWidget {
     final l10n = context.l10n;
     return AppNavHeader(
       title: l10n.chatTitle,
-      subtitle: 'المساعد الذكي',
+      subtitle: l10n.assistantTitle,
       compact: true,
       leadingAction: NavHeaderBack(onTap: onBack),
       actions: [NavHeaderAction(icon: Icons.refresh_rounded, tooltip: l10n.chatRestart, onTap: onRestart)],

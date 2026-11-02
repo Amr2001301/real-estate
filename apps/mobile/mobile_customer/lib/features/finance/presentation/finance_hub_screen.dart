@@ -80,7 +80,7 @@ class _FinanceHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: l10n.navFinance,
-      subtitle: 'خدماتك المالية',
+      subtitle: l10n.financeSubtitle,
       compact: true,
       leadingAction: GestureDetector(
         onTap: () => context.push('/account/profile'),

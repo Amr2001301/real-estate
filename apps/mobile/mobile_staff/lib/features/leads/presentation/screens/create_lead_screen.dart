@@ -627,7 +627,7 @@ class _ClientResultTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
                 child: Text(
-                  isCustomer ? 'مالك' : 'عميل',
+                  isCustomer ? context.l10n.clientTagOwner : context.l10n.clientTagClient,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

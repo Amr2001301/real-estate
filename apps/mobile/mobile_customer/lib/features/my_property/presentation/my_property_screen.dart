@@ -138,8 +138,8 @@ class _MyPropertyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AppNavHeader(
-      title: showCount && totalCount > 1 ? 'وحداتي' : l10n.accountMyProperty,
-      subtitle: 'محفظتي العقارية',
+      title: showCount && totalCount > 1 ? l10n.myUnits : l10n.accountMyProperty,
+      subtitle: l10n.myPortfolio,
       compact: true,
       leadingAction: GestureDetector(
         onTap: () => context.push('/account/profile'),
@@ -220,7 +220,7 @@ class _PortfolioPill extends StatelessWidget {
             ],
           ),
           child: Text(
-            totalCount == 1 ? 'وحدة واحدة' : '$totalCount وحدات',
+            context.l10n.unitsCount(totalCount),
             style: const TextStyle(
               color: _navyDeep,
               fontSize: 12,

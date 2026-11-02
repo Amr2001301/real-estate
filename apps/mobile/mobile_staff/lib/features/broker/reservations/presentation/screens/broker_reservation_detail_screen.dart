@@ -261,8 +261,8 @@ class _ReservationHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppNavHeader(
-      title: number != null ? ltr(number) : 'تفاصيل طلب الحجز',
-      subtitle: number != null ? 'تفاصيل طلب الحجز' : null,
+      title: number != null ? ltr(number) : context.l10n.brokerReservationDetails,
+      subtitle: number != null ? context.l10n.brokerReservationDetails : null,
       compact: true,
       leadingAction: const NavHeaderBack(),
       actions: [

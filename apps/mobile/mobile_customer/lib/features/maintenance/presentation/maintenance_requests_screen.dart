@@ -117,28 +117,28 @@ class _MaintenanceRequestsScreenState
                 items: [
                   _FilterItem(
                     key: null,
-                    label: 'الكل',
+                    label: context.l10n.leadsFilterAll,
                     dotColor: null,
                     activeGradient: _openGradient,
                     count: all.length,
                   ),
                   _FilterItem(
                     key: _FilterKey.open.name,
-                    label: 'مفتوح',
+                    label: context.l10n.maintenanceStatusOpen,
                     dotColor: _openAccent,
                     activeGradient: _openGradient,
                     count: openCount,
                   ),
                   _FilterItem(
                     key: _FilterKey.inProgress.name,
-                    label: 'قيد التنفيذ',
+                    label: context.l10n.maintenanceStatusInProgress,
                     dotColor: _inProgressAccent,
                     activeGradient: _inProgressGradient,
                     count: inProgressCount,
                   ),
                   _FilterItem(
                     key: _FilterKey.closed.name,
-                    label: 'مغلق',
+                    label: context.l10n.maintenanceStatusClosed,
                     dotColor: _closedAccent,
                     activeGradient: _closedGradient,
                     count: closedCount,
@@ -233,13 +233,13 @@ class _MaintHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: l10n.accountMaintenance,
-      subtitle: requestCount != null && requestCount! > 0 ? 'طلبات الخدمة · $requestCount' : 'طلبات الخدمة',
+      subtitle: requestCount != null && requestCount! > 0 ? '${l10n.serviceRequests} · $requestCount' : l10n.serviceRequests,
       compact: true,
       leadingAction: GestureDetector(
         onTap: () => context.push('/account/profile'),
         child: _GoldRingAvatar(name: displayName),
       ),
-      actions: [NavHeaderButton(label: 'جديد', onTap: onNewRequest)],
+      actions: [NavHeaderButton(label: l10n.leadTabNew, onTap: onNewRequest)],
     );
   }
 }
@@ -306,7 +306,7 @@ class _MaintSummary extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'إجمالي الطلبات',
+                            context.l10n.supervisorSummaryTotalLabel,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.6),
                               fontSize: 13,
@@ -355,7 +355,7 @@ class _MaintSummary extends StatelessWidget {
                     Expanded(
                       child: _SummaryCell(
                         value: '$openCount',
-                        label: 'مفتوحة',
+                        label: context.l10n.maintenanceStatusOpenPlural,
                         accent: _openAccent,
                         theme: theme,
                       ),
@@ -368,7 +368,7 @@ class _MaintSummary extends StatelessWidget {
                     Expanded(
                       child: _SummaryCell(
                         value: '$inProgressCount',
-                        label: 'قيد التنفيذ',
+                        label: context.l10n.maintenanceStatusInProgress,
                         accent: _inProgressAccent,
                         theme: theme,
                       ),
@@ -381,7 +381,7 @@ class _MaintSummary extends StatelessWidget {
                     Expanded(
                       child: _SummaryCell(
                         value: '$closedCount',
-                        label: 'مغلقة',
+                        label: context.l10n.supervisorFilterClosed,
                         accent: _closedAccent,
                         theme: theme,
                       ),
@@ -647,7 +647,7 @@ class _RequestCard extends StatelessWidget {
                 children: [
                   // Description
                   Text(
-                    hasDescription ? request.description : 'لا يوجد وصف',
+                    hasDescription ? request.description : context.l10n.supervisorNoDescription,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -671,7 +671,7 @@ class _RequestCard extends StatelessWidget {
                         Expanded(
                           child: _InfoCell(
                             icon: AppIcons.calendar,
-                            label: 'تاريخ الطلب',
+                            label: context.l10n.maintenanceRequestDate,
                             value: DateFormatter.shortDate(
                               request.createdAt!,
                               languageCode: lang,
@@ -689,7 +689,7 @@ class _RequestCard extends StatelessWidget {
                       Expanded(
                         child: _InfoCell(
                           icon: Icons.flag_rounded,
-                          label: 'الأولوية',
+                          label: context.l10n.maintenancePriorityLabel,
                           value: maintenancePriorityLabel(l10n, request.priority),
                           accent: _priorityAccent(request.priority),
                         ),
@@ -753,7 +753,7 @@ class _DetailsRow extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(
-                'عرض التفاصيل',
+                context.l10n.supervisorViewDetails,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w700,

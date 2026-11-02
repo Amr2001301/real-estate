@@ -718,7 +718,7 @@ class _RequestCard extends StatelessWidget {
                                 color: ct.accent.withValues(alpha: 0.4)),
                           ),
                           child: Text(
-                            maintenanceStatusLabel(request.status),
+                            maintenanceStatusLabel(context.l10n, request.status),
                             style: TextStyle(
                               color: ct.accent,
                               fontSize: 12,
@@ -765,7 +765,7 @@ class _RequestCard extends StatelessWidget {
                         Expanded(
                           child: _InfoCell(
                             icon: Icons.access_time_rounded,
-                            label: 'تاريخ الطلب',
+                            label: context.l10n.maintenanceRequestDate,
                             value: DateFormatter.shortDate(
                               request.createdAt!,
                               languageCode: lang,
@@ -783,8 +783,8 @@ class _RequestCard extends StatelessWidget {
                       Expanded(
                         child: _InfoCell(
                           icon: Icons.flag_rounded,
-                          label: 'الأولوية',
-                          value: maintenancePriorityLabel(request.priority),
+                          label: context.l10n.maintenancePriorityLabel,
+                          value: maintenancePriorityLabel(context.l10n, request.priority),
                           accent: _priorityAccent(request.priority),
                         ),
                       ),

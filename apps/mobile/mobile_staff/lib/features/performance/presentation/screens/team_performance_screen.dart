@@ -536,19 +536,19 @@ class _MemberCard extends StatelessWidget {
                     _KpiDot(
                         color: _colorLeads,
                         count: p.leadsCount,
-                        label: 'فرص'),
+                        label: context.l10n.kpiLeads),
                     _KpiDot(
                         color: _colorVisits,
                         count: p.visitsCount,
-                        label: 'زيارات'),
+                        label: context.l10n.navVisits),
                     _KpiDot(
                         color: _colorReservations,
                         count: p.reservationsCount,
-                        label: 'حجوزات'),
+                        label: context.l10n.navReservations),
                     _KpiDot(
                         color: _colorContracts,
                         count: p.signedContractsCount,
-                        label: 'عقود'),
+                        label: context.l10n.navContracts),
                   ],
                 ),
               ],

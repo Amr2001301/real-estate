@@ -55,7 +55,9 @@ void showAppNotificationBanner(
 
   entry = OverlayEntry(
     builder: (_) => _BannerWidget(
-      title: title.isEmpty ? 'إشعار جديد' : title,
+      title: title.isEmpty
+          ? (textDirection == TextDirection.rtl ? 'إشعار جديد' : 'New notification')
+          : title,
       body: body,
       textDirection: textDirection,
       onTap: onTap != null
@@ -328,7 +330,7 @@ class _BannerCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        'الآن',
+                        Directionality.of(context) == TextDirection.rtl ? 'الآن' : 'Now',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.28),
                           fontSize: 10,

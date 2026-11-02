@@ -494,7 +494,7 @@ class _ServicesListCard extends StatelessWidget {
       _SItem(
         icon: AppIcons.property,
         label: l10n.accountMyProperty,
-        subtitle: 'وحداتك العقارية ومتابعة حالتها',
+        subtitle: l10n.accountMyPropertySubtitle,
         navyStyle: true,
         onTap: () => context.push('/account/property'),
       ),
@@ -522,7 +522,7 @@ class _ServicesListCard extends StatelessWidget {
       _SItem(
         icon: AppIcons.maintenance,
         label: l10n.accountMaintenance,
-        subtitle: 'طلبات الصيانة والإصلاح',
+        subtitle: l10n.accountMaintenanceSubtitle,
         navyStyle: true,
         onTap: () => context.push('/account/maintenance'),
       ),

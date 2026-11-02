@@ -121,8 +121,8 @@ class _DetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppNavHeader(
-      title: 'تفاصيل الطلب',
-      subtitle: 'طلب صيانة',
+      title: context.l10n.maintenanceDetailTitle,
+      subtitle: context.l10n.maintenanceFallbackTitle,
       compact: true,
       leadingAction: const NavHeaderBack(),
       actions: [NavHeaderPill(label: maintenanceStatusLabel(l10n, request.status), color: accent)],
@@ -196,7 +196,7 @@ class _SummaryCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              category?.isNotEmpty == true ? category! : 'طلب صيانة',
+                              category?.isNotEmpty == true ? category! : context.l10n.maintenanceFallbackTitle,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
@@ -208,7 +208,7 @@ class _SummaryCard extends StatelessWidget {
                             ),
                             if (request.unitCode != null)
                               Text(
-                                'وحدة ${request.unitCode}',
+                                context.l10n.unitTitle(request.unitCode!),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
                                   fontSize: 13,
@@ -303,22 +303,22 @@ class _ResolutionCard extends StatelessWidget {
           languageCode: Localizations.localeOf(context).languageCode,
         );
 
-  ({String label, Color color}) _resolvedByInfo() => switch (request.resolvedBy) {
+  ({String label, Color color}) _resolvedByInfo(AppLocalizations l10n) => switch (request.resolvedBy) {
         MaintenanceResolvedBy.both =>
-          (label: 'أكد الطرفان الحل', color: const Color(0xFF4ADE80)),
+          (label: l10n.maintenanceResolvedByBoth, color: const Color(0xFF4ADE80)),
         MaintenanceResolvedBy.customer =>
-          (label: 'أكد العميل الحل', color: AppPalette.gold300),
+          (label: l10n.maintenanceResolvedByCustomer, color: AppPalette.gold300),
         MaintenanceResolvedBy.supervisor =>
-          (label: 'أكد مشرف الصيانة الحل', color: AppPalette.gold300),
+          (label: l10n.maintenanceResolvedBySupervisor, color: AppPalette.gold300),
         null =>
-          (label: 'لم يتم التأكيد بعد', color: const Color(0xFF9CA3AF)),
+          (label: l10n.maintenanceResolvedByNone, color: const Color(0xFF9CA3AF)),
       };
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
-    final rb = _resolvedByInfo();
+    final rb = _resolvedByInfo(context.l10n);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -345,8 +345,8 @@ class _ResolutionCard extends StatelessWidget {
                     child: const Icon(Icons.checklist_rounded, color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'متابعة الحل والتقييم',
+                  Text(
+                    context.l10n.maintenanceFollowUpTitle,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -369,35 +369,35 @@ class _ResolutionCard extends StatelessWidget {
                     children: [
                       _StatusPill(label: rb.label, color: rb.color),
                       if (request.isOverdue)
-                        const _StatusPill(
-                            label: 'متأخر عن الموعد', color: Color(0xFFEF4444)),
+                        _StatusPill(
+                            label: context.l10n.supervisorDetailOverdueLabel, color: Color(0xFFEF4444)),
                       if (request.unresolvedAt != null)
-                        const _StatusPill(label: 'لم تُحل', color: Color(0xFFEF4444)),
+                        _StatusPill(label: context.l10n.maintenanceUnresolved, color: Color(0xFFEF4444)),
                       if (request.complaintAt != null)
-                        const _StatusPill(
-                            label: 'تم تقديم شكوى', color: Color(0xFFF97316)),
+                        _StatusPill(
+                            label: context.l10n.supervisorDetailComplaintLabel, color: Color(0xFFF97316)),
                     ],
                   ),
                   const SizedBox(height: 14),
                   // Info rows
                   _InfoRow(
                     icon: Icons.schedule_rounded,
-                    label: 'الموعد المستهدف للمعالجة',
+                    label: context.l10n.maintenanceTargetDate,
                     value: request.dueAt != null
                         ? _dateStr(context, request.dueAt)
-                        : 'يبدأ بعد اعتماد الطلب',
+                        : context.l10n.maintenanceStartsAfterApproval,
                   ),
                   _InfoRow(
                     icon: Icons.verified_rounded,
-                    label: 'تأكيد مشرف الصيانة',
+                    label: context.l10n.maintenanceSupervisorConfirmation,
                     value: request.supervisorConfirmedResolutionAt != null
                         ? _dateStr(context, request.supervisorConfirmedResolutionAt)
-                        : 'لم يؤكد بعد',
+                        : context.l10n.maintenanceResolvedByNone,
                   ),
                   if (request.complaintAt != null)
                     _InfoRow(
                       icon: Icons.report_rounded,
-                      label: 'تاريخ الشكوى',
+                      label: context.l10n.supervisorDetailComplaintDateLabel,
                       value: _dateStr(context, request.complaintAt),
                     ),
                 ],
@@ -413,12 +413,12 @@ class _ResolutionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'تجاوز طلبك الموعد المستهدف — يمكنك تقديم شكوى.',
+                      context.l10n.maintenanceOverdueComplaintHint,
                       style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
                     ),
                     const SizedBox(height: 10),
                     AppButton(
-                      label: 'تقديم شكوى',
+                      label: context.l10n.maintenanceFileComplaint,
                       variant: AppButtonVariant.outline,
                       size: AppButtonSize.medium,
                       isLoading: submitting,
@@ -437,8 +437,8 @@ class _ResolutionCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'تقييمك للخدمة',
+                    Text(
+                      context.l10n.maintenanceYourRating,
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -453,7 +453,7 @@ class _ResolutionCard extends StatelessWidget {
                     ],
                     const SizedBox(height: 4),
                     Text(
-                      'أكدت الحل في ${_dateStr(context, request.customerConfirmedResolutionAt)}',
+                      context.l10n.maintenanceYouConfirmedOn(_dateStr(context, request.customerConfirmedResolutionAt)),
                       style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
                     ),
                   ],
@@ -482,7 +482,7 @@ class _ResolutionCard extends StatelessWidget {
     } else {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(content: Text('تم تسجيل شكواك وسيتابعها فريقنا.')));
+        ..showSnackBar(SnackBar(content: Text(context.l10n.maintenanceComplaintSent)));
     }
   }
 }
@@ -555,7 +555,7 @@ class _AttachmentsSection extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () => context.read<DocumentsListCubit>().load(),
-                            child: const Text('إعادة المحاولة'),
+                            child: Text(context.l10n.actionRetry),
                           ),
                         ],
                       ),
@@ -839,7 +839,7 @@ class _ConfirmResolutionFormState extends State<_ConfirmResolutionForm> {
 
   Future<void> _submit() async {
     if (_rating < 1) {
-      setState(() => _error = 'يرجى اختيار تقييم من 1 إلى 5 نجوم.');
+      setState(() => _error = context.l10n.maintenanceRatingRequired);
       return;
     }
     setState(() => _error = null);
@@ -855,7 +855,7 @@ class _ConfirmResolutionFormState extends State<_ConfirmResolutionForm> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-            const SnackBar(content: Text('شكراً لك! تم تأكيد الحل وإرسال تقييمك.')));
+            SnackBar(content: Text(context.l10n.maintenanceRatingThanks)));
     }
   }
 
@@ -867,7 +867,7 @@ class _ConfirmResolutionFormState extends State<_ConfirmResolutionForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('هل تم حل المشكلة؟ أكّد الحل وقيّم الخدمة',
+        Text(context.l10n.maintenanceConfirmPrompt,
             style: theme.textTheme.titleSmall),
         const SizedBox(height: AppSpacing.sm),
         Row(
@@ -889,7 +889,7 @@ class _ConfirmResolutionFormState extends State<_ConfirmResolutionForm> {
         const SizedBox(height: AppSpacing.sm),
         AppTextField(
           controller: _note,
-          hint: 'أضف ملاحظة عن جودة الخدمة (اختياري)',
+          hint: context.l10n.maintenanceRatingNoteHint,
           maxLines: 3,
           enabled: !widget.submitting,
         ),
@@ -903,7 +903,7 @@ class _ConfirmResolutionFormState extends State<_ConfirmResolutionForm> {
         ],
         const SizedBox(height: AppSpacing.sm),
         AppButton(
-          label: 'تأكيد الحل وإرسال التقييم',
+          label: context.l10n.maintenanceConfirmAndRate,
           size: AppButtonSize.medium,
           isLoading: widget.submitting,
           onPressed: widget.submitting ? null : _submit,

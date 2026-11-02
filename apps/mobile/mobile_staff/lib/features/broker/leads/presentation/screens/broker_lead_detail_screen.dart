@@ -251,7 +251,7 @@ class _Body extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'قدّم طلب حجز لهذا العميل',
+                              context.l10n.brokerReserveForLead,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.6),
                                 fontSize: 11,
@@ -312,8 +312,8 @@ class _LeadHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppNavHeader(
-      title: name ?? 'العميل المحتمل',
-      subtitle: name != null ? 'العميل المحتمل' : null,
+      title: name ?? context.l10n.leadSingular,
+      subtitle: name != null ? context.l10n.leadSingular : null,
       compact: true,
       leadingAction: const NavHeaderBack(),
       actions: [

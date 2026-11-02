@@ -98,10 +98,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     final visible = _apply(state.items);
 
                     if (visible.isEmpty) {
-                      return const EmptyState(
+                      return EmptyState(
                         icon: Icons.filter_list_off_rounded,
-                        title: 'لا توجد نتائج',
-                        message: 'لا توجد عناصر محفوظة في هذا التصنيف',
+                        title: context.l10n.noResults,
+                        message: context.l10n.favoritesFilterEmpty,
                       );
                     }
 
@@ -143,7 +143,7 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: l10n.navFavorites,
-      subtitle: count != null ? 'الوحدات المحفوظة · $count' : 'الوحدات المحفوظة',
+      subtitle: count != null ? '${l10n.favoritesSubtitle} · $count' : l10n.favoritesSubtitle,
       compact: true,
       leadingAction: const NavHeaderBack(),
     );
@@ -173,21 +173,21 @@ class _FilterRow extends StatelessWidget {
       child: Row(
         children: [
           _FilterChip(
-            label: 'الكل',
+            label: context.l10n.leadsFilterAll,
             count: all.length,
             selected: selected == _FilterTab.all,
             onTap: () => onSelect(_FilterTab.all),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: 'وحدات',
+            label: context.l10n.favoritesTabUnits,
             count: unitCount,
             selected: selected == _FilterTab.units,
             onTap: () => onSelect(_FilterTab.units),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: 'مشاريع',
+            label: context.l10n.favoritesTabProjects,
             count: projectCount,
             selected: selected == _FilterTab.projects,
             onTap: () => onSelect(_FilterTab.projects),
@@ -329,8 +329,9 @@ class _FavoriteCard extends StatelessWidget {
       detailIcon  = null;
     }
 
-    final pillLabel = fav.isProject ? 'مشروع' : (subtitle ?? 'وحدة');
-    final ctaLabel  = fav.isProject ? 'عرض المشروع' : 'عرض الوحدة';
+    final l10n = context.l10n;
+    final pillLabel = fav.isProject ? l10n.favoriteKindProject : (subtitle ?? l10n.favoriteKindUnit);
+    final ctaLabel  = fav.isProject ? l10n.viewProject : l10n.viewUnit;
 
     return LuxeCard(
       onTap: onTap,
@@ -546,13 +547,13 @@ class _SavedPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppPalette.gold300.withValues(alpha: 0.35)),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.bookmark_rounded, size: 11, color: AppPalette.gold300),
           SizedBox(width: 4),
           Text(
-            'محفوظة',
+            context.l10n.savedBadge,
             style: TextStyle(
               color: AppPalette.gold300,
               fontSize: 11,

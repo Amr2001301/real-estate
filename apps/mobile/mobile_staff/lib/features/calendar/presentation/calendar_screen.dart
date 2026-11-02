@@ -10,7 +10,7 @@ import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/calendar_event.dart';
 import 'calendar_cubit.dart';
 
-const _kDaysAr = ['اتنين', 'تلات', 'أربع', 'خميس', 'جمعة', 'سبت', 'أحد'];
+const _kDaysAr = ['إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت', 'أحد'];
 const _kDaysEn = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _kMonthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 const _kMonthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
