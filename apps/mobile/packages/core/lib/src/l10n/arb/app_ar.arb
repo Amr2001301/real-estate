@@ -1408,5 +1408,11 @@
   "visitEventFeedbackSubmitted": "أُضيف تقييم الزيارة",
   "visitEventOther": "تحديث على الزيارة",
   "authPhoneTitle": "تسجيل الدخول برقم الهاتف",
-  "fieldFullNameNewAccount": "الاسم الكامل (للحسابات الجديدة فقط)"
+  "fieldFullNameNewAccount": "الاسم الكامل (للحسابات الجديدة فقط)",
+  "brokerLeadSectionContact": "بيانات العميل",
+  "brokerLeadSectionContactSubtitle": "الاسم ورقم الهاتف مطلوبان، والبريد الإلكتروني اختياري.",
+  "brokerSectionNoteSubtitle": "أي تفاصيل تساعد فريق المبيعات في التواصل مع العميل.",
+  "brokerReservationClientSubtitle": "اختر أحد العملاء المحتملين الذين أضفتهم.",
+  "brokerReservationNewSubtitle": "قدّم طلب حجز وحدة لعميلك",
+  "brokerLeadNewSubtitle": "أضف بيانات العميل المحتمل"
 }

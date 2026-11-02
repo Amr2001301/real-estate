@@ -4100,4 +4100,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldFullNameNewAccount => 'Full name (new accounts only)';
+
+  @override
+  String get brokerLeadSectionContact => 'Client details';
+
+  @override
+  String get brokerLeadSectionContactSubtitle =>
+      'Name and phone are required; email is optional.';
+
+  @override
+  String get brokerSectionNoteSubtitle =>
+      'Anything that helps the sales team reach the client.';
+
+  @override
+  String get brokerReservationClientSubtitle =>
+      'Pick one of the leads you added.';
+
+  @override
+  String get brokerReservationNewSubtitle =>
+      'Request a unit booking for your client';
+
+  @override
+  String get brokerLeadNewSubtitle => 'Add the prospective client\'s details';
 }

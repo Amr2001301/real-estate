@@ -1416,5 +1416,11 @@
   "visitEventFeedbackSubmitted": "Feedback added",
   "visitEventOther": "Visit updated",
   "authPhoneTitle": "Sign in with your phone",
-  "fieldFullNameNewAccount": "Full name (new accounts only)"
+  "fieldFullNameNewAccount": "Full name (new accounts only)",
+  "brokerLeadSectionContact": "Client details",
+  "brokerLeadSectionContactSubtitle": "Name and phone are required; email is optional.",
+  "brokerSectionNoteSubtitle": "Anything that helps the sales team reach the client.",
+  "brokerReservationClientSubtitle": "Pick one of the leads you added.",
+  "brokerReservationNewSubtitle": "Request a unit booking for your client",
+  "brokerLeadNewSubtitle": "Add the prospective client's details"
 }

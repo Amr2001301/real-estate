@@ -7705,6 +7705,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Full name (new accounts only)'**
   String get fieldFullNameNewAccount;
+
+  /// No description provided for @brokerLeadSectionContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Client details'**
+  String get brokerLeadSectionContact;
+
+  /// No description provided for @brokerLeadSectionContactSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name and phone are required; email is optional.'**
+  String get brokerLeadSectionContactSubtitle;
+
+  /// No description provided for @brokerSectionNoteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything that helps the sales team reach the client.'**
+  String get brokerSectionNoteSubtitle;
+
+  /// No description provided for @brokerReservationClientSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick one of the leads you added.'**
+  String get brokerReservationClientSubtitle;
+
+  /// No description provided for @brokerReservationNewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a unit booking for your client'**
+  String get brokerReservationNewSubtitle;
+
+  /// No description provided for @brokerLeadNewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the prospective client\'s details'**
+  String get brokerLeadNewSubtitle;
 }
 
 class _AppLocalizationsDelegate
