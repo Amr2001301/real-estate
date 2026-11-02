@@ -317,7 +317,7 @@ class _UnitHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${property.unitType}  ·  ${property.unitCode}',
+                        '${unitTypeLabel(property.unitType, languageCode: Localizations.localeOf(context).languageCode)}  ·  ${property.unitCode}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.start,

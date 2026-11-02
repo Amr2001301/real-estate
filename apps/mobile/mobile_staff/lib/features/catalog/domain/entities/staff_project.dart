@@ -68,6 +68,7 @@ class StaffUnit extends Equatable {
     required this.code,
     required this.status,
     this.type,
+    this.typeName,
     this.price,
     this.area,
     this.bedrooms,
@@ -91,6 +92,13 @@ class StaffUnit extends Equatable {
   final String code;
   final String status;
   final String? type;
+
+  /// The company's own name for the type, when it set one.
+  final Translatable? typeName;
+
+  /// The type as people read it ("فيلا"), never the code; empty without one.
+  String typeLabel(String languageCode) =>
+      unitTypeLabel(type, languageCode: languageCode, name: typeName);
   final String? price;
   final String? area;
   final int? bedrooms;

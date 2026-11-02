@@ -309,7 +309,7 @@ class _ChequeTileState extends State<_ChequeTile> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                c.customer ?? (c.number != null ? '#${c.number}' : l10n.chequesTitle),
+                                c.customer ?? (c.number != null ? ltr('#${c.number}') : l10n.chequesTitle),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -323,7 +323,7 @@ class _ChequeTileState extends State<_ChequeTile> {
                               const SizedBox(height: 3),
                               Text(
                                 [
-                                  if (c.number != null) '#${c.number}',
+                                  if (c.number != null) ltr('#${c.number}'),
                                   if (c.bank != null) c.bank!,
                                 ].join(' · '),
                                 maxLines: 1,

@@ -22,6 +22,7 @@ class Unit extends Equatable {
     required this.id,
     required this.code,
     required this.type,
+    this.typeName,
     required this.area,
     required this.bedrooms,
     required this.bathrooms,
@@ -37,6 +38,9 @@ class Unit extends Equatable {
   final String id;
   final String code;
   final String type;
+
+  /// The company's own name for the type, when it set one.
+  final Translatable? typeName;
   final num area;
   final int bedrooms;
   final int bathrooms;
@@ -51,6 +55,10 @@ class Unit extends Equatable {
   final UnitSpecs specs;
 
   List<String> get galleryImages => imageUrls(media);
+
+  /// The type as people read it ("فيلا", "شقة بغرفتي نوم"), never the code.
+  String typeLabel(String languageCode) =>
+      unitTypeLabel(type, languageCode: languageCode, name: typeName);
   num? get priceValue => num.tryParse(price);
 
   @override

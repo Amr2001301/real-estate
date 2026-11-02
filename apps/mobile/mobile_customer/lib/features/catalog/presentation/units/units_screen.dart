@@ -67,6 +67,8 @@ class _UnitsScreenState extends State<UnitsScreen> {
       final hay = [
         u.code,
         u.type,
+        u.typeLabel('ar'),
+        u.typeLabel('en'),
         u.project?.name.resolve('ar') ?? '',
         u.project?.name.resolve('en') ?? '',
         u.project?.city ?? '',

@@ -633,7 +633,7 @@ class _LeadResultTile extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: colors.inkStrong)),
                     if (phone != null)
-                      Text(phone,
+                      Text(ltr(phone),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: colors.inkMuted)),
                   ],
@@ -700,7 +700,7 @@ class _SelectedLeadCard extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700, color: colors.inkStrong)),
                 if (phone != null)
-                  Text(phone,
+                  Text(ltr(phone),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: colors.inkMuted)),
               ],
@@ -881,7 +881,7 @@ class _ClientResultTile extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: colors.inkStrong)),
                     if (client.phone != null)
-                      Text(client.phone!,
+                      Text(ltr(client.phone),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: colors.inkMuted)),
                   ],
@@ -947,7 +947,7 @@ class _SelectedClientCard extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700, color: colors.inkStrong)),
                 if (client.phone != null)
-                  Text(client.phone!,
+                  Text(ltr(client.phone),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: colors.inkMuted)),
               ],
@@ -1116,7 +1116,7 @@ class _UnitDropdown extends StatelessWidget {
         for (final u in units)
           DropdownMenuItem<String?>(
             value: u.id,
-            child: Text('${u.code}${u.type != null ? ' · ${u.type}' : ''}'),
+            child: Text('${u.code}${u.type != null ? ' · ${unitTypeLabel(u.type, languageCode: Localizations.localeOf(context).languageCode)}' : ''}'),
           ),
       ],
       onChanged: (id) => cubit.selectUnit(id),

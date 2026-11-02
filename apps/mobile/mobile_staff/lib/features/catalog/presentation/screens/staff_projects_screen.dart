@@ -1020,7 +1020,7 @@ class _UnitMetaRow extends StatelessWidget {
           const SizedBox(width: 4),
           Expanded(
             child: Text(
-              types.take(4).join(' • '),
+              types.take(4).map((t) => unitTypeLabel(t, languageCode: Localizations.localeOf(context).languageCode)).join(' • '),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

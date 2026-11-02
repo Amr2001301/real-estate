@@ -13,6 +13,7 @@ extension UnitDtoMapper on UnitDto {
         id: id,
         code: code,
         type: type,
+        typeName: typeName,
         area: area,
         bedrooms: bedrooms,
         bathrooms: bathrooms,

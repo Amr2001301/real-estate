@@ -54,7 +54,7 @@ class ContractCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   [
-                    if (contract.contractNumber != null) '#${contract.contractNumber}',
+                    if (contract.contractNumber != null) ltr('#${contract.contractNumber}'),
                     if (contract.unitCode != null) contract.unitCode!,
                     if (contract.projectName != null)
                       contract.projectName!.resolve(lang),

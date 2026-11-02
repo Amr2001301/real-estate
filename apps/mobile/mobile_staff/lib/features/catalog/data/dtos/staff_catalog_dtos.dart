@@ -114,6 +114,7 @@ class StaffUnitDto {
     required this.code,
     required this.status,
     this.type,
+    this.typeName,
     this.price,
     this.area,
     this.bedrooms,
@@ -138,6 +139,9 @@ class StaffUnitDto {
   final String code;
   final String status;
   final String? type;
+
+  /// The company's own name for the type (`{ar, en}`), when it set one.
+  final Translatable? typeName;
   final String? price;
   final String? area;
   final int? bedrooms;
@@ -204,6 +208,7 @@ class StaffUnitDto {
       code: json['code'] as String? ?? '',
       status: json['status'] as String? ?? 'AVAILABLE',
       type: json['type'] as String?,
+      typeName: json['typeName'] == null ? null : Translatable.fromJson(json['typeName']),
       price: json['price']?.toString(),
       area: json['area']?.toString(),
       bedrooms: (json['bedrooms'] as num?)?.toInt(),

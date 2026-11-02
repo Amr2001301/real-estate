@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../common/role_label.dart';
 import '../../../permissions/staff_permissions.dart';
 import '../../../../common/lead_stage_label.dart';
 import '../../../bonus/presentation/cubit/bonus_summary_cubit.dart';
@@ -2613,7 +2614,7 @@ class _DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _RoleChip(label: l10n.salesRoleChip),
+                              _RoleChip(label: roleLabel(l10n, context.read<SessionCubit>().state.role)),
                               const SizedBox(width: AppSpacing.xs),
                               _DateChip(),
                             ],

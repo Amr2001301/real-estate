@@ -160,7 +160,7 @@ class _DetailPageState extends State<_DetailPage> {
                               _IdentityRow(unit: unit),
                               const SizedBox(height: AppSpacing.sm),
                               Text(
-                                unit.type,
+                                unit.typeLabel(Localizations.localeOf(context).languageCode),
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium
@@ -1208,7 +1208,7 @@ class _StickyActionBar extends StatelessWidget {
               },
             ),
             const SizedBox(height: AppSpacing.sm),
-            ContactButtons(whatsappMessage: '${unit.type} · ${unit.code}'),
+            ContactButtons(whatsappMessage: '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${unit.code}'),
           ],
         ),
       ),
@@ -1322,13 +1322,13 @@ void showUnitContactSheet(BuildContext context, Unit unit) {
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '${unit.type} · ${l10n.unitCode(unit.code)}',
+            '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${l10n.unitCode(unit.code)}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.appColors.inkMuted,
                 ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          ContactButtons(whatsappMessage: '${unit.type} · ${unit.code}'),
+          ContactButtons(whatsappMessage: '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${unit.code}'),
         ],
       ),
     ),

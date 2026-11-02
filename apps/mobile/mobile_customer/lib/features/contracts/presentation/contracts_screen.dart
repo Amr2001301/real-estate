@@ -560,7 +560,7 @@ class _ContractCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            contract.unitType,
+                            unitTypeLabel(contract.unitType, languageCode: Localizations.localeOf(context).languageCode),
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: colors.inkStrong,
                               fontWeight: FontWeight.w800,

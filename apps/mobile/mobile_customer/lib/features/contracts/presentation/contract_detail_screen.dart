@@ -357,7 +357,7 @@ class _SummaryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        contract.unitType,
+                        unitTypeLabel(contract.unitType, languageCode: Localizations.localeOf(context).languageCode),
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: colors.inkStrong,

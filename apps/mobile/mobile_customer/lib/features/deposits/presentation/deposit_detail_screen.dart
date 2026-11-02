@@ -326,7 +326,7 @@ class _DepositSummaryCard extends StatelessWidget {
                       Divider(height: AppSpacing.lg, color: colors.hairline),
                     _InfoRow(
                       icon: Icons.home_work_rounded,
-                      label: l10n.maintenanceUnitLabel,
+                      label: l10n.contractUnit,
                       value: deposit.unitCode!,
                       colors: colors,
                       theme: theme,

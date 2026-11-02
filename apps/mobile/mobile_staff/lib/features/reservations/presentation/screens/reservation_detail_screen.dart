@@ -654,7 +654,7 @@ class _TimelineItem extends StatelessWidget {
                   Text(
                     isNote
                         ? entry.body
-                        : reservationStatusLabel(l10n, entry.body),
+                        : reservationEventLabel(l10n, entry.body),
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,

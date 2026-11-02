@@ -25,6 +25,7 @@ class UnitDto {
     required this.id,
     required this.code,
     required this.type,
+    this.typeName,
     required this.area,
     required this.bedrooms,
     required this.bathrooms,
@@ -40,6 +41,9 @@ class UnitDto {
   final String id;
   final String code;
   final String type;
+
+  /// The company's own name for the type (`{ar, en}`), when it set one.
+  final Translatable? typeName;
   final num area;
   final int bedrooms;
   final int bathrooms;
@@ -55,6 +59,7 @@ class UnitDto {
         id: json['id'] as String,
         code: json['code'] as String? ?? '',
         type: json['type'] as String? ?? '',
+        typeName: json['typeName'] == null ? null : Translatable.fromJson(json['typeName']),
         area: (json['area'] as num?) ?? 0,
         bedrooms: (json['bedrooms'] as num?)?.toInt() ?? 0,
         bathrooms: (json['bathrooms'] as num?)?.toInt() ?? 0,

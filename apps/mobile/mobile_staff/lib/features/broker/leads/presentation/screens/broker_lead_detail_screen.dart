@@ -715,7 +715,7 @@ class _DetailSkeleton extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('تم تسجيل العميل المحتمل', style: TextStyle(fontSize: 13, color: colors.inkStrong)),
-                    Text('١٥/٠٦/٢٠٢٦', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                    Text('15/06/2026', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                   ])),
                 ]),
               ],

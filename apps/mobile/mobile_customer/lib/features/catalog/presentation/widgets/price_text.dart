@@ -2,7 +2,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 /// Displays a raw decimal price string formatted + localized (e.g. "5,800,000
-/// EGP" / "٥٬٨٠٠٬٠٠٠ ج.م").
+/// EGP" / "5,800,000 ج.م").
 class PriceText extends StatelessWidget {
   const PriceText(this.price, {super.key, this.style, this.color});
 

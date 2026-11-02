@@ -86,13 +86,13 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Could not connect',
+                  context.l10n.stateNoConnection,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Please check your connection and try again.',
+                  context.l10n.errorNoConnection,
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -102,7 +102,7 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
                 else
                   FilledButton(
                     onPressed: _retry,
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.actionRetry),
                   ),
               ],
             ),

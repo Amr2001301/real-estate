@@ -63,7 +63,7 @@ class _OtpScreenState extends State<OtpScreen> {
             padding: EdgeInsets.zero,
             children: [
               AuthHeader(
-                title: l10n.authLoginWithPhone,
+                title: l10n.authPhoneTitle,
                 subtitle: l10n.authPhoneSubtitle,
                 onBack: _back,
               ),
@@ -99,7 +99,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                 Expanded(
                                   child: Text(
                                     l10n.authOtpSentTo(
-                                        state.otpPhone ?? _phone.text.trim()),
+                                        ltr(state.otpPhone ?? _phone.text.trim())),
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -113,8 +113,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             const SizedBox(height: AppSpacing.md),
                             AuthField(
                               controller: _fullName,
-                              label:
-                                  '${l10n.fieldFullName} (${l10n.filterAny})',
+                              label: l10n.fieldFullNameNewAccount,
                               icon: Icons.person_outline_rounded,
                             ),
                             const SizedBox(height: AppSpacing.md),

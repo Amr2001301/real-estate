@@ -288,7 +288,7 @@ class _ClientCard extends StatelessWidget {
                               size: 13, color: colors.inkMuted),
                           const SizedBox(width: 4),
                           Text(
-                            client.phone!,
+                            ltr(client.phone),
                             style: theme.textTheme.bodySmall
                                 ?.copyWith(color: colors.inkMuted),
                           ),

@@ -165,7 +165,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final fields = [
       _Field(l10n.fieldFullName, p.fullName ?? '—'),
       _Field(l10n.fieldEmail, p.email ?? '—'),
-      _Field(l10n.fieldPhone, p.phone ?? '—'),
+      _Field(l10n.fieldPhone, p.phone != null ? ltr(p.phone) : '—'),
       _Field(l10n.fieldLanguage, p.locale == 'en' ? 'English' : 'العربية'),
     ];
 
@@ -347,6 +347,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
+                  textDirection: TextDirection.ltr,
+                  textAlign: Directionality.of(context) == TextDirection.rtl ? TextAlign.right : TextAlign.left,
                   decoration: InputDecoration(labelText: l10n.fieldPhone),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {

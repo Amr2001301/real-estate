@@ -173,7 +173,7 @@ class _Body extends StatelessWidget {
             _Row(label: l10n.chequeDueDate, value: date(c.dueDate), valueColor: dueNow ? colors.error : null),
             if (c.clearingDate != null) _Row(label: l10n.chequeClearedOn, value: date(c.clearingDate)),
             if (c.bounceDate != null) _Row(label: l10n.chequeBouncedOn, value: date(c.bounceDate), valueColor: colors.error),
-            if (c.replacedByNumber != null) _Row(label: l10n.chequeReplacedBy, value: '#${c.replacedByNumber}'),
+            if (c.replacedByNumber != null) _Row(label: l10n.chequeReplacedBy, value: ltr('#${c.replacedByNumber}')),
             _Row(label: l10n.chequeRecordedBy, value: c.recordedBy),
           ],
         ),

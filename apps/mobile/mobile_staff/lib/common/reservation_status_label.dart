@@ -24,3 +24,17 @@ BadgeTone reservationStatusTone(String status) => switch (status) {
 const kReservationStatuses = [
   'PENDING', 'APPROVED', 'CONVERTED', 'REJECTED', 'CANCELLED', 'EXPIRED',
 ];
+
+/// One event on a reservation's history, as a sentence (never the raw code).
+String reservationEventLabel(AppLocalizations l10n, String type) => switch (type) {
+      'CREATED' => l10n.reservationEventCreated,
+      'APPROVED' => l10n.reservationEventApproved,
+      'REJECTED' => l10n.reservationEventRejected,
+      'CANCELLED' => l10n.reservationEventCancelled,
+      'EXPIRED' => l10n.reservationEventExpired,
+      'NOTE_ADDED' => l10n.reservationEventNoteAdded,
+      'BOOKING_PAYMENT_CONFIRMED' => l10n.reservationEventPaymentConfirmed,
+      'BOOKING_PAYMENT_UNCONFIRMED' => l10n.reservationEventPaymentUnconfirmed,
+      'CONVERTED' => l10n.reservationEventConverted,
+      _ => l10n.reservationEventOther,
+    };

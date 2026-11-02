@@ -1072,7 +1072,7 @@ class _ReservationsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٦', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
+                        Text('6', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'الإجمالي' : 'Total', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1081,7 +1081,7 @@ class _ReservationsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٣', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.info)),
+                        Text('3', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.info)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'موافق عليه' : 'Approved', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1090,7 +1090,7 @@ class _ReservationsSkeleton extends StatelessWidget {
                     Expanded(child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('٢', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
+                        Text('2', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
                         const SizedBox(height: 3),
                         Text(lang == 'ar' ? 'محوّل' : 'Converted', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
                       ]),
@@ -1131,7 +1131,7 @@ class _ReservationsSkeleton extends StatelessWidget {
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('محمد أحمد العمري', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                           const SizedBox(height: 4),
-                          Text('RES-٢٠٢٦-٠٠١٢ · A-١٠٢', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                          Text('RES-2026-0012 · A-102', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         ])),
                         StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
                         const SizedBox(width: AppSpacing.xs),

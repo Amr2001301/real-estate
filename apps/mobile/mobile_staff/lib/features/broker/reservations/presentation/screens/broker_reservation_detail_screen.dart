@@ -558,7 +558,7 @@ class _DetailSkeleton extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      ['A-١٠٢ · كمبوند الرياض', 'محمد أحمد العمري', '١٠٠٬٠٠٠ ${PriceFormatter.symbol('ar')}', '١٥/٠٦/٢٠٢٦'][i],
+                      ['A-102 · كمبوند الرياض', 'محمد أحمد العمري', '100,000 ${PriceFormatter.symbol('ar')}', '15/06/2026'][i],
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkStrong),
                     ),
                   ]),
@@ -592,7 +592,7 @@ class _DetailSkeleton extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Text('المبلغ', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
                 const Spacer(),
-                Text('١٠٠٬٠٠٠ ${PriceFormatter.symbol('ar')}',
+                Text('100,000 ${PriceFormatter.symbol('ar')}',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.brandGold)),
               ]),
             ]),

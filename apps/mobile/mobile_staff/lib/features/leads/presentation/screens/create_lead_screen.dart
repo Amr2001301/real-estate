@@ -608,7 +608,7 @@ class _ClientResultTile extends StatelessWidget {
                     ),
                     if (client.phone != null || client.email != null)
                       Text(
-                        client.phone ?? client.email!,
+                        client.phone != null ? ltr(client.phone) : client.email!,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.inkMuted,
                         ),
@@ -708,7 +708,7 @@ class _SelectedClientCard extends StatelessWidget {
                 ),
                 if (client.phone != null)
                   Text(
-                    client.phone!,
+                    ltr(client.phone),
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: colors.inkMuted),
                   ),

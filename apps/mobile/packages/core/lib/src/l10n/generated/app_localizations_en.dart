@@ -1494,7 +1494,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session does not match this company. Please sign in again.';
 
   @override
-  String get roleSales => 'Sales';
+  String get roleSales => 'Sales Advisor';
 
   @override
   String get roleSalesManager => 'Sales Manager';
@@ -1503,10 +1503,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleBroker => 'Broker';
 
   @override
-  String get roleAdmin => 'Admin';
+  String get roleAdmin => 'Administrator';
 
   @override
-  String get roleMaintenance => 'Maintenance';
+  String get roleMaintenance => 'Maintenance Supervisor';
 
   @override
   String get roleStaff => 'Staff';
@@ -4008,4 +4008,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String installmentPaidOn(String date) {
     return 'Paid on $date';
   }
+
+  @override
+  String get reservationEventCreated => 'Reservation created';
+
+  @override
+  String get reservationEventApproved => 'Reservation approved';
+
+  @override
+  String get reservationEventRejected => 'Reservation rejected';
+
+  @override
+  String get reservationEventCancelled => 'Reservation cancelled';
+
+  @override
+  String get reservationEventExpired => 'Reservation expired';
+
+  @override
+  String get reservationEventNoteAdded => 'Note added';
+
+  @override
+  String get reservationEventPaymentConfirmed => 'Booking payment confirmed';
+
+  @override
+  String get reservationEventPaymentUnconfirmed =>
+      'Booking payment unconfirmed';
+
+  @override
+  String get reservationEventConverted => 'Converted to a contract';
+
+  @override
+  String get reservationEventOther => 'Reservation updated';
+
+  @override
+  String get visitEventRequestCreated => 'Visit requested';
+
+  @override
+  String get visitEventRequestReviewed => 'Visit request reviewed';
+
+  @override
+  String get visitEventRequestRejected => 'Visit request rejected';
+
+  @override
+  String get visitEventRequestCancelled => 'Visit request cancelled';
+
+  @override
+  String get visitEventScheduled => 'Visit scheduled';
+
+  @override
+  String get visitEventConfirmed => 'Visit confirmed';
+
+  @override
+  String get visitEventCompleted => 'Visit completed';
+
+  @override
+  String get visitEventCancelled => 'Visit cancelled';
+
+  @override
+  String get visitEventNoShow => 'Client did not show';
+
+  @override
+  String get visitEventRescheduled => 'Visit rescheduled';
+
+  @override
+  String get visitEventSalesAssigned => 'Assigned to a sales advisor';
+
+  @override
+  String get visitEventNoteAdded => 'Note added';
+
+  @override
+  String get visitEventCustomerConfirmed => 'Client confirmed';
+
+  @override
+  String get visitEventCustomerRescheduleRequested =>
+      'Client asked to reschedule';
+
+  @override
+  String get visitEventReminderSent => 'Reminder sent';
+
+  @override
+  String get visitEventSalesReassigned => 'Visit reassigned';
+
+  @override
+  String get visitEventFeedbackSubmitted => 'Feedback added';
+
+  @override
+  String get visitEventOther => 'Visit updated';
+
+  @override
+  String get authPhoneTitle => 'Sign in with your phone';
+
+  @override
+  String get fieldFullNameNewAccount => 'Full name (new accounts only)';
 }

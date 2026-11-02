@@ -402,7 +402,7 @@ class _UnitDropdown extends StatelessWidget {
         for (final u in available)
           DropdownMenuItem(
             value: u.id,
-            child: Text('${u.code}${u.type != null ? ' · ${u.type}' : ''}'),
+            child: Text('${u.code}${u.type != null ? ' · ${unitTypeLabel(u.type, languageCode: Localizations.localeOf(context).languageCode)}' : ''}'),
           ),
       ],
       onChanged: (id) => id != null ? cubit.selectUnit(id) : null,
@@ -590,7 +590,7 @@ class _LeadResultTile extends StatelessWidget {
                           color: colors.inkStrong,
                         )),
                     if (phone != null)
-                      Text(phone,
+                      Text(ltr(phone),
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: colors.inkMuted)),
                   ],
@@ -664,7 +664,7 @@ class _SelectedLeadCard extends StatelessWidget {
                       color: colors.inkStrong,
                     )),
                 if (phone != null)
-                  Text(phone,
+                  Text(ltr(phone),
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: colors.inkMuted)),
               ],

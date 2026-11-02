@@ -359,7 +359,7 @@ class _UnitPicker extends StatelessWidget {
         for (final u in state.units)
           DropdownMenuItem(
             value: u.id,
-            child: Text('${u.code}${u.type != null ? ' · ${u.type}' : ''}'),
+            child: Text('${u.code}${u.type != null ? ' · ${unitTypeLabel(u.type, languageCode: Localizations.localeOf(context).languageCode)}' : ''}'),
           ),
       ],
       onChanged: (id) => id != null ? cubit.selectUnit(id) : null,
