@@ -38,6 +38,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # The app-root test sets mock storage values and keeps fonts offline.
+  shared_preferences: ^2.3.3
+  flutter_secure_storage: ^9.2.2
+  google_fonts: ^6.2.1
   # Phase 7A — Staff App integration smoke (local/manual; not in CI yet).
   # See integration_test/smoke_test.dart and docs/system-qa-strategy.md.
   integration_test:

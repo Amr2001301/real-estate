@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 class StaffDepositDto {
   const StaffDepositDto({
     required this.id,
@@ -30,7 +32,7 @@ class StaffDepositDto {
     final installment = json['installment'] as Map<String, dynamic>?;
     return StaffDepositDto(
       id: json['id'] as String,
-      amount: (json['amount'] as num?)?.toDouble(),
+      amount: readAmount(json['amount']),
       type: json['type'] as String?,
       verified: json['verified'] as bool?,
       reviewStatus: json['reviewStatus'] as String?,

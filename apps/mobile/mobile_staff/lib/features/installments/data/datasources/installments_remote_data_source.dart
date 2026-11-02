@@ -1,3 +1,4 @@
+import 'package:core/core_domain.dart';
 import 'package:dio/dio.dart';
 
 import '../../domain/entities/installment.dart';
@@ -39,12 +40,12 @@ class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
       },
     );
     final json = res.data!;
-    final monthly = (json['monthlyInstallment'] as num).toDouble();
+    final monthly = readAmount(json['monthlyInstallment']) ?? 0;
     return InstallmentResult(
-      remainingAmount: (json['remainingAmount'] as num).toDouble(),
-      financedAmount: (json['financedAmount'] as num).toDouble(),
+      remainingAmount: readAmount(json['remainingAmount']) ?? 0,
+      financedAmount: readAmount(json['financedAmount']) ?? 0,
       monthlyInstallment: monthly,
-      totalPayable: (json['totalPayable'] as num).toDouble(),
+      totalPayable: readAmount(json['totalPayable']) ?? 0,
       downPayment: input.downPayment,
       reservationAmount: input.reservationAmount,
       durationMonths: input.durationMonths,

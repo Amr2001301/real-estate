@@ -105,7 +105,11 @@ class ReservationDetailDto {
     return ReservationDetailDto(
       reservation: ReservationDto.fromJson(json),
       planName: planName is Map ? planName['en'] as String? : planName as String?,
-      notes: ((json['notes'] as List?) ?? const [])
+      // The notes thread is `reservationNotes`; `notes` is the reservation's
+      // own text (a string), kept as a list only by older responses.
+      notes: ((json['reservationNotes'] ?? json['notes']) is List
+              ? (json['reservationNotes'] ?? json['notes']) as List
+              : const [])
           .whereType<Map<String, dynamic>>()
           .map(ReservationNoteDto.fromJson)
           .toList(),

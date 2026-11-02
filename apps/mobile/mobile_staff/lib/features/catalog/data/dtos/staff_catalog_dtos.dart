@@ -90,7 +90,7 @@ class StaffProjectDto {
       availableUnitsCount: (json['availableUnitsCount'] as num?)?.toInt(),
       totalUnitsCount: (json['totalUnitsCount'] as num?)?.toInt(),
       soldUnitsCount: (json['soldUnitsCount'] as num?)?.toInt(),
-      startingPrice: (json['startingPrice'] as num?)?.toDouble(),
+      startingPrice: readAmount(json['startingPrice']),
       unitTypes: (json['unitTypes'] as List?)?.whereType<String>().toList() ??
           const [],
       lat: (json['lat'] as num?)?.toDouble(),

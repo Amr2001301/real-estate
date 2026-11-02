@@ -182,11 +182,15 @@ class _CompanySelectorScreenState extends State<CompanySelectorScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : AppButton(
-                                label: l10n.companySelectButton,
-                                variant: AppButtonVariant.outline,
-                                size: AppButtonSize.small,
-                                onPressed: () => _onSelect(company.slug),
+                            // Its own width: AppButton fills what it is given,
+                            // and a trailing slot is given the whole row.
+                            : IntrinsicWidth(
+                                child: AppButton(
+                                  label: l10n.companySelectButton,
+                                  variant: AppButtonVariant.outline,
+                                  size: AppButtonSize.small,
+                                  onPressed: () => _onSelect(company.slug),
+                                ),
                               ),
                         onTap: state.isSelecting ? null : () => _onSelect(company.slug),
                       );
