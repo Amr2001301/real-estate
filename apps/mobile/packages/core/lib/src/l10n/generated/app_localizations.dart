@@ -7747,6 +7747,846 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yesterday'**
   String get followUpsYesterday;
+
+  /// No description provided for @brokerAvailableProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Available projects'**
+  String get brokerAvailableProjects;
+
+  /// No description provided for @brokerAchievementSnapshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance snapshot'**
+  String get brokerAchievementSnapshot;
+
+  /// No description provided for @brokerActivityBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get brokerActivityBadge;
+
+  /// No description provided for @brokerLeadsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads sent'**
+  String get brokerLeadsSent;
+
+  /// No description provided for @brokerAcceptanceRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Acceptance rate'**
+  String get brokerAcceptanceRate;
+
+  /// No description provided for @brokerSignedContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get brokerSignedContracts;
+
+  /// No description provided for @brokerPendingLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 lead waiting for approval} other{{n} leads waiting for approval}}'**
+  String brokerPendingLeads(int n);
+
+  /// No description provided for @brokerPendingReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 reservation waiting for review} other{{n} reservations waiting for review}}'**
+  String brokerPendingReservations(int n);
+
+  /// No description provided for @brokerChipWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get brokerChipWaiting;
+
+  /// No description provided for @brokerChipReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get brokerChipReview;
+
+  /// No description provided for @brokerChipGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get brokerChipGood;
+
+  /// No description provided for @brokerFocusAllClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing urgent — great work!'**
+  String get brokerFocusAllClear;
+
+  /// No description provided for @brokerNoProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects available'**
+  String get brokerNoProjects;
+
+  /// No description provided for @brokerCommissionsDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total commissions due'**
+  String get brokerCommissionsDue;
+
+  /// No description provided for @brokerCommissionsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No commissions yet'**
+  String get brokerCommissionsNone;
+
+  /// No description provided for @brokerSalesVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales volume'**
+  String get brokerSalesVolume;
+
+  /// No description provided for @brokerSignedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total value of signed contracts'**
+  String get brokerSignedValue;
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days ago'**
+  String daysAgo(int n);
+
+  /// No description provided for @maintenanceActionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start work'**
+  String get maintenanceActionStart;
+
+  /// No description provided for @maintenanceActionReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen'**
+  String get maintenanceActionReopen;
+
+  /// No description provided for @maintenanceResolvedByBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both sides confirmed the fix'**
+  String get maintenanceResolvedByBoth;
+
+  /// No description provided for @maintenanceResolvedByCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'The customer confirmed the fix'**
+  String get maintenanceResolvedByCustomer;
+
+  /// No description provided for @maintenanceResolvedBySupervisor.
+  ///
+  /// In en, this message translates to:
+  /// **'The supervisor confirmed the fix'**
+  String get maintenanceResolvedBySupervisor;
+
+  /// No description provided for @maintenanceResolvedByNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not confirmed yet'**
+  String get maintenanceResolvedByNone;
+
+  /// No description provided for @maintenanceOutOfWarranty.
+  ///
+  /// In en, this message translates to:
+  /// **'Out of warranty'**
+  String get maintenanceOutOfWarranty;
+
+  /// No description provided for @maintenanceWarrantyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty unknown'**
+  String get maintenanceWarrantyUnknown;
+
+  /// No description provided for @maintenanceDeadlinePassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Past the deadline'**
+  String get maintenanceDeadlinePassed;
+
+  /// No description provided for @maintenanceTimeLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Time left'**
+  String get maintenanceTimeLeft;
+
+  /// No description provided for @timeUnitDay.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get timeUnitDay;
+
+  /// No description provided for @timeUnitHour.
+  ///
+  /// In en, this message translates to:
+  /// **'hours'**
+  String get timeUnitHour;
+
+  /// No description provided for @timeUnitMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get timeUnitMinute;
+
+  /// No description provided for @timeUnitSecond.
+  ///
+  /// In en, this message translates to:
+  /// **'sec'**
+  String get timeUnitSecond;
+
+  /// No description provided for @maintenanceDeadlineOver.
+  ///
+  /// In en, this message translates to:
+  /// **'The deadline has passed'**
+  String get maintenanceDeadlineOver;
+
+  /// No description provided for @maintenanceDeadlineUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% of the time used'**
+  String maintenanceDeadlineUsed(String pct);
+
+  /// No description provided for @unitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit {code}'**
+  String unitTitle(String code);
+
+  /// No description provided for @whatsappOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open WhatsApp'**
+  String get whatsappOpenFailed;
+
+  /// No description provided for @maintenanceDirections.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions'**
+  String get maintenanceDirections;
+
+  /// No description provided for @maintenanceWarrantyEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty ends'**
+  String get maintenanceWarrantyEnds;
+
+  /// No description provided for @maintenanceServicedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Item serviced'**
+  String get maintenanceServicedItem;
+
+  /// No description provided for @maintenanceRequestDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Request date'**
+  String get maintenanceRequestDate;
+
+  /// No description provided for @maintenancePriorityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get maintenancePriorityLabel;
+
+  /// No description provided for @teamPerfSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your reps\' performance'**
+  String get teamPerfSubtitle;
+
+  /// No description provided for @teamTargetsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the team\'s monthly targets'**
+  String get teamTargetsSubtitle;
+
+  /// No description provided for @teamManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Team management'**
+  String get teamManagement;
+
+  /// No description provided for @fromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get fromLabel;
+
+  /// No description provided for @clientTagOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get clientTagOwner;
+
+  /// No description provided for @clientTagClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get clientTagClient;
+
+  /// No description provided for @kpiLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get kpiLeads;
+
+  /// No description provided for @calculatorInputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Inputs'**
+  String get calculatorInputs;
+
+  /// No description provided for @brokerProjectsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects open to you'**
+  String get brokerProjectsSubtitle;
+
+  /// No description provided for @brokerAddLeadForUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a lead for this unit'**
+  String get brokerAddLeadForUnit;
+
+  /// No description provided for @brokerAddLeadForProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a lead for this project'**
+  String get brokerAddLeadForProject;
+
+  /// No description provided for @detailsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get detailsLabel;
+
+  /// No description provided for @aboutTheProject.
+  ///
+  /// In en, this message translates to:
+  /// **'About the project'**
+  String get aboutTheProject;
+
+  /// No description provided for @projectFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Project features'**
+  String get projectFeatures;
+
+  /// No description provided for @projectLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Project location'**
+  String get projectLocationTitle;
+
+  /// No description provided for @totalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get totalLabel;
+
+  /// No description provided for @availableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get availableLabel;
+
+  /// No description provided for @unavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get unavailableLabel;
+
+  /// No description provided for @brokerCommissionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commissions and what is due'**
+  String get brokerCommissionsSubtitle;
+
+  /// No description provided for @brokerReservationDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation request'**
+  String get brokerReservationDetails;
+
+  /// No description provided for @brokerReserveForLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a booking for this client'**
+  String get brokerReserveForLead;
+
+  /// No description provided for @leadSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get leadSingular;
+
+  /// No description provided for @shareProjectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'See the project and its available units:'**
+  String get shareProjectBody;
+
+  /// No description provided for @shareUnitBody.
+  ///
+  /// In en, this message translates to:
+  /// **'See the unit\'s details:'**
+  String get shareUnitBody;
+
+  /// No description provided for @paidDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid on'**
+  String get paidDateLabel;
+
+  /// No description provided for @proofFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof files'**
+  String get proofFilesTitle;
+
+  /// No description provided for @tapFileToOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a file to open or download it'**
+  String get tapFileToOpen;
+
+  /// No description provided for @submitProofSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach your payment receipt for review'**
+  String get submitProofSubtitle;
+
+  /// No description provided for @fileReadyToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'The file is ready to send'**
+  String get fileReadyToSend;
+
+  /// No description provided for @proofFileTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF · JPG · PNG · WebP (up to 25 MB)'**
+  String get proofFileTypes;
+
+  /// No description provided for @viewApprovedProof.
+  ///
+  /// In en, this message translates to:
+  /// **'View the approved proof'**
+  String get viewApprovedProof;
+
+  /// No description provided for @tapToViewAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view or download the attachment'**
+  String get tapToViewAttachment;
+
+  /// No description provided for @paymentProofResubmitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resubmit payment proof'**
+  String get paymentProofResubmitTitle;
+
+  /// No description provided for @paymentProofResubmitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your last proof was rejected — attach a new document'**
+  String get paymentProofResubmitHint;
+
+  /// No description provided for @paymentProofSubmitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a photo or PDF as proof of payment'**
+  String get paymentProofSubmitHint;
+
+  /// No description provided for @financeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your payments and contracts'**
+  String get financeSubtitle;
+
+  /// No description provided for @accountMyPropertySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your units and their status'**
+  String get accountMyPropertySubtitle;
+
+  /// No description provided for @accountMaintenanceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance and repair requests'**
+  String get accountMaintenanceSubtitle;
+
+  /// No description provided for @moreAssistantSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with our assistant'**
+  String get moreAssistantSubtitle;
+
+  /// No description provided for @moreBenefitFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Save favourites'**
+  String get moreBenefitFavorites;
+
+  /// No description provided for @moreBenefitCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare units'**
+  String get moreBenefitCompare;
+
+  /// No description provided for @moreBenefitTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your journey'**
+  String get moreBenefitTrack;
+
+  /// No description provided for @tapToViewReceipts.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view or download the receipts'**
+  String get tapToViewReceipts;
+
+  /// No description provided for @createdDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Created on'**
+  String get createdDateLabel;
+
+  /// No description provided for @tapToViewDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to view or download the attached documents'**
+  String get tapToViewDocuments;
+
+  /// No description provided for @maintenanceFollowUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution and rating'**
+  String get maintenanceFollowUpTitle;
+
+  /// No description provided for @maintenanceTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target fix date'**
+  String get maintenanceTargetDate;
+
+  /// No description provided for @maintenanceStartsAfterApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts once the request is approved'**
+  String get maintenanceStartsAfterApproval;
+
+  /// No description provided for @maintenanceSupervisorConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Supervisor confirmation'**
+  String get maintenanceSupervisorConfirmation;
+
+  /// No description provided for @maintenanceOverdueComplaintHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request is past its target date — you can file a complaint.'**
+  String get maintenanceOverdueComplaintHint;
+
+  /// No description provided for @maintenanceFileComplaint.
+  ///
+  /// In en, this message translates to:
+  /// **'File a complaint'**
+  String get maintenanceFileComplaint;
+
+  /// No description provided for @maintenanceYourRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Your rating'**
+  String get maintenanceYourRating;
+
+  /// No description provided for @maintenanceYouConfirmedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'You confirmed the fix on {date}'**
+  String maintenanceYouConfirmedOn(String date);
+
+  /// No description provided for @maintenanceComplaintSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your complaint was filed; our team will follow it up.'**
+  String get maintenanceComplaintSent;
+
+  /// No description provided for @maintenanceRatingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a rating from 1 to 5 stars.'**
+  String get maintenanceRatingRequired;
+
+  /// No description provided for @maintenanceRatingThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you! The fix is confirmed and your rating sent.'**
+  String get maintenanceRatingThanks;
+
+  /// No description provided for @maintenanceConfirmPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Was the problem fixed? Confirm and rate the service'**
+  String get maintenanceConfirmPrompt;
+
+  /// No description provided for @maintenanceRatingNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note about the service (optional)'**
+  String get maintenanceRatingNoteHint;
+
+  /// No description provided for @maintenanceConfirmAndRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the fix and send the rating'**
+  String get maintenanceConfirmAndRate;
+
+  /// No description provided for @serviceRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Service requests'**
+  String get serviceRequests;
+
+  /// No description provided for @maintenanceStatusOpenPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get maintenanceStatusOpenPlural;
+
+  /// No description provided for @maintenanceNewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us the problem and we\'ll handle it'**
+  String get maintenanceNewSubtitle;
+
+  /// No description provided for @maintenanceFromCameraHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo now'**
+  String get maintenanceFromCameraHint;
+
+  /// No description provided for @maintenanceFromGalleryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick from your photos'**
+  String get maintenanceFromGalleryHint;
+
+  /// No description provided for @noResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get noResults;
+
+  /// No description provided for @favoritesFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved in this category'**
+  String get favoritesFilterEmpty;
+
+  /// No description provided for @favoritesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved units'**
+  String get favoritesSubtitle;
+
+  /// No description provided for @favoritesTabUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get favoritesTabUnits;
+
+  /// No description provided for @favoritesTabProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get favoritesTabProjects;
+
+  /// No description provided for @favoriteKindProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get favoriteKindProject;
+
+  /// No description provided for @favoriteKindUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get favoriteKindUnit;
+
+  /// No description provided for @savedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedBadge;
+
+  /// No description provided for @requestsFilterEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests in this category'**
+  String get requestsFilterEmpty;
+
+  /// No description provided for @requestsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get requestsNew;
+
+  /// No description provided for @requestsConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get requestsConfirmed;
+
+  /// No description provided for @requestsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get requestsCompleted;
+
+  /// No description provided for @requestsCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get requestsCancelled;
+
+  /// No description provided for @preferredDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred date'**
+  String get preferredDateLabel;
+
+  /// No description provided for @salesRepLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales consultant'**
+  String get salesRepLabel;
+
+  /// No description provided for @noMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No message'**
+  String get noMessage;
+
+  /// No description provided for @requestDateValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Requested on {date}'**
+  String requestDateValue(String date);
+
+  /// No description provided for @installmentsPaidOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{paid} of {total} installments paid'**
+  String installmentsPaidOf(int paid, int total);
+
+  /// No description provided for @ofTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'of {total}'**
+  String ofTotal(int total);
+
+  /// No description provided for @summaryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryTab;
+
+  /// No description provided for @financialPanel.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial overview'**
+  String get financialPanel;
+
+  /// No description provided for @monthsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} months'**
+  String monthsCount(int n);
+
+  /// No description provided for @overdueTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total overdue'**
+  String get overdueTotal;
+
+  /// No description provided for @overdueInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 overdue installment} other{{n} overdue installments}}'**
+  String overdueInstallments(int n);
+
+  /// No description provided for @lastDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'last due {date}'**
+  String lastDueOn(String date);
+
+  /// No description provided for @remainingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get remainingLabel;
+
+  /// No description provided for @planDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan length'**
+  String get planDuration;
+
+  /// No description provided for @contractDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract details'**
+  String get contractDetails;
+
+  /// No description provided for @myUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'My units'**
+  String get myUnits;
+
+  /// No description provided for @myPortfolio.
+  ///
+  /// In en, this message translates to:
+  /// **'My property portfolio'**
+  String get myPortfolio;
+
+  /// No description provided for @unitsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 unit} other{{n} units}}'**
+  String unitsCount(int n);
+
+  /// No description provided for @overdueCountBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} overdue'**
+  String overdueCountBadge(int n);
+
+  /// No description provided for @onTrackBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get onTrackBadge;
+
+  /// No description provided for @paymentProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment progress'**
+  String get paymentProgress;
+
+  /// No description provided for @notificationPrefsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification settings'**
+  String get notificationPrefsTitle;
 }
 
 class _AppLocalizationsDelegate

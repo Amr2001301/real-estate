@@ -816,7 +816,7 @@ class _SpecsGrid extends StatelessWidget {
       if (unit.area != null)
         (
           Icons.square_foot_outlined,
-          '${_fmtArea(unit.area)} م²',
+          l10n.unitAreaValue(_fmtArea(unit.area)),
           l10n.unitArea,
         ),
       if (unit.floor != null)

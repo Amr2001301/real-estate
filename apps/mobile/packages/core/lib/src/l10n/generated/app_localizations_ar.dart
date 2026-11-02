@@ -4082,4 +4082,480 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get followUpsYesterday => 'أمس';
+
+  @override
+  String get brokerAvailableProjects => 'المشاريع المتاحة';
+
+  @override
+  String get brokerAchievementSnapshot => 'لقطة الإنجاز';
+
+  @override
+  String get brokerActivityBadge => 'نشاط';
+
+  @override
+  String get brokerLeadsSent => 'الفرص المُرسلة';
+
+  @override
+  String get brokerAcceptanceRate => 'نسبة القبول';
+
+  @override
+  String get brokerSignedContracts => 'عقود موقّعة';
+
+  @override
+  String brokerPendingLeads(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عملاء محتملون ينتظرون الموافقة',
+      one: 'عميل محتمل واحد ينتظر الموافقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brokerPendingReservations(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حجوزات تنتظر المراجعة',
+      one: 'حجز واحد ينتظر المراجعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brokerChipWaiting => 'في الانتظار';
+
+  @override
+  String get brokerChipReview => 'مراجعة';
+
+  @override
+  String get brokerChipGood => 'جيد';
+
+  @override
+  String get brokerFocusAllClear => 'لا توجد أولويات عاجلة — أداء ممتاز!';
+
+  @override
+  String get brokerNoProjects => 'لا توجد مشاريع متاحة';
+
+  @override
+  String get brokerCommissionsDue => 'إجمالي العمولات المستحقة';
+
+  @override
+  String get brokerCommissionsNone => 'لا توجد عمولات بعد';
+
+  @override
+  String get brokerSalesVolume => 'حجم المبيعات';
+
+  @override
+  String get brokerSignedValue => 'إجمالي قيمة العقود الموقّعة';
+
+  @override
+  String daysAgo(int n) {
+    return 'منذ $n أيام';
+  }
+
+  @override
+  String get maintenanceActionStart => 'بدء التنفيذ';
+
+  @override
+  String get maintenanceActionReopen => 'إعادة الفتح';
+
+  @override
+  String get maintenanceResolvedByBoth => 'أكّد الطرفان الحل';
+
+  @override
+  String get maintenanceResolvedByCustomer => 'أكّد العميل الحل';
+
+  @override
+  String get maintenanceResolvedBySupervisor => 'أكّد مشرف الصيانة الحل';
+
+  @override
+  String get maintenanceResolvedByNone => 'لم يُؤكَّد بعد';
+
+  @override
+  String get maintenanceOutOfWarranty => 'خارج الضمان';
+
+  @override
+  String get maintenanceWarrantyUnknown => 'ضمان غير محدد';
+
+  @override
+  String get maintenanceDeadlinePassed => 'تجاوز الموعد النهائي';
+
+  @override
+  String get maintenanceTimeLeft => 'الوقت المتبقي';
+
+  @override
+  String get timeUnitDay => 'يوم';
+
+  @override
+  String get timeUnitHour => 'ساعة';
+
+  @override
+  String get timeUnitMinute => 'دقيقة';
+
+  @override
+  String get timeUnitSecond => 'ثانية';
+
+  @override
+  String get maintenanceDeadlineOver => 'انتهت المهلة المحددة';
+
+  @override
+  String maintenanceDeadlineUsed(String pct) {
+    return 'استُخدم $pct% من المهلة';
+  }
+
+  @override
+  String unitTitle(String code) {
+    return 'وحدة $code';
+  }
+
+  @override
+  String get whatsappOpenFailed => 'تعذّر فتح واتساب';
+
+  @override
+  String get maintenanceDirections => 'الاتجاهات';
+
+  @override
+  String get maintenanceWarrantyEnds => 'انتهاء الضمان';
+
+  @override
+  String get maintenanceServicedItem => 'العنصر المُصان';
+
+  @override
+  String get maintenanceRequestDate => 'تاريخ الطلب';
+
+  @override
+  String get maintenancePriorityLabel => 'الأولوية';
+
+  @override
+  String get teamPerfSubtitle => 'متابعة أداء المندوبين وإنجازاتهم';
+
+  @override
+  String get teamTargetsSubtitle => 'تحديد الأهداف الشهرية للفريق';
+
+  @override
+  String get teamManagement => 'إدارة الفريق';
+
+  @override
+  String get fromLabel => 'من';
+
+  @override
+  String get clientTagOwner => 'مالك';
+
+  @override
+  String get clientTagClient => 'عميل';
+
+  @override
+  String get kpiLeads => 'فرص';
+
+  @override
+  String get calculatorInputs => 'بيانات الحساب';
+
+  @override
+  String get brokerProjectsSubtitle => 'المشاريع المتاحة لك';
+
+  @override
+  String get brokerAddLeadForUnit => 'إضافة عميل محتمل لهذه الوحدة';
+
+  @override
+  String get brokerAddLeadForProject => 'إضافة عميل محتمل لهذا المشروع';
+
+  @override
+  String get detailsLabel => 'التفاصيل';
+
+  @override
+  String get aboutTheProject => 'عن المشروع';
+
+  @override
+  String get projectFeatures => 'مميزات المشروع';
+
+  @override
+  String get projectLocationTitle => 'موقع المشروع';
+
+  @override
+  String get totalLabel => 'الإجمالي';
+
+  @override
+  String get availableLabel => 'متاح';
+
+  @override
+  String get unavailableLabel => 'غير متاح';
+
+  @override
+  String get brokerCommissionsSubtitle => 'سجل العمولات والمستحقات';
+
+  @override
+  String get brokerReservationDetails => 'تفاصيل طلب الحجز';
+
+  @override
+  String get brokerReserveForLead => 'قدّم طلب حجز لهذا العميل';
+
+  @override
+  String get leadSingular => 'العميل المحتمل';
+
+  @override
+  String get shareProjectBody => 'استعرض المشروع واكتشف الوحدات المتاحة:';
+
+  @override
+  String get shareUnitBody => 'استعرض تفاصيل الوحدة:';
+
+  @override
+  String get paidDateLabel => 'تاريخ السداد';
+
+  @override
+  String get proofFilesTitle => 'ملفات الإثبات';
+
+  @override
+  String get tapFileToOpen => 'اضغط على الملف لتحميله أو عرضه';
+
+  @override
+  String get submitProofSubtitle => 'أرفق إيصال الدفع للمراجعة';
+
+  @override
+  String get fileReadyToSend => 'الملف جاهز للإرسال';
+
+  @override
+  String get proofFileTypes => 'PDF · JPG · PNG · WebP (حتى 25 ميجابايت)';
+
+  @override
+  String get viewApprovedProof => 'عرض إثبات الدفع المعتمد';
+
+  @override
+  String get tapToViewAttachment => 'اضغط لعرض الملف المرفق أو تحميله';
+
+  @override
+  String get paymentProofResubmitTitle => 'إعادة إرسال إثبات الدفع';
+
+  @override
+  String get paymentProofResubmitHint =>
+      'رُفض إثباتك السابق — أرفق مستندًا جديدًا';
+
+  @override
+  String get paymentProofSubmitHint => 'أرفق صورة أو ملف PDF كإثبات للدفع';
+
+  @override
+  String get financeSubtitle => 'خدماتك المالية';
+
+  @override
+  String get accountMyPropertySubtitle => 'وحداتك العقارية ومتابعة حالتها';
+
+  @override
+  String get accountMaintenanceSubtitle => 'طلبات الصيانة والإصلاح';
+
+  @override
+  String get moreAssistantSubtitle => 'تحدّث مع مساعدنا الذكي';
+
+  @override
+  String get moreBenefitFavorites => 'احفظ مفضلاتك';
+
+  @override
+  String get moreBenefitCompare => 'قارن الوحدات';
+
+  @override
+  String get moreBenefitTrack => 'تتبّع رحلتك';
+
+  @override
+  String get tapToViewReceipts => 'اضغط لعرض الإيصالات أو تنزيلها';
+
+  @override
+  String get createdDateLabel => 'تاريخ الإنشاء';
+
+  @override
+  String get tapToViewDocuments => 'اضغط لعرض المستندات المرفقة أو تنزيلها';
+
+  @override
+  String get maintenanceFollowUpTitle => 'متابعة الحل والتقييم';
+
+  @override
+  String get maintenanceTargetDate => 'الموعد المستهدف للمعالجة';
+
+  @override
+  String get maintenanceStartsAfterApproval => 'يبدأ بعد اعتماد الطلب';
+
+  @override
+  String get maintenanceSupervisorConfirmation => 'تأكيد مشرف الصيانة';
+
+  @override
+  String get maintenanceOverdueComplaintHint =>
+      'تجاوز طلبك الموعد المستهدف — يمكنك تقديم شكوى.';
+
+  @override
+  String get maintenanceFileComplaint => 'تقديم شكوى';
+
+  @override
+  String get maintenanceYourRating => 'تقييمك للخدمة';
+
+  @override
+  String maintenanceYouConfirmedOn(String date) {
+    return 'أكّدت الحل في $date';
+  }
+
+  @override
+  String get maintenanceComplaintSent => 'سُجّلت شكواك وسيتابعها فريقنا.';
+
+  @override
+  String get maintenanceRatingRequired => 'يرجى اختيار تقييم من 1 إلى 5 نجوم.';
+
+  @override
+  String get maintenanceRatingThanks =>
+      'شكرًا لك! تم تأكيد الحل وإرسال تقييمك.';
+
+  @override
+  String get maintenanceConfirmPrompt =>
+      'هل حُلّت المشكلة؟ أكّد الحل وقيّم الخدمة';
+
+  @override
+  String get maintenanceRatingNoteHint => 'أضف ملاحظة عن جودة الخدمة (اختياري)';
+
+  @override
+  String get maintenanceConfirmAndRate => 'تأكيد الحل وإرسال التقييم';
+
+  @override
+  String get serviceRequests => 'طلبات الخدمة';
+
+  @override
+  String get maintenanceStatusOpenPlural => 'مفتوحة';
+
+  @override
+  String get maintenanceNewSubtitle => 'أبلغنا عن المشكلة وسنتولى أمرها';
+
+  @override
+  String get maintenanceFromCameraHint => 'التقط صورة الآن مباشرةً';
+
+  @override
+  String get maintenanceFromGalleryHint => 'اختر من معرض الصور';
+
+  @override
+  String get noResults => 'لا توجد نتائج';
+
+  @override
+  String get favoritesFilterEmpty => 'لا توجد عناصر محفوظة في هذا التصنيف';
+
+  @override
+  String get favoritesSubtitle => 'الوحدات المحفوظة';
+
+  @override
+  String get favoritesTabUnits => 'وحدات';
+
+  @override
+  String get favoritesTabProjects => 'مشاريع';
+
+  @override
+  String get favoriteKindProject => 'مشروع';
+
+  @override
+  String get favoriteKindUnit => 'وحدة';
+
+  @override
+  String get savedBadge => 'محفوظة';
+
+  @override
+  String get requestsFilterEmpty => 'لا توجد طلبات في هذا التصنيف';
+
+  @override
+  String get requestsNew => 'جديدة';
+
+  @override
+  String get requestsConfirmed => 'مؤكدة';
+
+  @override
+  String get requestsCompleted => 'مكتملة';
+
+  @override
+  String get requestsCancelled => 'ملغاة';
+
+  @override
+  String get preferredDateLabel => 'التاريخ المفضّل';
+
+  @override
+  String get salesRepLabel => 'مستشار المبيعات';
+
+  @override
+  String get noMessage => 'لا توجد رسالة';
+
+  @override
+  String requestDateValue(String date) {
+    return 'تاريخ الطلب: $date';
+  }
+
+  @override
+  String installmentsPaidOf(int paid, int total) {
+    return '$paid من $total قسط مسدّد';
+  }
+
+  @override
+  String ofTotal(int total) {
+    return 'من $total';
+  }
+
+  @override
+  String get summaryTab => 'الملخص';
+
+  @override
+  String get financialPanel => 'اللوحة المالية';
+
+  @override
+  String monthsCount(int n) {
+    return '$n شهرًا';
+  }
+
+  @override
+  String get overdueTotal => 'إجمالي المتأخرات';
+
+  @override
+  String overdueInstallments(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n أقساط متأخرة',
+      one: 'قسط واحد متأخر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lastDueOn(String date) {
+    return 'آخر استحقاق $date';
+  }
+
+  @override
+  String get remainingLabel => 'المتبقي';
+
+  @override
+  String get planDuration => 'مدة التقسيط';
+
+  @override
+  String get contractDetails => 'تفاصيل العقد';
+
+  @override
+  String get myUnits => 'وحداتي';
+
+  @override
+  String get myPortfolio => 'محفظتي العقارية';
+
+  @override
+  String unitsCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدات',
+      one: 'وحدة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String overdueCountBadge(int n) {
+    return '$n متأخرة';
+  }
+
+  @override
+  String get onTrackBadge => 'منتظم';
+
+  @override
+  String get paymentProgress => 'تقدّم السداد';
+
+  @override
+  String get notificationPrefsTitle => 'تفضيلات الإشعارات';
 }

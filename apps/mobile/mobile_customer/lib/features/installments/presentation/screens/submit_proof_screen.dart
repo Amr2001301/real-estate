@@ -71,7 +71,7 @@ class _ProofHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: isResubmit ? l10n.paymentProofResubmit : l10n.paymentProofSubmit,
-      subtitle: 'أرفق إيصال الدفع للمراجعة',
+      subtitle: l10n.submitProofSubtitle,
       compact: true,
       leadingAction: const NavHeaderBack(),
     );
@@ -634,8 +634,8 @@ class _FilePicker extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     hasFile
-                        ? 'الملف جاهز للإرسال'
-                        : 'PDF · JPG · PNG · WebP (حتى 25 ميجابايت)',
+                        ? context.l10n.fileReadyToSend
+                        : context.l10n.proofFileTypes,
                     style: TextStyle(
                       color: colors.inkMuted,
                       fontSize: 11.5,

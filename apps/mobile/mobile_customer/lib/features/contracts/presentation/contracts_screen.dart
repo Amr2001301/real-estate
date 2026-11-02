@@ -463,7 +463,7 @@ class _ContractCard extends StatelessWidget {
                 else if (contract.createdAt != null)
                   _InfoRow(
                     icon: AppIcons.calendar,
-                    label: 'تاريخ الإنشاء',
+                    label: context.l10n.createdDateLabel,
                     value: DateFormatter.mediumDate(
                       contract.createdAt!,
                       languageCode: lang,
@@ -647,7 +647,7 @@ class _DocumentsButton extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'اضغط لعرض أو تنزيل المستندات المرفقة',
+                      context.l10n.tapToViewDocuments,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
                         fontSize: 12,

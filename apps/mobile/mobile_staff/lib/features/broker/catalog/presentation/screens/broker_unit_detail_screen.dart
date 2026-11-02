@@ -583,7 +583,7 @@ class _AddLeadCardState extends State<_AddLeadCard> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'إضافة عميل محتمل لهذه الوحدة',
+                      context.l10n.brokerAddLeadForUnit,
                       style: TextStyle(
                         color: _navyDeep.withValues(alpha: 0.55),
                         fontSize: 11,
@@ -666,7 +666,7 @@ class _SpecsGrid extends StatelessWidget {
       if (unit.bathrooms != null)
         (Icons.bathtub_outlined, '${unit.bathrooms}', l10n.unitBathrooms),
       if (unit.area != null)
-        (Icons.square_foot_outlined, '${_fmtArea(unit.area)} م²',
+        (Icons.square_foot_outlined, l10n.unitAreaValue(_fmtArea(unit.area)),
             l10n.unitArea),
       if (unit.floor != null)
         (Icons.layers_outlined, '${unit.floor}', l10n.unitFloor),

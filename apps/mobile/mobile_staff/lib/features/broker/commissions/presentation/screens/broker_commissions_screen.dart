@@ -131,7 +131,7 @@ class _CommissionsHeader extends StatelessWidget {
     final l10n = context.l10n;
     return AppNavHeader(
       title: l10n.navCommissions,
-      subtitle: 'سجل العمولات والمستحقات',
+      subtitle: l10n.brokerCommissionsSubtitle,
       compact: true,
       leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
     );

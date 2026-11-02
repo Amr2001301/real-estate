@@ -64,7 +64,7 @@ class MoreScreen extends StatelessWidget {
                           colors: [Color(0xFF1E3A62), AppPalette.navy],
                         ),
                         label: l10n.homeAskAssistant,
-                        subtitle: 'تحدّث مع مساعدنا الذكي',
+                        subtitle: l10n.moreAssistantSubtitle,
                         onTap: () => context.push('/chat'),
                       ),
                     ],
@@ -271,7 +271,7 @@ class _BenefitStrip extends StatelessWidget {
           Expanded(
             child: _BenefitTile(
               icon: Icons.favorite_rounded,
-              label: 'احفظ مفضلاتك',
+              label: context.l10n.moreBenefitFavorites,
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -283,7 +283,7 @@ class _BenefitStrip extends StatelessWidget {
           Expanded(
             child: _BenefitTile(
               icon: Icons.compare_arrows_rounded,
-              label: 'قارن الوحدات',
+              label: context.l10n.moreBenefitCompare,
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -295,7 +295,7 @@ class _BenefitStrip extends StatelessWidget {
           Expanded(
             child: _BenefitTile(
               icon: Icons.timeline_rounded,
-              label: 'تتبّع رحلتك',
+              label: context.l10n.moreBenefitTrack,
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

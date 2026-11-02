@@ -83,7 +83,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
                   // ── Grouped input form card ─────────────────────────────
                   _FormCard(
-                    label: 'بيانات الحساب',
+                    label: context.l10n.calculatorInputs,
                     children: [
                       // Price — full width (larger text)
                       _FormField(
@@ -527,7 +527,7 @@ class _DurationChip extends StatelessWidget {
             ),
             const SizedBox(width: 5),
             Text(
-              '$months شهر',
+              context.l10n.planTemplatesMonths(months),
               style: TextStyle(
                 color: isSelected ? Colors.white : AppPalette.navy,
                 fontSize: 13,

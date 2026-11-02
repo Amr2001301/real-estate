@@ -777,6 +777,7 @@ class _StaffActions extends StatelessWidget {
               StaffShare.project(
                 projectId: detail.project.id,
                 projectName: detail.project.name.resolve(lang),
+                l10n: context.l10n,
               );
             },
           ),
@@ -1205,9 +1206,9 @@ class _UnitFilterRow extends StatelessWidget {
 
     final chips = [
       (null, l10n.leadsFilterAll, totalCount, colors.brandGold),
-      ('AVAILABLE', 'متاحة', availableCount, colors.success),
-      ('RESERVED', 'محجوزة', reservedCount, colors.warning),
-      ('SOLD', 'مباعة', soldCount, const Color(0xFFEF4444)),
+      ('AVAILABLE', l10n.unitStatusAvailable, availableCount, colors.success),
+      ('RESERVED', l10n.unitStatusReserved, reservedCount, colors.warning),
+      ('SOLD', l10n.unitStatusSold, soldCount, const Color(0xFFEF4444)),
     ];
 
     return DecoratedBox(
@@ -1472,7 +1473,7 @@ class _UnitCard extends StatelessWidget {
                               if (unit.area != null)
                                 _SpecPill(
                                   icon: Icons.square_foot_rounded,
-                                  label: '${_formatArea(unit.area)} م²',
+                                  label: context.l10n.unitAreaValue(_formatArea(unit.area)),
                                 ),
                               if (unit.bedrooms != null &&
                                   unit.bedrooms! > 0)
@@ -1558,6 +1559,7 @@ class _SendChip extends StatelessWidget {
           unitId:      unit.id,
           unitCode:    unit.code,
           projectName: state.data?.project.name.resolve(lang) ?? '',
+          l10n: context.l10n,
         );
       },
       child: Container(

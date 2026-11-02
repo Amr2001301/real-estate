@@ -1154,7 +1154,7 @@ class _FinancialCard extends StatelessWidget {
         : const Color(0xFF34C77B);
 
     final amountLabel = isOverdue
-        ? (overdue == 1 ? 'قسط واحد متأخر' : '$overdue أقساط متأخرة')
+        ? l10n.overdueInstallments(overdue)
         : l10n.homeNextInstallment;
 
     return Container(
@@ -1213,8 +1213,8 @@ class _FinancialCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'اللوحة المالية',
+                Text(
+                  context.l10n.financialPanel,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -1227,12 +1227,12 @@ class _FinancialCard extends StatelessWidget {
                 if (isOverdue)
                   _HeaderBadge(
                     icon: Icons.warning_amber_rounded,
-                    label: '$overdue متأخرة',
+                    label: context.l10n.overdueCountBadge(overdue),
                     color: const Color(0xFFEF4444),
                   )
                 else
                   _HeaderBadge(
-                    label: 'منتظم',
+                    label: context.l10n.onTrackBadge,
                     color: const Color(0xFF34C77B),
                     dot: true,
                   ),
@@ -1379,7 +1379,7 @@ class _FinancialCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'تقدم السداد',
+                        context.l10n.paymentProgress,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.38),
                           fontSize: 10,
@@ -1425,13 +1425,13 @@ class _FinancialCard extends StatelessWidget {
               child: Row(
                 children: [
                   _NStat(
-                    label: 'مدفوع',
+                    label: context.l10n.installmentStatusPaid,
                     value: '$paid',
                     color: const Color(0xFF34C77B),
                   ),
                   _NVLine(),
                   _NStat(
-                    label: 'متأخر',
+                    label: context.l10n.installmentStatusOverdue,
                     value: '$overdue',
                     color: overdue > 0
                         ? const Color(0xFFEF4444)
@@ -1439,13 +1439,13 @@ class _FinancialCard extends StatelessWidget {
                   ),
                   _NVLine(),
                   _NStat(
-                    label: 'قيد الانتظار',
+                    label: context.l10n.installmentStatusPending,
                     value: '$pending',
                     color: AppPalette.gold400,
                   ),
                   _NVLine(),
                   _NStat(
-                    label: 'المتبقي',
+                    label: context.l10n.remainingLabel,
                     value: '$remaining',
                     color: Colors.white.withValues(alpha: 0.85),
                   ),

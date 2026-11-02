@@ -92,7 +92,7 @@ class _ProjectsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppNavHeader(
       title: l10n.navProjects,
-      subtitle: count != null ? 'المشاريع المتاحة لك · $count' : 'المشاريع المتاحة لك',
+      subtitle: count != null ? '${l10n.brokerProjectsSubtitle} · $count' : l10n.brokerProjectsSubtitle,
       compact: true,
       leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
     );

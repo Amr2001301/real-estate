@@ -371,7 +371,7 @@ class _ReceiptsSection extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'اضغط على الملف لتحميله أو عرضه',
+                    context.l10n.tapFileToOpen,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.inkMuted,
                     ),

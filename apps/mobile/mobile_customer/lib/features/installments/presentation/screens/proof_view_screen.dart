@@ -242,7 +242,7 @@ class _InstallmentSummaryCard extends StatelessWidget {
                   Divider(height: AppSpacing.lg, color: colors.hairline),
                   _InfoRow(
                     icon: Icons.check_circle_outline_rounded,
-                    label: 'تاريخ السداد',
+                    label: context.l10n.paidDateLabel,
                     value: DateFormatter.mediumDate(
                       installment.paidAt!,
                       languageCode: lang,
@@ -267,7 +267,7 @@ class _InstallmentSummaryCard extends StatelessWidget {
                   Divider(height: AppSpacing.lg, color: colors.hairline),
                   _InfoRow(
                     icon: Icons.upload_file_rounded,
-                    label: 'تاريخ الإرسال',
+                    label: context.l10n.paymentSubmittedDate,
                     value: DateFormatter.mediumDate(
                       proof.submittedAt!,
                       languageCode: lang,
@@ -287,8 +287,8 @@ class _InstallmentSummaryCard extends StatelessWidget {
   String _methodLabel(AppLocalizations l10n, PaymentMethod method) =>
       switch (method) {
         PaymentMethod.bankTransfer => l10n.paymentProofMethodBankTransfer,
-        PaymentMethod.cheque => 'شيك',
-        PaymentMethod.cash => 'نقدي',
+        PaymentMethod.cheque => l10n.paymentMethodCheque,
+        PaymentMethod.cash => l10n.paymentMethodCash,
         _ => l10n.paymentProofMethodOther,
       };
 }
@@ -375,14 +375,14 @@ class _ProofFilesSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ملفات الإثبات',
+                    context.l10n.proofFilesTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: colors.inkStrong,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   Text(
-                    'اضغط على الملف لتحميله أو عرضه',
+                    context.l10n.tapFileToOpen,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.inkMuted,
                     ),

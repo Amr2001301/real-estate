@@ -234,10 +234,10 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                     final visible = _apply(all);
 
                     if (visible.isEmpty) {
-                      return const EmptyState(
+                      return EmptyState(
                         icon: Icons.filter_list_off_rounded,
-                        title: 'لا توجد نتائج',
-                        message: 'لا توجد طلبات في هذا التصنيف',
+                        title: context.l10n.noResults,
+                        message: context.l10n.requestsFilterEmpty,
                       );
                     }
 
@@ -312,13 +312,13 @@ class _FilterRow extends StatelessWidget {
   final _FilterKey            selected;
   final ValueChanged<_FilterKey> onSelect;
 
-  static const _labels = {
-    _FilterKey.all:       'الكل',
-    _FilterKey.pending:   'جديدة',
-    _FilterKey.confirmed: 'مؤكدة',
-    _FilterKey.completed: 'مكتملة',
-    _FilterKey.cancelled: 'ملغية',
-  };
+  static String _label(AppLocalizations l10n, _FilterKey key) => switch (key) {
+        _FilterKey.all => l10n.leadsFilterAll,
+        _FilterKey.pending => l10n.requestsNew,
+        _FilterKey.confirmed => l10n.requestsConfirmed,
+        _FilterKey.completed => l10n.requestsCompleted,
+        _FilterKey.cancelled => l10n.requestsCancelled,
+      };
 
   static const _dots = {
     _FilterKey.all:       Colors.white,
@@ -341,7 +341,7 @@ class _FilterRow extends StatelessWidget {
             final isSelected = selected == key;
             final count      = counts[key] ?? 0;
             final dot        = _dots[key]!;
-            final label      = _labels[key]!;
+            final label      = _label(context.l10n, key);
             return Padding(
               padding: const EdgeInsets.only(left: 8),
               child: _FilterItem(
@@ -504,7 +504,7 @@ class _VisitSummary extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'إجمالي الطلبات',
+                      context.l10n.supervisorSummaryTotalLabel,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.75),
                         fontSize: 13,
@@ -532,19 +532,19 @@ class _VisitSummary extends StatelessWidget {
                 Row(
                   children: [
                     _SummaryCell(
-                      label: 'جديدة',
+                      label: context.l10n.requestsNew,
                       count: pending,
                       color: AppPalette.gold300,
                     ),
                     _SummaryDivider(),
                     _SummaryCell(
-                      label: 'مؤكدة',
+                      label: context.l10n.requestsConfirmed,
                       count: confirmed,
                       color: const Color(0xFF93C5FD),
                     ),
                     _SummaryDivider(),
                     _SummaryCell(
-                      label: 'مكتملة',
+                      label: context.l10n.requestsCompleted,
                       count: completed,
                       color: const Color(0xFF4ADE80),
                     ),
@@ -785,7 +785,7 @@ class _VisitCard extends StatelessWidget {
                 if (request.preferredDate != null)
                   _InfoCell(
                     icon: AppIcons.calendar,
-                    label: 'التاريخ المفضّل',
+                    label: context.l10n.preferredDateLabel,
                     value: DateFormatter.mediumDate(
                       request.preferredDate!,
                       languageCode: lang,
@@ -813,7 +813,7 @@ class _VisitCard extends StatelessWidget {
                 if (request.assignedSalesName?.isNotEmpty == true)
                   _InfoCell(
                     icon: Icons.person_rounded,
-                    label: 'المبيعات',
+                    label: context.l10n.salesRepLabel,
                     value: request.assignedSalesName!,
                     accent: theme.accent,
                   ),
@@ -851,7 +851,7 @@ class _VisitCard extends StatelessWidget {
                       Text(
                         request.notes?.isNotEmpty == true
                             ? request.notes!
-                            : 'لا توجد رسالة',
+                            : context.l10n.noMessage,
                         style: TextStyle(
                           fontSize: 15,
                           color: request.notes?.isNotEmpty == true
@@ -933,7 +933,7 @@ class _VisitCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'تاريخ الطلب: ${DateFormatter.mediumDate(request.createdAt!, languageCode: lang)}',
+                        context.l10n.requestDateValue(DateFormatter.mediumDate(request.createdAt!, languageCode: lang)),
                         style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFFB0B7C3),

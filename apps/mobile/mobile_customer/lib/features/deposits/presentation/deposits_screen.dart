@@ -741,7 +741,7 @@ class _ReceiptsButton extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'اضغط لعرض أو تنزيل الإيصالات',
+                      context.l10n.tapToViewReceipts,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
                         fontSize: 12,

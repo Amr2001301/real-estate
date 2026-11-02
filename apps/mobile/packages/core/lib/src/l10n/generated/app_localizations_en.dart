@@ -4125,4 +4125,488 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get followUpsYesterday => 'Yesterday';
+
+  @override
+  String get brokerAvailableProjects => 'Available projects';
+
+  @override
+  String get brokerAchievementSnapshot => 'Performance snapshot';
+
+  @override
+  String get brokerActivityBadge => 'Activity';
+
+  @override
+  String get brokerLeadsSent => 'Leads sent';
+
+  @override
+  String get brokerAcceptanceRate => 'Acceptance rate';
+
+  @override
+  String get brokerSignedContracts => 'Signed contracts';
+
+  @override
+  String brokerPendingLeads(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n leads waiting for approval',
+      one: '1 lead waiting for approval',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brokerPendingReservations(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n reservations waiting for review',
+      one: '1 reservation waiting for review',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brokerChipWaiting => 'Waiting';
+
+  @override
+  String get brokerChipReview => 'Review';
+
+  @override
+  String get brokerChipGood => 'Good';
+
+  @override
+  String get brokerFocusAllClear => 'Nothing urgent — great work!';
+
+  @override
+  String get brokerNoProjects => 'No projects available';
+
+  @override
+  String get brokerCommissionsDue => 'Total commissions due';
+
+  @override
+  String get brokerCommissionsNone => 'No commissions yet';
+
+  @override
+  String get brokerSalesVolume => 'Sales volume';
+
+  @override
+  String get brokerSignedValue => 'Total value of signed contracts';
+
+  @override
+  String daysAgo(int n) {
+    return '$n days ago';
+  }
+
+  @override
+  String get maintenanceActionStart => 'Start work';
+
+  @override
+  String get maintenanceActionReopen => 'Reopen';
+
+  @override
+  String get maintenanceResolvedByBoth => 'Both sides confirmed the fix';
+
+  @override
+  String get maintenanceResolvedByCustomer => 'The customer confirmed the fix';
+
+  @override
+  String get maintenanceResolvedBySupervisor =>
+      'The supervisor confirmed the fix';
+
+  @override
+  String get maintenanceResolvedByNone => 'Not confirmed yet';
+
+  @override
+  String get maintenanceOutOfWarranty => 'Out of warranty';
+
+  @override
+  String get maintenanceWarrantyUnknown => 'Warranty unknown';
+
+  @override
+  String get maintenanceDeadlinePassed => 'Past the deadline';
+
+  @override
+  String get maintenanceTimeLeft => 'Time left';
+
+  @override
+  String get timeUnitDay => 'days';
+
+  @override
+  String get timeUnitHour => 'hours';
+
+  @override
+  String get timeUnitMinute => 'min';
+
+  @override
+  String get timeUnitSecond => 'sec';
+
+  @override
+  String get maintenanceDeadlineOver => 'The deadline has passed';
+
+  @override
+  String maintenanceDeadlineUsed(String pct) {
+    return '$pct% of the time used';
+  }
+
+  @override
+  String unitTitle(String code) {
+    return 'Unit $code';
+  }
+
+  @override
+  String get whatsappOpenFailed => 'Couldn\'t open WhatsApp';
+
+  @override
+  String get maintenanceDirections => 'Directions';
+
+  @override
+  String get maintenanceWarrantyEnds => 'Warranty ends';
+
+  @override
+  String get maintenanceServicedItem => 'Item serviced';
+
+  @override
+  String get maintenanceRequestDate => 'Request date';
+
+  @override
+  String get maintenancePriorityLabel => 'Priority';
+
+  @override
+  String get teamPerfSubtitle => 'Track your reps\' performance';
+
+  @override
+  String get teamTargetsSubtitle => 'Set the team\'s monthly targets';
+
+  @override
+  String get teamManagement => 'Team management';
+
+  @override
+  String get fromLabel => 'From';
+
+  @override
+  String get clientTagOwner => 'Owner';
+
+  @override
+  String get clientTagClient => 'Client';
+
+  @override
+  String get kpiLeads => 'Leads';
+
+  @override
+  String get calculatorInputs => 'Inputs';
+
+  @override
+  String get brokerProjectsSubtitle => 'Projects open to you';
+
+  @override
+  String get brokerAddLeadForUnit => 'Add a lead for this unit';
+
+  @override
+  String get brokerAddLeadForProject => 'Add a lead for this project';
+
+  @override
+  String get detailsLabel => 'Details';
+
+  @override
+  String get aboutTheProject => 'About the project';
+
+  @override
+  String get projectFeatures => 'Project features';
+
+  @override
+  String get projectLocationTitle => 'Project location';
+
+  @override
+  String get totalLabel => 'Total';
+
+  @override
+  String get availableLabel => 'Available';
+
+  @override
+  String get unavailableLabel => 'Unavailable';
+
+  @override
+  String get brokerCommissionsSubtitle => 'Your commissions and what is due';
+
+  @override
+  String get brokerReservationDetails => 'Reservation request';
+
+  @override
+  String get brokerReserveForLead => 'Request a booking for this client';
+
+  @override
+  String get leadSingular => 'Lead';
+
+  @override
+  String get shareProjectBody => 'See the project and its available units:';
+
+  @override
+  String get shareUnitBody => 'See the unit\'s details:';
+
+  @override
+  String get paidDateLabel => 'Paid on';
+
+  @override
+  String get proofFilesTitle => 'Proof files';
+
+  @override
+  String get tapFileToOpen => 'Tap a file to open or download it';
+
+  @override
+  String get submitProofSubtitle => 'Attach your payment receipt for review';
+
+  @override
+  String get fileReadyToSend => 'The file is ready to send';
+
+  @override
+  String get proofFileTypes => 'PDF · JPG · PNG · WebP (up to 25 MB)';
+
+  @override
+  String get viewApprovedProof => 'View the approved proof';
+
+  @override
+  String get tapToViewAttachment => 'Tap to view or download the attachment';
+
+  @override
+  String get paymentProofResubmitTitle => 'Resubmit payment proof';
+
+  @override
+  String get paymentProofResubmitHint =>
+      'Your last proof was rejected — attach a new document';
+
+  @override
+  String get paymentProofSubmitHint =>
+      'Attach a photo or PDF as proof of payment';
+
+  @override
+  String get financeSubtitle => 'Your payments and contracts';
+
+  @override
+  String get accountMyPropertySubtitle => 'Your units and their status';
+
+  @override
+  String get accountMaintenanceSubtitle => 'Maintenance and repair requests';
+
+  @override
+  String get moreAssistantSubtitle => 'Chat with our assistant';
+
+  @override
+  String get moreBenefitFavorites => 'Save favourites';
+
+  @override
+  String get moreBenefitCompare => 'Compare units';
+
+  @override
+  String get moreBenefitTrack => 'Track your journey';
+
+  @override
+  String get tapToViewReceipts => 'Tap to view or download the receipts';
+
+  @override
+  String get createdDateLabel => 'Created on';
+
+  @override
+  String get tapToViewDocuments =>
+      'Tap to view or download the attached documents';
+
+  @override
+  String get maintenanceFollowUpTitle => 'Resolution and rating';
+
+  @override
+  String get maintenanceTargetDate => 'Target fix date';
+
+  @override
+  String get maintenanceStartsAfterApproval =>
+      'Starts once the request is approved';
+
+  @override
+  String get maintenanceSupervisorConfirmation => 'Supervisor confirmation';
+
+  @override
+  String get maintenanceOverdueComplaintHint =>
+      'Your request is past its target date — you can file a complaint.';
+
+  @override
+  String get maintenanceFileComplaint => 'File a complaint';
+
+  @override
+  String get maintenanceYourRating => 'Your rating';
+
+  @override
+  String maintenanceYouConfirmedOn(String date) {
+    return 'You confirmed the fix on $date';
+  }
+
+  @override
+  String get maintenanceComplaintSent =>
+      'Your complaint was filed; our team will follow it up.';
+
+  @override
+  String get maintenanceRatingRequired =>
+      'Please choose a rating from 1 to 5 stars.';
+
+  @override
+  String get maintenanceRatingThanks =>
+      'Thank you! The fix is confirmed and your rating sent.';
+
+  @override
+  String get maintenanceConfirmPrompt =>
+      'Was the problem fixed? Confirm and rate the service';
+
+  @override
+  String get maintenanceRatingNoteHint =>
+      'Add a note about the service (optional)';
+
+  @override
+  String get maintenanceConfirmAndRate => 'Confirm the fix and send the rating';
+
+  @override
+  String get serviceRequests => 'Service requests';
+
+  @override
+  String get maintenanceStatusOpenPlural => 'Open';
+
+  @override
+  String get maintenanceNewSubtitle =>
+      'Tell us the problem and we\'ll handle it';
+
+  @override
+  String get maintenanceFromCameraHint => 'Take a photo now';
+
+  @override
+  String get maintenanceFromGalleryHint => 'Pick from your photos';
+
+  @override
+  String get noResults => 'No results';
+
+  @override
+  String get favoritesFilterEmpty => 'Nothing saved in this category';
+
+  @override
+  String get favoritesSubtitle => 'Saved units';
+
+  @override
+  String get favoritesTabUnits => 'Units';
+
+  @override
+  String get favoritesTabProjects => 'Projects';
+
+  @override
+  String get favoriteKindProject => 'Project';
+
+  @override
+  String get favoriteKindUnit => 'Unit';
+
+  @override
+  String get savedBadge => 'Saved';
+
+  @override
+  String get requestsFilterEmpty => 'No requests in this category';
+
+  @override
+  String get requestsNew => 'New';
+
+  @override
+  String get requestsConfirmed => 'Confirmed';
+
+  @override
+  String get requestsCompleted => 'Completed';
+
+  @override
+  String get requestsCancelled => 'Cancelled';
+
+  @override
+  String get preferredDateLabel => 'Preferred date';
+
+  @override
+  String get salesRepLabel => 'Sales consultant';
+
+  @override
+  String get noMessage => 'No message';
+
+  @override
+  String requestDateValue(String date) {
+    return 'Requested on $date';
+  }
+
+  @override
+  String installmentsPaidOf(int paid, int total) {
+    return '$paid of $total installments paid';
+  }
+
+  @override
+  String ofTotal(int total) {
+    return 'of $total';
+  }
+
+  @override
+  String get summaryTab => 'Summary';
+
+  @override
+  String get financialPanel => 'Financial overview';
+
+  @override
+  String monthsCount(int n) {
+    return '$n months';
+  }
+
+  @override
+  String get overdueTotal => 'Total overdue';
+
+  @override
+  String overdueInstallments(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n overdue installments',
+      one: '1 overdue installment',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lastDueOn(String date) {
+    return 'last due $date';
+  }
+
+  @override
+  String get remainingLabel => 'Remaining';
+
+  @override
+  String get planDuration => 'Plan length';
+
+  @override
+  String get contractDetails => 'Contract details';
+
+  @override
+  String get myUnits => 'My units';
+
+  @override
+  String get myPortfolio => 'My property portfolio';
+
+  @override
+  String unitsCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String overdueCountBadge(int n) {
+    return '$n overdue';
+  }
+
+  @override
+  String get onTrackBadge => 'On track';
+
+  @override
+  String get paymentProgress => 'Payment progress';
+
+  @override
+  String get notificationPrefsTitle => 'Notification settings';
 }

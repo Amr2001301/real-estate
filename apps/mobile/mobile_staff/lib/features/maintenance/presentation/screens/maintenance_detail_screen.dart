@@ -116,7 +116,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                   leadingAction: const NavHeaderBack(),
                   actions: [
                     if (status != null)
-                      NavHeaderPill(label: maintenanceStatusLabel(status), color: accent),
+                      NavHeaderPill(label: maintenanceStatusLabel(context.l10n, status), color: accent),
                   ],
                 ),
                 SliverPadding(
@@ -341,7 +341,7 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    isOverdue ? 'تجاوز الموعد النهائي' : 'الوقت المتبقي',
+                    isOverdue ? context.l10n.maintenanceDeadlinePassed : context.l10n.maintenanceTimeLeft,
                     style: TextStyle(
                       color: accent,
                       fontSize: 12,
@@ -372,13 +372,13 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Row(
                 children: [
-                  _TimerBox(value: days, unit: 'يوم', accent: accent),
+                  _TimerBox(value: days, unit: context.l10n.timeUnitDay, accent: accent),
                   _TimerColon(accent: accent),
-                  _TimerBox(value: hours, unit: 'ساعة', accent: accent),
+                  _TimerBox(value: hours, unit: context.l10n.timeUnitHour, accent: accent),
                   _TimerColon(accent: accent),
-                  _TimerBox(value: minutes, unit: 'دقيقة', accent: accent),
+                  _TimerBox(value: minutes, unit: context.l10n.timeUnitMinute, accent: accent),
                   _TimerColon(accent: accent),
-                  _TimerBox(value: seconds, unit: 'ثانية', accent: accent),
+                  _TimerBox(value: seconds, unit: context.l10n.timeUnitSecond, accent: accent),
                 ],
               ),
             ),
@@ -401,8 +401,8 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
                   const SizedBox(height: 6),
                   Text(
                     isOverdue
-                        ? 'انتهت المهلة المحددة'
-                        : '${(progress * 100).toStringAsFixed(0)}% من المهلة مستخدم',
+                        ? context.l10n.maintenanceDeadlineOver
+                        : context.l10n.maintenanceDeadlineUsed((progress * 100).toStringAsFixed(0)),
                     style: TextStyle(
                       color: accent.withValues(alpha: 0.50),
                       fontSize: 10,
@@ -520,7 +520,7 @@ class _IssueCard extends StatelessWidget {
         ? DateFormatter.mediumDate(r.createdAt!, languageCode: lang)
         : null;
     final pColor = _priorityColor(r.priority);
-    final pLabel = maintenancePriorityLabel(r.priority);
+    final pLabel = maintenancePriorityLabel(context.l10n, r.priority);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -580,7 +580,7 @@ class _IssueCard extends StatelessWidget {
                             ),
                             if (r.unitCode != null)
                               Text(
-                                'وحدة ${r.unitCode}',
+                                context.l10n.unitTitle(r.unitCode!),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.65),
                                   fontSize: 12,
@@ -704,7 +704,7 @@ class _CustomerInfoCard extends StatelessWidget {
     final ok = await ContactActions.whatsApp(number: phone);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذّر فتح WhatsApp')),
+        SnackBar(content: Text(context.l10n.whatsappOpenFailed)),
       );
     }
   }
@@ -758,7 +758,7 @@ class _CustomerInfoCard extends StatelessWidget {
                     Expanded(
                       child: _ContactActionButton(
                         icon: Icons.call_rounded,
-                        label: 'اتصال',
+                        label: context.l10n.contactCall,
                         color: const Color(0xFF4ADE80),
                         onTap: () => _callPhone(context),
                       ),
@@ -947,7 +947,7 @@ class _LocationCard extends StatelessWidget {
                           child: InkWell(
                             onTap: () => _openDirections(context),
                             borderRadius: BorderRadius.circular(8),
-                            child: const Padding(
+                            child: Padding(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 10,
                                 vertical: 7,
@@ -962,7 +962,7 @@ class _LocationCard extends StatelessWidget {
                                   ),
                                   SizedBox(width: 5),
                                   Text(
-                                    'الاتجاهات',
+                                    context.l10n.maintenanceDirections,
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
@@ -1110,13 +1110,13 @@ class _WorkflowCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       _StatusPill(
-                        label: maintenanceResolvedByLabel(r.resolvedBy),
+                        label: maintenanceResolvedByLabel(context.l10n, r.resolvedBy),
                         color: _resolvedByColor(r.resolvedBy),
                       ),
                       if (r.warrantyStatus != null &&
                           r.warrantyStatus != MaintenanceWarrantyStatus.unknown)
                         _StatusPill(
-                          label: maintenanceWarrantyStatusLabel(r.warrantyStatus!),
+                          label: maintenanceWarrantyStatusLabel(context.l10n, r.warrantyStatus!),
                           color: _warrantyColor(r.warrantyStatus!),
                         ),
                       if (r.isOverdue)
@@ -1159,13 +1159,13 @@ class _WorkflowCard extends StatelessWidget {
                       r.warrantyEndSnapshot != null)
                     _InfoRow(
                       icon: Icons.shield_rounded,
-                      label: 'انتهاء الضمان',
+                      label: context.l10n.maintenanceWarrantyEnds,
                       value: fmtDate(r.warrantyEndSnapshot),
                     ),
                   if (r.itemName != null)
                     _InfoRow(
                       icon: Icons.build_circle_outlined,
-                      label: 'العنصر المُصان',
+                      label: context.l10n.maintenanceServicedItem,
                       value: r.itemName!.resolve(lang),
                     ),
                 ],
@@ -1371,7 +1371,7 @@ class _WorkflowActionCard extends StatelessWidget {
               child: SizedBox(
                 width: double.infinity,
                 child: AppButton(
-                  label: maintenanceTransitionLabel(t),
+                  label: maintenanceTransitionLabel(context.l10n, t),
                   icon: maintenanceTransitionIcon(t),
                   size: AppButtonSize.medium,
                   variant: t == MaintenanceTransition.resolve

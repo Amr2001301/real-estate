@@ -345,7 +345,7 @@ class _UnitHeader extends StatelessWidget {
                 if (total > 0) ...[
                   const SizedBox(width: 12),
                   Semantics(
-                    label: '$paid من $total قسط مسدد',
+                    label: context.l10n.installmentsPaidOf(paid, total),
                     child: SizedBox(
                       width: 52,
                       height: 52,
@@ -369,7 +369,7 @@ class _UnitHeader extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'من $total',
+                                context.l10n.ofTotal(total),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.48),
                                   fontSize: 9,
@@ -495,7 +495,7 @@ class _PillTabBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('الأقساط'),
+                Text(context.l10n.installmentsTitle),
                 if (overdueCount > 0) ...[
                   const SizedBox(width: 6),
                   Container(
@@ -519,7 +519,7 @@ class _PillTabBar extends StatelessWidget {
               ],
             ),
           ),
-          const Tab(text: 'الملخص'),
+          Tab(text: context.l10n.summaryTab),
         ],
       ),
     );
@@ -618,7 +618,7 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = <({String label, _Filter value, int count})>[
-      (label: 'الكل', value: _Filter.all, count: total),
+      (label: context.l10n.leadsFilterAll, value: _Filter.all, count: total),
       if (overdue > 0)
         (label: l10n.installmentStatusOverdue, value: _Filter.overdue, count: overdue),
       if (pending > 0)
@@ -862,7 +862,7 @@ class _FinancialCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'اللوحة المالية',
+                    context.l10n.financialPanel,
                     style: TextStyle(
                       color: AppPalette.gold300.withValues(alpha: 0.80),
                       fontSize: 13,
@@ -883,7 +883,7 @@ class _FinancialCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        '${property.totalMonths} شهرًا',
+                        context.l10n.monthsCount(property.totalMonths ?? 0),
                         style: const TextStyle(
                           color: AppPalette.gold300,
                           fontSize: 12,
@@ -899,7 +899,7 @@ class _FinancialCard extends StatelessWidget {
               if (hasOverdue) ...[
                 // Overdue state: largest element on the card
                 Text(
-                  'إجمالي المتأخرات',
+                  context.l10n.overdueTotal,
                   style: TextStyle(
                     color: overdueColor.withValues(alpha: 0.72),
                     fontSize: 13,
@@ -919,8 +919,8 @@ class _FinancialCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${overdue == 1 ? "قسط واحد متأخر" : "$overdue أقساط متأخرة"}'
-                  '${nextInst != null ? " · آخر استحقاق ${DateFormatter.mediumDate(nextInst!.dueDate, languageCode: lang)}" : ""}',
+                  '${context.l10n.overdueInstallments(overdue)}'
+                  '${nextInst != null ? ' · ${context.l10n.lastDueOn(DateFormatter.mediumDate(nextInst!.dueDate, languageCode: lang))}' : ''}',
                   style: TextStyle(
                     color: overdueColor.withValues(alpha: 0.62),
                     fontSize: 13,
@@ -930,7 +930,7 @@ class _FinancialCard extends StatelessWidget {
               ] else if (hasNext) ...[
                 // No overdue — next installment is primary focus
                 Text(
-                  'القسط القادم',
+                  context.l10n.homeNextInstallment,
                   style: TextStyle(
                     color: AppPalette.gold300.withValues(alpha: 0.75),
                     fontSize: 13,
@@ -961,7 +961,7 @@ class _FinancialCard extends StatelessWidget {
               ] else ...[
                 // No plan / all paid
                 Text(
-                  'القسط الشهري',
+                  context.l10n.homeMonthlyInstallment,
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 13,
@@ -990,7 +990,7 @@ class _FinancialCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'القسط الشهري',
+                      context.l10n.homeMonthlyInstallment,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.50),
                         fontSize: 13,
@@ -1069,7 +1069,7 @@ class _CardStatsRow extends StatelessWidget {
         Expanded(
           child: _StatCell(
             value: '$paid',
-            label: 'مدفوع',
+            label: context.l10n.installmentStatusPaid,
             color: const Color(0xFF4ADE80),
           ),
         ),
@@ -1080,7 +1080,7 @@ class _CardStatsRow extends StatelessWidget {
         Expanded(
           child: _StatCell(
             value: '$overdue',
-            label: 'متأخر',
+            label: context.l10n.installmentStatusOverdue,
             color: const Color(0xFFEF4444),
           ),
         ),
@@ -1091,7 +1091,7 @@ class _CardStatsRow extends StatelessWidget {
         Expanded(
           child: _StatCell(
             value: '$pending',
-            label: 'قيد الانتظار',
+            label: context.l10n.installmentStatusPending,
             color: const Color(0xFFF59E0B),
           ),
         ),
@@ -1102,7 +1102,7 @@ class _CardStatsRow extends StatelessWidget {
         Expanded(
           child: _StatCell(
             value: '${total - paid}',
-            label: 'المتبقي',
+            label: context.l10n.remainingLabel,
             color: Colors.white,
           ),
         ),
@@ -1197,8 +1197,8 @@ class _ContractCard extends StatelessWidget {
       if (property.totalMonths != null)
         (
           icon: Icons.calendar_month_rounded,
-          label: 'مدة التقسيط',
-          value: '${property.totalMonths} شهرًا',
+          label: context.l10n.planDuration,
+          value: context.l10n.monthsCount(property.totalMonths ?? 0),
           isCode: false,
         ),
     ];
@@ -1266,8 +1266,8 @@ class _ContractCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      const Text(
-                        'تفاصيل العقد',
+                      Text(
+                        context.l10n.contractDetails,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,

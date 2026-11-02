@@ -3,16 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../domain/entities/maintenance_request.dart';
 
-// Inline Arabic labels (Arabic-first app). Existing staff features use l10n;
-// the maintenance supervisor strings are inline to avoid an ARB/codegen pass —
-// extract to l10n in a follow-up if desired.
+// Labels for the maintenance supervisor screens, from the ARB files.
 
-String maintenanceStatusLabel(MaintenanceStatus s) => switch (s) {
-      MaintenanceStatus.open => 'مفتوح',
-      MaintenanceStatus.assigned => 'مُسند',
-      MaintenanceStatus.inProgress => 'قيد التنفيذ',
-      MaintenanceStatus.resolved => 'تم الحل',
-      MaintenanceStatus.closed => 'مغلق',
+String maintenanceStatusLabel(AppLocalizations l10n, MaintenanceStatus s) => switch (s) {
+      MaintenanceStatus.open => l10n.maintenanceStatusOpen,
+      MaintenanceStatus.assigned => l10n.supervisorStatAssigned,
+      MaintenanceStatus.inProgress => l10n.maintenanceStatusInProgress,
+      MaintenanceStatus.resolved => l10n.maintenanceStatusResolved,
+      MaintenanceStatus.closed => l10n.maintenanceStatusClosed,
       MaintenanceStatus.unknown => '—',
     };
 
@@ -25,11 +23,11 @@ BadgeTone maintenanceStatusTone(MaintenanceStatus s) => switch (s) {
       MaintenanceStatus.unknown => BadgeTone.neutral,
     };
 
-String maintenancePriorityLabel(MaintenancePriority p) => switch (p) {
-      MaintenancePriority.low => 'أولوية منخفضة',
-      MaintenancePriority.medium => 'أولوية متوسطة',
-      MaintenancePriority.high => 'أولوية عالية',
-      MaintenancePriority.urgent => 'عاجلة',
+String maintenancePriorityLabel(AppLocalizations l10n, MaintenancePriority p) => switch (p) {
+      MaintenancePriority.low => l10n.maintenancePriorityValue(l10n.maintenancePriorityLow),
+      MaintenancePriority.medium => l10n.maintenancePriorityValue(l10n.maintenancePriorityMedium),
+      MaintenancePriority.high => l10n.maintenancePriorityValue(l10n.maintenancePriorityHigh),
+      MaintenancePriority.urgent => l10n.maintenancePriorityUrgent,
       MaintenancePriority.unknown => '—',
     };
 
@@ -41,10 +39,10 @@ BadgeTone maintenancePriorityTone(MaintenancePriority p) => switch (p) {
       MaintenancePriority.unknown => BadgeTone.neutral,
     };
 
-String maintenanceTransitionLabel(MaintenanceTransition t) => switch (t) {
-      MaintenanceTransition.start   => 'بدء التنفيذ',
-      MaintenanceTransition.resolve => 'تم حل المشكلة',
-      MaintenanceTransition.reopen  => 'إعادة الفتح',
+String maintenanceTransitionLabel(AppLocalizations l10n, MaintenanceTransition t) => switch (t) {
+      MaintenanceTransition.start   => l10n.maintenanceActionStart,
+      MaintenanceTransition.resolve => l10n.maintenanceProblemSolved,
+      MaintenanceTransition.reopen  => l10n.maintenanceActionReopen,
     };
 
 IconData maintenanceTransitionIcon(MaintenanceTransition t) => switch (t) {
@@ -53,11 +51,11 @@ IconData maintenanceTransitionIcon(MaintenanceTransition t) => switch (t) {
       MaintenanceTransition.reopen  => Icons.refresh_rounded,
     };
 
-String maintenanceResolvedByLabel(MaintenanceResolvedBy? by) => switch (by) {
-      MaintenanceResolvedBy.both => 'أكد الطرفان الحل',
-      MaintenanceResolvedBy.customer => 'أكد العميل الحل',
-      MaintenanceResolvedBy.supervisor => 'أكد مشرف الصيانة الحل',
-      null => 'لم يتم التأكيد بعد',
+String maintenanceResolvedByLabel(AppLocalizations l10n, MaintenanceResolvedBy? by) => switch (by) {
+      MaintenanceResolvedBy.both => l10n.maintenanceResolvedByBoth,
+      MaintenanceResolvedBy.customer => l10n.maintenanceResolvedByCustomer,
+      MaintenanceResolvedBy.supervisor => l10n.maintenanceResolvedBySupervisor,
+      null => l10n.maintenanceResolvedByNone,
     };
 
 BadgeTone maintenanceResolvedByTone(MaintenanceResolvedBy? by) => switch (by) {
@@ -67,8 +65,8 @@ BadgeTone maintenanceResolvedByTone(MaintenanceResolvedBy? by) => switch (by) {
       null => BadgeTone.neutral,
     };
 
-String maintenanceWarrantyStatusLabel(MaintenanceWarrantyStatus s) => switch (s) {
-      MaintenanceWarrantyStatus.inWarranty => 'ضمان ساري',
-      MaintenanceWarrantyStatus.outOfWarranty => 'خارج الضمان',
-      MaintenanceWarrantyStatus.unknown => 'ضمان غير محدد',
+String maintenanceWarrantyStatusLabel(AppLocalizations l10n, MaintenanceWarrantyStatus s) => switch (s) {
+      MaintenanceWarrantyStatus.inWarranty => l10n.warrantyActive,
+      MaintenanceWarrantyStatus.outOfWarranty => l10n.maintenanceOutOfWarranty,
+      MaintenanceWarrantyStatus.unknown => l10n.maintenanceWarrantyUnknown,
     };

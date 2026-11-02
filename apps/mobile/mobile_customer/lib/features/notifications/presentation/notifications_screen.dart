@@ -157,7 +157,7 @@ class _Header extends StatelessWidget {
         if (canMarkAll) NavHeaderAction(icon: Icons.done_all_rounded, tooltip: l10n.markAllRead, onTap: onMarkAll),
         NavHeaderAction(
           icon: Icons.tune_rounded,
-          tooltip: 'تفضيلات الإشعارات',
+          tooltip: l10n.notificationPrefsTitle,
           onTap: () => context.push('/account/notifications/preferences'),
         ),
       ],
