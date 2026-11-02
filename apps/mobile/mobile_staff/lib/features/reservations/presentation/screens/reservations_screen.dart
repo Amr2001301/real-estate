@@ -430,48 +430,27 @@ class _ReservationTileState extends State<_ReservationTile> {
                       const SizedBox(height: 10),
                       Container(height: 0.5, color: colors.hairline),
                       const SizedBox(height: 10),
-                      Row(
+                      // Wraps to a second line rather than run past the card's edge.
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           if (hasDate)
                             _InfoChip(
                               icon: Icons.calendar_today_rounded,
-                              label: DateFormatter.shortDate(
-                                r.createdAt!,
-                                languageCode: lang,
-                              ),
+                              label: DateFormatter.shortDate(r.createdAt!, languageCode: lang),
                               color: colors.brandNavy,
                             ),
-                          if (hasDate && hasUnit)
-                            const SizedBox(width: 6),
                           if (hasUnit)
-                            _InfoChip(
-                              icon: Icons.apartment_rounded,
-                              label: r.unitCode!,
-                              color: colors.brandGold,
-                            ),
-                          if ((hasDate || hasUnit) && hasProject && r.projectName != null)
-                            const SizedBox(width: 6),
-                          if (hasProject && !hasClient)
-                            const SizedBox.shrink()
-                          else if (hasProject)
-                            Expanded(
-                              child: _InfoChip(
-                                icon: Icons.location_city_rounded,
-                                label: r.projectName!,
-                                color: colors.inkMuted,
-                              ),
-                            ),
-                          if (hasExpiry && r.status == 'PENDING') ...[
-                            if (hasDate || hasUnit) const SizedBox(width: 6),
+                            _InfoChip(icon: Icons.apartment_rounded, label: r.unitCode!, color: colors.brandGold),
+                          if (hasProject && hasClient)
+                            _InfoChip(icon: Icons.location_city_rounded, label: r.projectName!, color: colors.inkMuted),
+                          if (hasExpiry && r.status == 'PENDING')
                             _InfoChip(
                               icon: Icons.timer_outlined,
-                              label: DateFormatter.shortDate(
-                                r.expiresAt!,
-                                languageCode: lang,
-                              ),
+                              label: DateFormatter.shortDate(r.expiresAt!, languageCode: lang),
                               color: colors.warning,
                             ),
-                          ],
                         ],
                       ),
                     ],
@@ -500,29 +479,6 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        border: Border.all(color: color.withValues(alpha: 0.20)),
-        borderRadius: AppRadii.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color.withValues(alpha: 0.80)),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
+    return AppInfoChip(icon: icon, label: label, color: color);
   }
 }

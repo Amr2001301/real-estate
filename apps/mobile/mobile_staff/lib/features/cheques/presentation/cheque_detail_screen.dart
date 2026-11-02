@@ -127,10 +127,16 @@ class _Body extends StatelessWidget {
                   children: [
                     Text(l10n.chequeAmount, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     const SizedBox(height: 2),
-                    Text(
-                      chequeMoney(c.amount, lang),
-                      key: const Key('cheque-amount'),
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colors.inkStrong),
+                    // One line: a long amount shrinks rather than drop the currency to a new line.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        chequeMoney(c.amount, lang),
+                        key: const Key('cheque-amount'),
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colors.inkStrong),
+                      ),
                     ),
                   ],
                 ),
