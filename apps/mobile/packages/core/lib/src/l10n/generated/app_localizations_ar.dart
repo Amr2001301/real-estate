@@ -4056,4 +4056,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fieldFullNameNewAccount => 'الاسم الكامل (للحسابات الجديدة فقط)';
+
+  @override
+  String get brokerLeadSectionContact => 'بيانات العميل';
+
+  @override
+  String get brokerLeadSectionContactSubtitle =>
+      'الاسم ورقم الهاتف مطلوبان، والبريد الإلكتروني اختياري.';
+
+  @override
+  String get brokerSectionNoteSubtitle =>
+      'أي تفاصيل تساعد فريق المبيعات في التواصل مع العميل.';
+
+  @override
+  String get brokerReservationClientSubtitle =>
+      'اختر أحد العملاء المحتملين الذين أضفتهم.';
+
+  @override
+  String get brokerReservationNewSubtitle => 'قدّم طلب حجز وحدة لعميلك';
+
+  @override
+  String get brokerLeadNewSubtitle => 'أضف بيانات العميل المحتمل';
 }

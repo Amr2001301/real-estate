@@ -76,7 +76,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                   children: [
                     // ── Section 01: Unit ──────────────────────────────────
                     if (!state.fixedUnit) ...[
-                      _SectionCard(
+                      AppFormSection(
                         step: '01',
                         title: l10n.reservationSectionUnit,
                         subtitle: l10n.reservationSectionUnitSubtitle,
@@ -97,7 +97,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                     ],
 
                     // ── Section 02: Client ────────────────────────────────
-                    _SectionCard(
+                    AppFormSection(
                       step: step2,
                       title: l10n.reservationSectionClient,
                       subtitle: l10n.reservationSectionClientSubtitle,
@@ -119,7 +119,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                     const SizedBox(height: AppSpacing.md),
 
                     // ── Section 03: Details ───────────────────────────────
-                    _SectionCard(
+                    AppFormSection(
                       step: step3,
                       title: l10n.reservationSectionDetails,
                       subtitle: l10n.reservationSectionDetailsSubtitle,
@@ -141,7 +141,7 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
                     const SizedBox(height: AppSpacing.md),
 
                     // ── Section 04: Plan & Booking Amount ─────────────────
-                    _SectionCard(
+                    AppFormSection(
                       step: step4,
                       title: l10n.reservationSectionPlan,
                       subtitle: l10n.reservationSectionPlanSubtitle,
@@ -189,123 +189,6 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
 // ═════════════════════════════════════════════════════════════════════════════
 // Section card — identical design to create_lead_screen
 // ═════════════════════════════════════════════════════════════════════════════
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.step,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final String step;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme  = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        border: Border.all(color: colors.hairline),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gold shimmer top strip
-          Container(
-            height: 2,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0x00B8941F),
-                  AppPalette.gold400,
-                  AppPalette.gold300,
-                  Color(0x00B8941F),
-                ],
-              ),
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row: title + step badge
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: colors.inkStrong,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.inkMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppPalette.gold300, AppPalette.gold500],
-                        ),
-                        borderRadius: BorderRadius.circular(AppRadii.md),
-                      ),
-                      child: Center(
-                        child: Text(
-                          step,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Divider(height: 1),
-                const SizedBox(height: AppSpacing.lg),
-                child,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Validation message

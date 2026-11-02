@@ -171,7 +171,7 @@ class _LogActivityScreenState extends State<LogActivityScreen> {
               padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxl),
               children: [
                 // ── 01 What happened ─────────────────────────────────────
-                _SectionCard(
+                AppFormSection(
                   step: '01',
                   title: l10n.activityWhatHappened,
                   subtitle: l10n.activitySectionWhatSubtitle,
@@ -205,7 +205,7 @@ class _LogActivityScreenState extends State<LogActivityScreen> {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── 02 Details ───────────────────────────────────────────
-                _SectionCard(
+                AppFormSection(
                   step: '02',
                   title: l10n.activitySectionDetails,
                   subtitle: l10n.activitySectionDetailsSubtitle,
@@ -228,7 +228,7 @@ class _LogActivityScreenState extends State<LogActivityScreen> {
                 const SizedBox(height: AppSpacing.md),
 
                 // ── 03 Next follow-up ────────────────────────────────────
-                _SectionCard(
+                AppFormSection(
                   step: '03',
                   title: l10n.leadNextAction,
                   subtitle: l10n.activitySectionNextSubtitle,
@@ -339,91 +339,6 @@ class _LogActivityScreenState extends State<LogActivityScreen> {
 // ═════════════════════════════════════════════════════════════════════════════
 // Section card — same design as create_visit / create_reservation
 // ═════════════════════════════════════════════════════════════════════════════
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.step, required this.title, required this.subtitle, required this.child});
-  final String step;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        border: Border.all(color: colors.hairline),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 2,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0x00B8941F), AppPalette.gold400, AppPalette.gold300, Color(0x00B8941F)],
-              ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xl)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: colors.inkStrong,
-                              )),
-                          const SizedBox(height: 2),
-                          Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppPalette.gold300, AppPalette.gold500],
-                        ),
-                        borderRadius: BorderRadius.circular(AppRadii.md),
-                      ),
-                      child: Center(
-                        child: Text(step,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Divider(height: 1),
-                const SizedBox(height: AppSpacing.lg),
-                child,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Segmented choice — the create-visit client-type control, for any options

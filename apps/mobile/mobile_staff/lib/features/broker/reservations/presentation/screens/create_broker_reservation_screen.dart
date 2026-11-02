@@ -56,66 +56,86 @@ class CreateBrokerReservationScreen extends StatelessWidget {
                           MediaQuery.of(context).padding.bottom,
                     ),
                     children: [
-                      // ── Lead picker (when not fixed) ─────────────────────
+                      // ── Client (when not fixed) ──────────────────────────
                       if (!state.fixedLead) ...[
-                        _SectionLabel(label: l10n.navLeads),
-                        const SizedBox(height: AppSpacing.sm),
-                        _StyledDropdown<String>(
-                          hint: l10n.brokerSelectLead,
-                          icon: Icons.person_rounded,
-                          value: state.selectedLeadId,
-                          items: [
-                            for (final lead in state.leads)
-                              DropdownMenuItem(
-                                value: lead.id,
-                                child: Text(lead.fullName),
+                        AppFormSection(
+                          step: '01',
+                          title: l10n.reservationSectionClient,
+                          subtitle: l10n.brokerReservationClientSubtitle,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _StyledDropdown<String>(
+                                hint: l10n.brokerSelectLead,
+                                icon: Icons.person_rounded,
+                                value: state.selectedLeadId,
+                                items: [
+                                  for (final lead in state.leads)
+                                    DropdownMenuItem(
+                                      value: lead.id,
+                                      child: Text(lead.fullName),
+                                    ),
+                                ],
+                                onChanged: (id) =>
+                                    id != null ? cubit.selectLead(id) : null,
                               ),
-                          ],
-                          onChanged: (id) =>
-                              id != null ? cubit.selectLead(id) : null,
+                              if (state.showValidation && !state.hasLead) ...[
+                                const SizedBox(height: AppSpacing.xs),
+                                _ErrorText(l10n.brokerSelectLead),
+                              ],
+                            ],
+                          ),
                         ),
-                        if (state.showValidation && !state.hasLead) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          _ErrorText(l10n.brokerSelectLead),
-                        ],
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: AppSpacing.lg),
                       ],
 
-                      // ── Project picker ────────────────────────────────────
-                      _SectionLabel(label: l10n.visitProject),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledDropdown<String>(
-                        hint: l10n.visitSelectProject,
-                        icon: Icons.apartment_rounded,
-                        value: state.selectedProjectId,
-                        items: [
-                          for (final p in state.projects)
-                            DropdownMenuItem(
-                              value: p.id,
-                              child: Text(p.name.resolve(lang)),
+                      // ── Unit ──────────────────────────────────────────────
+                      AppFormSection(
+                        step: state.fixedLead ? '01' : '02',
+                        title: l10n.reservationSectionUnit,
+                        subtitle: l10n.reservationSectionUnitSubtitle,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _SectionLabel(label: l10n.visitProject),
+                            const SizedBox(height: AppSpacing.sm),
+                            _StyledDropdown<String>(
+                              hint: l10n.visitSelectProject,
+                              icon: Icons.apartment_rounded,
+                              value: state.selectedProjectId,
+                              items: [
+                                for (final p in state.projects)
+                                  DropdownMenuItem(
+                                    value: p.id,
+                                    child: Text(p.name.resolve(lang)),
+                                  ),
+                              ],
+                              onChanged: (id) =>
+                                  id != null ? cubit.selectProject(id) : null,
                             ),
-                        ],
-                        onChanged: (id) =>
-                            id != null ? cubit.selectProject(id) : null,
+                            const SizedBox(height: AppSpacing.md),
+                            _SectionLabel(label: l10n.reservationUnit),
+                            const SizedBox(height: AppSpacing.sm),
+                            _UnitPicker(state: state),
+                            if (state.showValidation && !state.hasUnit) ...[
+                              const SizedBox(height: AppSpacing.xs),
+                              _ErrorText(l10n.reservationUnitRequired),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      // ── Unit picker ───────────────────────────────────────
-                      _SectionLabel(label: l10n.reservationUnit),
-                      const SizedBox(height: AppSpacing.sm),
-                      _UnitPicker(state: state),
-                      if (state.showValidation && !state.hasUnit) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        _ErrorText(l10n.reservationUnitRequired),
-                      ],
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.lg),
 
                       // ── Note ──────────────────────────────────────────────
-                      _SectionLabel(label: l10n.brokerLeadNote),
-                      const SizedBox(height: AppSpacing.sm),
-                      _StyledNoteField(
-                        hint: l10n.brokerLeadNote,
-                        onChanged: cubit.setNotes,
+                      AppFormSection(
+                        step: state.fixedLead ? '02' : '03',
+                        title: l10n.leadNotes,
+                        subtitle: l10n.brokerSectionNoteSubtitle,
+                        child: AppTextField(
+                          hint: l10n.leadNotesHint,
+                          maxLines: 4,
+                          onChanged: cubit.setNotes,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
 
@@ -150,7 +170,7 @@ class _FormHeader extends StatelessWidget {
     final l10n = context.l10n;
     return AppNavHeader(
       title: l10n.reservationNew,
-      subtitle: 'قدّم طلب حجز وحدة للعميل',
+      subtitle: l10n.brokerReservationNewSubtitle,
       compact: true,
       leadingAction: const NavHeaderBack(),
     );
@@ -296,57 +316,17 @@ class _StyledDropdown<T> extends StatelessWidget {
             ),
           ],
         ),
+        // The container draws the field; switch off the theme's own border
+        // and fill so the field doesn't show a second box inside it.
         decoration: const InputDecoration(
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          filled: false,
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         ),
         items: items,
         onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-// ── Styled note field ─────────────────────────────────────────────────────────
-
-class _StyledNoteField extends StatelessWidget {
-  const _StyledNoteField({
-    required this.hint,
-    required this.onChanged,
-  });
-
-  final String hint;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TextField(
-        onChanged: onChanged,
-        maxLines: 4,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: colors.inkMuted.withValues(alpha: 0.55),
-            fontSize: 14,
-          ),
-          contentPadding: const EdgeInsets.all(AppSpacing.md),
-          border: InputBorder.none,
-        ),
       ),
     );
   }

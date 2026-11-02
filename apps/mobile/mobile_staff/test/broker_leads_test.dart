@@ -1,5 +1,7 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_staff/features/broker/leads/data/dtos/broker_lead_dtos.dart';
 import 'package:mobile_staff/features/broker/leads/data/mappers/broker_lead_mapper.dart';
@@ -10,6 +12,7 @@ import 'package:mobile_staff/features/broker/leads/domain/repositories/broker_le
 import 'package:mobile_staff/features/broker/leads/domain/usecases/broker_lead_use_cases.dart';
 import 'package:mobile_staff/features/broker/leads/presentation/cubit/broker_leads_cubit.dart';
 import 'package:mobile_staff/features/broker/leads/presentation/cubit/create_broker_lead_cubit.dart';
+import 'package:mobile_staff/features/broker/leads/presentation/screens/create_broker_lead_screen.dart';
 
 class _FakeRemote implements BrokerLeadsRemoteDataSource {
   _FakeRemote({this.rows = const [], this.error});
@@ -148,6 +151,29 @@ void main() {
       await cubit.submit();
       expect(cubit.state.submitted, isFalse);
       expect(cubit.state.submitFailure?.type, FailureType.validation);
+    });
+  });
+
+  group('CreateBrokerLeadScreen', () {
+    testWidgets('is built from numbered form steps, like the sales forms', (tester) async {
+      final cubit = CreateBrokerLeadCubit(CreateBrokerLead(_FakeRepo()));
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(extensions: [AppColorsExt.resolve(Brightness.light)]),
+        locale: const Locale('ar'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: BlocProvider.value(value: cubit, child: const CreateBrokerLeadScreen()),
+      ));
+      await tester.pump();
+
+      expect(find.byType(AppFormSection), findsNWidgets(2));
+      expect(find.text('01'), findsOneWidget);
+      expect(find.text('02'), findsOneWidget);
+      expect(find.text('بيانات العميل'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).at(0), 'Mona');
+      await tester.enterText(find.byType(TextField).at(1), '+201000');
+      expect(cubit.state.isValid, isTrue);
     });
   });
 }
