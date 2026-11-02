@@ -17,7 +17,9 @@ extension AppToneColors on AppTone {
   /// The tone's base brand/semantic color, resolved from the active theme.
   Color baseColor(AppColorsExt c) => switch (this) {
         AppTone.gold => c.brandGold,
-        AppTone.navy => c.brandNavy,
+        // On a dark surface the brand navy all but disappears; a lighter
+        // navy-blue keeps the card's tint, rail and icon visible.
+        AppTone.navy => c.surface.computeLuminance() < 0.2 ? const Color(0xFF7C9CC9) : c.brandNavy,
         AppTone.success => c.success,
         AppTone.warning => c.warning,
         AppTone.error => c.error,

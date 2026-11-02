@@ -93,6 +93,8 @@ export 'src/auth/token_storage.dart';
 // Widgets
 export 'src/widgets/app_nav_header.dart';
 export 'src/widgets/app_home_header.dart';
+export 'src/widgets/app_info_chip.dart';
+export 'src/widgets/app_kpi_tile.dart';
 export 'src/widgets/unit_specs_grid.dart';
 export 'src/widgets/auth_widgets.dart';
 export 'src/widgets/brand_mark.dart';
