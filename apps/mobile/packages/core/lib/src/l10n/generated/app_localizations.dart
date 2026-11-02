@@ -7741,6 +7741,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add the prospective client\'s details'**
   String get brokerLeadNewSubtitle;
+
+  /// No description provided for @followUpsYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get followUpsYesterday;
 }
 
 class _AppLocalizationsDelegate

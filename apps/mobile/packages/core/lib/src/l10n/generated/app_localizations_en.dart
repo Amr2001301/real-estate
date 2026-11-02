@@ -4122,4 +4122,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brokerLeadNewSubtitle => 'Add the prospective client\'s details';
+
+  @override
+  String get followUpsYesterday => 'Yesterday';
 }

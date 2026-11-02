@@ -1220,7 +1220,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get installmentsEmptyMessage =>
-      'ستظهر جدول الأقساط هنا فور تفعيل خطة لعقدك.';
+      'سيظهر جدول الأقساط هنا فور تفعيل خطة لعقدك.';
 
   @override
   String get installmentStatusPending => 'قيد الانتظار';
@@ -1955,7 +1955,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get appointmentConfirmSuccess =>
-      'تم تأكيد الزيارة. نلقاك في الموعد المتفق عليه.';
+      'تم تأكيد الزيارة. نراك في الموعد المتفق عليه.';
 
   @override
   String get appointmentRescheduleSuccess => 'تم إرسال طلب إعادة الجدولة.';
@@ -2899,19 +2899,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get staffTfaCodeHint =>
-      'افتح تطبيق المصادقة على موبايلك واكتب الكود المكوّن من 6 أرقام.';
+      'افتح تطبيق المصادقة على هاتفك وأدخل الرمز المكوّن من 6 أرقام.';
 
   @override
-  String get staffTfaCodeLabel => 'الكود من التطبيق';
+  String get staffTfaCodeLabel => 'الرمز من التطبيق';
 
   @override
-  String get staffTfaRecoveryLabel => 'كود احتياطي';
+  String get staffTfaRecoveryLabel => 'رمز احتياطي';
 
   @override
-  String get staffTfaUseRecovery => 'معاك كود احتياطي بدل التطبيق؟';
+  String get staffTfaUseRecovery => 'هل لديك رمز احتياطي بدلًا من التطبيق؟';
 
   @override
-  String get staffTfaUseApp => 'استخدم الكود من التطبيق';
+  String get staffTfaUseApp => 'استخدم الرمز من التطبيق';
 
   @override
   String get staffTfaVerify => 'تأكيد';
@@ -2921,30 +2921,30 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get staffTfaWrongCode =>
-      'الكود غير صحيح — تأكد من الكود الحالي في التطبيق';
+      'الرمز غير صحيح — تحقّق من الرمز الحالي في التطبيق';
 
   @override
   String get staffTfaLocked => 'محاولات خاطئة كثيرة — حاول بعد 15 دقيقة';
 
   @override
-  String get staffTfaExpired => 'انتهت مهلة الخطوة دي — سجّل دخولك من جديد';
+  String get staffTfaExpired => 'انتهت مهلة هذه الخطوة — سجّل الدخول من جديد';
 
   @override
-  String get staffTfaInvalidFormat => 'اكتب الكود المكوّن من 6 أرقام';
+  String get staffTfaInvalidFormat => 'أدخل الرمز المكوّن من 6 أرقام';
 
   @override
   String get staffTfaSetupTitle => 'فعّل التحقق بخطوتين';
 
   @override
   String get staffTfaSetupHint =>
-      'شركتك بتطلب كود من تطبيق مصادقة مع كلمة المرور. ضيف المفتاح ده في تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، وبعدين اكتب الكود اللي هيظهر.';
+      'تشترط شركتك رمزًا من تطبيق مصادقة إلى جانب كلمة المرور. أضف هذا المفتاح إلى تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، ثم أدخل الرمز الذي يظهر فيه.';
 
   @override
   String get staffTfaOpenApp => 'إضافة في تطبيق المصادقة';
 
   @override
   String get staffTfaNoApp =>
-      'مفيش تطبيق مصادقة على الموبايل — انسخ المفتاح وضيفه يدويًا';
+      'لا يوجد تطبيق مصادقة على الهاتف — انسخ المفتاح وأضفه يدويًا';
 
   @override
   String get staffTfaKeyLabel => 'المفتاح';
@@ -2959,21 +2959,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get staffTfaEnable => 'تفعيل ومتابعة';
 
   @override
-  String get staffTfaCodesTitle => 'الأكواد الاحتياطية';
+  String get staffTfaCodesTitle => 'الرموز الاحتياطية';
 
   @override
   String get staffTfaCodesHint =>
-      'احتفظ بالأكواد دي في مكان آمن. كل كود يشتغل مرة واحدة لو موبايلك مش معاك، ومش هتظهر تاني.';
+      'احتفظ بهذه الرموز في مكان آمن. يُستخدم كل رمز مرة واحدة إذا لم يكن هاتفك معك، ولن تظهر مرة أخرى.';
 
   @override
-  String get staffTfaCodesContinue => 'حفظتها — متابعة';
+  String get staffTfaCodesContinue => 'حفظتُها — متابعة';
 
   @override
-  String get leadLostTitle => 'ليه خسرنا العميل ده؟';
+  String get leadLostTitle => 'لماذا خسرنا هذا العميل؟';
 
   @override
   String get leadLostHint =>
-      'اختار السبب. ده اللي بيظهر في تقرير أسباب الخسارة.';
+      'اختر السبب. يظهر هذا السبب في تقرير أسباب الخسارة.';
 
   @override
   String get leadLostNote => 'تفاصيل (اختياري)';
@@ -2983,7 +2983,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get leadLostEmpty =>
-      'مفيش أسباب خسارة متسجلة لشركتك — اطلب من المدير يضيفها من لوحة التحكم.';
+      'لا توجد أسباب خسارة مسجّلة لشركتك — اطلب من المدير إضافتها من لوحة التحكم.';
 
   @override
   String get leadLostReasonLabel => 'سبب الخسارة';
@@ -2993,54 +2993,54 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get followUpsHint =>
-      'العملاء اللي جه ميعاد التواصل معاهم: المتأخر الأول، بعدين النهارده، بعدين الجاي.';
+      'العملاء الذين حان موعد التواصل معهم: المتأخر أولًا، ثم اليوم، ثم القادم.';
 
   @override
   String get followUpsOverdue => 'متأخرة';
 
   @override
-  String get followUpsToday => 'النهارده';
+  String get followUpsToday => 'اليوم';
 
   @override
-  String get followUpsUpcoming => 'الجاية';
+  String get followUpsUpcoming => 'القادمة';
 
   @override
-  String get followUpsEmptyOverdue => 'مفيش متابعات متأخرة — شغل عظيم.';
+  String get followUpsEmptyOverdue => 'لا توجد متابعات متأخرة — عمل رائع.';
 
   @override
-  String get followUpsEmptyToday => 'مفيش متابعات باقية النهارده.';
+  String get followUpsEmptyToday => 'لا توجد متابعات متبقية اليوم.';
 
   @override
-  String get followUpsEmptyUpcoming => 'مفيش متابعات جاية.';
+  String get followUpsEmptyUpcoming => 'لا توجد متابعات قادمة.';
 
   @override
   String get followUpsEmptyHint =>
-      'حدد ميعاد المتابعة الجاية لما تسجّل أي تواصل مع العميل.';
+      'حدّد موعد المتابعة التالية عند تسجيل أي تواصل مع العميل.';
 
   @override
   String followUpsFocusLine(int overdue, int today) {
-    return '$overdue متأخرة · $today النهارده';
+    return '$overdue متأخرة · $today اليوم';
   }
 
   @override
   String get followUpsLastActivity => 'آخر تواصل';
 
   @override
-  String get followUpsNoActivity => 'لسه مفيش تواصل';
+  String get followUpsNoActivity => 'لا يوجد تواصل بعد';
 
   @override
-  String get leadNextAction => 'المتابعة الجاية';
+  String get leadNextAction => 'المتابعة التالية';
 
   @override
   String get leadNextActionNone =>
-      'مفيش متابعة محددة — حدد ميعاد لما تسجّل التواصل الجاي.';
+      'لا توجد متابعة محدّدة — حدّد موعدًا عند تسجيل التواصل التالي.';
 
   @override
-  String get leadLogActivity => 'سجّل تواصل';
+  String get leadLogActivity => 'تسجيل تواصل';
 
   @override
   String get leadLogActivityHint =>
-      'مكالمة أو اجتماع أو واتساب أو ملاحظة، ومعاها ميعاد المتابعة الجاية.';
+      'مكالمة أو اجتماع أو واتساب أو ملاحظة، مع موعد المتابعة التالية.';
 
   @override
   String get noteKindNote => 'ملاحظة';
@@ -3061,37 +3061,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String get callResultLabel => 'نتيجة المكالمة';
 
   @override
-  String get callResultAnswered => 'رد';
+  String get callResultAnswered => 'تم الرد';
 
   @override
-  String get callResultNoAnswer => 'مردّش';
+  String get callResultNoAnswer => 'لم يرد';
 
   @override
   String get callResultBusy => 'مشغول';
 
   @override
-  String get callResultUnreachable => 'مش متاح';
+  String get callResultUnreachable => 'غير متاح';
 
   @override
-  String get callResultWrongNumber => 'رقم غلط';
+  String get callResultWrongNumber => 'رقم خاطئ';
 
   @override
-  String get activityWhatHappened => 'حصل إيه؟';
+  String get activityWhatHappened => 'ماذا حدث؟';
 
   @override
-  String get activityBodyHint => 'اكتب اللي حصل واللي اتفقتوا عليه…';
+  String get activityBodyHint => 'اكتب ما حدث وما اتفقتم عليه…';
 
   @override
-  String get activityNextKeep => 'سيبها زي ما هي';
+  String get activityNextKeep => 'أبقِها كما هي';
 
   @override
-  String get activityNextNone => 'من غير متابعة';
+  String get activityNextNone => 'بدون متابعة';
 
   @override
   String get activityNextIn1h => 'بعد ساعة';
 
   @override
-  String get activityNextTomorrow => 'بكرة';
+  String get activityNextTomorrow => 'غدًا';
 
   @override
   String get activityNextIn3Days => 'بعد 3 أيام';
@@ -3100,16 +3100,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get activityNextWeek => 'بعد أسبوع';
 
   @override
-  String get activityNextPick => 'ميعاد تاني…';
+  String get activityNextPick => 'موعد آخر…';
 
   @override
-  String get activityNextType => 'نوعها';
+  String get activityNextType => 'نوع المتابعة';
 
   @override
   String get activityNextNote => 'ملاحظة للمتابعة (اختياري)';
 
   @override
-  String get activityPastDate => 'اختار ميعاد في المستقبل';
+  String get activityPastDate => 'اختر موعدًا في المستقبل';
 
   @override
   String get activitySave => 'حفظ التواصل';
@@ -3118,38 +3118,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noteReply => 'رد';
 
   @override
-  String get noteReplyHint => 'اكتب رد…';
+  String get noteReplyHint => 'اكتب ردًا…';
 
   @override
   String get noteReplySend => 'إرسال';
 
   @override
-  String get activitySectionWhatSubtitle => 'نوع التواصل، ولو مكالمة: نتيجتها';
+  String get activitySectionWhatSubtitle =>
+      'نوع التواصل، ونتيجته إن كان مكالمة';
 
   @override
   String get activitySectionDetails => 'التفاصيل';
 
   @override
-  String get activitySectionDetailsSubtitle => 'اللي حصل واللي اتفقتوا عليه';
+  String get activitySectionDetailsSubtitle => 'ما حدث وما اتفقتم عليه';
 
   @override
-  String get activitySectionNextSubtitle => 'إمتى هتتواصل مع العميل تاني؟';
+  String get activitySectionNextSubtitle => 'متى ستتواصل مع العميل مرة أخرى؟';
 
   @override
-  String get activityNextSet => 'حدد ميعاد';
+  String get activityNextSet => 'تحديد موعد';
 
   @override
-  String get activityNextWhen => 'الميعاد';
+  String get activityNextWhen => 'الموعد';
 
   @override
   String get calendarTitle => 'التقويم';
 
   @override
-  String get calendarEmptyDay => 'مفيش مواعيد في اليوم ده';
+  String get calendarEmptyDay => 'لا توجد مواعيد في هذا اليوم';
 
   @override
   String get calendarEmptyHint =>
-      'الزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود بتظهر هنا في ميعادها.';
+      'تظهر هنا الزيارات والمتابعات وانتهاء الحجوزات وتوقيع العقود في مواعيدها.';
 
   @override
   String get calendarTypeVisit => 'زيارة';
@@ -3167,10 +3168,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get calendarDone => 'تمّت';
 
   @override
-  String get calendarPrevWeek => 'الأسبوع اللي فات';
+  String get calendarPrevWeek => 'الأسبوع الماضي';
 
   @override
-  String get calendarNextWeek => 'الأسبوع الجاي';
+  String get calendarNextWeek => 'الأسبوع القادم';
 
   @override
   String get depositTypeFee => 'رسوم وغرامات';
@@ -3188,32 +3189,32 @@ class AppLocalizationsAr extends AppLocalizations {
   String get chequesTitle => 'الشيكات';
 
   @override
-  String get chequeStatusPending => 'لسه ما اتودعش';
+  String get chequeStatusPending => 'لم يُودَع بعد';
 
   @override
   String get chequeStatusDeposited => 'مودَع بالبنك';
 
   @override
-  String get chequeStatusCleared => 'اتصرف';
+  String get chequeStatusCleared => 'صُرف';
 
   @override
   String get chequeStatusBounced => 'مرتد';
 
   @override
-  String get chequeStatusReplaced => 'اتستبدل';
+  String get chequeStatusReplaced => 'استُبدل';
 
   @override
   String get chequeStatusCancelled => 'ملغي';
 
   @override
-  String get chequesEmpty => 'مفيش شيكات هنا';
+  String get chequesEmpty => 'لا توجد شيكات هنا';
 
   @override
   String get chequesEmptyHint =>
-      'الشيكات اللي العملاء بيدفعوا بيها بتظهر هنا بالأقرب استحقاقًا.';
+      'تظهر هنا الشيكات التي يدفع بها العملاء مرتّبة حسب أقرب استحقاق.';
 
   @override
-  String get chequeDueForDeposit => 'جه ميعاد الإيداع';
+  String get chequeDueForDeposit => 'حان موعد الإيداع';
 
   @override
   String get chequeNumberLabel => 'رقم الشيك';
@@ -3240,46 +3241,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get chequeRecordedBy => 'سجّله';
 
   @override
-  String get chequeClearedOn => 'اتصرف يوم';
+  String get chequeClearedOn => 'صُرف بتاريخ';
 
   @override
-  String get chequeBouncedOn => 'ارتد يوم';
+  String get chequeBouncedOn => 'ارتد بتاريخ';
 
   @override
   String get chequeBounceReason => 'سبب الارتداد';
 
   @override
-  String get chequeReplacedBy => 'اتستبدل بشيك';
+  String get chequeReplacedBy => 'استُبدل بشيك';
 
   @override
-  String get chequePayments => 'الدفعات اللي بيغطيها';
+  String get chequePayments => 'الدفعات التي يغطيها';
 
   @override
   String get chequeInstallmentDue => 'قسط مستحق';
 
   @override
   String get chequeOnDashboard =>
-      'الارتداد والإلغاء والاستبدال بيتعملوا من لوحة التحكم على الويب.';
+      'يتم الارتداد والإلغاء والاستبدال من لوحة التحكم على الويب.';
 
   @override
-  String get chequeActionDeposit => 'اتودّع في البنك';
+  String get chequeActionDeposit => 'تسجيل الإيداع';
 
   @override
   String get chequeDepositTitle => 'تسجيل إيداع الشيك';
 
   @override
   String get chequeDepositHint =>
-      'الشيك هيتسجل إنه اتودّع في البنك ومستني الصرف.';
+      'سيُسجَّل الشيك على أنه أُودع في البنك وبانتظار الصرف.';
 
   @override
-  String get chequeActionClear => 'اتصرف';
+  String get chequeActionClear => 'تسجيل الصرف';
 
   @override
   String get chequeClearTitle => 'تسجيل صرف الشيك';
 
   @override
   String get chequeClearHint =>
-      'الدفعة اللي بيغطيها الشيك هتتسجل مدفوعة بتاريخ الصرف.';
+      'ستُسجَّل الدفعة التي يغطيها الشيك مدفوعةً بتاريخ الصرف.';
 
   @override
   String get chequeClearDate => 'تاريخ الصرف';
@@ -3288,10 +3289,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get chequeConfirm => 'تأكيد';
 
   @override
-  String get chequeDepositedDone => 'اتسجل إيداع الشيك';
+  String get chequeDepositedDone => 'تم تسجيل إيداع الشيك';
 
   @override
-  String get chequeClearedDone => 'اتسجل صرف الشيك';
+  String get chequeClearedDone => 'تم تسجيل صرف الشيك';
 
   @override
   String get assistantTitle => 'المساعد الذكي';
@@ -3304,7 +3305,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get assistantScopeHint =>
-      'الأقساط المتأخرة، الوحدات المتاحة، الفرص والحجوزات والزيارات. بيرد من البيانات اللي متاحة ليك بس، ومبيغيّرش أي حاجة. كل سؤال بيتحسب من باقة الشركة.';
+      'الأقساط المتأخرة، والوحدات المتاحة، والفرص، والحجوزات، والزيارات. يجيب من البيانات المتاحة لك فقط، ولا يغيّر أي شيء. يُحتسب كل سؤال من باقة الشركة.';
 
   @override
   String get assistantPlaceholder => 'اكتب سؤالك…';
@@ -3313,146 +3314,147 @@ class AppLocalizationsAr extends AppLocalizations {
   String get assistantSend => 'إرسال';
 
   @override
-  String get assistantThinking => 'بيدوّر في البيانات…';
+  String get assistantThinking => 'يبحث في البيانات…';
 
   @override
-  String get assistantSuggestOverdue => 'مين العملاء اللي عليهم أقساط متأخرة؟';
+  String get assistantSuggestOverdue => 'من العملاء الذين عليهم أقساط متأخرة؟';
 
   @override
-  String get assistantSuggestUnits => 'إيه الوحدات المتاحة بـ 3 غرف أو أكتر؟';
+  String get assistantSuggestUnits => 'ما الوحدات المتاحة بثلاث غرف أو أكثر؟';
 
   @override
   String get assistantSuggestSummary => 'ملخص سريع للمبيعات والحجوزات';
 
   @override
-  String get assistantSuggestVisits => 'إيه الزيارات اللي عندي النهارده وبكرة؟';
+  String get assistantSuggestVisits => 'ما الزيارات المجدولة لي اليوم وغدًا؟';
 
   @override
   String get assistantNotConfigured =>
-      'المساعد الذكي مش متاح على المنصة دلوقتي.';
+      'المساعد الذكي غير متاح على المنصة حاليًا.';
 
   @override
   String get assistantNotActive =>
-      'المساعد مش مفعّل لشركتك أو باقته خلصت — كلّم مدير الشركة.';
+      'المساعد غير مفعّل لشركتك أو انتهت باقته — تواصل مع مدير الشركة.';
 
   @override
   String get assistantExhausted =>
-      'أسئلة الباقة خلصت الشهر ده — كلّم مدير الشركة.';
+      'نفدت أسئلة الباقة لهذا الشهر — تواصل مع مدير الشركة.';
 
   @override
-  String get assistantErrorExhausted => 'أسئلة الباقة خلصت الشهر ده.';
+  String get assistantErrorExhausted => 'نفدت أسئلة الباقة لهذا الشهر.';
 
   @override
-  String get assistantErrorNotActive => 'المساعد مش مفعّل أو مدة الباقة خلصت.';
+  String get assistantErrorNotActive =>
+      'المساعد غير مفعّل أو انتهت مدة الباقة.';
 
   @override
   String get assistantErrorUnavailable =>
-      'معرفناش نوصل للمساعد — السؤال ما اتحسبش، جرّب تاني.';
+      'تعذّر الوصول إلى المساعد — لم يُحتسب السؤال، حاول مرة أخرى.';
 
   @override
   String get assistantErrorRate =>
-      'أسئلة كتير في وقت قصير — استنى دقيقة وجرّب تاني.';
+      'أسئلة كثيرة في وقت قصير — انتظر دقيقة ثم حاول مرة أخرى.';
 
   @override
   String get signTitle => 'توقيع العميل';
 
   @override
-  String get signNotSent => 'لسه ما اتبعتش للتوقيع';
+  String get signNotSent => 'لم يُرسَل للتوقيع بعد';
 
   @override
   String get signNotSentHint =>
-      'ابعت نموذج الحجز للعميل يمضي عليه من موبايله: هيوصله كود على رقمه ويمضي بإيده.';
+      'أرسل نموذج الحجز إلى العميل ليوقّع عليه من هاتفه: يصله رمز على رقمه ويوقّع بنفسه.';
 
   @override
-  String get signStatePending => 'مستني توقيع العميل';
+  String get signStatePending => 'بانتظار توقيع العميل';
 
   @override
-  String get signStateSigned => 'العميل مضى';
+  String get signStateSigned => 'وقّع العميل';
 
   @override
-  String get signStateExpired => 'اللينك انتهى';
+  String get signStateExpired => 'انتهت صلاحية الرابط';
 
   @override
-  String get signStateCancelled => 'الطلب اتلغى';
+  String get signStateCancelled => 'أُلغي الطلب';
 
   @override
   String signCodeTo(String phone) {
-    return 'الكود بيروح على $phone';
+    return 'يُرسَل الرمز إلى $phone';
   }
 
   @override
   String signExpires(String when) {
-    return 'اللينك شغال لحد $when';
+    return 'الرابط صالح حتى $when';
   }
 
   @override
   String signSignedBy(String name, String when) {
-    return 'مضى باسم $name — $when';
+    return 'وقّع باسم $name — $when';
   }
 
   @override
   String signSentAt(String when) {
-    return 'اتبعت $when';
+    return 'أُرسل $when';
   }
 
   @override
   String get signOutdated =>
-      'الحجز اتغيّر بعد ما العميل مضى — التوقيع على نسخة أقدم. ابعت لينك جديد.';
+      'تغيّر الحجز بعد توقيع العميل — التوقيع على نسخة أقدم. أرسل رابطًا جديدًا.';
 
   @override
-  String get signSend => 'ابعت للتوقيع';
+  String get signSend => 'إرسال للتوقيع';
 
   @override
-  String get signSendNew => 'ابعت لينك جديد';
+  String get signSendNew => 'إرسال رابط جديد';
 
   @override
   String get signCancel => 'إلغاء الطلب';
 
   @override
-  String get signNewLinkTitle => 'تبعت لينك جديد؟';
+  String get signNewLinkTitle => 'إرسال رابط جديد؟';
 
   @override
-  String get signNewLinkBody => 'اللينك اللي اتبعت قبل كده هيبطّل يشتغل.';
+  String get signNewLinkBody => 'سيتوقف الرابط المُرسَل سابقًا عن العمل.';
 
   @override
-  String get signCancelTitle => 'تلغي طلب التوقيع؟';
+  String get signCancelTitle => 'إلغاء طلب التوقيع؟';
 
   @override
-  String get signCancelBody => 'اللينك اللي مع العميل هيبطّل يشتغل.';
+  String get signCancelBody => 'سيتوقف الرابط الذي لدى العميل عن العمل.';
 
   @override
   String get signCancelConfirm => 'إلغاء الطلب';
 
   @override
-  String get signLinkReady => 'لينك التوقيع جاهز';
+  String get signLinkReady => 'رابط التوقيع جاهز';
 
   @override
   String get signLinkHint =>
-      'ابعته للعميل دلوقتي — اللينك مش هيظهر تاني، وشغال 72 ساعة.';
+      'أرسله إلى العميل الآن — لن يظهر الرابط مرة أخرى، وهو صالح لمدة 72 ساعة.';
 
   @override
   String get signCopy => 'نسخ';
 
   @override
-  String get signCopied => 'اتنسخ اللينك';
+  String get signCopied => 'تم نسخ الرابط';
 
   @override
   String get signShare => 'مشاركة';
 
   @override
   String signShareMessage(String name, String url) {
-    return 'أهلاً $name، ده لينك نموذج الحجز عشان تراجعه وتمضي عليه:\n$url';
+    return 'مرحبًا $name، هذا رابط نموذج الحجز لمراجعته والتوقيع عليه:\n$url';
   }
 
   @override
   String get campaignsTitle => 'الحملات';
 
   @override
-  String get campaignsEmpty => 'مفيش حملات';
+  String get campaignsEmpty => 'لا توجد حملات';
 
   @override
   String get campaignsEmptyHint =>
-      'الحملات بتتعمل ويتسجّل صرفها من لوحة التحكم على الويب.';
+      'تُنشأ الحملات ويُسجَّل صرفها من لوحة التحكم على الويب.';
 
   @override
   String get campaignsSpend => 'إجمالي الصرف';
@@ -3467,7 +3469,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get campaignsWon => 'المبيعات';
 
   @override
-  String get campaignsCpa => 'تكلفة البيعة';
+  String get campaignsCpa => 'تكلفة البيع';
 
   @override
   String campaignLeadsCount(String n) {
@@ -3476,12 +3478,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String campaignWonCount(String n) {
-    return '$n بيعة';
+    return '$n عملية بيع';
   }
 
   @override
   String campaignLostCount(String n) {
-    return '$n عميل اتقفل خسارة';
+    return '$n عميل أُغلق كخسارة';
   }
 
   @override
@@ -3490,7 +3492,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get campaignQualified => 'مؤهلين';
+  String get campaignQualified => 'مؤهَّلون';
 
   @override
   String get campaignChannel => 'القناة';
@@ -3511,13 +3513,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get campaignCode => 'كود الرابط';
 
   @override
-  String get campaignPlatforms => 'العملاء جم منين';
+  String get campaignPlatforms => 'مصادر العملاء';
 
   @override
   String get campaignSpendLog => 'الصرف';
 
   @override
-  String get campaignSpendEmpty => 'لسه مفيش صرف متسجّل.';
+  String get campaignSpendEmpty => 'لا يوجد صرف مسجّل بعد.';
 
   @override
   String get campaignOnDashboard =>
@@ -3584,16 +3586,16 @@ class AppLocalizationsAr extends AppLocalizations {
   String get campaignPlatformOther => 'مصدر آخر';
 
   @override
-  String get campaignPlatformUnknown => 'مش معروف';
+  String get campaignPlatformUnknown => 'غير معروف';
 
   @override
   String get leadCampaign => 'الحملة';
 
   @override
-  String get leadCampaignHint => 'الحملة اللي جابت العميل (اختياري)';
+  String get leadCampaignHint => 'الحملة التي جاء منها العميل (اختياري)';
 
   @override
-  String get leadCampaignNone => 'من غير حملة';
+  String get leadCampaignNone => 'بدون حملة';
 
   @override
   String get campaignsSubtitle => 'الصرف والعملاء والمبيعات من كل حملة';
@@ -3605,24 +3607,24 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String campaignUntil(String n) {
-    return 'لحد $n';
+    return 'حتى $n';
   }
 
   @override
-  String get duplicatesTitle => 'العملاء المكررين';
+  String get duplicatesTitle => 'العملاء المكررون';
 
   @override
-  String get duplicatesSubtitle => 'نفس العميل بأكتر من فرصة مفتوحة — ادمجهم';
+  String get duplicatesSubtitle => 'العميل نفسه بأكثر من فرصة مفتوحة — ادمجها';
 
   @override
   String get duplicatesHow =>
-      'اختار الفرصة اللي تفضل، والباقي يتدمج فيها بكل ملاحظاته ومكالماته وزياراته. الفرصة اللي بتفضل بتاخد اللي ناقصها (الحملة، المصدر، المشروع، المسؤول، المتابعة الجاية) وأبعد مرحلة وصلوا لها.';
+      'اختر الفرصة التي ستبقى، وتُدمج فيها البقية بكل ملاحظاتها ومكالماتها وزياراتها. تأخذ الفرصة الباقية ما ينقصها (الحملة، والمصدر، والمشروع، والمسؤول، والمتابعة التالية) وأبعد مرحلة وصلت إليها.';
 
   @override
-  String get duplicatesEmpty => 'مفيش عملاء مكررين';
+  String get duplicatesEmpty => 'لا يوجد عملاء مكررون';
 
   @override
-  String get duplicatesEmptyHint => 'كل عميل ليه فرصة مفتوحة واحدة.';
+  String get duplicatesEmptyHint => 'لكل عميل فرصة مفتوحة واحدة.';
 
   @override
   String duplicatesOpenLeads(String n) {
@@ -3630,19 +3632,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get duplicatesKeep => 'تفضل';
+  String get duplicatesKeep => 'تبقى';
 
   @override
-  String get duplicatesMerge => 'تتدمج';
+  String get duplicatesMerge => 'تُدمج';
 
   @override
   String get duplicatesOwner => 'المسؤول';
 
   @override
-  String get duplicatesUnassigned => 'مش متوزعة';
+  String get duplicatesUnassigned => 'غير مُسندة';
 
   @override
-  String get duplicatesAdded => 'اتضافت';
+  String get duplicatesAdded => 'أُضيفت';
 
   @override
   String duplicatesActivities(String n) {
@@ -3651,23 +3653,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get duplicatesLocked =>
-      'فيها حجز أو وسيط — مش بتتدمج، خليها هي اللي تفضل';
+      'عليها حجز أو وسيط — لا يمكن دمجها، اجعلها هي الباقية';
 
   @override
   String duplicatesMergeN(String n) {
-    return 'ادمج $n في اللي بتفضل';
+    return 'دمج $n في الفرصة الباقية';
   }
 
   @override
-  String get duplicatesConfirmTitle => 'تدمج الفرص؟';
+  String get duplicatesConfirmTitle => 'دمج الفرص؟';
 
   @override
   String get duplicatesConfirmBody =>
-      'ملاحظاتها وسجلها هيتنقلوا للفرصة اللي بتفضل، وبعدين تتمسح.';
+      'ستُنقل ملاحظاتها وسجلها إلى الفرصة الباقية، ثم تُحذف.';
 
   @override
   String duplicatesMerged(String n) {
-    return 'اتدمج $n';
+    return 'تم دمج $n';
   }
 
   @override
@@ -3675,10 +3677,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get securityDevicesHint =>
-      'الأجهزة اللي داخلة على حسابك دلوقتي. لو في جهاز مش بتاعك اخرج منه وغيّر كلمة المرور.';
+      'الأجهزة المسجّلة الدخول إلى حسابك الآن. إن وجدت جهازًا لا يخصك فسجّل خروجه وغيّر كلمة المرور.';
 
   @override
-  String get securityThisDevice => 'الجهاز ده';
+  String get securityThisDevice => 'هذا الجهاز';
 
   @override
   String securityLastSeen(String when) {
@@ -3703,101 +3705,101 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get securitySignOut => 'خروج';
+  String get securitySignOut => 'تسجيل الخروج';
 
   @override
-  String get securitySignOutTitle => 'تخرج من الجهاز ده؟';
+  String get securitySignOutTitle => 'تسجيل الخروج من هذا الجهاز؟';
 
   @override
   String securitySignOutBody(String device) {
-    return '$device هيتطلب منه يسجّل دخول تاني.';
+    return 'سيُطلب من $device تسجيل الدخول مرة أخرى.';
   }
 
   @override
-  String get securitySignedOut => 'اتعمل خروج من الجهاز';
+  String get securitySignedOut => 'تم تسجيل الخروج من الجهاز';
 
   @override
-  String get securitySignOutOthers => 'اخرج من كل الأجهزة التانية';
+  String get securitySignOutOthers => 'تسجيل الخروج من كل الأجهزة الأخرى';
 
   @override
-  String get securitySignOutOthersTitle => 'تخرج من كل الأجهزة التانية؟';
+  String get securitySignOutOthersTitle => 'تسجيل الخروج من كل الأجهزة الأخرى؟';
 
   @override
   String get securitySignOutOthersBody =>
-      'كل الأجهزة غير الموبايل ده هيتطلب منها تسجّل دخول تاني.';
+      'سيُطلب من كل الأجهزة عدا هذا الهاتف تسجيل الدخول مرة أخرى.';
 
   @override
   String securitySignedOutOthers(String n) {
-    return 'اتعمل خروج من $n جهاز';
+    return 'تم تسجيل الخروج من الأجهزة الأخرى ($n)';
   }
 
   @override
-  String get securityOn => 'شغّال';
+  String get securityOn => 'مفعّل';
 
   @override
-  String get securityOff => 'مقفول';
+  String get securityOff => 'غير مفعّل';
 
   @override
   String get securityTfaHint =>
-      'كود من تطبيق المصادقة مع كلمة المرور كل مرة تسجّل دخول.';
+      'رمز من تطبيق المصادقة مع كلمة المرور في كل مرة تسجّل فيها الدخول.';
 
   @override
   String get securityTfaRequired =>
-      'شركتك بتطلب التحقق بخطوتين، فمينفعش يتقفل.';
+      'تشترط شركتك التحقق بخطوتين، لذا لا يمكن إيقافه.';
 
   @override
-  String get securityTfaTurnOn => 'شغّل التحقق بخطوتين';
+  String get securityTfaTurnOn => 'تفعيل التحقق بخطوتين';
 
   @override
-  String get securityTfaTurnOff => 'اقفله';
+  String get securityTfaTurnOff => 'إيقاف';
 
   @override
   String get securityTfaSetupHint =>
-      'ضيف المفتاح ده في تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، وبعدين اكتب الكود اللي هيظهر.';
+      'أضف هذا المفتاح إلى تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator)، ثم أدخل الرمز الذي يظهر فيه.';
 
   @override
   String get securityTfaOffBody =>
-      'اكتب كلمة المرور وكود من التطبيق عشان تقفل التحقق بخطوتين.';
+      'أدخل كلمة المرور ورمزًا من التطبيق لإيقاف التحقق بخطوتين.';
 
   @override
-  String get securityTfaOffDone => 'التحقق بخطوتين اتقفل';
+  String get securityTfaOffDone => 'تم إيقاف التحقق بخطوتين';
 
   @override
   String securityRecoveryLeft(String n) {
-    return 'فاضل $n كود احتياطي';
+    return 'الرموز الاحتياطية المتبقية: $n';
   }
 
   @override
-  String get securityNewCodes => 'أكواد احتياطية جديدة';
+  String get securityNewCodes => 'رموز احتياطية جديدة';
 
   @override
   String get securityNewCodesBody =>
-      'الأكواد القديمة هتبطّل. اكتب كود من التطبيق عشان تطلع أكواد جديدة.';
+      'ستتوقف الرموز القديمة عن العمل. أدخل رمزًا من التطبيق لإنشاء رموز جديدة.';
 
   @override
-  String get securityPasswordHint => 'كلمة مرور قوية من 8 حروف على الأقل.';
+  String get securityPasswordHint => 'كلمة مرور قوية من 8 أحرف على الأقل.';
 
   @override
-  String get securityChangePassword => 'غيّر كلمة المرور';
+  String get securityChangePassword => 'تغيير كلمة المرور';
 
   @override
   String get securityCurrentPassword => 'كلمة المرور الحالية';
 
   @override
-  String get securityPasswordAgain => 'اكتب كلمة المرور الجديدة تاني';
+  String get securityPasswordAgain => 'أعد كتابة كلمة المرور الجديدة';
 
   @override
-  String get securityPasswordMismatch => 'كلمتين المرور مش زي بعض';
+  String get securityPasswordMismatch => 'كلمتا المرور غير متطابقتين';
 
   @override
-  String get securityPasswordChanged => 'كلمة المرور اتغيّرت';
+  String get securityPasswordChanged => 'تم تغيير كلمة المرور';
 
   @override
-  String get leadDupTitle => 'العميل ده عنده فرصة مفتوحة بالفعل';
+  String get leadDupTitle => 'لدى هذا العميل فرصة مفتوحة بالفعل';
 
   @override
   String get leadDupDesc =>
-      'إضافة فرصة تانية بتقسم متابعته بين فرصتين. كمّل على الموجودة، أو أضف جديدة لو ده طلب مختلف فعلًا.';
+      'إضافة فرصة ثانية تقسم متابعته بين فرصتين. تابع الفرصة الحالية، أو أضف فرصة جديدة إن كان هذا طلبًا مختلفًا فعلًا.';
 
   @override
   String get leadDupOwner => 'المسؤول';
@@ -3806,17 +3808,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leadDupUnassigned => 'بدون مسؤول';
 
   @override
-  String get leadDupOpen => 'افتح الفرصة';
+  String get leadDupOpen => 'فتح الفرصة';
 
   @override
-  String get leadDupAnyway => 'أضف فرصة جديدة على أي حال';
+  String get leadDupAnyway => 'إضافة فرصة جديدة على أي حال';
 
   @override
-  String get reservationDecideTitle => 'مستني موافقتك';
+  String get reservationDecideTitle => 'بانتظار موافقتك';
 
   @override
   String get reservationDecideDesc =>
-      'الموافقة بتسمح إن الحجز يكمل لعقد، والرفض بيرجّع الوحدة متاحة.';
+      'الموافقة تسمح بإكمال الحجز إلى عقد، والرفض يعيد الوحدة متاحة.';
 
   @override
   String reservationBookedBy(String name) {
@@ -3830,13 +3832,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationReject => 'رفض';
 
   @override
-  String get reservationApproveConfirm => 'توافق على الحجز ده؟';
+  String get reservationApproveConfirm => 'الموافقة على هذا الحجز؟';
 
   @override
   String get reservationRejectTitle => 'رفض الحجز';
 
   @override
-  String get reservationRejectReasonHint => 'السبب (هيظهر للمندوب)';
+  String get reservationRejectReasonHint => 'السبب (سيظهر لمستشار المبيعات)';
 
   @override
   String get reservationApprovedDone => 'تمت الموافقة على الحجز';
@@ -3845,10 +3847,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get reservationRejectedDone => 'تم رفض الحجز';
 
   @override
-  String get contractDeliveryPromised => 'ميعاد التسليم في العقد';
+  String get contractDeliveryPromised => 'موعد التسليم في العقد';
 
   @override
-  String get contractDeliveryExpected => 'ميعاد التسليم المتوقع حاليًا';
+  String get contractDeliveryExpected => 'موعد التسليم المتوقع حاليًا';
 
   @override
   String contractDeliveryLate(int days) {
@@ -3960,7 +3962,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contentAboutCompany => 'عن الشركة';
 
   @override
-  String get contentPageEmpty => 'الصفحة دي لسه فاضية.';
+  String get contentPageEmpty => 'هذه الصفحة فارغة حاليًا.';
 
   @override
   String installmentPaidOn(String date) {
@@ -4077,4 +4079,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brokerLeadNewSubtitle => 'أضف بيانات العميل المحتمل';
+
+  @override
+  String get followUpsYesterday => 'أمس';
 }

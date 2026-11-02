@@ -155,7 +155,7 @@ void main() {
     await tester.tap(find.byKey(const Key('assistant-suggestion-0')));
     await tester.pump();
     await tester.pump();
-    expect(repo.asked.single.$1, 'مين العملاء اللي عليهم أقساط متأخرة؟');
+    expect(repo.asked.single.$1, 'من العملاء الذين عليهم أقساط متأخرة؟');
     expect(find.textContaining('answer to'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('assistant-input')), 'وحدات؟');

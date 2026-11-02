@@ -129,10 +129,10 @@ void main() {
     expect(cubit.state.working, isFalse);
   });
 
-  testWidgets('not sent yet: «ابعت للتوقيع» opens the link to share', (t) async {
+  testWidgets('not sent yet: «إرسال للتوقيع» opens the link to share', (t) async {
     final repo = _Repo();
     await _pump(t, repo);
-    expect(find.text('لسه ما اتبعتش للتوقيع'), findsOneWidget);
+    expect(find.text('لم يُرسَل للتوقيع بعد'), findsOneWidget);
     await t.tap(find.byKey(const Key('signature-send')));
     await t.pump();
     await t.pump();
@@ -145,14 +145,14 @@ void main() {
   testWidgets('waiting: cancel asks first', (t) async {
     final repo = _Repo([const SignatureRequest(id: 'p1', state: 'PENDING', phone: '+20 ••• ••• 4567')]);
     await _pump(t, repo);
-    expect(find.text('مستني توقيع العميل'), findsOneWidget);
+    expect(find.text('بانتظار توقيع العميل'), findsOneWidget);
     await t.tap(find.byKey(const Key('signature-cancel')));
     await t.pump(const Duration(milliseconds: 300));
     await t.tap(find.widgetWithText(FilledButton, 'إلغاء الطلب'));
     await t.pump();
     await t.pump();
     expect(repo.calls, ['cancel:p1']);
-    expect(find.text('الطلب اتلغى'), findsOneWidget);
+    expect(find.text('أُلغي الطلب'), findsOneWidget);
   });
 
   testWidgets('signed on an older version: the warning and a new link', (t) async {
@@ -160,10 +160,10 @@ void main() {
       SignatureRequest(id: 's1', state: 'SIGNED', signerName: 'Mona', signedAt: DateTime(2026, 10, 30, 11), outdated: true, signature: _png),
     ]);
     await _pump(t, repo);
-    expect(find.text('العميل مضى'), findsOneWidget);
+    expect(find.text('وقّع العميل'), findsOneWidget);
     expect(find.byKey(const Key('signature-outdated')), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
-    expect(find.text('ابعت لينك جديد'), findsOneWidget);
+    expect(find.text('إرسال رابط جديد'), findsOneWidget);
   });
 
   testWidgets('a booking that is over and was never sent shows nothing', (t) async {

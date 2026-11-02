@@ -246,7 +246,7 @@ void main() {
       );
       await tester.pumpWidget(host(cubit));
       await tester.pumpAndSettle();
-      expect(find.textContaining('مفيش أسباب خسارة'), findsOneWidget);
+      expect(find.textContaining('لا توجد أسباب خسارة'), findsOneWidget);
       await tester.tap(find.byKey(const Key('lost-confirm')));
       await tester.pump();
       expect(repo.stageCalls, isEmpty);

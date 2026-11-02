@@ -335,7 +335,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField), '12');
       await tester.tap(find.text('تأكيد'));
       await tester.pump();
-      expect(find.text('اكتب الكود المكوّن من 6 أرقام'), findsOneWidget);
+      expect(find.text('أدخل الرمز المكوّن من 6 أرقام'), findsOneWidget);
       expect(repo.calls, isEmpty);
       await tester.enterText(find.byType(TextFormField), '123456');
       await tester.tap(find.text('تأكيد'));
@@ -354,7 +354,7 @@ void main() {
       await tester.tap(find.text('تفعيل ومتابعة'));
       await tester.pumpAndSettle();
       expect(find.text('aaaa-bbbb'), findsOneWidget);
-      expect(find.text('حفظتها — متابعة'), findsOneWidget);
+      expect(find.text('حفظتُها — متابعة'), findsOneWidget);
     });
 
     test('the step\'s own refusals have their own messages', () async {
