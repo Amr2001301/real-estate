@@ -17,6 +17,7 @@ dependencies:
     path: ../packages/core
 
   flutter_bloc: ^9.1.1
+  provider: ^6.1.2 # ChangeNotifierProvider for CustomerTenantStorage (a Listenable)
   go_router: ^14.6.2
   shared_preferences: ^2.3.3 # customer tenant selection persistence (non-secret prefs)
   dio: ^5.7.0 # data layer (remote data sources) only
@@ -42,6 +43,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # The app-root test sets mock storage values and keeps fonts offline.
+  flutter_secure_storage: ^9.2.2
+  google_fonts: ^6.2.1
   # Phase 7A — Customer App integration smoke (local/manual; not in CI yet).
   # See integration_test/smoke_test.dart and docs/system-qa-strategy.md.
   integration_test:

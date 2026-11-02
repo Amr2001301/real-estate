@@ -1384,5 +1384,7 @@
   "unitOrientationSouthEast": "South-east",
   "unitOrientationSouthWest": "South-west",
   "contentAboutCompany": "About the company",
-  "contentPageEmpty": "This page is empty for now."
+  "contentPageEmpty": "This page is empty for now.",
+  "installmentPaidOn": "Paid on {date}",
+  "@installmentPaidOn": { "placeholders": { "date": { "type": "String" } } }
 }

@@ -70,6 +70,7 @@ import 'features/info_request/data/repositories/info_request_repository_impl.dar
 import 'features/info_request/domain/repositories/info_request_repository.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:provider/provider.dart' show ChangeNotifierProvider;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'features/company_discovery/data/datasources/company_discovery_remote_data_source.dart';
@@ -93,6 +94,13 @@ class CustomerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
+        // First: the catalog and chat repositories read the chosen company
+        // from it, and a provider only sees the ones listed before it.
+        // A ChangeNotifier (the branding reloads when the company changes):
+        // a plain RepositoryProvider refuses a Listenable in debug builds.
+        ChangeNotifierProvider<CustomerTenantStorage>(
+          create: (ctx) => CustomerTenantStorage(ctx.read<SharedPreferences>()),
+        ),
         RepositoryProvider<AuthRepository>(
           create: (ctx) => AuthRepositoryImpl(
             AuthRemoteDataSourceImpl(ctx.read<Dio>()),
@@ -189,9 +197,6 @@ class CustomerApp extends StatelessWidget {
             CompanyDiscoveryRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
-        RepositoryProvider<CustomerTenantStorage>(
-          create: (ctx) => CustomerTenantStorage(ctx.read<SharedPreferences>()),
-        ),
         RepositoryProvider<BrandingRepository>(
           create: (ctx) => BrandingRepository(ctx.read<Dio>()),
         ),
@@ -278,6 +283,9 @@ class _CustomerRootState extends State<_CustomerRoot> {
   // the same FCM message is delivered more than once.
   String? _lastBannerId;
 
+  // Kept to stop listening in dispose(), where the context may not be read.
+  late final CustomerTenantStorage _tenantStorage = context.read<CustomerTenantStorage>();
+
   @override
   void initState() {
     super.initState();
@@ -285,7 +293,7 @@ class _CustomerRootState extends State<_CustomerRoot> {
     _wireMismatchHandler();
     _wireFcm();
     _loadBranding();
-    context.read<CustomerTenantStorage>().addListener(_loadBranding);
+    _tenantStorage.addListener(_loadBranding);
     // BlocListener only fires on *transitions*. If the app relaunches with a
     // persisted session the state is already authenticated — no transition fires
     // and registration would be skipped. Run best-effort after the first frame.
@@ -315,7 +323,7 @@ class _CustomerRootState extends State<_CustomerRoot> {
 
   @override
   void dispose() {
-    context.read<CustomerTenantStorage>().removeListener(_loadBranding);
+    _tenantStorage.removeListener(_loadBranding);
     _fcmOpenSub?.cancel();
     _fcmFgSub?.cancel();
     _tokenSub?.cancel();

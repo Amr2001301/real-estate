@@ -1376,5 +1376,7 @@
   "unitOrientationSouthEast": "قبلي شرقي",
   "unitOrientationSouthWest": "قبلي غربي",
   "contentAboutCompany": "عن الشركة",
-  "contentPageEmpty": "الصفحة دي لسه فاضية."
+  "contentPageEmpty": "الصفحة دي لسه فاضية.",
+  "installmentPaidOn": "تم الدفع في {date}",
+  "@installmentPaidOn": { "placeholders": { "date": { "type": "String" } } }
 }

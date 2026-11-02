@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 // Wire shapes for /sales-targets and /sales-targets/performance. Data layer only.
 
 class SalesPerformanceDto {
@@ -38,8 +40,8 @@ class SalesPerformanceDto {
   final double? targetUnitsPercent;
 
   static int _i(Object? v) => (v as num?)?.toInt() ?? 0;
-  static double _d(Object? v) => (v as num?)?.toDouble() ?? 0;
-  static double? _dn(Object? v) => v == null ? null : (v as num).toDouble();
+  static double _d(Object? v) => readAmount(v) ?? 0;
+  static double? _dn(Object? v) => readAmount(v);
   static int? _in(Object? v) => v == null ? null : (v as num).toInt();
 
   factory SalesPerformanceDto.fromJson(Map<String, dynamic> json) => SalesPerformanceDto(

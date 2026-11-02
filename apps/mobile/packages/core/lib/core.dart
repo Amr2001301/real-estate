@@ -59,6 +59,7 @@ export 'src/usecase/use_case.dart';
 // Generic shared value types / utilities (no feature business logic)
 export 'src/common/translatable.dart';
 export 'src/common/paginated.dart';
+export 'src/common/json_amount.dart';
 export 'src/common/price_formatter.dart';
 export 'src/common/date_formatter.dart';
 export 'src/common/unit_specs.dart';

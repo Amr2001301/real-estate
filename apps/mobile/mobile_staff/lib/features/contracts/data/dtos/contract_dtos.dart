@@ -125,7 +125,7 @@ class StaffContractDetailDto extends StaffContractRowDto {
       salesName: sales?['fullName'] as String?,
       downPaymentAmount: StaffContractRowDto._parseDecimal(json['downPaymentAmount']),
       installmentPlanMonths: plan?['totalMonths'] as int?,
-      installmentPlanMonthlyAmount: (plan?['monthlyAmount'] as num?)?.toDouble(),
+      installmentPlanMonthlyAmount: readAmount(plan?['monthlyAmount']),
       installments: rawInstallments
           .whereType<Map<String, dynamic>>()
           .map(ContractInstallmentDto.fromJson)

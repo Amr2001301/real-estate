@@ -4003,4 +4003,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contentPageEmpty => 'This page is empty for now.';
+
+  @override
+  String installmentPaidOn(String date) {
+    return 'Paid on $date';
+  }
 }

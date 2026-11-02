@@ -399,12 +399,14 @@ class _StaffRootState extends State<_StaffRoot> {
     final tokenStorage = context.read<TokenStorage>();
     final sessionCubit = context.read<SessionCubit>();
     final mismatchNotifier = context.read<TenantMismatchNotifier>();
-    final l10n = context.l10n;
+    // The message is read when the handler runs: this widget sits above
+    // MaterialApp, so its own context has no localizations.
     context.read<TenantMismatchRegistry>().handler = () async {
+      final message = staffNavigatorKey.currentContext?.l10n.errorTenantMismatch;
       await tokenStorage.clear();
       sessionCubit.adoptSignedOut();
       // Set the pending message consumed by StaffLoginScreen on next build.
-      mismatchNotifier.setMessage(l10n.errorTenantMismatch);
+      if (message != null) mismatchNotifier.setMessage(message);
     };
   }
 

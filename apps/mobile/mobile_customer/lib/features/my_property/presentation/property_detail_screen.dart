@@ -1090,7 +1090,7 @@ class _InstallmentCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'تم الدفع · ${DateFormatter.mediumDate(inst.paidAt!, languageCode: lang)}',
+                                context.l10n.installmentPaidOn(DateFormatter.mediumDate(inst.paidAt!, languageCode: lang)),
                                 style: TextStyle(
                                   color: statusColor,
                                   fontSize: 13,

@@ -7519,6 +7519,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This page is empty for now.'**
   String get contentPageEmpty;
+
+  /// No description provided for @installmentPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid on {date}'**
+  String installmentPaidOn(String date);
 }
 
 class _AppLocalizationsDelegate

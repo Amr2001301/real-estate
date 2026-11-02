@@ -3961,4 +3961,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get contentPageEmpty => 'الصفحة دي لسه فاضية.';
+
+  @override
+  String installmentPaidOn(String date) {
+    return 'تم الدفع في $date';
+  }
 }
