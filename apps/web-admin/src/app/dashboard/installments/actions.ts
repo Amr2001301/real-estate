@@ -183,3 +183,27 @@ function buildPayload(formData: FormData): Record<string, unknown> {
     durationOptions,
   };
 }
+
+export interface VisibilityState {
+  updated?: number;
+  error?: string;
+}
+
+/** Who sees several plans at once — the plan list's bulk bar. */
+export async function setPlansVisibilityAction(
+  _prev: VisibilityState,
+  formData: FormData,
+): Promise<VisibilityState> {
+  const ids = formData.getAll('ids').map(String).filter(Boolean);
+  const visibility = String(formData.get('visibility') ?? '');
+  if (ids.length === 0) return { error: 'none' };
+  if (visibility !== 'PUBLIC' && visibility !== 'SALES_ONLY') return { error: 'حدث خطأ غير متوقع' };
+  try {
+    const res = await api.post<{ updated: number }>('/installment-plan-templates/visibility', { ids, visibility });
+    revalidateAll();
+    return { updated: res.updated };
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+}

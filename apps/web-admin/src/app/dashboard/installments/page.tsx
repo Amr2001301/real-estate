@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { PlanTemplateStatusBadge } from '@/components/badges';
 import { PlanActions } from './_components/plan-actions';
+import { BulkVisibilityBar, PLAN_VISIBILITY_FORM } from './_components/bulk-visibility';
+import { Badge } from '@/components/ui/badge';
 import {
   PremiumPageHero,
   PremiumMetricStrip,
@@ -47,6 +49,7 @@ export default async function InstallmentPlansPage({
     q?: string;
     projectId?: string;
     status?: string;
+    visibility?: string;
     page?: string;
   }>;
 }) {
@@ -69,6 +72,7 @@ export default async function InstallmentPlansPage({
   if (sp.q) qs.set('q', sp.q);
   if (sp.projectId) qs.set('projectId', sp.projectId);
   if (sp.status) qs.set('status', sp.status);
+  if (sp.visibility) qs.set('visibility', sp.visibility);
 
   const [statsRes, plansRes, projectsRes] = await Promise.all([
     isAdmin
@@ -142,7 +146,7 @@ export default async function InstallmentPlansPage({
         trailing={
           <div className="flex items-center gap-1.5">
             <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-            {(sp.q || sp.projectId || sp.status) && (
+            {(sp.q || sp.projectId || sp.status || sp.visibility) && (
               <Link href="/dashboard/installments">
                 <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
               </Link>
@@ -177,6 +181,13 @@ export default async function InstallmentPlansPage({
             </Select>
           </PremiumFilterField>
         )}
+        <PremiumFilterField label={m.visibilityFilter}>
+          <Select name="visibility" inputSize="sm" defaultValue={sp.visibility ?? ''} className="w-40">
+            <option value="">{m.visibilityAll}</option>
+            <option value="PUBLIC">{m.visibilityLabels.PUBLIC}</option>
+            <option value="SALES_ONLY">{m.visibilityLabels.SALES_ONLY}</option>
+          </Select>
+        </PremiumFilterField>
       </PremiumFilterBar>
 
       {plansRes.error && (
@@ -204,15 +215,19 @@ export default async function InstallmentPlansPage({
             description={m.empty.description}
           />
         ) : (
+          <>
+          {isAdmin && <BulkVisibilityBar locale={locale} />}
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
+                  {isAdmin && <th className="w-10 py-3 ps-5" />}
                   <th className="text-start py-3 ps-5 pe-4">{m.cols.name}</th>
                   <th className="text-start py-3 px-4">{m.cols.project}</th>
                   <th className="text-start py-3 px-4">{m.cols.netPrice}</th>
                   <th className="text-start py-3 px-4">{m.cols.installments}</th>
                   <th className="text-start py-3 px-4">{m.cols.status}</th>
+                  <th className="text-start py-3 px-4">{m.visibilityCol}</th>
                   <th className="text-start py-3 px-4">{m.cols.created}</th>
                   <th className="py-3 ps-4 pe-5" />
                 </tr>
@@ -220,6 +235,18 @@ export default async function InstallmentPlansPage({
               <tbody className="divide-y divide-hairline">
                 {plans.map((r) => (
                   <tr key={r.id} className="hover:bg-canvas/40 transition-colors duration-100 align-middle">
+                    {isAdmin && (
+                      <td className="py-3 ps-5">
+                        <input
+                          type="checkbox"
+                          name="ids"
+                          value={r.id}
+                          form={PLAN_VISIBILITY_FORM}
+                          aria-label={`${m.bulk.selectRow}: ${r.name}`}
+                          className="h-4 w-4 rounded border-hairline accent-brand-600"
+                        />
+                      </td>
+                    )}
                     <td className="py-3 ps-5 pe-4">
                       <Link
                         href={`/dashboard/installments/${r.id}`}
@@ -271,6 +298,11 @@ export default async function InstallmentPlansPage({
                     <td className="py-3 px-4">
                       <PlanTemplateStatusBadge status={r.status} locale={locale} />
                     </td>
+                    <td className="py-3 px-4">
+                      <Badge tone={r.visibility === 'PUBLIC' ? 'success' : 'gray'}>
+                        {r.visibility === 'PUBLIC' ? m.visibilityLabels.PUBLIC : m.visibilityLabels.SALES_ONLY}
+                      </Badge>
+                    </td>
                     <td className="py-3 px-4 text-xs text-slate-500 tabular-nums">
                       {formatDate(r.createdAt, locale)}
                     </td>
@@ -282,6 +314,7 @@ export default async function InstallmentPlansPage({
               </tbody>
             </table>
           </div>
+          </>
         )}
       </PremiumSectionCard>
 
