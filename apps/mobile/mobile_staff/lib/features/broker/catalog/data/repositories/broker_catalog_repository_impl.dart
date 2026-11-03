@@ -24,4 +24,13 @@ class BrokerCatalogRepositoryImpl implements BrokerCatalogRepository {
       return rows.map((r) => r.toEntity()).toList();
     });
   }
+
+  @override
+  Future<Result<List<InstallmentOffer>>> unitPlans(String unitId) => guardApiCall(
+        () async => [for (final j in await _remote.unitPlans(unitId)) installmentOfferFromPublicJson(j)],
+      );
+
+  @override
+  Future<Result<ProjectPlanSummary>> projectPlans(String projectId) =>
+      guardApiCall(() async => ProjectPlanSummary.fromJson(await _remote.projectPlans(projectId)));
 }

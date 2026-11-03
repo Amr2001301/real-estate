@@ -92,6 +92,22 @@ export class BrokerPortalController {
     return this.portal.listProjects(scope);
   }
 
+  @Get('projects/:id/payment-plans')
+  projectPaymentPlans(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portal.projectPaymentPlans(scope, id);
+  }
+
+  @Get('units/:id/payment-plans')
+  unitPaymentPlans(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portal.unitPaymentPlans(scope, id);
+  }
+
   @Get('units')
   units(
     @BrokerScope() scope: BrokerScopeContext,

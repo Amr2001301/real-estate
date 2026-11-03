@@ -995,6 +995,17 @@ function enrichDurationOptions(
   }));
 }
 
+/** What a customer-facing plan reads: its durations and its first instalment. */
+const CUSTOMER_PLAN_INCLUDE = {
+  durationOptions: { orderBy: { order: 'asc' } },
+  scheduleItems: {
+    where: { paymentType: PlanPaymentType.INSTALLMENT },
+    orderBy: { paymentNumber: 'asc' },
+    take: 1,
+    select: { amount: true },
+  },
+} satisfies Prisma.InstallmentPlanTemplateInclude;
+
 /** Months between two instalments of a legacy (single-duration) plan. */
 const FREQUENCY_MONTHS: Record<InstallmentFrequency, number> = {
   MONTHLY: 1,
@@ -1103,7 +1114,7 @@ export function summarizePublicPlans(plans: ReturnType<typeof serializePublicPla
 }
 
 @Injectable()
-class PlanTemplatesService {
+export class PlanTemplatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -1183,20 +1194,7 @@ class PlanTemplatesService {
       select: { id: true },
     });
     if (!unit) throw new NotFoundException('Unit not found');
-    const plans = await this.prisma.installmentPlanTemplate.findMany({
-      where: { companyId, unitId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        durationOptions: { orderBy: { order: 'asc' } },
-        scheduleItems: {
-          where: { paymentType: PlanPaymentType.INSTALLMENT },
-          orderBy: { paymentNumber: 'asc' },
-          take: 1,
-          select: { amount: true },
-        },
-      },
-    });
-    return plans.map((p) => serializePublicPlan(p));
+    return this.customerPlansForUnit(unitId);
   }
 
   /**
@@ -1211,17 +1209,31 @@ class PlanTemplatesService {
       select: { id: true },
     });
     if (!project) throw new NotFoundException('Project not found');
+    return this.customerPlansForProject(projectId);
+  }
+
+  /**
+   * The plans customers may see on a unit (ACTIVE + PUBLIC), in the current
+   * tenant. The caller has checked the unit is theirs to show — published
+   * for the public catalogue, granted for a broker (owner, 2026-11-03: a
+   * broker shows the customer what the customer would see).
+   */
+  async customerPlansForUnit(unitId: string) {
+    const companyId = getRequiredCompanyId();
+    const plans = await this.prisma.installmentPlanTemplate.findMany({
+      where: { companyId, unitId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
+      orderBy: { createdAt: 'asc' },
+      include: CUSTOMER_PLAN_INCLUDE,
+    });
+    return plans.map((p) => serializePublicPlan(p));
+  }
+
+  /** The project's offers from the plans customers may see (caller checks access). */
+  async customerPlansForProject(projectId: string) {
+    const companyId = getRequiredCompanyId();
     const plans = await this.prisma.installmentPlanTemplate.findMany({
       where: { companyId, projectId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
-      include: {
-        durationOptions: { orderBy: { order: 'asc' } },
-        scheduleItems: {
-          where: { paymentType: PlanPaymentType.INSTALLMENT },
-          orderBy: { paymentNumber: 'asc' },
-          take: 1,
-          select: { amount: true },
-        },
-      },
+      include: CUSTOMER_PLAN_INCLUDE,
     });
     return summarizePublicPlans(plans.map((p) => serializePublicPlan(p)));
   }

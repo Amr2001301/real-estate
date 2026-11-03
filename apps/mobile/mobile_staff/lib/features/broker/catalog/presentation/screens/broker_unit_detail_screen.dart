@@ -1,11 +1,13 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../../common/catalog_status_label.dart';
 import '../../domain/entities/broker_project.dart';
+import '../../domain/repositories/broker_catalog_repository.dart';
 
 const _navyDeep = Color(0xFF0B1726);
 const _navyMid = Color(0xFF14273F);
@@ -26,6 +28,26 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
   final _planKey = GlobalKey();
   final _locationKey = GlobalKey();
   final _projectKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  List<InstallmentOffer> _offers = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlans();
+  }
+
+  // The plans a customer would see (best-effort: the page shows without them).
+  Future<void> _loadPlans() async {
+    final result = await context.read<BrokerCatalogRepository>().unitPlans(widget.unit.id);
+    if (!mounted) return;
+    if (result case Ok(:final data)) setState(() => _offers = data);
+  }
+
+  void _addLead(String? projectId) => context.push('/broker/leads/new', extra: {
+        'projectId': ?projectId,
+        'unitId': widget.unit.id,
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +60,8 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
     final projectName = lang == 'ar' ? (unit.projectNameAr ?? unit.projectNameEn) : (unit.projectNameEn ?? unit.projectNameAr);
     final hasSpecs = _hasSpecs(unit);
     final hasLocation = unit.hasLocation || unit.address != null;
+    final offer = _offers.where((o) => o.options.isNotEmpty).firstOrNull;
+    final longest = offer?.longest;
 
     Widget section(String title, {Key? key}) => SliverToBoxAdapter(
           child: Padding(
@@ -67,10 +91,7 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
                   key: const Key('broker-unit-add-lead'),
                   label: l10n.brokerLeadNew,
                   icon: Icons.person_add_alt_1_rounded,
-                  onPressed: () => context.push('/broker/leads/new', extra: {
-                    'projectId': ?effProjectId,
-                    'unitId': unit.id,
-                  }),
+                  onPressed: () => _addLead(effProjectId),
                 ),
               ],
             )
@@ -82,6 +103,38 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
             child: AppPriceCard(
               label: l10n.detailTotalPrice,
               price: hasPrice ? PriceFormatter.formatString(unit.price, languageCode: lang) : l10n.priceOnRequest,
+              caption: cheapestInstallmentLine(l10n, lang, _offers),
+              facts: [
+                if (offer != null)
+                  AppPriceFact(
+                    l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
+                    PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
+                  ),
+                if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
+              ],
+              actionLabel: offer != null ? l10n.detailCalcInstallment : null,
+              onAction: offer == null
+                  ? null
+                  : () => showInstallmentCalculator(
+                        context,
+                        subtitle: [
+                          ltr(unit.code),
+                          if (hasPrice) PriceFormatter.formatString(unit.price, languageCode: lang),
+                        ].join(' · '),
+                        offers: _offers,
+                        actions: available
+                            ? (sheetContext) => [
+                                  AppDetailPrimaryButton(
+                                    label: l10n.brokerLeadNew,
+                                    icon: Icons.person_add_alt_1_rounded,
+                                    onPressed: () {
+                                      Navigator.of(sheetContext).pop();
+                                      _addLead(effProjectId);
+                                    },
+                                  ),
+                                ]
+                            : null,
+                      ),
             ),
           ),
         ),
@@ -90,6 +143,7 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
           tabs: [
             if (hasSpecs) AppSectionTab(l10n.detailTabOverview, _detailsKey),
             if (unit.floorPlanUrls.isNotEmpty) AppSectionTab(l10n.detailTabFloorPlan, _planKey),
+            if (_offers.isNotEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
             if (hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
             if (unit.projectId != null) AppSectionTab(l10n.navProjects, _projectKey),
           ],
@@ -108,6 +162,18 @@ class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
         if (unit.floorPlanUrls.isNotEmpty) ...[
           section(l10n.sectionFloorPlans, key: _planKey),
           box(_MediaGallery(urls: unit.floorPlanUrls)),
+        ],
+
+        // ── Payment plans ────────────────────────────────────────────
+        if (_offers.isNotEmpty) ...[
+          section(l10n.detailTabPayment, key: _paymentKey),
+          for (final o in _offers)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
+                child: AppPaymentPlanTable(offer: o),
+              ),
+            ),
         ],
 
         // ── Location ─────────────────────────────────────────────────
