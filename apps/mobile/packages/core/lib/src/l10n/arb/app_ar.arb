@@ -1688,5 +1688,7 @@
   "@detailUpTo": {"placeholders": {"term": {"type": "String"}}},
   "pageNotFoundTitle": "الصفحة غير موجودة",
   "pageNotFoundMessage": "الرابط غير صحيح أو لم تعد هذه الصفحة متاحة.",
-  "pageNotFoundHome": "العودة إلى الرئيسية"
+  "pageNotFoundHome": "العودة إلى الرئيسية",
+  "pageNoAccessTitle": "هذه الصفحة غير متاحة لحسابك",
+  "pageNoAccessMessage": "اطلب من مدير النظام في شركتك صلاحية الوصول إليها."
 }

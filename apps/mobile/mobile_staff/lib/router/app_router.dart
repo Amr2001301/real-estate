@@ -1,3 +1,5 @@
+import '../features/permissions/staff_access_gate.dart';
+import '../features/permissions/staff_permissions.dart';
 import 'load_by_id.dart';
 import 'dart:async';
 
@@ -423,14 +425,17 @@ GoRouter createStaffRouter(
         path: '/campaigns',
         builder: (context, state) => BlocProvider(
           create: (ctx) => CampaignsCubit(ctx.read<CampaignsRepository>()),
-          child: const CampaignsScreen(),
+          child: const StaffAccessGate(allows: StaffAccess.campaigns, child: CampaignsScreen()),
         ),
       ),
       GoRoute(
         path: '/campaigns/:id',
         builder: (context, state) => BlocProvider(
           create: (ctx) => CampaignDetailCubit(ctx.read<CampaignsRepository>(), id: state.pathParameters['id']!),
-          child: CampaignDetailScreen(row: state.extra is Campaign ? state.extra as Campaign : null),
+          child: StaffAccessGate(
+            allows: StaffAccess.campaigns,
+            child: CampaignDetailScreen(row: state.extra is Campaign ? state.extra as Campaign : null),
+          ),
         ),
       ),
 
@@ -453,15 +458,21 @@ GoRouter createStaffRouter(
       ),
 
       // ── «ليا وعليا»: the dashboard's receivables & payables ──────────────
-      GoRoute(path: '/ledger', builder: (context, state) => const LedgerScreen()),
+      GoRoute(
+        path: '/ledger',
+        builder: (context, state) => const StaffAccessGate(allows: StaffAccess.ledger, child: LedgerScreen()),
+      ),
       GoRoute(
         path: '/ledger/:group',
         builder: (context, state) {
           final range = state.extra as ({String? dateFrom, String? dateTo})?;
-          return LedgerGroupScreen(
-            group: LedgerGroup.fromWire(state.pathParameters['group']) ?? LedgerGroup.installments,
-            dateFrom: range?.dateFrom,
-            dateTo: range?.dateTo,
+          return StaffAccessGate(
+            allows: StaffAccess.ledger,
+            child: LedgerGroupScreen(
+              group: LedgerGroup.fromWire(state.pathParameters['group']) ?? LedgerGroup.installments,
+              dateFrom: range?.dateFrom,
+              dateTo: range?.dateTo,
+            ),
           );
         },
       ),
@@ -471,7 +482,7 @@ GoRouter createStaffRouter(
         path: '/cheques',
         builder: (context, state) => BlocProvider(
           create: (ctx) => ChequesCubit(ctx.read<ChequesRepository>()),
-          child: const ChequesScreen(),
+          child: const StaffAccessGate(allows: StaffAccess.cheques, child: ChequesScreen()),
         ),
       ),
       GoRoute(
@@ -482,7 +493,7 @@ GoRouter createStaffRouter(
             id: state.pathParameters['id']!,
             row: state.extra as Cheque?,
           ),
-          child: const ChequeDetailScreen(),
+          child: const StaffAccessGate(allows: StaffAccess.cheques, child: ChequeDetailScreen()),
         ),
       ),
 
@@ -805,7 +816,7 @@ GoRouter createStaffRouter(
               ),
             ),
           ],
-          child: const PaymentsReviewScreen(),
+          child: const StaffAccessGate(allows: StaffAccess.paymentsReview, child: PaymentsReviewScreen()),
         ),
       ),
       // ── Bonus / Targets ──────────────────────────────────────────────────

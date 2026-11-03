@@ -1696,5 +1696,7 @@
   "@detailUpTo": {"placeholders": {"term": {"type": "String"}}},
   "pageNotFoundTitle": "Page not found",
   "pageNotFoundMessage": "The link is wrong or this page is no longer available.",
-  "pageNotFoundHome": "Back to home"
+  "pageNotFoundHome": "Back to home",
+  "pageNoAccessTitle": "This page is not available to your account",
+  "pageNoAccessMessage": "Ask your company's administrator for access to it."
 }

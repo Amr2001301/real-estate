@@ -9199,6 +9199,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to home'**
   String get pageNotFoundHome;
+
+  /// No description provided for @pageNoAccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This page is not available to your account'**
+  String get pageNoAccessTitle;
+
+  /// No description provided for @pageNoAccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask your company\'s administrator for access to it.'**
+  String get pageNoAccessMessage;
 }
 
 class _AppLocalizationsDelegate

@@ -4971,4 +4971,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pageNotFoundHome => 'Back to home';
+
+  @override
+  String get pageNoAccessTitle => 'This page is not available to your account';
+
+  @override
+  String get pageNoAccessMessage =>
+      'Ask your company\'s administrator for access to it.';
 }

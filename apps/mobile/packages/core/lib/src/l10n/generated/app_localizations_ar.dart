@@ -4927,4 +4927,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pageNotFoundHome => 'العودة إلى الرئيسية';
+
+  @override
+  String get pageNoAccessTitle => 'هذه الصفحة غير متاحة لحسابك';
+
+  @override
+  String get pageNoAccessMessage =>
+      'اطلب من مدير النظام في شركتك صلاحية الوصول إليها.';
 }
