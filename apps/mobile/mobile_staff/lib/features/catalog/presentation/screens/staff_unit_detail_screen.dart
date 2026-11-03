@@ -72,7 +72,7 @@ class _LoadingScaffold extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 child: Align(
                   alignment: AlignmentDirectional.centerEnd,
-                  child: _CircleBackButton(onTap: () => context.pop()),
+                  child: const NavHeaderBack(),
                 ),
               ),
               const Expanded(child: StaffListSkeleton()),
@@ -103,7 +103,7 @@ class _ErrorScaffold extends StatelessWidget {
           automaticallyImplyLeading: false,
           leading: Padding(
             padding: const EdgeInsets.all(8),
-            child: _CircleBackButton(onTap: () => context.pop()),
+            child: const NavHeaderBack(),
           ),
         ),
         body: ErrorState(failure: failure, onRetry: onRetry),
@@ -129,194 +129,93 @@ class _DetailPage extends StatelessWidget {
     final hasProject = unit.projectName != null || unit.projectCity != null;
     final available = unit.status == 'AVAILABLE';
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: colors.canvas,
-        bottomNavigationBar: _StickyActionBar(
-          unit: unit,
-          effProjectId: effProjectId,
-        ),
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
+    Widget section(String title) => AppDetailSheetPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
+            child: AppDetailSectionTitle(title),
           ),
-          slivers: [
-            // ── Hero ──────────────────────────────────────────────────────
-            SliverAppBar(
-              expandedHeight: 420,
-              pinned: true,
-              stretch: true,
-              backgroundColor: _navyDeep,
-              surfaceTintColor: Colors.transparent,
-              systemOverlayStyle: SystemUiOverlayStyle.light,
-              automaticallyImplyLeading: false,
-              leading: Padding(
-                padding: const EdgeInsets.all(8),
-                child: _CircleBackButton(onTap: () => context.pop()),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                stretchModes: const [StretchMode.zoomBackground],
-                titlePadding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.lg,
-                  AppSpacing.md,
+        );
+
+    return AppDetailSheetPage(
+      onBack: () => context.pop(),
+      hero: _HeroBackground(unit: unit, lang: lang),
+      bottomBar: _StickyActionBar(unit: unit, effProjectId: effProjectId),
+      slivers: [
+        // ── Identity: code, project, then type · price · status ─────────
+        AppDetailSheetPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ltr(unit.code),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: colors.inkStrong,
+                        height: 1.1,
+                      ),
                 ),
-                title: Text(
-                  unit.code,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                    shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
+                if (unit.projectName != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    [unit.projectName!.resolve(lang), if (unit.projectCity != null) unit.projectCity!].join(' · '),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
                   ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadii.lg),
+                  child: _MetaStrip(unit: unit, l10n: l10n, lang: lang, colors: colors, available: available),
                 ),
-                background: _HeroBackground(unit: unit, lang: lang),
-              ),
+              ],
             ),
-
-            // ── Meta strip (edge-to-edge: type + price + status) ──────────
-            SliverToBoxAdapter(
-              child: _MetaStrip(
-                unit: unit,
-                l10n: l10n,
-                lang: lang,
-                colors: colors,
-                available: available,
-              ),
-            ),
-
-            // ── Unit details section ───────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.xl,
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                ),
-                child: _SectionTitle(l10n.unitDetails),
-              ),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              sliver: _SpecsGrid(unit: unit, l10n: l10n),
-            ),
-
-            // EE2/EE5 — the specs the website shows (only those it has).
-            if (!unit.specs.isEmpty)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-                sliver: SliverToBoxAdapter(child: UnitSpecsGrid(specs: unit.specs)),
-              ),
-
-            // ── Floor plans section ────────────────────────────────────────
-            if (unit.floorPlanUrls.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  child: _SectionTitle(l10n.sectionFloorPlans),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg),
-                  child: _UnitFloorPlansGallery(urls: unit.floorPlanUrls),
-                ),
-              ),
-            ],
-
-            // ── Location section ───────────────────────────────────────────
-            if (unit.hasLocation || unit.address != null) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  child: _SectionTitle(l10n.projectLocation),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
-                  child: _UnitLocationCard(unit: unit, l10n: l10n),
-                ),
-              ),
-            ],
-
-            // ── Maintenance & warranty section ─────────────────────────────
-            if (unit.maintenanceItems.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  child: _SectionTitle(l10n.sectionWarrantyItems),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg),
-                sliver: SliverList.separated(
-                  itemCount: unit.maintenanceItems.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (_, i) => _MaintenanceItemCard(
-                    item: unit.maintenanceItems[i],
-                    l10n: l10n,
-                    lang: lang,
-                  ),
-                ),
-              ),
-            ],
-
-            // ── Project section ────────────────────────────────────────────
-            if (hasProject) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  child: _SectionTitle(l10n.navProjects),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
-                  child: _ProjectCard(unit: unit, lang: lang),
-                ),
-              ),
-            ],
-
-            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
-          ],
+          ),
         ),
-      ),
+
+        // ── Unit details ────────────────────────────────────────────────
+        section(l10n.unitDetails),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          sliver: _SpecsGrid(unit: unit, l10n: l10n),
+        ),
+        // EE2/EE5 — the specs the website shows (only those it has).
+        if (!unit.specs.isEmpty)
+          AppDetailSheetPage.box(
+            Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: UnitSpecsGrid(specs: unit.specs)),
+          ),
+
+        // ── Floor plans ─────────────────────────────────────────────────
+        if (unit.floorPlanUrls.isNotEmpty) ...[
+          section(l10n.sectionFloorPlans),
+          AppDetailSheetPage.box(_UnitFloorPlansGallery(urls: unit.floorPlanUrls)),
+        ],
+
+        // ── Location ────────────────────────────────────────────────────
+        if (unit.hasLocation || unit.address != null) ...[
+          section(l10n.projectLocation),
+          AppDetailSheetPage.box(_UnitLocationCard(unit: unit, l10n: l10n)),
+        ],
+
+        // ── Maintenance & warranty ──────────────────────────────────────
+        if (unit.maintenanceItems.isNotEmpty) ...[
+          section(l10n.sectionWarrantyItems),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            sliver: SliverList.separated(
+              itemCount: unit.maintenanceItems.length,
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (_, i) => _MaintenanceItemCard(item: unit.maintenanceItems[i], l10n: l10n, lang: lang),
+            ),
+          ),
+        ],
+
+        // ── Project ─────────────────────────────────────────────────────
+        if (hasProject) ...[
+          section(l10n.navProjects),
+          AppDetailSheetPage.box(_ProjectCard(unit: unit, lang: lang)),
+        ],
+      ],
     );
   }
 }
@@ -637,16 +536,6 @@ class _DotPainter extends CustomPainter {
 // ══════════════════════════════════════════════════════════════════════════════
 // Glass circle back button
 // ══════════════════════════════════════════════════════════════════════════════
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Meta strip — edge-to-edge: type chip + price + status badge
 // ══════════════════════════════════════════════════════════════════════════════
@@ -695,10 +584,10 @@ class _MetaStrip extends StatelessWidget {
                 ),
                 child: Text(
                   unit.typeLabel(Localizations.localeOf(context).languageCode),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: _navyMid,
+                    color: AppTone.navy.baseColor(colors),
                   ),
                 ),
               ),
@@ -755,41 +644,6 @@ class _MetaStrip extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Section title
 // ══════════════════════════════════════════════════════════════════════════════
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 20,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: colors.inkStrong,
-            letterSpacing: -0.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Specs — 2 × 2 grid (ensures enough height for scrolling)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -827,113 +681,9 @@ class _SpecsGrid extends StatelessWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    // Build rows of 2
-    final rows = <Widget>[];
-    for (int i = 0; i < specs.length; i += 2) {
-      rows.add(
-        Row(
-          children: [
-            Expanded(
-              child: _SpecCard(
-                icon: specs[i].$1,
-                value: specs[i].$2,
-                label: specs[i].$3,
-              ),
-            ),
-            if (i + 1 < specs.length) ...[
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _SpecCard(
-                  icon: specs[i + 1].$1,
-                  value: specs[i + 1].$2,
-                  label: specs[i + 1].$3,
-                ),
-              ),
-            ] else
-              const Expanded(child: SizedBox.shrink()),
-          ],
-        ),
-      );
-      if (i + 2 < specs.length) rows.add(const SizedBox(height: AppSpacing.sm));
-    }
-
     return SliverToBoxAdapter(
-      child: Column(mainAxisSize: MainAxisSize.min, children: rows),
-    );
-  }
-}
-
-class _SpecCard extends StatelessWidget {
-  const _SpecCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.xl,
-        horizontal: AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppPalette.gold400.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppPalette.gold400.withValues(alpha: 0.20),
-              ),
-            ),
-            child: Icon(icon, size: 24, color: colors.brandGold),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: colors.inkStrong,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colors.inkMuted,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ],
+      child: AppDetailStatsRow(
+        stats: [for (final x in specs) AppDetailStat(icon: x.$1, value: x.$2, label: x.$3)],
       ),
     );
   }

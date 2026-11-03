@@ -96,6 +96,7 @@ export 'src/widgets/app_home_header.dart';
 export 'src/widgets/app_info_chip.dart';
 export 'src/widgets/app_form_section.dart';
 export 'src/widgets/app_filter_chip.dart';
+export 'src/widgets/app_detail_sheet_page.dart';
 export 'src/widgets/app_kpi_tile.dart';
 export 'src/widgets/unit_specs_grid.dart';
 export 'src/widgets/auth_widgets.dart';

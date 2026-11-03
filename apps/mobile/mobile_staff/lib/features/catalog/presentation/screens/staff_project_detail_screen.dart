@@ -106,51 +106,43 @@ class _StaffProjectDetailScreenState
                     ? p.availableUnitsCount
                     : availableUnits.length;
 
-            return CustomScrollView(
-              controller: _scroll,
+            return AppDetailSheetPage(
+              onBack: () => context.pop(),
+              hero: _HeroBackground(
+                project: p,
+                statusLabel: projectStatusLabel(l10n, p.status),
+                statusTone: projectStatusTone(p.status),
+              ),
               slivers: [
-                // ── Collapsible hero ────────────────────────────────────────
-                SliverAppBar(
-                  expandedHeight: 370,
-                  pinned: true,
-                  stretch: true,
-                  backgroundColor: _navyDeep,
-                  surfaceTintColor: Colors.transparent,
-                  systemOverlayStyle: SystemUiOverlayStyle.light,
-                  automaticallyImplyLeading: false,
-                  leading: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: _CircleBackButton(
-                        onTap: () => context.pop()),
-                  ),
-                  flexibleSpace: FlexibleSpaceBar(
-                    collapseMode: CollapseMode.parallax,
-                    stretchModes: const [StretchMode.zoomBackground],
-                    titlePadding:
-                        const EdgeInsetsDirectional.fromSTEB(
-                            AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.lg),
-                    title: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                        shadows: [
-                          Shadow(color: Colors.black54, blurRadius: 10),
+                // ── Identity: name and city ────────────────────────────────
+                AppDetailSheetPage.box(
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.xs),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: colors.inkStrong,
+                                height: 1.1,
+                              ),
+                        ),
+                        if (p.city?.isNotEmpty ?? false) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_rounded, size: 16, color: colors.brandGold),
+                              const SizedBox(width: 4),
+                              Text(p.city!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.inkMuted)),
+                            ],
+                          ),
                         ],
-                      ),
-                    ),
-                    background: _HeroBackground(
-                      project: p,
-                      statusLabel: projectStatusLabel(l10n, p.status),
-                      statusTone: projectStatusTone(p.status),
+                      ],
                     ),
                   ),
                 ),
-
                 // ── Actions + stats + about + units header ──────────────────
                 SliverToBoxAdapter(
                   child: Column(
@@ -160,7 +152,7 @@ class _StaffProjectDetailScreenState
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                             AppSpacing.lg,
-                            AppSpacing.xl,
+                            AppSpacing.lg,
                             AppSpacing.lg,
                             0),
                         child: const _StaffActions(),
@@ -465,16 +457,6 @@ class _FallbackBackButton extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Glass circle back button (used in hero AppBar)
 // ══════════════════════════════════════════════════════════════════════════════
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background (used inside FlexibleSpaceBar)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1044,38 +1026,12 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                ),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                    letterSpacing: -0.2,
-                  ),
-            ),
-          ],
-        ),
+        AppDetailSectionTitle(title),
         if (child is! SizedBox) ...[
-          const SizedBox(height: AppSpacing.md + 2),
+          const SizedBox(height: AppSpacing.md),
           child,
         ],
       ],

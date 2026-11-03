@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
@@ -26,51 +25,36 @@ class BrokerUnitDetailScreen extends StatelessWidget {
     final available = unit.status.toUpperCase() == 'AVAILABLE';
     final effProjectId = projectId ?? unit.projectId;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
-      child: Scaffold(
-        backgroundColor: context.appColors.canvas,
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics()),
+    final colors = context.appColors;
+    return AppDetailSheetPage(
+          onBack: () => context.pop(),
+          heroHeight: 360,
+          hero: _HeroBackground(unit: unit, l10n: l10n),
           slivers: [
-            // ── Collapsing hero ──────────────────────────────────────────
-            SliverAppBar(
-              expandedHeight: 320,
-              pinned: true,
-              stretch: true,
-              backgroundColor: _navyDeep,
-              surfaceTintColor: Colors.transparent,
-              systemOverlayStyle: SystemUiOverlayStyle.light,
-              automaticallyImplyLeading: false,
-              leading: Padding(
-                padding: const EdgeInsets.all(8),
-                child: _CircleBackButton(onTap: () => context.pop()),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                stretchModes: const [StretchMode.zoomBackground],
-                titlePadding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.md),
-                title: Text(
-                  unit.code,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                    shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
-                  ),
+            // ── Identity: code, then type · price · status ────────────────
+            AppDetailSheetPage.box(
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ltr(unit.code),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colors.inkStrong,
+                            height: 1.1,
+                          ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                      child: _MetaStrip(unit: unit, l10n: l10n, lang: lang),
+                    ),
+                  ],
                 ),
-                background: _HeroBackground(unit: unit, l10n: l10n),
               ),
             ),
-
-            // ── Meta strip ────────────────────────────────────────────────
-            SliverToBoxAdapter(child: _MetaStrip(unit: unit, l10n: l10n, lang: lang)),
 
             // ── Add lead CTA card (AVAILABLE only) ────────────────────────
             if (available)
@@ -153,10 +137,7 @@ class BrokerUnitDetailScreen extends StatelessWidget {
               ),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: 56)),
           ],
-        ),
-      ),
     );
   }
 
@@ -614,32 +595,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 20,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
-                letterSpacing: -0.2,
-              ),
-        ),
-      ],
-    );
+    return AppDetailSectionTitle(title);
   }
 }
 
@@ -676,103 +632,9 @@ class _SpecsGrid extends StatelessWidget {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
 
-    final rows = <Widget>[];
-    for (int i = 0; i < specs.length; i += 2) {
-      rows.add(Row(
-        children: [
-          Expanded(
-            child: _SpecCard(
-                icon: specs[i].$1,
-                value: specs[i].$2,
-                label: specs[i].$3),
-          ),
-          if (i + 1 < specs.length) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SpecCard(
-                  icon: specs[i + 1].$1,
-                  value: specs[i + 1].$2,
-                  label: specs[i + 1].$3),
-            ),
-          ] else
-            const Expanded(child: SizedBox.shrink()),
-        ],
-      ));
-      if (i + 2 < specs.length) {
-        rows.add(const SizedBox(height: AppSpacing.sm));
-      }
-    }
-
     return SliverToBoxAdapter(
-        child: Column(mainAxisSize: MainAxisSize.min, children: rows));
-  }
-}
-
-class _SpecCard extends StatelessWidget {
-  const _SpecCard(
-      {required this.icon, required this.value, required this.label});
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.xl, horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border:
-            Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppPalette.gold400.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: AppPalette.gold400.withValues(alpha: 0.20)),
-            ),
-            child: Icon(icon, size: 24, color: colors.brandGold),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: colors.inkStrong,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colors.inkMuted,
-            ),
-          ),
-        ],
+      child: AppDetailStatsRow(
+        stats: [for (final x in specs) AppDetailStat(icon: x.$1, value: x.$2, label: x.$3)],
       ),
     );
   }
@@ -1144,16 +1006,6 @@ class _StatusPill extends StatelessWidget {
 }
 
 // ── Circle back button ────────────────────────────────────────────────────────
-
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
-  }
-}
 
 // ── Dot texture ───────────────────────────────────────────────────────────────
 
