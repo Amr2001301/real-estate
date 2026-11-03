@@ -169,6 +169,37 @@ abstract final class AppTheme {
           vertical: AppSpacing.xxs,
         ),
       ),
+      // On = white thumb with a check on gold; off = grey thumb with a cross
+      // on a soft track. The Material default (navy thumb on gold, hairline
+      // thumb when off) made the two states hard to tell apart.
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? Colors.white
+              : ext.inkMuted,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? ext.brandGold
+              : ext.surfaceSoft,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? ext.brandGold
+              : ext.inkMuted,
+        ),
+        thumbIcon: WidgetStateProperty.resolveWith(
+          (states) => Icon(
+            states.contains(WidgetState.selected)
+                ? Icons.check_rounded
+                : Icons.close_rounded,
+            size: 16,
+            color: states.contains(WidgetState.selected)
+                ? ext.brandGold
+                : ext.surfaceSoft,
+          ),
+        ),
+      ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: ext.surface,
         selectedItemColor: ext.brandGold,

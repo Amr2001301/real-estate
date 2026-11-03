@@ -9,21 +9,24 @@ import 'empty_state.dart';
 
 /// What a wrong or outdated link opens (a notification for a page that moved,
 /// a typo): the app's own header, a short Arabic/English message and a way
-/// home — never the router's raw error.
+/// home — never the router's raw error. With [noAccess] it says the page is
+/// not open to this account instead (a link to a page the menu hides).
 class AppNotFoundPage extends StatelessWidget {
-  const AppNotFoundPage({super.key, required this.onHome});
+  const AppNotFoundPage({super.key, required this.onHome, this.noAccess = false});
 
   final VoidCallback onHome;
+  final bool noAccess;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final title = noAccess ? l10n.pageNoAccessTitle : l10n.pageNotFoundTitle;
     return Scaffold(
-      key: const Key('page-not-found'),
+      key: Key(noAccess ? 'page-no-access' : 'page-not-found'),
       backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
-          AppNavHeader(title: l10n.pageNotFoundTitle, compact: true),
+          AppNavHeader(title: title, compact: true),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -31,9 +34,9 @@ class AppNotFoundPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   EmptyState(
-                    icon: Icons.link_off_rounded,
-                    title: l10n.pageNotFoundTitle,
-                    message: l10n.pageNotFoundMessage,
+                    icon: noAccess ? Icons.lock_outline_rounded : Icons.link_off_rounded,
+                    title: title,
+                    message: noAccess ? l10n.pageNoAccessMessage : l10n.pageNotFoundMessage,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   AppButton(label: l10n.pageNotFoundHome, icon: Icons.home_rounded, onPressed: onHome),

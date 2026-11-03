@@ -213,6 +213,8 @@ GoRouter createCustomerRouter(
         // A company's own app has no picker: it is that company's.
         return kEnableCustomerTenantSelection && !tenantStorage.isLocked ? null : '/home';
       }
+      // The guest hub offers sign-in; a signed-in customer has «حسابي».
+      if (loc == '/more' && isCustomer) return '/account';
       if (loc == '/visit-request') return authed ? null : '/login';
       if (loc == '/info-request') return authed ? null : '/login';
       return null;
