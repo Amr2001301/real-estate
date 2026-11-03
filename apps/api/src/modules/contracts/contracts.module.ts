@@ -1546,6 +1546,26 @@ class ContractsController {
     await assertOwnedRecord(this.prisma, req, user, COMPANY_WIDE_CODES.contracts, () => this.svc.ownerSalesId(id));
   }
 
+  // The customer's statement of account (كشف حساب) for one of their own
+  // contracts — the same figures staff see on the contract page. Staff names
+  // (who reversed a payment) and internal deposit ids are left out.
+  @RequireCapability('feature.customerApp')
+  @Roles(UserRole.CUSTOMER)
+  @Get('me/contracts/:id/statement')
+  async myStatement(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    const owned = await this.prisma.contract.findFirst({
+      where: { id, customerId: user.sub, deletedAt: null, companyId: getRequiredCompanyId() },
+      select: { id: true },
+    });
+    if (!owned) throw new NotFoundException('Contract not found');
+    const s = await this.svc.statement(id);
+    return {
+      ...s,
+      lines: s.lines.map(({ by: _by, depositId: _d, ...line }) => line),
+      awaiting: s.awaiting.map(({ depositId: _d, ...a }) => a),
+    };
+  }
+
   // Customer view of their own contracts — intentionally NOT permission-gated.
   //
   // SECURITY: the underlying Contract row carries a permanent `pdfUrl`
