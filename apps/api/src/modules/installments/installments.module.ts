@@ -27,6 +27,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -58,6 +59,7 @@ import {
   NotificationsModule,
   NotificationsService,
 } from '../notifications/notifications.module';
+import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { RequireCapability } from '../../common/decorators/require-capability.decorator';
@@ -135,6 +137,10 @@ class CreatePlanDto {
 
 // ─── Template DTOs ─────────────────────────────────────────────────────────────
 
+/** Who sees a plan: the sales team only, or customers too (the app's unit page). */
+const PLAN_VISIBILITIES = ['SALES_ONLY', 'PUBLIC'] as const;
+type PlanVisibility = (typeof PLAN_VISIBILITIES)[number];
+
 class DurationOptionDto {
   @IsInt() @Min(1) durationMonths!: number;
   @IsNumber() @Min(0) increasePercentage!: number;
@@ -168,6 +174,8 @@ class CreatePlanTemplateDto {
   @IsOptional() @IsDateString() manualStartDate?: string;
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
   @IsOptional() @IsEnum(PlanTemplateStatus) status?: PlanTemplateStatus;
+  /** PUBLIC: customers see the plan on the unit page of the app. */
+  @IsOptional() @IsIn(PLAN_VISIBILITIES) visibility?: PlanVisibility;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
 }
@@ -193,6 +201,8 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsDateString() manualStartDate?: string;
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
   @IsOptional() @IsEnum(PlanTemplateStatus) status?: PlanTemplateStatus;
+  /** PUBLIC: customers see the plan on the unit page of the app. */
+  @IsOptional() @IsIn(PLAN_VISIBILITIES) visibility?: PlanVisibility;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
 }
@@ -984,6 +994,110 @@ function enrichDurationOptions(
   }));
 }
 
+/** Months between two instalments of a legacy (single-duration) plan. */
+const FREQUENCY_MONTHS: Record<InstallmentFrequency, number> = {
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  SEMI_ANNUAL: 6,
+  YEARLY: 12,
+};
+
+type PublicPlanSource = {
+  id: string;
+  name: string;
+  description: string | null;
+  isCash: boolean;
+  totalPrice: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  netPrice: Prisma.Decimal;
+  reservationAmount: Prisma.Decimal;
+  downPaymentAmount: Prisma.Decimal;
+  finalPaymentAmount: Prisma.Decimal | null;
+  installmentsCount: number | null;
+  frequency: InstallmentFrequency;
+  durationOptions: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal; order: number }[];
+  scheduleItems: { amount: Prisma.Decimal }[];
+};
+
+/**
+ * One plan as a customer reads it. Every plan comes out as a list of
+ * options (months, how often, each instalment): a duration plan has one per
+ * duration (monthly), a legacy plan one (its own frequency), a cash plan none.
+ */
+export function serializePublicPlan(p: PublicPlanSource) {
+  const netPrice = Number(p.netPrice);
+  const reservationAmount = Number(p.reservationAmount);
+  const downPaymentAmount = Number(p.downPaymentAmount);
+  const finalPaymentAmount = Number(p.finalPaymentAmount ?? 0);
+  let options: {
+    durationMonths: number;
+    frequency: InstallmentFrequency;
+    installmentsCount: number;
+    installmentAmount: number;
+    totalPayable: number;
+  }[] = [];
+  if (!p.isCash && p.durationOptions.length > 0) {
+    options = enrichDurationOptions(p.durationOptions, {
+      netPrice,
+      reservationAmount,
+      downPaymentAmount,
+      finalPaymentAmount,
+    }).map((o) => ({
+      durationMonths: o.durationMonths,
+      frequency: InstallmentFrequency.MONTHLY,
+      installmentsCount: o.durationMonths,
+      installmentAmount: o.calculated.monthlyInstallment,
+      totalPayable: o.calculated.totalPayable,
+    }));
+  } else if (!p.isCash && p.installmentsCount) {
+    const remaining = Math.max(0, netPrice - reservationAmount - downPaymentAmount - finalPaymentAmount);
+    const amount = p.scheduleItems[0] ? Number(p.scheduleItems[0].amount) : remaining / p.installmentsCount;
+    options = [
+      {
+        durationMonths: p.installmentsCount * FREQUENCY_MONTHS[p.frequency],
+        frequency: p.frequency,
+        installmentsCount: p.installmentsCount,
+        installmentAmount: Math.round(amount * 100) / 100,
+        totalPayable: netPrice,
+      },
+    ];
+  }
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    isCash: p.isCash,
+    totalPrice: Number(p.totalPrice),
+    discountAmount: Number(p.discountAmount),
+    netPrice,
+    reservationAmount,
+    downPaymentAmount,
+    // Booking + down payment, as a share of the net price (what "10% مقدم" means).
+    upfrontPercent: netPrice > 0 ? Math.round(((reservationAmount + downPaymentAmount) / netPrice) * 1000) / 10 : 0,
+    finalPaymentAmount,
+    options,
+  };
+}
+
+/** A project's offers: distinct (upfront share, longest months) pairs. */
+export function summarizePublicPlans(plans: ReturnType<typeof serializePublicPlan>[]) {
+  const offers = new Map<string, { upfrontPercent: number; maxMonths: number; isCash: boolean }>();
+  for (const p of plans) {
+    const maxMonths = p.options.reduce((m, o) => Math.max(m, o.durationMonths), 0);
+    const key = `${p.isCash}|${p.upfrontPercent}|${maxMonths}`;
+    if (!offers.has(key)) offers.set(key, { upfrontPercent: p.upfrontPercent, maxMonths, isCash: p.isCash });
+  }
+  const installment = plans.filter((p) => !p.isCash && p.options.length > 0);
+  return {
+    plansCount: plans.length,
+    minUpfrontPercent: installment.length ? Math.min(...installment.map((p) => p.upfrontPercent)) : null,
+    maxMonths: installment.length
+      ? Math.max(...installment.flatMap((p) => p.options.map((o) => o.durationMonths)))
+      : null,
+    offers: [...offers.values()].sort((a, b) => a.upfrontPercent - b.upfrontPercent || b.maxMonths - a.maxMonths),
+  };
+}
+
 @Injectable()
 class PlanTemplatesService {
   constructor(
@@ -1049,6 +1163,63 @@ class PlanTemplatesService {
         totalPages: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  // ─── Customer-facing (the app's unit and project pages) ─────────────────────
+
+  /**
+   * The plans a customer sees on a unit's page: ACTIVE plans of that unit the
+   * company marked PUBLIC, in a published project. Only the terms a customer
+   * needs — no creator, no internal ids beyond the plan's own.
+   */
+  async publicForUnit(unitId: string) {
+    const companyId = getRequiredCompanyId();
+    const unit = await this.prisma.unit.findFirst({
+      where: { id: unitId, companyId, building: { phase: { project: { status: 'PUBLISHED' } } } },
+      select: { id: true },
+    });
+    if (!unit) throw new NotFoundException('Unit not found');
+    const plans = await this.prisma.installmentPlanTemplate.findMany({
+      where: { companyId, unitId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        durationOptions: { orderBy: { order: 'asc' } },
+        scheduleItems: {
+          where: { paymentType: PlanPaymentType.INSTALLMENT },
+          orderBy: { paymentNumber: 'asc' },
+          take: 1,
+          select: { amount: true },
+        },
+      },
+    });
+    return plans.map((p) => serializePublicPlan(p));
+  }
+
+  /**
+   * A project's payment terms for its page: the PUBLIC ACTIVE plans of its
+   * units, folded into the distinct offers (down payment share × longest
+   * duration), with the lowest down payment share and longest duration.
+   */
+  async publicForProject(projectId: string) {
+    const companyId = getRequiredCompanyId();
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, companyId, status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    const plans = await this.prisma.installmentPlanTemplate.findMany({
+      where: { companyId, projectId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
+      include: {
+        durationOptions: { orderBy: { order: 'asc' } },
+        scheduleItems: {
+          where: { paymentType: PlanPaymentType.INSTALLMENT },
+          orderBy: { paymentNumber: 'asc' },
+          take: 1,
+          select: { amount: true },
+        },
+      },
+    });
+    return summarizePublicPlans(plans.map((p) => serializePublicPlan(p)));
   }
 
   async stats() {
@@ -1216,6 +1387,7 @@ class PlanTemplatesService {
             ? new Prisma.Decimal(dto.finalPaymentAmount)
             : null,
           status: dto.status ?? PlanTemplateStatus.DRAFT,
+          visibility: dto.visibility ?? 'SALES_ONLY',
           createdById: userId,
         },
       });
@@ -1279,7 +1451,7 @@ class PlanTemplatesService {
     // (or replacing its durations, which unlinks the reservations' choice)
     // would convert those reservations on numbers nobody agreed to.
     const termsChange = Object.keys(dto).some(
-      (k) => !['name', 'description', 'status'].includes(k) && (dto as Record<string, unknown>)[k] !== undefined,
+      (k) => !['name', 'description', 'status', 'visibility'].includes(k) && (dto as Record<string, unknown>)[k] !== undefined,
     );
     if (termsChange) {
       const inUse = await this.prisma.reservation.count({
@@ -1426,6 +1598,7 @@ class PlanTemplatesService {
             ? new Prisma.Decimal(merged.finalPaymentAmount)
             : null,
           status: merged.status ?? PlanTemplateStatus.DRAFT,
+          ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
         },
       });
 
@@ -2136,11 +2309,31 @@ class PlanTemplatesController {
   }
 }
 
+// ─── Public plans controller (the customer app) ───────────────────────────────
+
+@ApiTags('installment-plan-templates')
+@Controller()
+class PublicPlansController {
+  constructor(private readonly svc: PlanTemplatesService) {}
+
+  @Public()
+  @Get('public/units/:id/payment-plans')
+  forUnit(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.publicForUnit(id);
+  }
+
+  @Public()
+  @Get('public/projects/:id/payment-plans')
+  forProject(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.publicForProject(id);
+  }
+}
+
 // ─── Module ───────────────────────────────────────────────────────────────────
 
 @Module({
   imports: [NotificationsModule],
-  controllers: [InstallmentsController, PlanTemplatesController, MeInstallmentsController],
+  controllers: [InstallmentsController, PlanTemplatesController, PublicPlansController, MeInstallmentsController],
   providers: [
     InstallmentsService,
     InstallmentsCron,
