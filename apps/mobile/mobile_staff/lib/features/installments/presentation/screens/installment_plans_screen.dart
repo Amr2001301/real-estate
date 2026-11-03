@@ -175,7 +175,7 @@ class _PlanCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        template.name,
+                        ltrRuns(template.name),
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: colors.inkStrong,
                           fontWeight: FontWeight.w800,

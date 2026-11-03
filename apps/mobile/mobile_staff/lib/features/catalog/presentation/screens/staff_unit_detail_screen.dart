@@ -316,7 +316,7 @@ class _DetailPageState extends State<_DetailPage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                      child: Text(o.name, style: Theme.of(context).textTheme.titleSmall),
+                      child: Text(ltrRuns(o.name), style: Theme.of(context).textTheme.titleSmall),
                     ),
                     AppPaymentPlanTable(offer: o),
                   ],

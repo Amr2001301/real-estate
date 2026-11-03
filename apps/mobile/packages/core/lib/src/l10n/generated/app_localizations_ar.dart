@@ -4917,4 +4917,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String detailUpTo(String term) {
     return 'حتى $term';
   }
+
+  @override
+  String get pageNotFoundTitle => 'الصفحة غير موجودة';
+
+  @override
+  String get pageNotFoundMessage =>
+      'الرابط غير صحيح أو لم تعد هذه الصفحة متاحة.';
+
+  @override
+  String get pageNotFoundHome => 'العودة إلى الرئيسية';
 }

@@ -240,7 +240,7 @@ class _SuccessBody extends StatelessWidget {
                   if (r.bookingAmount != null)
                     PriceFormatter.formatString(r.bookingAmount,
                         languageCode: lang),
-                  if (detail.planName != null) detail.planName!,
+                  if (detail.planName != null) ltrRuns(detail.planName),
                 ].join('  ·  '),
               ),
               const SizedBox(height: AppSpacing.md),

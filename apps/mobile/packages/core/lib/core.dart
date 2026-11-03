@@ -99,6 +99,7 @@ export 'src/widgets/app_form_section.dart';
 export 'src/widgets/app_filter_chip.dart';
 export 'src/widgets/app_detail_page.dart';
 export 'src/widgets/app_detail_kit.dart';
+export 'src/widgets/app_not_found_page.dart';
 export 'src/widgets/app_kpi_tile.dart';
 export 'src/widgets/unit_specs_grid.dart';
 export 'src/widgets/auth_widgets.dart';

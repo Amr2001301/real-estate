@@ -9181,6 +9181,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'up to {term}'**
   String detailUpTo(String term);
+
+  /// No description provided for @pageNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get pageNotFoundTitle;
+
+  /// No description provided for @pageNotFoundMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The link is wrong or this page is no longer available.'**
+  String get pageNotFoundMessage;
+
+  /// No description provided for @pageNotFoundHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to home'**
+  String get pageNotFoundHome;
 }
 
 class _AppLocalizationsDelegate

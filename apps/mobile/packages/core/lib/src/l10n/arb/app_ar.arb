@@ -1685,5 +1685,8 @@
   "detailPlanTerm": "{pct} مقدم",
   "@detailPlanTerm": {"placeholders": {"pct": {"type": "String"}}},
   "detailUpTo": "حتى {term}",
-  "@detailUpTo": {"placeholders": {"term": {"type": "String"}}}
+  "@detailUpTo": {"placeholders": {"term": {"type": "String"}}},
+  "pageNotFoundTitle": "الصفحة غير موجودة",
+  "pageNotFoundMessage": "الرابط غير صحيح أو لم تعد هذه الصفحة متاحة.",
+  "pageNotFoundHome": "العودة إلى الرئيسية"
 }

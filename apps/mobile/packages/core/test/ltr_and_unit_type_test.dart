@@ -40,4 +40,14 @@ void main() {
     expect(PriceFormatter.formatCompact(1600000, languageCode: 'ar'), '1.6M ج.م');
     expect(DateFormatter.mediumDate(DateTime(2026, 11, 1), languageCode: 'ar'), '1 نوفمبر 2026');
   });
+
+  test('ltrRuns isolates Latin codes inside Arabic text, leaves numbers alone', () {
+    expect(
+      ltrRuns('خطة 5 سنوات — DF-LB-Z01-302'),
+      'خطة 5 سنوات — \u2066DF-LB-Z01-302\u2069',
+    );
+    expect(ltrRuns('عقد #CON-2026-0005'), 'عقد \u2066#CON-2026-0005\u2069');
+    expect(ltrRuns('خطة 5 سنوات'), 'خطة 5 سنوات');
+    expect(ltrRuns(null), '');
+  });
 }

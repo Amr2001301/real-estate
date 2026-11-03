@@ -210,7 +210,7 @@ class _DetailPageState extends State<_DetailPage> {
                     if (_offers.length > 1)
                       Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                        child: Text(o.name, style: Theme.of(context).textTheme.titleSmall),
+                        child: Text(ltrRuns(o.name), style: Theme.of(context).textTheme.titleSmall),
                       ),
                     AppPaymentPlanTable(offer: o),
                   ],

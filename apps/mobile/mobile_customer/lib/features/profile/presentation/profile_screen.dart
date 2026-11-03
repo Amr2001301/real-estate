@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/user_profile.dart';
@@ -127,9 +126,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final l10n = context.l10n;
     return Scaffold(
       backgroundColor: context.appColors.canvas,
-      extendBodyBehindAppBar: true,
-      appBar: _PremiumAppBar(title: l10n.profileTitle),
-      body: BlocBuilder<ProfileCubit, ProfileState>(
+      body: Column(
+        children: [
+          AppNavHeader(title: l10n.profileTitle, compact: true, leadingAction: const NavHeaderBack()),
+          Expanded(
+            child: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, state) {
           switch (state.status) {
             case DataStatus.initial:
@@ -149,6 +150,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   : _buildView(context, p, l10n);
           }
         },
+      ),
+          ),
+        ],
       ),
     );
   }
@@ -509,68 +513,6 @@ class _Field {
 }
 
 // ── Premium app bar ───────────────────────────────────────────────────────────
-
-class _PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _PremiumAppBar({required this.title});
-  final String title;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      foregroundColor: Colors.white,
-      elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.white),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      flexibleSpace: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [_navyLight, _navyCard, _navyDeep],
-                stops: [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
-          const IgnorePointer(child: _HeaderDots()),
-          // Gold shimmer at bottom
-          Positioned(
-            bottom: 0,
-            left: 48,
-            right: 48,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Dot texture ───────────────────────────────────────────────────────────────
 

@@ -4961,4 +4961,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String detailUpTo(String term) {
     return 'up to $term';
   }
+
+  @override
+  String get pageNotFoundTitle => 'Page not found';
+
+  @override
+  String get pageNotFoundMessage =>
+      'The link is wrong or this page is no longer available.';
+
+  @override
+  String get pageNotFoundHome => 'Back to home';
 }

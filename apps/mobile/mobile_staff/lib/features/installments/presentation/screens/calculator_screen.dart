@@ -447,7 +447,7 @@ class _PlanTemplatesSection extends StatelessWidget {
                       children: [
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          t.name,
+                          ltrRuns(t.name),
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: colors.inkMuted,
                             fontSize: 11,

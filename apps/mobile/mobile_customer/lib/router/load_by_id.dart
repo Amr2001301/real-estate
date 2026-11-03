@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 /// Opens a detail screen from an id alone — a notification, a push or a link
 /// — by finding the item in the customer's own list. Screens opened from
@@ -10,11 +11,15 @@ class LoadById<T> extends StatefulWidget {
     required this.load,
     required this.matches,
     required this.builder,
+    this.fallbackPath = '/home',
   });
 
   final Future<Result<List<T>>> Function() load;
   final bool Function(T item) matches;
   final Widget Function(T item) builder;
+
+  /// Where the back button goes when there is nothing to pop (a cold link).
+  final String fallbackPath;
 
   @override
   State<LoadById<T>> createState() => _LoadByIdState<T>();
@@ -25,7 +30,20 @@ class _LoadByIdState<T> extends State<LoadById<T>> {
 
   void _retry() => setState(() => _future = widget.load());
 
-  Widget _page(Widget body) => Scaffold(appBar: AppBar(), body: body);
+  Widget _page(Widget body) => Scaffold(
+        body: Column(
+          children: [
+            AppNavHeader(
+              title: '',
+              compact: true,
+              leadingAction: NavHeaderBack(
+                onFallback: () => context.go(widget.fallbackPath),
+              ),
+            ),
+            Expanded(child: body),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
