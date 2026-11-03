@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-02, after #242 + PR 2b)
+# Handoff — where the work stands (2026-11-03, after #251)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -67,11 +67,20 @@
   - **PR2b-2:** النصوص المكتوبة جوه الكود اتنقلت لملفات الترجمة (فصحى + إنجليزي). **مفتوح ومستني موافقتك.** بعده خطة مراجعة التطبيقين تكون خلصت.
 - **قراراتك:** كل النصوص فصحى؛ التصميم الأول (3b و3c) وبعده الفصحى (2b)؛ الأرقام إنجليزي.
 
+**بعد كده (3 نوفمبر، #245–#251):** القسم **2i** تحت. باختصار:
+- **#245:** كشف حساب العميل في تطبيق العميل.
+- **#246:** «ليا وعليا» في تطبيق الموظفين بنفس أرقام لوحة التحكم.
+- **#247 و#248:** فلتر موحّد في التطبيقين، وصفحات المشروع والوحدة بهيدر كحلي وكارت صور.
+- **#249:** خطط السداد: كل خطة ليها «من يراها»، والعميل بيشوف بس اللي الشركة معلّماها «تظهر للعملاء أيضًا». كل الخطط الحالية للمبيعات بس لحد ما الشركة تعلّمها.
+- **#250:** التصميم الجديد لصفحات المشروع والوحدة: صور بعدّاد وملء الشاشة، كارت السعر و«أو من … شهريًا»، شريط أقسام، جدول خطة الدفع، وحاسبة «احسب قسطك».
+- **#251:** تنبيه للموظفين (المندوب ومديره والأدمن) بالعقود اللي ماتمضتش وعليها دفعات مستحقة، مرة وبعدين كل أسبوع. العميل مايوصلهوش حاجة.
+- **الجاي:** خطط السداد في صفحات الوسيط، والنشر على السيرفر (بموافقتك ونسخة احتياطية).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #247 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #251 مدموج. **ابدأ بالقسم 2i** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -401,7 +410,7 @@ The owner asked whether the two apps keep up with the dashboard and the website.
 
 **Other open items the owner has not decided yet** (ask before starting; the settings-key and `.env.example` items are done in #236/#237): chasing an unsigned contract's due rows; counting a MANUAL cancellation's commission/bonus as a possible liability; showing the customer's national ID/address/extra fields to the broker; e-signing the contract itself (large).
 
-### 2i. #234–#242 and PR 2b (2026-11-01 → 2026-11-02) — mobile QA and polish
+### 2i. #234–#251 (2026-11-01 → 2026-11-03) — mobile QA, polish, plans and detail pages
 
 Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h are done (#236, #237).
 
@@ -421,12 +430,19 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 | #245 | Customer app ST1 | Statement of account (كشف حساب) on a signed contract: `GET /contracts/me/contracts/:id/statement` (customer, own contract only; same figures as staff, without who reversed a payment or deposit ids); screen `contract_statement_screen.dart`. e2e `e2e-st1-customer-statement`. |
 | #246 | Staff app LG-M | «ليا وعليا»: the dashboard's receivables & payables (`GET /reports/ledger`, `/reports/ledger/rows`) — same numbers by construction; admin or `reports:financial:read` (`StaffAccess.ledger`); periods, groups with state split, rows per group. `features/ledger/`. |
 | #247 | Mobile PR3d | Core `AppFilterChip` — one list filter pill (dot, count, navy when selected) replacing 16 private copies in both apps. |
-| PR 3e | Mobile | Project and unit pages in all three apps (customer, staff, broker) share one layout the owner chose: the navy header, the photos in a rounded card, then the sections (core `AppDetailPage`, `AppDetailSectionTitle`, `AppDetailStat`, `NavHeaderGlass`). The sliding bottom sheet is gone. Open. |
+| #248 | Mobile PR3e | Project and unit pages in all three apps (customer, staff, broker) share one layout the owner chose: the navy header, the photos in a rounded card, then the sections (core `AppDetailPage`, `AppDetailSectionTitle`, `AppDetailStat`, `NavHeaderGlass`). The sliding bottom sheet is gone. |
+| #249 | API + dashboard PP1 | Payment plans customers can see: `InstallmentPlanTemplate.visibility` (`SALES_ONLY` default, or `PUBLIC`) set from the plan form («من يراها»); `GET /public/units/:id/payment-plans` (the unit's ACTIVE + PUBLIC plans in a published project of the tenant: prices, booking, down payment, `downPaymentPercent` = down payment ÷ net price — the booking is its own line —, and per-duration `options` with the instalment) and `GET /public/projects/:id/payment-plans` (`minDownPaymentPercent`, `maxMonths`, distinct offers). e2e `e2e-pp1-public-plans`. |
+| #250 | Mobile DD-M | The richer project/unit pages from the owner-approved mockup: core `AppPhotoGallery` (counter, full-screen viewer, thumbnails), `AppPriceCard` («أو من X ج.م شهريًا»), `AppSectionTabsSliver` (pinned tabs that scroll to a section), `AppPaymentPlanTable`, `showInstallmentCalculator`, `AppPlanOfferCards`, `AppDetailBottomBar`; pure-Dart `InstallmentOffer` / `ProjectPlanSummary` (`core_domain`). Customer plans come from PP1; staff plans from the plan templates, worked out like the API's `computeDurationOption`. Broker pages get the layout without plans (public endpoints are scoped by tenant slug, not the broker's account). |
+| #251 | API ST2 | Unsigned contracts with a payment due alert staff, never the customer: `UnsignedContractAlertCron` (daily) → `unsigned_contract_due` to the sales rep on the deal, their sales manager and the admins; once, then weekly while unsigned. Env `UNSIGNED_CONTRACT_ALERTS_ENABLED`, `UNSIGNED_CONTRACT_ALERT_CRON`. e2e `e2e-st2-unsigned-contract-alerts`. |
 
 **Owner decisions (2026-11-03) on the open items:** customer statement in the app — yes (ST1); an unsigned contract's due rows — remind staff only, never the customer (ST2, next); the broker does not get the customer's national ID / address / extra fields; e-signing the contract itself is postponed (needs a lawyer's view on Egyptian law first). «ليا وعليا» must show the same numbers in the staff app and on the dashboard — the staff app has no ledger screen yet; owner approved: built in LG-M (same API and permission).
 
-**Next, in this order (one PR each, owner approves each merge):**
-1. **PR 2b — Modern Standard Arabic (owner: «فصحى») — split into 2b-1 (ARB values) and 2b-2 (strings in the code), see the table.** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.
+**Owner decisions (2026-11-03, later):** the detail-page mockup (canvas https://claude.ai/artifact/RFpE3DJpqNr5wjF7nKiaaj) approved and built (#250); customers see only the plans the company marks «تظهر للعملاء أيضًا» (#249) — every existing plan stays sales-only until the company marks it; the down payment share leaves the booking out ("10% مقدم"); ST2 recipients = rep + their manager + admins, weekly while unsigned (#251).
+
+**Next (owner picks; one PR each, owner approves each merge):**
+1. **Broker plans:** a broker-scoped endpoint for a unit's/project's plans (the public ones are tenant-by-slug), so the broker pages get «أو من … شهريًا» and the calculator like staff.
+2. **Production deploy** of everything since 2026-09-18 — explicit owner approval and a backup first (section 5, "Deferred by the owner"). New env since #237: `UNSIGNED_CONTRACT_ALERTS_ENABLED`, `UNSIGNED_CONTRACT_ALERT_CRON` (both optional). No new migrations in #245–#251 (`visibility` already existed).
+3. Postponed: e-signing the contract itself (lawyer first).
 
 **Owner decisions (2026-11-01/02):** all app text in فصحى; design first (3b, 3c), then 2b; Western digits (0-9) for numbers, prices and dates in both languages.
 
