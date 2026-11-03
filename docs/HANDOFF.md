@@ -440,7 +440,7 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 **Owner decisions (2026-11-03, later):** the detail-page mockup (canvas https://claude.ai/artifact/RFpE3DJpqNr5wjF7nKiaaj) approved and built (#250); customers see only the plans the company marks «تظهر للعملاء أيضًا» (#249) — every existing plan stays sales-only until the company marks it; the down payment share leaves the booking out ("10% مقدم"); ST2 recipients = rep + their manager + admins, weekly while unsigned (#251).
 
 **Next (owner picks; one PR each, owner approves each merge):**
-1. **Broker plans:** a broker-scoped endpoint for a unit's/project's plans (the public ones are tenant-by-slug), so the broker pages get «أو من … شهريًا» and the calculator like staff.
+1. ~~**Broker plans**~~ — BP1: `GET /portal/units/:id/payment-plans` and `/portal/projects/:id/payment-plans` (the plans customers see — owner chose this, 2026-11-03 — on a granted unit/project only; not granted → 404); the broker pages show «أو من … شهريًا», the plan table, the calculator and the project offers. Note: the broker *booking* form (`/portal/reservations/plan-options`) still lists every ACTIVE plan of the unit, as before — a reservation needs one.
 2. **Production deploy** of everything since 2026-09-18 — explicit owner approval and a backup first (section 5, "Deferred by the owner"). New env since #237: `UNSIGNED_CONTRACT_ALERTS_ENABLED`, `UNSIGNED_CONTRACT_ALERT_CRON` (both optional). No new migrations in #245–#251 (`visibility` already existed).
 3. Postponed: e-signing the contract itself (lawyer first).
 

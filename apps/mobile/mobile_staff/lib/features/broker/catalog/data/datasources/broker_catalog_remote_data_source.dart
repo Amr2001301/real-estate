@@ -5,6 +5,12 @@ import '../dtos/broker_catalog_dtos.dart';
 abstract interface class BrokerCatalogRemoteDataSource {
   Future<List<BrokerProjectDto>> listProjects();
   Future<List<BrokerUnitDto>> listUnits({String? projectId});
+
+  /// The plans the company shows customers for a granted unit (raw JSON).
+  Future<List<Map<String, dynamic>>> unitPlans(String unitId);
+
+  /// A granted project's payment offers (raw JSON).
+  Future<Map<String, dynamic>> projectPlans(String projectId);
 }
 
 class BrokerCatalogRemoteDataSourceImpl implements BrokerCatalogRemoteDataSource {
@@ -31,5 +37,17 @@ class BrokerCatalogRemoteDataSourceImpl implements BrokerCatalogRemoteDataSource
     final body = res.data;
     final list = body is Map<String, dynamic> ? (body['data'] as List? ?? const []) : (body as List? ?? const []);
     return list.whereType<Map<String, dynamic>>().map(BrokerUnitDto.fromJson).toList();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> unitPlans(String unitId) async {
+    final res = await _dio.get<List<dynamic>>('/portal/units/$unitId/payment-plans');
+    return (res.data ?? const []).whereType<Map<String, dynamic>>().toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> projectPlans(String projectId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/portal/projects/$projectId/payment-plans');
+    return res.data ?? const {};
   }
 }

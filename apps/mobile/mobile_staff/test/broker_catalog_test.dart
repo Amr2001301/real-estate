@@ -28,6 +28,34 @@ class _FakeRemote implements BrokerCatalogRemoteDataSource {
     if (error != null) throw error!;
     return units;
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> unitPlans(String unitId) async {
+    if (error != null) throw error!;
+    return [
+      {
+        'name': 'P',
+        'netPrice': '1000000',
+        'reservationAmount': 50000,
+        'downPaymentAmount': 100000,
+        'options': [
+          {'durationMonths': 60, 'frequency': 'MONTHLY', 'installmentsCount': 60, 'installmentAmount': 14166.66, 'totalPayable': 1000000},
+        ],
+      },
+    ];
+  }
+
+  @override
+  Future<Map<String, dynamic>> projectPlans(String projectId) async {
+    if (error != null) throw error!;
+    return {
+      'minDownPaymentPercent': 10,
+      'maxMonths': 60,
+      'offers': [
+        {'downPaymentPercent': 10, 'maxMonths': 60, 'isCash': false},
+      ],
+    };
+  }
 }
 
 class _FakeRepo implements BrokerCatalogRepository {
@@ -38,6 +66,10 @@ class _FakeRepo implements BrokerCatalogRepository {
   Future<Result<List<BrokerProject>>> getProjects() async => projects!;
   @override
   Future<Result<List<BrokerUnit>>> getUnits({String? projectId}) async => units!;
+  @override
+  Future<Result<List<InstallmentOffer>>> unitPlans(String unitId) async => const Ok([]);
+  @override
+  Future<Result<ProjectPlanSummary>> projectPlans(String projectId) async => const Ok(ProjectPlanSummary());
 }
 
 void main() {
@@ -113,6 +145,18 @@ void main() {
       await cubit.load();
       expect(cubit.state.status, DataStatus.success);
       expect(cubit.state.data, hasLength(1));
+    });
+  });
+
+  group('broker plans (what a customer would see)', () {
+    test('reads a unit\'s plans and a project\'s offers', () async {
+      final repo = BrokerCatalogRepositoryImpl(_FakeRemote());
+      final plans = (await repo.unitPlans('u1') as Ok<List<InstallmentOffer>>).data;
+      expect(plans.single.downPaymentPercent, 10);
+      expect(plans.single.cheapest!.amount, 14166.66);
+      final summary = (await repo.projectPlans('p1') as Ok<ProjectPlanSummary>).data;
+      expect(summary.minDownPaymentPercent, 10);
+      expect(summary.maxMonths, 60);
     });
   });
 }

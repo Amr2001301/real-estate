@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../../common/catalog_status_label.dart';
 import '../../domain/entities/broker_project.dart';
+import '../../domain/repositories/broker_catalog_repository.dart';
 import '../cubit/broker_units_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
@@ -28,11 +29,21 @@ class _BrokerProjectDetailScreenState
   final _servicesKey = GlobalKey();
   final _mapKey = GlobalKey();
   final _unitsKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  ProjectPlanSummary _plans = const ProjectPlanSummary();
 
   @override
   void initState() {
     super.initState();
     context.read<BrokerUnitsCubit>().load();
+    _loadPlans();
+  }
+
+  // The offers a customer would see (best-effort).
+  Future<void> _loadPlans() async {
+    final result = await context.read<BrokerCatalogRepository>().projectPlans(widget.project.id);
+    if (!mounted) return;
+    if (result case Ok(:final data)) setState(() => _plans = data);
   }
 
   @override
@@ -66,13 +77,14 @@ class _BrokerProjectDetailScreenState
         ],
       ),
       slivers: [
-        if (p.commissionPct != null)
+        if (p.commissionPct != null || !_plans.isEmpty)
           AppDetailPage.box(
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.md),
               child: AppPriceCard(
-                label: l10n.brokerCommissionPct,
-                price: '${p.commissionPct}%',
+                label: p.commissionPct != null ? l10n.brokerCommissionPct : l10n.detailPaymentPlans,
+                price: p.commissionPct != null ? percentLabel(double.tryParse('${p.commissionPct}') ?? 0) : name,
+                caption: projectOfferLine(l10n, _plans),
                 facts: [if (p.city != null) AppPriceFact(l10n.labelCity, p.city!)],
               ),
             ),
@@ -82,6 +94,7 @@ class _BrokerProjectDetailScreenState
           tabs: [
             if (p.description != null) AppSectionTab(l10n.detailTabOverview, _aboutKey),
             if (hasServices) AppSectionTab(l10n.detailTabAmenities, _servicesKey),
+            if (!_plans.isEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
             if (hasMap) AppSectionTab(l10n.detailTabLocation, _mapKey),
             AppSectionTab(l10n.detailTabUnits, _unitsKey),
           ],
@@ -92,6 +105,19 @@ class _BrokerProjectDetailScreenState
             children: [
               if (p.description != null) anchored(_aboutKey, _AboutSection(project: p, lang: lang, l10n: l10n)),
               if (hasServices) anchored(_servicesKey, _ServicesSection(project: p, lang: lang, l10n: l10n)),
+              if (!_plans.isEmpty)
+                Padding(
+                  key: _paymentKey,
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AppDetailSectionTitle(l10n.detailPaymentPlans),
+                      const SizedBox(height: AppSpacing.md),
+                      AppPlanOfferCards(plans: _plans),
+                    ],
+                  ),
+                ),
               if (hasMap) anchored(_mapKey, _MapSection(project: p, lang: lang)),
               Padding(
                 key: _unitsKey,

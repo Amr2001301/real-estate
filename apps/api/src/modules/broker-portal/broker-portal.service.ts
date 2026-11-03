@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PlanTemplatesService } from '../installments/installments.module';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -10,7 +11,44 @@ import { liveProjectGrant } from '../broker-access/live-grant';
 
 @Injectable()
 export class BrokerPortalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly plans: PlanTemplatesService,
+  ) {}
+
+  // ── /portal/units/:id/payment-plans + /portal/projects/:id/payment-plans ──
+  // The plans the company shows customers (owner, 2026-11-03: a broker shows
+  // the customer what the customer would see), for a unit or project the
+  // broker is granted. Not granted reads as not found.
+
+  async unitPaymentPlans(scope: BrokerScopeContext, unitId: string) {
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+      select: { id: true, building: { select: { phase: { select: { projectId: true } } } } },
+    });
+    if (!unit) throw new NotFoundException('Unit not found');
+    const [projectGrant, unitGrant] = await Promise.all([
+      this.prisma.brokerProjectAccess.findFirst({
+        where: { brokerId: scope.brokerId, projectId: unit.building.phase.projectId, ...liveProjectGrant() },
+        select: { id: true },
+      }),
+      this.prisma.brokerUnitAccess.findFirst({
+        where: { brokerId: scope.brokerId, unitId, active: true },
+        select: { id: true },
+      }),
+    ]);
+    if (!projectGrant && !unitGrant) throw new NotFoundException('Unit not found');
+    return this.plans.customerPlansForUnit(unitId);
+  }
+
+  async projectPaymentPlans(scope: BrokerScopeContext, projectId: string) {
+    const grant = await this.prisma.brokerProjectAccess.findFirst({
+      where: { brokerId: scope.brokerId, projectId, ...liveProjectGrant() },
+      select: { id: true },
+    });
+    if (!grant) throw new NotFoundException('Project not found');
+    return this.plans.customerPlansForProject(projectId);
+  }
 
   // ── /portal/me + /portal/profile ────────────────────────────────────────
 
