@@ -359,7 +359,7 @@ export class BrokerPortalReservationsService {
     if (!resolvedPlanId) {
       if (applicablePlans.length === 0) {
         throw new BadRequestException(
-          'لا توجد خطة دفع فعّالة لهذه الوحدة. تواصل مع الإدارة قبل إنشاء الحجز.',
+          'لا توجد خطة دفع متاحة للوسطاء لهذه الوحدة. تواصل مع الإدارة قبل إنشاء الحجز.',
         );
       }
       if (applicablePlans.length > 1) {
@@ -368,6 +368,10 @@ export class BrokerPortalReservationsService {
         );
       }
       resolvedPlanId = applicablePlans[0]!.id;
+    } else if (!applicablePlans.some((p) => p.id === resolvedPlanId)) {
+      throw new BadRequestException(
+        'خطة الدفع هذه غير متاحة للوسطاء. اختر خطة من الخطط المعروضة أو تواصل مع الإدارة.',
+      );
     }
 
     {
@@ -595,6 +599,9 @@ export class BrokerPortalReservationsService {
     const plans = await this.prisma.installmentPlanTemplate.findMany({
       where: {
         status: PlanTemplateStatus.ACTIVE,
+        // A broker books on the plans customers see (owner, 2026-11-03);
+        // sales-only plans and offers stay with the company's sales team.
+        visibility: 'PUBLIC',
         projectId,
         reservationAmount: { gt: 0 },
         OR: [{ unitId }, { unitId: null }],

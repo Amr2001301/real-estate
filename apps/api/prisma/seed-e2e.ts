@@ -287,6 +287,8 @@ async function main(): Promise<void> {
         downPaymentAmount: 200_000,
         installmentsCount: 24,
         status: PlanTemplateStatus.ACTIVE,
+        // Brokers book on the plans customers see.
+        visibility: 'PUBLIC',
         createdById: adminUser.id,
         durationOptions: {
           create: [

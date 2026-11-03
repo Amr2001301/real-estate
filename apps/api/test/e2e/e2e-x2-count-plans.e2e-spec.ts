@@ -296,6 +296,7 @@ describe('X2 — plans priced by instalment count convert to contracts (e2e)', (
       frequency: 'YEARLY',
       startDateRule: 'AFTER_CONTRACT',
       status: 'ACTIVE',
+      visibility: 'PUBLIC',
     });
     if (tpl.status !== 201) throw new Error(`template create: ${JSON.stringify(tpl.body)}`);
     let reservationId: string | undefined;
