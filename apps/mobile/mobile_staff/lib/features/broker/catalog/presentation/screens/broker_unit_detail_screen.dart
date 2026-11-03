@@ -25,35 +25,18 @@ class BrokerUnitDetailScreen extends StatelessWidget {
     final available = unit.status.toUpperCase() == 'AVAILABLE';
     final effProjectId = projectId ?? unit.projectId;
 
-    final colors = context.appColors;
-    return AppDetailSheetPage(
+    return AppDetailPage(
           onBack: () => context.pop(),
-          heroHeight: 360,
-          hero: _HeroBackground(unit: unit, l10n: l10n),
+          title: ltr(unit.code),
+          gallery: _HeroBackground(unit: unit, l10n: l10n),
           slivers: [
-            // ── Identity: code, then type · price · status ────────────────
-            AppDetailSheetPage.box(
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ltr(unit.code),
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: colors.inkStrong,
-                            height: 1.1,
-                          ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadii.lg),
-                      child: _MetaStrip(unit: unit, l10n: l10n, lang: lang),
-                    ),
-                  ],
-                ),
+            // ── Type · price · status ─────────────────────────────────────
+            AppDetailPage.box(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadii.lg),
+                child: _MetaStrip(unit: unit, l10n: l10n, lang: lang),
               ),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
             ),
 
             // ── Add lead CTA card (AVAILABLE only) ────────────────────────
@@ -194,14 +177,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Top gradient — protects back button
         const Positioned(
-          top: 0, left: 0, right: 0, height: 130,
+          top: 0, left: 0, right: 0, height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xCC000000), Color(0x00000000)],
+                  colors: [Color(0x33000000), Color(0x00000000)],
                 ),
               ),
             ),
@@ -210,14 +193,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Bottom gradient — behind title
         const Positioned(
-          left: 0, right: 0, bottom: 0, height: 180,
+          left: 0, right: 0, bottom: 0, height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Color(0xF2050E18), Color(0x00000000)],
+                  colors: [Color(0x88050E18), Color(0x00000000)],
                 ),
               ),
             ),
@@ -246,7 +229,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
         // Page dots
         if (multi)
           Positioned(
-            bottom: 88,
+            bottom: 12,
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -256,7 +239,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Status + media count badges — top end
         PositionedDirectional(
-          top: kToolbarHeight + 8,
+          top: AppSpacing.sm,
           end: AppSpacing.lg,
           child: Row(
             mainAxisSize: MainAxisSize.min,

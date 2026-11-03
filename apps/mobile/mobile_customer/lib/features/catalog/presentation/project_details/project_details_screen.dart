@@ -79,213 +79,52 @@ class _LoadingScaffold extends StatelessWidget {
 // Main page — Stack: pinned hero + scrollable sheet + floating nav + dock
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DetailPage extends StatefulWidget {
+class _DetailPage extends StatelessWidget {
   const _DetailPage({required this.state});
   final ProjectDetailsState state;
 
-  // Hero fills the top of the screen.
-  static const double _heroH = 390.0;
-  // Sheet starts this many px above the hero's bottom edge (overlap).
-  static const double _sheetPeek = 40.0;
-
-  @override
-  State<_DetailPage> createState() => _DetailPageState();
-}
-
-class _DetailPageState extends State<_DetailPage> {
-  late final ScrollController _scroll;
-  double _px = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll = ScrollController()..addListener(() {
-      if (mounted) setState(() => _px = _scroll.offset);
-    });
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  // Nav buttons are over the sheet once the sheet has scrolled up past them.
-  bool get _overSheet {
-    final topInset = MediaQuery.paddingOf(context).top;
-    return _px > (_DetailPage._heroH - _DetailPage._sheetPeek - topInset - 56);
-  }
-
-  // Project name would enter the status-bar unsafe area — show pinned header.
-  bool get _showHeader =>
-      _px > (_DetailPage._heroH - _DetailPage._sheetPeek + 28);
-
   @override
   Widget build(BuildContext context) {
-    final state = widget.state;
     final project = state.project!;
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
-    final topInset = MediaQuery.paddingOf(context).top;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    Widget section(String title, Widget child) => AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl),
+            child: _Section(title: title, child: child),
+          ),
+        );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: (_overSheet && !_showHeader)
-          ? SystemUiOverlayStyle.dark
-          : SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: colors.canvas,
-        body: Stack(
-          children: [
-            // ── 1. Hero image — fixed, never scrolls ──────────────────────
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: _DetailPage._heroH + topInset,
-              child: _HeroPanel(project: project, l10n: l10n),
-            ),
-
-            // ── 2. Scrollable content sheet ────────────────────────────────
-            SingleChildScrollView(
-              controller: _scroll,
-              physics: const ClampingScrollPhysics(),
-              child: Column(
-                children: [
-                  // Transparent spacer beneath the hero (sheet peeks into it).
-                  SizedBox(
-                    height: topInset +
-                        _DetailPage._heroH -
-                        _DetailPage._sheetPeek,
-                  ),
-
-                  // The floating sheet
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colors.canvas,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(AppRadii.xxl + 10),
-                        topRight: Radius.circular(AppRadii.xxl + 10),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 32,
-                          spreadRadius: 2,
-                          offset: const Offset(0, -10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Drag handle
-                        _SheetHandle(colors: colors),
-
-                        // Identity
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xl,
-                              AppSpacing.md,
-                              AppSpacing.xl,
-                              0),
-                          child: _IdentityBlock(
-                              project: project, lang: lang, l10n: l10n),
-                        ),
-
-                        // Stat tiles
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.xl,
-                              AppSpacing.xl,
-                              AppSpacing.xl,
-                              0),
-                          child: _StatTiles(project: project, l10n: l10n),
-                        ),
-
-                        // About
-                        if (!project.description.isEmpty) ...[
-                          const SizedBox(height: AppSpacing.xxl),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl),
-                            child: _Section(
-                              title: l10n.projectAbout,
-                              child: _AboutBlock(
-                                  text: project.description.resolve(lang)),
-                            ),
-                          ),
-                        ],
-
-                        // Amenities
-                        if (project.services.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.xxl),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl),
-                            child: _Section(
-                              title: l10n.projectAmenities,
-                              child: AmenityChips(
-                                  services: project.services),
-                            ),
-                          ),
-                        ],
-
-                        // Location
-                        if (project.hasLocation) ...[
-                          const SizedBox(height: AppSpacing.xxl),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xl),
-                            child: _Section(
-                              title: l10n.projectLocation,
-                              child: _LocationTile(
-                                  project: project, lang: lang, l10n: l10n),
-                            ),
-                          ),
-                        ],
-
-                        // Units carousel (full-bleed)
-                        if (state.previewUnits.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.xxl),
-                          _UnitsPreview(state: state),
-                        ],
-
-                        // Dock clearance
-                        SizedBox(height: 104 + bottomInset),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── 3. Adaptive nav overlay ───────────────────────────────────
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _NavOverlay(
-                topInset: topInset,
-                overSheet: _overSheet,
-                showHeader: _showHeader,
-                title: project.name.resolve(lang),
-                projectId: project.id,
-                colors: colors,
-              ),
-            ),
-
-            // ── 4. Sticky action dock ──────────────────────────────────────
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _StickyDock(project: project),
-            ),
-          ],
+    return AppDetailPage(
+      onBack: () => context.pop(),
+      title: project.name.resolve(lang),
+      subtitle: project.city,
+      actions: [NavHeaderGlass(child: FavoriteToggleButton(isProject: true, id: project.id))],
+      gallery: _HeroPanel(project: project, l10n: l10n),
+      bottomBar: _StickyDock(project: project),
+      slivers: [
+        AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: _IdentityBlock(project: project, lang: lang, l10n: l10n),
+          ),
         ),
-      ),
+        AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.lg),
+            child: _StatTiles(project: project, l10n: l10n),
+          ),
+        ),
+        if (!project.description.isEmpty)
+          section(l10n.projectAbout, _AboutBlock(text: project.description.resolve(lang))),
+        if (project.services.isNotEmpty) section(l10n.projectAmenities, AmenityChips(services: project.services)),
+        if (project.hasLocation)
+          section(l10n.projectLocation, _LocationTile(project: project, lang: lang, l10n: l10n)),
+        if (state.previewUnits.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(padding: const EdgeInsets.only(top: AppSpacing.xl), child: _UnitsPreview(state: state)),
+          ),
+      ],
     );
   }
 }
@@ -319,7 +158,7 @@ class _HeroPanel extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xB0000000), Color(0x00000000)],
+                  colors: [Color(0x33000000), Color(0x00000000)],
                 ),
               ),
             ),
@@ -347,9 +186,9 @@ class _HeroPanel extends StatelessWidget {
 
         // Pills — bottom of hero
         PositionedDirectional(
-          bottom: 52, // above the sheet peek zone
-          start: AppSpacing.xl,
-          end: AppSpacing.xl,
+          bottom: AppSpacing.md,
+          start: AppSpacing.md,
+          end: AppSpacing.md,
           child: Row(
             children: [
               if (project.featured) ...[
@@ -366,7 +205,7 @@ class _HeroPanel extends StatelessWidget {
 
         // Page indicator dots
         PositionedDirectional(
-          bottom: 28,
+          bottom: AppSpacing.xs,
           start: 0,
           end: 0,
           child: _HeroDots(count: project.galleryImages.length),
@@ -492,26 +331,6 @@ class _HeroDots extends StatelessWidget {
 // Sheet handle
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SheetHandle extends StatelessWidget {
-  const _SheetHandle({required this.colors});
-  final AppColorsExt colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        width: 44,
-        height: 4,
-        margin: const EdgeInsets.only(top: AppSpacing.sm + 2),
-        decoration: BoxDecoration(
-          color: colors.hairline,
-          borderRadius: BorderRadius.circular(999),
-        ),
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Adaptive nav overlay
 // Three states as user scrolls:
@@ -519,139 +338,6 @@ class _SheetHandle extends StatelessWidget {
 //   2. Over sheet   → surface circles, inkStrong icons
 //   3. showHeader   → full-width navy bar with project title
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _NavOverlay extends StatelessWidget {
-  const _NavOverlay({
-    required this.topInset,
-    required this.overSheet,
-    required this.showHeader,
-    required this.title,
-    required this.projectId,
-    required this.colors,
-  });
-
-  final double topInset;
-  final bool overSheet;
-  final bool showHeader;
-  final String title;
-  final String projectId;
-  final AppColorsExt colors;
-
-  @override
-  Widget build(BuildContext context) {
-    final backIcon = Icons.arrow_back_ios_new_rounded;
-    final iconColor =
-        (!showHeader && overSheet) ? colors.inkStrong : Colors.white;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeInOut,
-      color: showHeader ? _navyDeep : Colors.transparent,
-      height: topInset + kToolbarHeight,
-      padding: EdgeInsets.only(top: topInset),
-      child: Row(
-        children: [
-          const SizedBox(width: AppSpacing.sm),
-          // Back button
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: _NavCircle(
-              overSheet: overSheet,
-              showHeader: showHeader,
-              colors: colors,
-              child: Icon(backIcon, size: 18, color: iconColor),
-            ),
-          ),
-          // Project title — fades in when header is active
-          Expanded(
-            child: AnimatedOpacity(
-              opacity: showHeader ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 180),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // Favorite button
-          _NavCircle(
-            overSheet: overSheet,
-            showHeader: showHeader,
-            colors: colors,
-            child: FavoriteToggleButton(
-              isProject: true,
-              id: projectId,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavCircle extends StatelessWidget {
-  const _NavCircle({
-    required this.overSheet,
-    required this.showHeader,
-    required this.colors,
-    required this.child,
-  });
-
-  final bool overSheet;
-  final bool showHeader;
-  final AppColorsExt colors;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: showHeader
-            ? Colors.white.withValues(alpha: 0.12)
-            : overSheet
-                ? colors.surface
-                : Colors.white.withValues(alpha: 0.18),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: showHeader
-              ? Colors.white.withValues(alpha: 0.20)
-              : overSheet
-                  ? colors.hairline
-                  : Colors.white.withValues(alpha: 0.32),
-          width: 0.8,
-        ),
-        boxShadow:
-            (!showHeader && overSheet) ? colors.shadowSoft : null,
-      ),
-      child: IconButtonTheme(
-        data: IconButtonThemeData(
-          style: IconButton.styleFrom(
-            minimumSize: const Size(42, 42),
-            maximumSize: const Size(42, 42),
-            padding: EdgeInsets.zero,
-            iconSize: 20,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-        child: Center(child: child),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Identity block
@@ -894,39 +580,7 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                ),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                    letterSpacing: -0.2,
-                  ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md + 2),
-        child,
-      ],
-    );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppDetailSectionTitle(title), const SizedBox(height: AppSpacing.md), child]);
   }
 }
 

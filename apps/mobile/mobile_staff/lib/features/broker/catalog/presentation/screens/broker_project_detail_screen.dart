@@ -37,30 +37,17 @@ class _BrokerProjectDetailScreenState
     final p = widget.project;
     final name = p.name.resolve(lang);
 
-    final colors = context.appColors;
-    return AppDetailSheetPage(
+    return AppDetailPage(
           onBack: () => context.pop(),
-          heroHeight: 360,
-          hero: _HeroBackground(project: p, l10n: l10n, lang: lang),
+          title: name,
+          gallery: _HeroBackground(project: p, l10n: l10n, lang: lang),
           slivers: [
-            AppDetailSheetPage.box(
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs, bottom: AppSpacing.md),
-                child: Text(
-                  name,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colors.inkStrong,
-                        height: 1.1,
-                      ),
-                ),
-              ),
-            ),
             // ── Body ────────────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: AppSpacing.md),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                     child: ClipRRect(
@@ -125,7 +112,6 @@ class _HeroBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -138,8 +124,8 @@ class _HeroBackground extends StatelessWidget {
               colors: [
                 Color(0x88000000),
                 Color(0x22000000),
-                Color(0xCC000000),
-                Color(0xF2050E18),
+                Color(0x33000000),
+                Color(0x88050E18),
               ],
               stops: [0.0, 0.30, 0.70, 1.0],
             ),
@@ -163,7 +149,7 @@ class _HeroBackground extends StatelessWidget {
           ),
         ),
         PositionedDirectional(
-          top: topPad + 10,
+          top: AppSpacing.sm,
           end: AppSpacing.md,
           child: StatusBadge(
             label: projectStatusLabel(l10n, project.status),
@@ -173,14 +159,14 @@ class _HeroBackground extends StatelessWidget {
         ),
         if (project.commissionPct != null)
           PositionedDirectional(
-            top: topPad + 10,
-            start: 56,
+            top: AppSpacing.sm,
+            start: AppSpacing.sm,
             child: _CommissionPill(pct: project.commissionPct!, lang: lang),
           ),
         if (project.city != null)
           PositionedDirectional(
-            bottom: AppSpacing.xl + 36,
-            start: AppSpacing.lg,
+            bottom: AppSpacing.sm,
+            start: AppSpacing.md,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

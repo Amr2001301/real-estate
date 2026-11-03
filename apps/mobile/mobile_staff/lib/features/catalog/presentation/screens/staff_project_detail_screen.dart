@@ -106,43 +106,16 @@ class _StaffProjectDetailScreenState
                     ? p.availableUnitsCount
                     : availableUnits.length;
 
-            return AppDetailSheetPage(
+            return AppDetailPage(
               onBack: () => context.pop(),
-              hero: _HeroBackground(
+              title: name,
+              subtitle: p.city,
+              gallery: _HeroBackground(
                 project: p,
                 statusLabel: projectStatusLabel(l10n, p.status),
                 statusTone: projectStatusTone(p.status),
               ),
               slivers: [
-                // ── Identity: name and city ────────────────────────────────
-                AppDetailSheetPage.box(
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.xs),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: colors.inkStrong,
-                                height: 1.1,
-                              ),
-                        ),
-                        if (p.city?.isNotEmpty ?? false) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on_rounded, size: 16, color: colors.brandGold),
-                              const SizedBox(width: 4),
-                              Text(p.city!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.inkMuted)),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
                 // ── Actions + stats + about + units header ──────────────────
                 SliverToBoxAdapter(
                   child: Column(
@@ -522,14 +495,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           top: 0,
           left: 0,
           right: 0,
-          height: 160,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xCC000000), Color(0x00000000)],
+                  colors: [Color(0x33000000), Color(0x00000000)],
                 ),
               ),
             ),
@@ -541,14 +514,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 160,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Color(0xEE050E18), Color(0x00000000)],
+                  colors: [Color(0x88050E18), Color(0x00000000)],
                 ),
               ),
             ),
@@ -558,7 +531,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
         // Page dot indicators (above the title area)
         if (multi)
           Positioned(
-            bottom: 86,
+            bottom: 12,
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -568,7 +541,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Status badge + media count at top-end
         PositionedDirectional(
-          top: kToolbarHeight + 6,
+          top: AppSpacing.sm,
           end: AppSpacing.lg,
           child: Row(
             mainAxisSize: MainAxisSize.min,

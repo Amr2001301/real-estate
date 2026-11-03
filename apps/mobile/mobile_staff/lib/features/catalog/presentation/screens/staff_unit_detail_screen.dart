@@ -129,48 +129,29 @@ class _DetailPage extends StatelessWidget {
     final hasProject = unit.projectName != null || unit.projectCity != null;
     final available = unit.status == 'AVAILABLE';
 
-    Widget section(String title) => AppDetailSheetPage.box(
+    Widget section(String title) => AppDetailPage.box(
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
             child: AppDetailSectionTitle(title),
           ),
         );
 
-    return AppDetailSheetPage(
+    return AppDetailPage(
       onBack: () => context.pop(),
-      hero: _HeroBackground(unit: unit, lang: lang),
+      title: ltr(unit.code),
+      subtitle: unit.projectName == null
+          ? null
+          : [unit.projectName!.resolve(lang), if (unit.projectCity != null) unit.projectCity!].join(' · '),
+      gallery: _HeroBackground(unit: unit, lang: lang),
       bottomBar: _StickyActionBar(unit: unit, effProjectId: effProjectId),
       slivers: [
-        // ── Identity: code, project, then type · price · status ─────────
-        AppDetailSheetPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.xs),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ltr(unit.code),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colors.inkStrong,
-                        height: 1.1,
-                      ),
-                ),
-                if (unit.projectName != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    [unit.projectName!.resolve(lang), if (unit.projectCity != null) unit.projectCity!].join(' · '),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppRadii.lg),
-                  child: _MetaStrip(unit: unit, l10n: l10n, lang: lang, colors: colors, available: available),
-                ),
-              ],
-            ),
+        // ── Type · price · status ───────────────────────────────────────
+        AppDetailPage.box(
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            child: _MetaStrip(unit: unit, l10n: l10n, lang: lang, colors: colors, available: available),
           ),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
         ),
 
         // ── Unit details ────────────────────────────────────────────────
@@ -181,20 +162,20 @@ class _DetailPage extends StatelessWidget {
         ),
         // EE2/EE5 — the specs the website shows (only those it has).
         if (!unit.specs.isEmpty)
-          AppDetailSheetPage.box(
+          AppDetailPage.box(
             Padding(padding: const EdgeInsets.only(top: AppSpacing.sm), child: UnitSpecsGrid(specs: unit.specs)),
           ),
 
         // ── Floor plans ─────────────────────────────────────────────────
         if (unit.floorPlanUrls.isNotEmpty) ...[
           section(l10n.sectionFloorPlans),
-          AppDetailSheetPage.box(_UnitFloorPlansGallery(urls: unit.floorPlanUrls)),
+          AppDetailPage.box(_UnitFloorPlansGallery(urls: unit.floorPlanUrls)),
         ],
 
         // ── Location ────────────────────────────────────────────────────
         if (unit.hasLocation || unit.address != null) ...[
           section(l10n.projectLocation),
-          AppDetailSheetPage.box(_UnitLocationCard(unit: unit, l10n: l10n)),
+          AppDetailPage.box(_UnitLocationCard(unit: unit, l10n: l10n)),
         ],
 
         // ── Maintenance & warranty ──────────────────────────────────────
@@ -213,7 +194,7 @@ class _DetailPage extends StatelessWidget {
         // ── Project ─────────────────────────────────────────────────────
         if (hasProject) ...[
           section(l10n.navProjects),
-          AppDetailSheetPage.box(_ProjectCard(unit: unit, lang: lang)),
+          AppDetailPage.box(_ProjectCard(unit: unit, lang: lang)),
         ],
       ],
     );
@@ -279,14 +260,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           top: 0,
           left: 0,
           right: 0,
-          height: 200,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xDD000000), Color(0x00000000)],
+                  colors: [Color(0x33000000), Color(0x00000000)],
                 ),
               ),
             ),
@@ -298,14 +279,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 200,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Color(0xF5050E18), Color(0x00000000)],
+                  colors: [Color(0x88050E18), Color(0x00000000)],
                 ),
               ),
             ),
@@ -315,7 +296,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
         // Page dot indicators (above title area)
         if (multi)
           Positioned(
-            bottom: 90,
+            bottom: 12,
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -344,7 +325,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Status badge + count pill — top-end
         PositionedDirectional(
-          top: kToolbarHeight + 8,
+          top: AppSpacing.sm,
           end: AppSpacing.lg,
           child: Row(
             mainAxisSize: MainAxisSize.min,
