@@ -153,6 +153,7 @@ function buildPayload(formData: FormData): Record<string, unknown> {
       reservationAmountValue: num('reservationAmountValue'),
       startDateRule: 'AFTER_CONTRACT',
       status: str('status'),
+      visibility: str('visibility') || undefined,
     };
   }
 
@@ -178,6 +179,7 @@ function buildPayload(formData: FormData): Record<string, unknown> {
     manualStartDate: str('manualStartDate') || null,
     finalPaymentAmount: num('finalPaymentAmount') || null,
     status: str('status'),
+    visibility: str('visibility') || undefined,
     durationOptions,
   };
 }

@@ -386,11 +386,11 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
                   <option value="INACTIVE">{m.statusInactive}</option>
                 </Select>
               </Field>
-              <Field label={m.labelVisibility} hint={m.hintVisibility}>
-                <input type="hidden" name="visibility" value="SALES_ONLY" />
-                <div className="h-10 flex items-center rounded-xl border border-hairline bg-canvas/40 px-3 text-sm text-slate-500">
-                  {m.visibilityDisplay}
-                </div>
+              <Field label={m.labelVisibility} name="visibility" hint={m.hintVisibility}>
+                <Select id="visibility" name="visibility" defaultValue={d?.visibility === 'PUBLIC' ? 'PUBLIC' : 'SALES_ONLY'}>
+                  <option value="SALES_ONLY">{m.visibilitySalesOnly}</option>
+                  <option value="PUBLIC">{m.visibilityPublic}</option>
+                </Select>
               </Field>
             </div>
           </div>
