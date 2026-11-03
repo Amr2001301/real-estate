@@ -20,6 +20,8 @@ describe('BP1 — broker payment plans (e2e)', () => {
   const unitIds: string[] = [];
   const templateIds: string[] = [];
   const stamp = Date.now().toString().slice(-7);
+  let shownUnit = '';
+  let hiddenUnit = '';
 
   const http = () => request(testApp.app.getHttpServer());
   const asBroker = <T extends request.Test>(r: T) => r.set('Authorization', bearer(brokerToken));
@@ -91,8 +93,8 @@ describe('BP1 — broker payment plans (e2e)', () => {
   });
 
   it('BP1-1: a granted unit shows its public plan; a sales-only plan does not show', async () => {
-    const shown = await unitWithPlan(fixtures.projects.p1Id, 1, 'PUBLIC');
-    const hidden = await unitWithPlan(fixtures.projects.p1Id, 2, 'SALES_ONLY');
+    const shown = (shownUnit = await unitWithPlan(fixtures.projects.p1Id, 1, 'PUBLIC'));
+    const hidden = (hiddenUnit = await unitWithPlan(fixtures.projects.p1Id, 2, 'SALES_ONLY'));
     const res = await asBroker(http().get(`/v1/portal/units/${shown}/payment-plans`)).expect(200);
     expect(res.body).toHaveLength(1);
     // 1,000,000 − 50,000 booking − 100,000 down = 850,000 over 60 months.
@@ -128,5 +130,26 @@ describe('BP1 — broker payment plans (e2e)', () => {
       .get(`/v1/portal/projects/${fixtures.projects.p1Id}/payment-plans`)
       .set('Authorization', bearer(adminToken))
       .expect(403);
+  });
+
+  it('BP1-5: the booking form offers only those plans; a sales-only plan cannot be booked', async () => {
+    const ids = async (unitId: string) =>
+      (
+        await asBroker(http().get(`/v1/portal/reservations/plan-options?unitId=${unitId}`)).expect(
+          200,
+        )
+      ).body.map((p: { id: string }) => p.id) as string[];
+    const [publicPlan, salesOnly] = [templateIds[0]!, templateIds[1]!];
+    // The project's own plans (for every unit) come along when customers see them too.
+    expect(await ids(shownUnit)).toContain(publicPlan);
+    expect(await ids(hiddenUnit)).not.toContain(salesOnly);
+    const res = await asBroker(http().post('/v1/portal/reservations')).send({
+      leadId: fixtures.flowD.broker1ApprovedLeadId,
+      unitId: hiddenUnit,
+      installmentPlanTemplateId: salesOnly,
+      expiresInHours: 72,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('غير متاحة للوسطاء');
   });
 });

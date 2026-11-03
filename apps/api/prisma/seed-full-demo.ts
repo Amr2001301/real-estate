@@ -987,6 +987,9 @@ async function ensureTemplate(ctx: Ctx, projectId: string, unitId: string, label
     downPaymentValue: 10,
     startDateRule: 'AFTER_CONTRACT',
     status,
+    // Demo plans show in the customer app and on the broker pages, and
+    // brokers book on them.
+    visibility: 'PUBLIC',
     durationOptions: [
       { durationMonths: 36, increasePercentage: 0 },
       { durationMonths: 60, increasePercentage: 12 },

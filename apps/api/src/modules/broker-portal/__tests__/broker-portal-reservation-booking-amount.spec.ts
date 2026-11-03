@@ -181,7 +181,7 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
     const { svc } = makeService({ plans: [] });
     await expect(svc.createForActor(baseInput)).rejects.toThrow(BadRequestException);
     await expect(svc.createForActor(baseInput)).rejects.toThrow(
-      /لا توجد خطة دفع فعّالة/,
+      /لا توجد خطة دفع متاحة للوسطاء/,
     );
   });
 
