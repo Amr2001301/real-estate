@@ -1072,29 +1072,32 @@ export function serializePublicPlan(p: PublicPlanSource) {
     netPrice,
     reservationAmount,
     downPaymentAmount,
-    // Booking + down payment, as a share of the net price (what "10% مقدم" means).
-    upfrontPercent: netPrice > 0 ? Math.round(((reservationAmount + downPaymentAmount) / netPrice) * 1000) / 10 : 0,
+    // The down payment as a share of the net price ("10% مقدم"); the booking
+    // is its own line.
+    downPaymentPercent: netPrice > 0 ? Math.round((downPaymentAmount / netPrice) * 1000) / 10 : 0,
     finalPaymentAmount,
     options,
   };
 }
 
-/** A project's offers: distinct (upfront share, longest months) pairs. */
+/** A project's offers: distinct (down payment share, longest months) pairs. */
 export function summarizePublicPlans(plans: ReturnType<typeof serializePublicPlan>[]) {
-  const offers = new Map<string, { upfrontPercent: number; maxMonths: number; isCash: boolean }>();
+  const offers = new Map<string, { downPaymentPercent: number; maxMonths: number; isCash: boolean }>();
   for (const p of plans) {
     const maxMonths = p.options.reduce((m, o) => Math.max(m, o.durationMonths), 0);
-    const key = `${p.isCash}|${p.upfrontPercent}|${maxMonths}`;
-    if (!offers.has(key)) offers.set(key, { upfrontPercent: p.upfrontPercent, maxMonths, isCash: p.isCash });
+    const key = `${p.isCash}|${p.downPaymentPercent}|${maxMonths}`;
+    if (!offers.has(key)) offers.set(key, { downPaymentPercent: p.downPaymentPercent, maxMonths, isCash: p.isCash });
   }
   const installment = plans.filter((p) => !p.isCash && p.options.length > 0);
   return {
     plansCount: plans.length,
-    minUpfrontPercent: installment.length ? Math.min(...installment.map((p) => p.upfrontPercent)) : null,
+    minDownPaymentPercent: installment.length ? Math.min(...installment.map((p) => p.downPaymentPercent)) : null,
     maxMonths: installment.length
       ? Math.max(...installment.flatMap((p) => p.options.map((o) => o.durationMonths)))
       : null,
-    offers: [...offers.values()].sort((a, b) => a.upfrontPercent - b.upfrontPercent || b.maxMonths - a.maxMonths),
+    offers: [...offers.values()].sort(
+      (a, b) => a.downPaymentPercent - b.downPaymentPercent || b.maxMonths - a.maxMonths,
+    ),
   };
 }
 

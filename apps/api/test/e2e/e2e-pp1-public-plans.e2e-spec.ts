@@ -61,7 +61,7 @@ describe('PP1 — public payment plans (e2e)', () => {
   const plansOf = async (id: string) =>
     (await http().get(`/v1/public/units/${id}/payment-plans`).expect(200)).body as {
       id: string;
-      upfrontPercent: number;
+      downPaymentPercent: number;
       options: unknown[];
     }[];
 
@@ -213,7 +213,8 @@ describe('PP1 — public payment plans (e2e)', () => {
     const p = shown[0];
     if (!p) throw new Error('no plan');
     expect(p.id).toBe(publicPlan.id);
-    expect(p.upfrontPercent).toBe(10);
+    // The down payment alone (the 50,000 booking is its own line).
+    expect(p.downPaymentPercent).toBe(5);
     // 900,000 over 60 months; 990,000 (+10%) over 96.
     expect(p.options).toEqual([
       expect.objectContaining({
@@ -245,7 +246,7 @@ describe('PP1 — public payment plans (e2e)', () => {
     const [p] = await plansOf(legacy.unitId);
     if (!p) throw new Error('no plan');
     expect(p.id).toBe(legacy.id);
-    expect(p.upfrontPercent).toBe(20);
+    expect(p.downPaymentPercent).toBe(20);
     expect(p.options).toEqual([
       expect.objectContaining({
         durationMonths: 24,
@@ -259,11 +260,11 @@ describe('PP1 — public payment plans (e2e)', () => {
   it('PP1-3: the project folds its public plans into offers', async () => {
     const res = await http().get(`/v1/public/projects/${projectId}/payment-plans`).expect(200);
     expect(res.body.plansCount).toBe(2);
-    expect(res.body.minUpfrontPercent).toBe(10);
+    expect(res.body.minDownPaymentPercent).toBe(5);
     expect(res.body.maxMonths).toBe(96);
     expect(res.body.offers).toEqual([
-      { upfrontPercent: 10, maxMonths: 96, isCash: false },
-      { upfrontPercent: 20, maxMonths: 24, isCash: false },
+      { downPaymentPercent: 5, maxMonths: 96, isCash: false },
+      { downPaymentPercent: 20, maxMonths: 24, isCash: false },
     ]);
   });
 
