@@ -54,6 +54,7 @@ import {
   DepositReviewStatus,
 } from '@prisma/client';
 import { UNCLEARED_INSTRUMENT_STATUSES } from '../deposits/review-queue';
+import { UnsignedContractAlertCron } from './unsigned-contract-alert.cron';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   NotificationsModule,
@@ -2342,6 +2343,7 @@ class PublicPlansController {
     InstallmentsCron,
     InstallmentRemindersService,
     InstallmentDueSoonCron,
+    UnsignedContractAlertCron,
     PlanTemplatesService,
     MeInstallmentsService,
   ],
