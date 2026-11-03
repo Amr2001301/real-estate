@@ -714,7 +714,7 @@ Left for the owner, not in V1–V3:
   - A MANUAL cancellation's commission and bonus stay out of liabilities and totals until the admin decides.
   - Only the booking form is e-signed online; the contract is signed in ink.
   - The broker portal does not get the customer's national ID, address or extra fields.
-  - An unsigned contract's due rows are not chased until it is signed; they only show in the report and the dashboard tile.
+  - An unsigned contract's due rows are not chased until it is signed (no customer reminder, no late fee). Since ST2, staff are alerted instead: a daily job (`UnsignedContractAlertCron`, `unsigned_contract_due`) tells the sales rep on the deal, their sales manager and the admins — once when a payment falls due, then weekly while the contract stays unsigned. Env: `UNSIGNED_CONTRACT_ALERTS_ENABLED`, `UNSIGNED_CONTRACT_ALERT_CRON` (default `0 7 * * *`, UTC).
 - **Leaderboard share:** a broker's share % is of the top 10 brokers only. This is the owner's call.
 - **Owner's own tasks:** hosting/deployment (deploys are manual — see 2c), `ANTHROPIC_API_KEY` and `SUPER_ADMIN_*` on the API host, Android keystore and Firebase secrets for company apps, restricting the Firebase API key, GitHub branch protection on `main`.
 - **Deferred by the owner (2026-10-27, «حطها في التأجيلات»):**

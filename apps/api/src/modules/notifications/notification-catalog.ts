@@ -592,6 +592,17 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'تمت إضافة ملاحظة جديدة على فرصة {{customerName}}.',
     en_body: 'A new note was added to lead for {{customerName}}.',
   },
+  // ST2 — an unsigned contract with payments due: staff only, never the customer.
+  {
+    code: 'unsigned_contract_due',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'عقد لم يُوقَّع وعليه مستحقات',
+    en_subject: 'Unsigned contract with payments due',
+    ar_body:
+      'العقد {{contractNumber}} للوحدة {{unitCode}} لم يُوقَّع بعد، وعليه {{count}} دفعة مستحقة بإجمالي {{total}}. لا تُرسَل تذكيرات للعميل قبل التوقيع.',
+    en_body:
+      'Contract {{contractNumber}} for unit {{unitCode}} is not signed yet and has {{count}} payments due totalling {{total}}. The customer is not reminded until it is signed.',
+  },
   // Follow-ups (FU2): the rep's next action coming up or past, and the morning list.
   {
     code: 'follow_up_due_soon',
