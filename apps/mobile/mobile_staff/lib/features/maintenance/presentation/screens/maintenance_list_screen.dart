@@ -13,7 +13,6 @@ import '../maintenance_format.dart';
 // ── Color palette (mirrors Customer App) ─────────────────────────────────────
 
 const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 const _activeGradient    = [_navyLight, _navyDeep];
@@ -475,72 +474,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? _navyCard : colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? _navyCard : colors.hairline,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyCard.withValues(alpha: 0.18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: selected ? dot : dot.withValues(alpha: 0.45),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : colors.inkStrong,
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-            if (count > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? dot.withValues(alpha: 0.22)
-                      : colors.hairline.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: selected ? dot : colors.inkMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+    return AppFilterChip(label: label, count: count, selected: selected, onTap: onTap, dotColor: dot);
   }
 }
 

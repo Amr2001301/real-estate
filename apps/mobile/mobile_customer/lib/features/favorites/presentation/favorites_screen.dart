@@ -213,62 +213,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? _navyCard : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected ? _navyCard : const Color(0xFFE5E7EB),
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyCard.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF6B7280),
-                fontSize: 14,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              ),
-            ),
-            if (count > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? AppPalette.gold300.withValues(alpha: 0.25)
-                      : const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                    color: selected ? AppPalette.gold300 : const Color(0xFF9CA3AF),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+    return AppFilterChip(label: label, count: count, selected: selected, onTap: onTap);
   }
 }
 

@@ -626,98 +626,22 @@ class _FilterBar extends StatelessWidget {
       if (paid > 0)
         (label: l10n.installmentStatusPaid, value: _Filter.paid, count: paid),
     ];
-
     return SizedBox(
       height: 44,
-      child: ListView(
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsetsDirectional.only(end: 4),
-        children: items.map((item) {
-          final selected = filter == item.value;
-          final dot      = _dotColors[item.value]!;
-          return Padding(
-            padding: const EdgeInsetsDirectional.only(end: 8),
-            child: Semantics(
-              button: true,
-              selected: selected,
-              label: '${item.label} ${item.count}',
-              child: GestureDetector(
-                onTap: () => onChanged(item.value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: selected ? _navyCard : Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: selected ? _navyCard : const Color(0xFFD1D5DB),
-                    ),
-                    boxShadow: selected
-                        ? [
-                            BoxShadow(
-                              color: _navyCard.withValues(alpha: 0.18),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? dot
-                              : dot.withValues(alpha: 0.60),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Text(
-                        item.label,
-                        style: TextStyle(
-                          color: selected
-                              ? Colors.white
-                              : const Color(0xFF374151),
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                        ),
-                      ),
-                      if (item.count > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? dot.withValues(alpha: 0.22)
-                                : const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${item.count}',
-                            style: TextStyle(
-                              color: selected
-                                  ? dot
-                                  : const Color(0xFF6B7280),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, i) {
+          final item = items[i];
+          return AppFilterChip(
+            label: item.label,
+            count: item.count,
+            dotColor: item.value == _Filter.all ? null : _dotColors[item.value],
+            selected: filter == item.value,
+            onTap: () => onChanged(item.value),
           );
-        }).toList(),
+        },
       ),
     );
   }

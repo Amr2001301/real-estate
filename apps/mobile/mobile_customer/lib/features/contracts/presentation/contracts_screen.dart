@@ -745,125 +745,23 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return SizedBox(
-      height: 62,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 9.0),
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: 8,
-          ),
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-          itemBuilder: (context, i) {
-            final item = items[i];
-            final active = item.key == selected;
-            return GestureDetector(
-              onTap: () => onSelect(item.key),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: active
-                      ? LinearGradient(
-                          colors: item.activeGradient,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: active ? null : colors.surface,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: active
-                        ? Colors.transparent
-                        : item.dotColor != null
-                        ? item.dotColor!.withValues(alpha: 0.3)
-                        : colors.hairline.withValues(alpha: 0.6),
-                    width: 1.5,
-                  ),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: item.activeGradient.last.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (item.dotColor != null) ...[
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: active
-                              ? item.dotColor!.withValues(alpha: 0.9)
-                              : item.dotColor!.withValues(alpha: 0.7),
-                          shape: BoxShape.circle,
-                          boxShadow: active
-                              ? [
-                                  BoxShadow(
-                                    color: item.dotColor!.withValues(alpha: 0.5),
-                                    blurRadius: 4,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        color: active ? Colors.white : colors.inkStrong,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: active
-                            ? Colors.white.withValues(alpha: 0.18)
-                            : item.dotColor != null
-                            ? item.dotColor!.withValues(alpha: 0.14)
-                            : colors.hairline.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${item.count}',
-                        style: TextStyle(
-                          color: active
-                              ? Colors.white
-                              : item.dotColor ?? colors.inkMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+      height: 58,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 8),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, i) {
+          final item = items[i];
+          return AppFilterChip(
+            label: item.label,
+            count: item.count,
+            dotColor: item.dotColor,
+            selected: item.key == selected,
+            onTap: () => onSelect(item.key),
+          );
+        },
       ),
     );
   }

@@ -1260,66 +1260,7 @@ class _UnitStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? colors.brandNavy : colors.surface,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: isSelected
-              ? null
-              : Border.all(color: colors.hairline),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Count badge
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : colors.surfaceSoft,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : colors.inkMuted,
-                ),
-              ),
-            ),
-            if (!isSelected) ...[
-              const SizedBox(width: 5),
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : colors.inkStrong,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return AppFilterChip(label: label, count: count, selected: isSelected, onTap: onTap, dotColor: dotColor);
   }
 }
 
