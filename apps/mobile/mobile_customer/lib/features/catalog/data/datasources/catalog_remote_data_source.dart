@@ -19,6 +19,12 @@ abstract interface class CatalogRemoteDataSource {
   Future<ProjectDetailDto> getProject(String id);
   Future<Paginated<UnitDto>> listUnits(Map<String, dynamic> query);
   Future<UnitDto> getUnit(String id);
+
+  /// The plans the company shows customers for a unit (raw JSON objects).
+  Future<List<Map<String, dynamic>>> getUnitPlans(String unitId);
+
+  /// A project's payment offers (raw JSON).
+  Future<Map<String, dynamic>> getProjectPlans(String projectId);
 }
 
 class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
@@ -77,5 +83,23 @@ class CatalogRemoteDataSourceImpl implements CatalogRemoteDataSource {
       options: await _publicOptions(),
     );
     return UnitDto.fromJson(res.data!);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getUnitPlans(String unitId) async {
+    final res = await _dio.get<List<dynamic>>(
+      '/public/units/$unitId/payment-plans',
+      options: await _publicOptions(),
+    );
+    return (res.data ?? const []).whereType<Map<String, dynamic>>().toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getProjectPlans(String projectId) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/public/projects/$projectId/payment-plans',
+      options: await _publicOptions(),
+    );
+    return res.data ?? const {};
   }
 }

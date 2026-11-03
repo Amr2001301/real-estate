@@ -10,6 +10,7 @@ import '../../../../common/catalog_status_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../../common/staff_share.dart';
 import '../../../../features/leads/domain/repositories/leads_repository.dart';
+import '../../../installments/domain/repositories/installments_repository.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_project_detail_cubit.dart';
 
@@ -33,11 +34,40 @@ class _StaffProjectDetailScreenState
   String? _unitStatusFilter;
   final _scroll = ScrollController();
   final _unitsSectionKey = GlobalKey();
+  final _aboutKey = GlobalKey();
+  final _amenitiesKey = GlobalKey();
+  final _planKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  ProjectPlanSummary _plans = const ProjectPlanSummary();
+  String? _plansFor;
 
   @override
   void initState() {
     super.initState();
     context.read<StaffProjectDetailCubit>().load();
+  }
+
+  // Best-effort: the page shows without them.
+  Future<void> _loadPlans(String projectId) async {
+    if (_plansFor == projectId) return;
+    _plansFor = projectId;
+    final result = await context.read<InstallmentsRepository>().projectOffers(projectId);
+    if (!mounted) return;
+    if (result case Ok(:final data)) setState(() => _plans = ProjectPlanSummary.fromOffers(data));
+  }
+
+  void _addInterestedClient(StaffProject p, String lang) => context.push(
+        '/leads/new',
+        extra: LeadInterestContext(projectId: p.id, projectName: p.name.resolve(lang)),
+      );
+
+  void _share(StaffProject p, String lang) =>
+      StaffShare.project(projectId: p.id, projectName: p.name.resolve(lang), l10n: context.l10n);
+
+  List<String> _photos(StaffProject p) {
+    final seen = <String>{};
+    return [if (p.coverImageUrl != null) p.coverImageUrl!, ...p.mediaUrls].where(seen.add).toList();
   }
 
   @override
@@ -106,107 +136,84 @@ class _StaffProjectDetailScreenState
                     ? p.availableUnitsCount
                     : availableUnits.length;
 
+            _loadPlans(p.id);
+            Widget section(String title, Widget child, Key key) => Padding(
+                  key: key,
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, 0),
+                  child: _Section(title: title, child: child),
+                );
+
             return AppDetailPage(
               onBack: () => context.pop(),
               title: name,
               subtitle: p.city,
-              gallery: _HeroBackground(
-                project: p,
-                statusLabel: projectStatusLabel(l10n, p.status),
-                statusTone: projectStatusTone(p.status),
+              photos: _photos(p),
+              photoPlaceholder: _NoImagePlaceholder(),
+              photoBadge: StatusBadge(label: projectStatusLabel(l10n, p.status), tone: projectStatusTone(p.status)),
+              bottomBar: AppDetailBottomBar(
+                children: [
+                  AppDetailSecondaryButton(
+                    key: const Key('project-share'),
+                    label: l10n.staffShareWithClient,
+                    onPressed: () => _share(p, lang),
+                  ),
+                  AppDetailPrimaryButton(
+                    key: const Key('project-add-client'),
+                    label: l10n.staffAddInterestedClient,
+                    onPressed: () => _addInterestedClient(p, lang),
+                  ),
+                ],
               ),
               slivers: [
-                // ── Actions + stats + about + units header ──────────────────
+                AppDetailPage.box(
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                    child: AppPriceCard(
+                      label: startingPrice != null ? l10n.detailPricesFrom : l10n.unitPrice,
+                      price: startingPrice != null
+                          ? PriceFormatter.format(startingPrice, languageCode: lang)
+                          : l10n.priceOnRequest,
+                      caption: projectOfferLine(l10n, _plans),
+                      facts: [
+                        if (availCount != null)
+                          AppPriceFact(
+                            l10n.detailAvailableUnits,
+                            totalCount != null ? '$availCount / $totalCount' : '$availCount',
+                          ),
+                        if (p.city?.isNotEmpty ?? false) AppPriceFact(l10n.labelCity, p.city!),
+                      ],
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+                AppSectionTabsSliver(
+                  tabs: [
+                    if (description != null && description.isNotEmpty) AppSectionTab(l10n.detailTabOverview, _aboutKey),
+                    if (p.services.isNotEmpty) AppSectionTab(l10n.detailTabAmenities, _amenitiesKey),
+                    if (p.floorPlanUrls.isNotEmpty) AppSectionTab(l10n.detailTabFloorPlan, _planKey),
+                    if (!_plans.isEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
+                    if (p.hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
+                    AppSectionTab(l10n.detailTabUnits, _unitsSectionKey),
+                  ],
+                ),
                 SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Staff actions
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            0),
-                        child: const _StaffActions(),
-                      ),
-
-                      // Stats bar
-                      if (availCount != null ||
-                          totalCount != null ||
-                          startingPrice != null) ...[
-                        const SizedBox(height: AppSpacing.lg),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg),
-                          child: _StatsBar(
-                            available: availCount,
-                            total: totalCount,
-                            startingPrice: startingPrice,
-                            lang: lang,
-                            l10n: l10n,
-                          ),
+                      if (description != null && description.isNotEmpty)
+                        section(l10n.projectAbout, _AboutBlock(text: description), _aboutKey),
+                      if (p.services.isNotEmpty)
+                        section(l10n.projectAmenities, _AmenitiesBlock(services: p.services), _amenitiesKey),
+                      if (p.floorPlanUrls.isNotEmpty)
+                        section(l10n.sectionFloorPlans, _FloorPlansGallery(urls: p.floorPlanUrls), _planKey),
+                      if (!_plans.isEmpty)
+                        section(l10n.detailPaymentPlans, AppPlanOfferCards(plans: _plans), _paymentKey),
+                      if (p.hasLocation)
+                        section(
+                          l10n.projectLocation,
+                          _InAppMap(lat: p.lat!, lng: p.lng!, label: p.name.resolve(lang), openLabel: l10n.openInMaps),
+                          _locationKey,
                         ),
-                      ],
-
-                      // About
-                      if (description != null &&
-                          description.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xxl),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg),
-                          child: _Section(
-                            title: l10n.projectAbout,
-                            child: _AboutBlock(text: description),
-                          ),
-                        ),
-                      ],
-
-                      // Amenities / services
-                      if (p.services.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xxl),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg),
-                          child: _Section(
-                            title: l10n.projectAmenities,
-                            child: _AmenitiesBlock(services: p.services),
-                          ),
-                        ),
-                      ],
-
-                      // Floor plans
-                      if (p.floorPlanUrls.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.xxl),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg),
-                          child: _Section(
-                            title: l10n.sectionFloorPlans,
-                            child: _FloorPlansGallery(
-                                urls: p.floorPlanUrls),
-                          ),
-                        ),
-                      ],
-
-                      // Location — in-app map
-                      if (p.hasLocation) ...[
-                        const SizedBox(height: AppSpacing.xxl),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg),
-                          child: _Section(
-                            title: l10n.projectLocation,
-                            child: _InAppMap(
-                              lat: p.lat!,
-                              lng: p.lng!,
-                              label: p.name.resolve(lang),
-                              openLabel: l10n.openInMaps,
-                            ),
-                          ),
-                        ),
-                      ],
 
                       // Units section header
                       const SizedBox(height: AppSpacing.xxl),
@@ -433,233 +440,6 @@ class _FallbackBackButton extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background (used inside FlexibleSpaceBar)
 // ══════════════════════════════════════════════════════════════════════════════
-class _HeroBackground extends StatefulWidget {
-  const _HeroBackground({
-    required this.project,
-    required this.statusLabel,
-    required this.statusTone,
-  });
-
-  final StaffProject project;
-  final String statusLabel;
-  final BadgeTone statusTone;
-
-  @override
-  State<_HeroBackground> createState() => _HeroBackgroundState();
-}
-
-class _HeroBackgroundState extends State<_HeroBackground> {
-  final _ctrl = PageController();
-  int _page = 0;
-
-  List<String> get _urls {
-    final seen = <String>{};
-    final result = <String>[];
-    final cover = widget.project.coverImageUrl;
-    if (cover != null && seen.add(cover)) result.add(cover);
-    for (final u in widget.project.mediaUrls) {
-      if (seen.add(u)) result.add(u);
-    }
-    return result;
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final urls = _urls;
-    final multi = urls.length > 1;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Image carousel or placeholder
-        if (urls.isEmpty)
-          _NoImagePlaceholder()
-        else if (!multi)
-          AppNetworkImage(url: urls.first)
-        else
-          PageView.builder(
-            controller: _ctrl,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemCount: urls.length,
-            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
-          ),
-
-        // Top gradient — protects back button
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x33000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Bottom gradient — behind the FlexibleSpaceBar title
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0x88050E18), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Page dot indicators (above the title area)
-        if (multi)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: _PageDots(count: urls.length, current: _page),
-            ),
-          ),
-
-        // Status badge + media count at top-end
-        PositionedDirectional(
-          top: AppSpacing.sm,
-          end: AppSpacing.lg,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (multi) ...[
-                _MediaCountPill(current: _page + 1, total: urls.length),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              _StatusPill(
-                  label: widget.statusLabel, tone: widget.statusTone),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PageDots extends StatelessWidget {
-  const _PageDots({required this.count, required this.current});
-  final int count;
-  final int current;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < count; i++) ...[
-          if (i > 0) const SizedBox(width: 5),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            width:  current == i ? 20 : 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: current == i
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.tone});
-  final String label;
-  final BadgeTone tone;
-
-  Color _bgColor() => switch (tone) {
-        BadgeTone.success =>
-          const Color(0xFF22C55E).withValues(alpha: 0.85),
-        BadgeTone.warning =>
-          const Color(0xFFF59E0B).withValues(alpha: 0.85),
-        _ => Colors.black.withValues(alpha: 0.45),
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _bgColor(),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.25),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _MediaCountPill extends StatelessWidget {
-  const _MediaCountPill({required this.current, required this.total});
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.28),
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.photo_library_outlined,
-              size: 12, color: Colors.white70),
-          const SizedBox(width: 4),
-          Text(
-            '$current / $total',
-            style: const TextStyle(fontSize: 11, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _NoImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -679,311 +459,9 @@ class _NoImagePlaceholder extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Staff actions — primary row + secondary row
 // ══════════════════════════════════════════════════════════════════════════════
-class _StaffActions extends StatelessWidget {
-  const _StaffActions();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _ActionBtn(
-            icon: Icons.person_add_rounded,
-            label: l10n.staffAddInterestedClient,
-            bgColor: colors.brandNavy,
-            fgColor: Colors.white,
-            onTap: () {
-              final detail = context
-                  .read<StaffProjectDetailCubit>()
-                  .state
-                  .data;
-              final lang =
-                  Localizations.localeOf(context).languageCode;
-              context.push(
-                '/leads/new',
-                extra: LeadInterestContext(
-                  projectId: detail?.project.id,
-                  projectName: detail?.project.name.resolve(lang) ??
-                      detail?.project.id,
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(
-          child: _ActionBtn(
-            icon: Icons.share_rounded,
-            label: l10n.staffShareWithClient,
-            bgColor: colors.brandGold.withValues(alpha: 0.08),
-            fgColor: colors.brandGold,
-            border: Border.all(
-              color: colors.brandGold.withValues(alpha: 0.55),
-              width: 1.3,
-            ),
-            onTap: () {
-              final detail =
-                  context.read<StaffProjectDetailCubit>().state.data;
-              if (detail == null) return;
-              final lang = Localizations.localeOf(context).languageCode;
-              StaffShare.project(
-                projectId: detail.project.id,
-                projectName: detail.project.name.resolve(lang),
-                l10n: context.l10n,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.bgColor,
-    required this.fgColor,
-    required this.onTap,
-    this.border,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color bgColor;
-  final Color fgColor;
-  final BoxBorder? border;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: 15,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            border: border,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 17, color: fgColor),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: fgColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Stats bar — unified horizontal card with gold shimmer top bar
 // ══════════════════════════════════════════════════════════════════════════════
-class _StatsBar extends StatelessWidget {
-  const _StatsBar({
-    required this.lang,
-    required this.l10n,
-    this.available,
-    this.total,
-    this.startingPrice,
-  });
-
-  final String lang;
-  final AppLocalizations l10n;
-  final int? available;
-  final int? total;
-  final double? startingPrice;
-
-  String _compactPrice(double price) {
-    final currency = ' ${PriceFormatter.symbol(lang)}';
-    if (price >= 1e6) {
-      final v = price / 1e6;
-      final suffix = lang == 'ar' ? 'م' : 'M';
-      final numStr = v == v.truncateToDouble()
-          ? '${v.toInt()}$suffix'
-          : '${v.toStringAsFixed(1)}$suffix';
-      return '$numStr$currency';
-    }
-    if (price >= 1e3) {
-      final suffix = lang == 'ar' ? 'ك' : 'K';
-      return '${(price / 1e3).toInt()}$suffix$currency';
-    }
-    return '${price.toInt()}$currency';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    final items = <(IconData, String, String, Color)>[];
-    if (total != null) {
-      items.add((
-        Icons.apartment_outlined,
-        '$total',
-        l10n.projectTotalLabel,
-        colors.inkStrong,
-      ));
-    }
-    if (startingPrice != null) {
-      items.add((
-        Icons.sell_outlined,
-        _compactPrice(startingPrice!),
-        l10n.projectStartingFrom,
-        colors.brandGold,
-      ));
-    }
-    if (available != null) {
-      items.add((
-        Icons.meeting_room_outlined,
-        '$available',
-        l10n.projectAvailableLabel,
-        colors.success,
-      ));
-    }
-
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-            color: colors.hairline.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // Gold shimmer top bar
-          Container(
-            height: 2.5,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppPalette.gold300,
-                  AppPalette.gold500,
-                  AppPalette.gold300,
-                ],
-              ),
-            ),
-          ),
-          // Stats row
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  if (i > 0)
-                    VerticalDivider(
-                      width: 1,
-                      thickness: 0.5,
-                      color: colors.hairline,
-                    ),
-                  Expanded(
-                    child: _StatItem(
-                      icon: items[i].$1,
-                      value: items[i].$2,
-                      label: items[i].$3,
-                      color: items[i].$4,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  const _StatItem({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-          vertical: 22, horizontal: 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 22, color: color.withValues(alpha: 0.80)),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: color,
-              letterSpacing: -0.5,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: colors.inkMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Section wrapper — gold-bar label + content
 // ══════════════════════════════════════════════════════════════════════════════

@@ -4797,4 +4797,168 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ledgerEmpty => 'No items in this period.';
+
+  @override
+  String get detailPhotosFullscreen => 'View photos full screen';
+
+  @override
+  String get detailClose => 'Close';
+
+  @override
+  String get detailTotalPrice => 'Total price';
+
+  @override
+  String get detailPricesFrom => 'Prices from';
+
+  @override
+  String detailOrFrom(String amount, String period) {
+    return 'or from $amount $period';
+  }
+
+  @override
+  String get detailPeriodMonthly => 'a month';
+
+  @override
+  String get detailPeriodQuarterly => 'every 3 months';
+
+  @override
+  String get detailPeriodSemiAnnual => 'every 6 months';
+
+  @override
+  String get detailPeriodYearly => 'a year';
+
+  @override
+  String detailUpfrontPct(String pct) {
+    return 'Down $pct';
+  }
+
+  @override
+  String get detailTerm => 'Term';
+
+  @override
+  String detailYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n years',
+      one: '1 year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String detailMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n months',
+      one: '1 month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get detailHandover => 'Handover';
+
+  @override
+  String get detailCalcInstallment => 'Work out your instalment';
+
+  @override
+  String get detailTabOverview => 'Overview';
+
+  @override
+  String get detailTabFloorPlan => 'Floor plan';
+
+  @override
+  String get detailTabPayment => 'Payment plan';
+
+  @override
+  String get detailTabLocation => 'Location';
+
+  @override
+  String get detailTabSimilar => 'Similar';
+
+  @override
+  String get detailTabUnits => 'Units';
+
+  @override
+  String get detailTabAmenities => 'Amenities';
+
+  @override
+  String get detailRowBooking => 'Booking';
+
+  @override
+  String get detailRowDownPayment => 'Down payment';
+
+  @override
+  String detailRowInstallments(int count) {
+    return 'Instalments ($count)';
+  }
+
+  @override
+  String get detailRowFinal => 'Final payment';
+
+  @override
+  String get detailRowTotal => 'Total';
+
+  @override
+  String get detailRowDiscount => 'Discount';
+
+  @override
+  String get detailCashPayment => 'Cash payment';
+
+  @override
+  String get detailInstallmentMonthly => 'Monthly instalment';
+
+  @override
+  String get detailInstallmentQuarterly => 'Quarterly instalment';
+
+  @override
+  String get detailInstallmentSemiAnnual => 'Half-yearly instalment';
+
+  @override
+  String get detailInstallmentYearly => 'Yearly instalment';
+
+  @override
+  String get detailCalcPlan => 'Plan';
+
+  @override
+  String get detailCalcDuration => 'Duration';
+
+  @override
+  String get detailCalcUpfront => 'Down';
+
+  @override
+  String get detailCalcCount => 'Instalments';
+
+  @override
+  String get detailCalcTotal => 'Total paid';
+
+  @override
+  String get detailCalcNote =>
+      'Figures come from the current payment plans; the final plan is set at signing.';
+
+  @override
+  String detailProjectOffer(String pct, String term) {
+    return '$pct down, up to $term';
+  }
+
+  @override
+  String get detailAvailableUnits => 'Available units';
+
+  @override
+  String get detailSimilarUnits => 'Similar units';
+
+  @override
+  String get detailPaymentPlans => 'Payment plans';
+
+  @override
+  String detailPlanTerm(String pct) {
+    return '$pct down';
+  }
+
+  @override
+  String detailUpTo(String term) {
+    return 'up to $term';
+  }
 }

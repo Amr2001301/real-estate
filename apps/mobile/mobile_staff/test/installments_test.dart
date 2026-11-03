@@ -17,6 +17,13 @@ class _FakeRepo implements InstallmentsRepository {
       const Ok([]);
 
   @override
+  Future<Result<List<InstallmentOffer>>> projectOffers(String projectId) async => const Ok([]);
+
+  @override
+  Future<Result<List<InstallmentOffer>>> unitOffers({required String projectId, required String unitId}) async =>
+      const Ok([]);
+
+  @override
   Future<Result<InstallmentResult>> calculateInstallment(InstallmentInput input) async {
     if (input.netPrice <= 0 ||
         input.durationMonths < 1 ||

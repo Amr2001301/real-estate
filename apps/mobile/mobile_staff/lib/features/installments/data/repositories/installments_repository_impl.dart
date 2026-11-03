@@ -21,4 +21,17 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
   Future<Result<InstallmentResult>> calculateInstallment(InstallmentInput input) {
     return guardApiCall(() => _remote.calculateInstallment(input));
   }
+
+  @override
+  Future<Result<List<InstallmentOffer>>> unitOffers({required String projectId, required String unitId}) =>
+      guardApiCall(() async => [
+            for (final j in await _remote.listTemplatesJson(projectId: projectId))
+              if (j['status'] == 'ACTIVE' && (j['unit'] as Map?)?['id'] == unitId) installmentOfferFromTemplateJson(j),
+          ]);
+
+  @override
+  Future<Result<List<InstallmentOffer>>> projectOffers(String projectId) => guardApiCall(() async => [
+        for (final j in await _remote.listTemplatesJson(projectId: projectId))
+          if (j['status'] == 'ACTIVE') installmentOfferFromTemplateJson(j),
+      ]);
 }

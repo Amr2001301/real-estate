@@ -65,6 +65,7 @@ export 'src/common/ltr_isolate.dart';
 export 'src/common/price_formatter.dart';
 export 'src/common/date_formatter.dart';
 export 'src/common/unit_specs.dart';
+export 'src/common/installment_offer.dart';
 
 // Contact actions (WhatsApp / call / maps)
 export 'src/contact/contact_actions.dart';
@@ -97,6 +98,7 @@ export 'src/widgets/app_info_chip.dart';
 export 'src/widgets/app_form_section.dart';
 export 'src/widgets/app_filter_chip.dart';
 export 'src/widgets/app_detail_page.dart';
+export 'src/widgets/app_detail_kit.dart';
 export 'src/widgets/app_kpi_tile.dart';
 export 'src/widgets/unit_specs_grid.dart';
 export 'src/widgets/auth_widgets.dart';

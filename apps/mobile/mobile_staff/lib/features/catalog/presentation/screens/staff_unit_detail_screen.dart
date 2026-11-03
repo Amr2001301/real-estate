@@ -8,6 +8,8 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../../common/staff_share.dart';
+import '../../../installments/domain/repositories/installments_repository.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_unit_detail_cubit.dart';
 
@@ -115,22 +117,105 @@ class _ErrorScaffold extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Detail page
 // ══════════════════════════════════════════════════════════════════════════════
-class _DetailPage extends StatelessWidget {
+class _DetailPage extends StatefulWidget {
   const _DetailPage({required this.unit, this.projectId});
   final StaffUnit unit;
   final String? projectId;
 
   @override
+  State<_DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<_DetailPage> {
+  final _detailsKey = GlobalKey();
+  final _planKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  List<InstallmentOffer> _offers = const [];
+
+  StaffUnit get unit => widget.unit;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlans();
+  }
+
+  // Best-effort: the page shows without them.
+  Future<void> _loadPlans() async {
+    final projectId = widget.projectId ?? unit.projectId;
+    if (projectId == null) return;
+    final result = await context.read<InstallmentsRepository>().unitOffers(projectId: projectId, unitId: unit.id);
+    if (!mounted) return;
+    if (result case Ok(:final data)) setState(() => _offers = data);
+  }
+
+  List<String> get _photos {
+    final seen = <String>{};
+    return [
+      if (unit.coverImage != null) unit.coverImage!,
+      ...unit.mediaUrls,
+    ].where(seen.add).toList();
+  }
+
+  void _openCalculator() {
+    final lang = Localizations.localeOf(context).languageCode;
+    if (_offers.every((o) => o.options.isEmpty)) {
+      _openFullCalculator();
+      return;
+    }
+    showInstallmentCalculator(
+      context,
+      subtitle: [
+        ltr(unit.code),
+        if (unit.price != null) PriceFormatter.formatString(unit.price, languageCode: lang),
+      ].join(' · '),
+      offers: _offers,
+      actions: (sheetContext) => [
+        AppDetailSecondaryButton(
+          label: context.l10n.staffShareWithClient,
+          icon: Icons.ios_share_rounded,
+          onPressed: () {
+            Navigator.of(sheetContext).pop();
+            _share();
+          },
+        ),
+      ],
+    );
+  }
+
+  void _openFullCalculator() => context.push(
+        '/calculator',
+        extra: {'price': double.tryParse(unit.price ?? ''), 'projectId': unit.projectId},
+      );
+
+  void _share() {
+    final lang = Localizations.localeOf(context).languageCode;
+    StaffShare.unit(
+      unitId: unit.id,
+      unitCode: unit.code,
+      projectName: unit.projectName?.resolve(lang) ?? '',
+      l10n: context.l10n,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final effProjectId = projectId ?? unit.projectId;
     final hasProject = unit.projectName != null || unit.projectCity != null;
     final available = unit.status == 'AVAILABLE';
+    final hasPrice = unit.price != null && unit.price!.isNotEmpty;
+    final price = hasPrice ? PriceFormatter.formatString(unit.price, languageCode: lang) : l10n.priceOnRequest;
+    final monthlyLine = cheapestInstallmentLine(l10n, lang, _offers);
+    final offer = _offers.where((o) => o.options.isNotEmpty).firstOrNull;
+    final longest = offer?.longest;
+    final handover = unit.specs.deliveryDate;
+    final hasLocation = unit.hasLocation || unit.address != null;
 
-    Widget section(String title) => AppDetailPage.box(
+    Widget section(String title, {Key? key}) => AppDetailPage.box(
           Padding(
+            key: key,
             padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
             child: AppDetailSectionTitle(title),
           ),
@@ -139,23 +224,70 @@ class _DetailPage extends StatelessWidget {
     return AppDetailPage(
       onBack: () => context.pop(),
       title: ltr(unit.code),
-      subtitle: unit.projectName == null
-          ? null
-          : [unit.projectName!.resolve(lang), if (unit.projectCity != null) unit.projectCity!].join(' · '),
-      gallery: _HeroBackground(unit: unit, lang: lang),
-      bottomBar: _StickyActionBar(unit: unit, effProjectId: effProjectId),
-      slivers: [
-        // ── Type · price · status ───────────────────────────────────────
-        AppDetailPage.box(
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            child: _MetaStrip(unit: unit, l10n: l10n, lang: lang, colors: colors, available: available),
+      subtitle: [
+        if (unit.type != null) unit.typeLabel(lang),
+        if (unit.projectName != null) unit.projectName!.resolve(lang),
+      ].join(' · '),
+      photos: _photos,
+      photoPlaceholder: _Placeholder(),
+      photoBadge: StatusBadge(label: unitStatusLabel(l10n, unit.status), tone: unitStatusTone(unit.status)),
+      bottomBar: AppDetailBottomBar(
+        children: [
+          AppDetailSecondaryButton(
+            key: const Key('unit-calculator'),
+            label: l10n.calculatorTitle,
+            onPressed: _openFullCalculator,
           ),
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+          AppDetailSecondaryButton(
+            key: const Key('unit-share'),
+            label: l10n.staffShareWithClient,
+            onPressed: _share,
+          ),
+          if (available)
+            AppDetailPrimaryButton(
+              key: const Key('unit-reserve'),
+              label: l10n.reservationCreate,
+              onPressed: () => context.push(
+                '/reservations/new',
+                extra: {'unitId': unit.id, if (unit.projectId != null) 'projectId': unit.projectId},
+              ),
+            ),
+        ],
+      ),
+      slivers: [
+        AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: AppPriceCard(
+              label: l10n.detailTotalPrice,
+              price: price,
+              caption: monthlyLine,
+              facts: [
+                if (offer != null)
+                  AppPriceFact(
+                    l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
+                    PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
+                  ),
+                if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
+                if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
+              ],
+              actionLabel: hasPrice ? l10n.detailCalcInstallment : null,
+              onAction: hasPrice ? _openCalculator : null,
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        AppSectionTabsSliver(
+          tabs: [
+            AppSectionTab(l10n.detailTabOverview, _detailsKey),
+            if (unit.floorPlanUrls.isNotEmpty) AppSectionTab(l10n.detailTabFloorPlan, _planKey),
+            if (_offers.isNotEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
+            if (hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
+          ],
         ),
 
         // ── Unit details ────────────────────────────────────────────────
-        section(l10n.unitDetails),
+        section(l10n.unitDetails, key: _detailsKey),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           sliver: _SpecsGrid(unit: unit, l10n: l10n),
@@ -168,13 +300,34 @@ class _DetailPage extends StatelessWidget {
 
         // ── Floor plans ─────────────────────────────────────────────────
         if (unit.floorPlanUrls.isNotEmpty) ...[
-          section(l10n.sectionFloorPlans),
+          section(l10n.sectionFloorPlans, key: _planKey),
           AppDetailPage.box(_UnitFloorPlansGallery(urls: unit.floorPlanUrls)),
         ],
 
+        // ── Payment plans ───────────────────────────────────────────────
+        if (_offers.isNotEmpty) ...[
+          section(l10n.detailTabPayment, key: _paymentKey),
+          for (final o in _offers)
+            AppDetailPage.box(
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Text(o.name, style: Theme.of(context).textTheme.titleSmall),
+                    ),
+                    AppPaymentPlanTable(offer: o),
+                  ],
+                ),
+              ),
+            ),
+        ],
+
         // ── Location ────────────────────────────────────────────────────
-        if (unit.hasLocation || unit.address != null) ...[
-          section(l10n.projectLocation),
+        if (hasLocation) ...[
+          section(l10n.projectLocation, key: _locationKey),
           AppDetailPage.box(_UnitLocationCard(unit: unit, l10n: l10n)),
         ],
 
@@ -204,246 +357,6 @@ class _DetailPage extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background
 // ══════════════════════════════════════════════════════════════════════════════
-class _HeroBackground extends StatefulWidget {
-  const _HeroBackground({required this.unit, required this.lang});
-  final StaffUnit unit;
-  final String lang;
-
-  @override
-  State<_HeroBackground> createState() => _HeroBackgroundState();
-}
-
-class _HeroBackgroundState extends State<_HeroBackground> {
-  final _ctrl = PageController();
-  int _page = 0;
-
-  List<String> get _urls {
-    final seen = <String>{};
-    final result = <String>[];
-    final cover = widget.unit.coverImage;
-    if (cover != null && seen.add(cover)) result.add(cover);
-    for (final u in widget.unit.mediaUrls) {
-      if (seen.add(u)) result.add(u);
-    }
-    return result;
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final urls  = _urls;
-    final multi = urls.length > 1;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Image carousel or placeholder
-        if (urls.isEmpty)
-          _Placeholder()
-        else if (!multi)
-          AppNetworkImage(url: urls.first)
-        else
-          PageView.builder(
-            controller: _ctrl,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemCount: urls.length,
-            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
-          ),
-
-        // Top gradient — protects back button
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x33000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Bottom gradient — behind title + location
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0x88050E18), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Page dot indicators (above title area)
-        if (multi)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: _PageDots(count: urls.length, current: _page),
-            ),
-          ),
-
-        // Gold hairline at the very bottom of the hero
-        const Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: SizedBox(
-            height: 1.5,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Color(0x66C8A24B),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Status badge + count pill — top-end
-        PositionedDirectional(
-          top: AppSpacing.sm,
-          end: AppSpacing.lg,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (multi) ...[
-                _MediaCountPill(current: _page + 1, total: urls.length),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              _StatusPill(
-                label: unitStatusLabel(context.l10n, widget.unit.status),
-                tone: unitStatusTone(widget.unit.status),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PageDots extends StatelessWidget {
-  const _PageDots({required this.count, required this.current});
-  final int count;
-  final int current;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < count; i++) ...[
-          if (i > 0) const SizedBox(width: 5),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            width:  current == i ? 20 : 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: current == i
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _MediaCountPill extends StatelessWidget {
-  const _MediaCountPill({required this.current, required this.total});
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.28),
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.photo_library_outlined,
-              size: 12, color: Colors.white70),
-          const SizedBox(width: 4),
-          Text(
-            '$current / $total',
-            style: const TextStyle(fontSize: 11, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.tone});
-  final String label;
-  final BadgeTone tone;
-
-  Color _bg() => switch (tone) {
-    BadgeTone.success => const Color(0xFF22C55E).withValues(alpha: 0.90),
-    BadgeTone.warning => const Color(0xFFF59E0B).withValues(alpha: 0.90),
-    _ => Colors.black.withValues(alpha: 0.50),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _bg(),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.25),
-          width: 0.8,
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -520,108 +433,6 @@ class _DotPainter extends CustomPainter {
 // ══════════════════════════════════════════════════════════════════════════════
 // Meta strip — edge-to-edge: type chip + price + status badge
 // ══════════════════════════════════════════════════════════════════════════════
-class _MetaStrip extends StatelessWidget {
-  const _MetaStrip({
-    required this.unit,
-    required this.l10n,
-    required this.lang,
-    required this.colors,
-    required this.available,
-  });
-  final StaffUnit unit;
-  final AppLocalizations l10n;
-  final String lang;
-  final AppColorsExt colors;
-  final bool available;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasPrice = unit.price != null && unit.price!.isNotEmpty;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            // Type chip
-            if (unit.type != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _navyLight.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  border: Border.all(color: _navyLight.withValues(alpha: 0.18)),
-                ),
-                child: Text(
-                  unit.typeLabel(Localizations.localeOf(context).languageCode),
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppTone.navy.baseColor(colors),
-                  ),
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 28,
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                color: colors.hairline,
-              ),
-            ],
-            // Price
-            if (hasPrice)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      PriceFormatter.formatString(unit.price,
-                          languageCode: lang),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: available ? AppPalette.gold500 : colors.inkMuted,
-                        letterSpacing: -0.5,
-                        height: 1.0,
-                      ),
-                    ),
-                    Text(
-                      l10n.unitPrice,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: colors.inkMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              const Spacer(),
-            // Status badge
-            StatusBadge(
-              label: unitStatusLabel(l10n, unit.status),
-              tone: unitStatusTone(unit.status),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Section title
 // ══════════════════════════════════════════════════════════════════════════════
@@ -773,158 +584,6 @@ class _ProjectCard extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Sticky action dock
 // ══════════════════════════════════════════════════════════════════════════════
-class _StickyActionBar extends StatelessWidget {
-  const _StickyActionBar({required this.unit, this.effProjectId});
-  final StaffUnit unit;
-  final String? effProjectId;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-    final available = unit.status == 'AVAILABLE';
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xs,
-          AppSpacing.lg,
-          AppSpacing.sm,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            boxShadow: colors.shadowCard,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppPalette.navy700, AppPalette.navy],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  left: AppSpacing.xl,
-                  right: AppSpacing.xl,
-                  child: Container(
-                    height: 1,
-                    color: AppPalette.gold400.withValues(alpha: 0.35),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Reserve — AVAILABLE only
-                      if (available) ...[
-                        AppButton(
-                          label: l10n.reservationCreate,
-                          icon: Icons.bookmark_add_outlined,
-                          variant: AppButtonVariant.gold,
-                          size: AppButtonSize.large,
-                          expand: true,
-                          onPressed: () => context.push(
-                            '/reservations/new',
-                            extra: {
-                              'unitId': unit.id,
-                              if (unit.projectId != null) 'projectId': unit.projectId,
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                      ],
-
-                      // Second row — hide Schedule visit for SOLD units
-                      Row(
-                        children: [
-                          if (available && effProjectId != null ||
-                              unit.status == 'RESERVED' && effProjectId != null)
-                            ...[],
-                          Expanded(
-                            child: _GlassAction(
-                              label: l10n.calculatorTitle,
-                              icon: Icons.calculate_outlined,
-                              onTap: () => context.push(
-                                '/calculator',
-                                extra: {
-                                  'price': double.tryParse(unit.price ?? ''),
-                                  'projectId': unit.projectId,
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassAction extends StatelessWidget {
-  const _GlassAction({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Unit location — inline map (when coordinates exist) with address row above,
 // or address-only card when coordinates are absent

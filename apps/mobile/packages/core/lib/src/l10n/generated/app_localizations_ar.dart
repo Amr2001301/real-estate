@@ -4749,4 +4749,172 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ledgerEmpty => 'لا توجد بنود في هذه الفترة.';
+
+  @override
+  String get detailPhotosFullscreen => 'عرض الصور بملء الشاشة';
+
+  @override
+  String get detailClose => 'إغلاق';
+
+  @override
+  String get detailTotalPrice => 'السعر الإجمالي';
+
+  @override
+  String get detailPricesFrom => 'الأسعار تبدأ من';
+
+  @override
+  String detailOrFrom(String amount, String period) {
+    return 'أو من $amount $period';
+  }
+
+  @override
+  String get detailPeriodMonthly => 'شهريًا';
+
+  @override
+  String get detailPeriodQuarterly => 'كل 3 أشهر';
+
+  @override
+  String get detailPeriodSemiAnnual => 'كل 6 أشهر';
+
+  @override
+  String get detailPeriodYearly => 'سنويًا';
+
+  @override
+  String detailUpfrontPct(String pct) {
+    return 'المقدم $pct';
+  }
+
+  @override
+  String get detailTerm => 'مدة التقسيط';
+
+  @override
+  String detailYears(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n سنة',
+      few: '$n سنوات',
+      two: 'سنتان',
+      one: 'سنة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String detailMonths(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n شهرًا',
+      few: '$n أشهر',
+      two: 'شهران',
+      one: 'شهر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get detailHandover => 'الاستلام';
+
+  @override
+  String get detailCalcInstallment => 'احسب قسطك';
+
+  @override
+  String get detailTabOverview => 'نظرة عامة';
+
+  @override
+  String get detailTabFloorPlan => 'المخطط';
+
+  @override
+  String get detailTabPayment => 'خطة الدفع';
+
+  @override
+  String get detailTabLocation => 'الموقع';
+
+  @override
+  String get detailTabSimilar => 'مشابهة';
+
+  @override
+  String get detailTabUnits => 'الوحدات';
+
+  @override
+  String get detailTabAmenities => 'المرافق';
+
+  @override
+  String get detailRowBooking => 'دفعة الحجز';
+
+  @override
+  String get detailRowDownPayment => 'الدفعة المقدمة';
+
+  @override
+  String detailRowInstallments(int count) {
+    return 'الأقساط ($count)';
+  }
+
+  @override
+  String get detailRowFinal => 'الدفعة الأخيرة';
+
+  @override
+  String get detailRowTotal => 'الإجمالي';
+
+  @override
+  String get detailRowDiscount => 'الخصم';
+
+  @override
+  String get detailCashPayment => 'الدفع كاش';
+
+  @override
+  String get detailInstallmentMonthly => 'القسط الشهري';
+
+  @override
+  String get detailInstallmentQuarterly => 'القسط ربع السنوي';
+
+  @override
+  String get detailInstallmentSemiAnnual => 'القسط نصف السنوي';
+
+  @override
+  String get detailInstallmentYearly => 'القسط السنوي';
+
+  @override
+  String get detailCalcPlan => 'الخطة';
+
+  @override
+  String get detailCalcDuration => 'المدة';
+
+  @override
+  String get detailCalcUpfront => 'المقدم';
+
+  @override
+  String get detailCalcCount => 'عدد الأقساط';
+
+  @override
+  String get detailCalcTotal => 'إجمالي السداد';
+
+  @override
+  String get detailCalcNote =>
+      'الأرقام من خطط السداد الحالية، وتُحدَّد الخطة النهائية عند التعاقد.';
+
+  @override
+  String detailProjectOffer(String pct, String term) {
+    return 'مقدم $pct وتقسيط حتى $term';
+  }
+
+  @override
+  String get detailAvailableUnits => 'وحدات متاحة';
+
+  @override
+  String get detailSimilarUnits => 'وحدات مشابهة';
+
+  @override
+  String get detailPaymentPlans => 'أنظمة السداد';
+
+  @override
+  String detailPlanTerm(String pct) {
+    return '$pct مقدم';
+  }
+
+  @override
+  String detailUpTo(String term) {
+    return 'حتى $term';
+  }
 }

@@ -31,6 +31,40 @@ class _FakeDataSource implements CatalogRemoteDataSource {
 
   @override
   Future<UnitDto> getUnit(String id) async => _throw();
+
+  @override
+  Future<List<Map<String, dynamic>>> getUnitPlans(String unitId) async {
+    if (error != null) _throw();
+    return [
+      {
+        'name': 'Plan A',
+        'isCash': false,
+        'netPrice': 1000000,
+        'reservationAmount': 50000,
+        'downPaymentAmount': 50000,
+        'discountAmount': 0,
+        'finalPaymentAmount': 0,
+        'options': [
+          {'durationMonths': 60, 'frequency': 'MONTHLY', 'installmentsCount': 60, 'installmentAmount': 15000, 'totalPayable': 1000000},
+          {'durationMonths': 24, 'frequency': 'QUARTERLY', 'installmentsCount': 8, 'installmentAmount': 112500, 'totalPayable': 1000000},
+        ],
+      },
+    ];
+  }
+
+  @override
+  Future<Map<String, dynamic>> getProjectPlans(String projectId) async {
+    if (error != null) _throw();
+    return {
+      'plansCount': 2,
+      'minDownPaymentPercent': 10,
+      'maxMonths': 96,
+      'offers': [
+        {'downPaymentPercent': 10, 'maxMonths': 96, 'isCash': false},
+        {'downPaymentPercent': 12.5, 'maxMonths': 24, 'isCash': false},
+      ],
+    };
+  }
 }
 
 DioException _http(int status) => DioException(
@@ -75,5 +109,34 @@ void main() {
       expect(result.isOk, isTrue);
       expect(result.dataOrNull?.data, isEmpty);
     });
+  });
+
+  test('getUnitPlans reads the public plans into offers', () async {
+    final repo = CatalogRepositoryImpl(_FakeDataSource());
+    final result = await repo.getUnitPlans('u1');
+    final offers = (result as Ok<List<InstallmentOffer>>).data;
+    expect(offers, hasLength(1));
+    final offer = offers.first;
+    expect(offer.upfront, 100000);
+    expect(offer.downPaymentPercent, 5);
+    expect(offer.options.last.period, InstallmentPeriod.quarterly);
+    expect(offer.longest!.durationMonths, 60);
+    // 112,500 every 3 months is 37,500 a month: still dearer than 15,000.
+    expect(offer.cheapest!.durationMonths, 60);
+  });
+
+  test('getProjectPlans reads the offers', () async {
+    final repo = CatalogRepositoryImpl(_FakeDataSource());
+    final result = await repo.getProjectPlans('p1');
+    final summary = (result as Ok<ProjectPlanSummary>).data;
+    expect(summary.minDownPaymentPercent, 10);
+    expect(summary.maxMonths, 96);
+    expect(summary.offers.last.downPaymentPercent, 12.5);
+    expect(percentText(summary.offers.last.downPaymentPercent), '12.5');
+  });
+
+  test('getUnitPlans maps a network error to a failure', () async {
+    final repo = CatalogRepositoryImpl(_FakeDataSource(error: _http(500)));
+    expect(await repo.getUnitPlans('u1'), isA<Err<List<InstallmentOffer>>>());
   });
 }

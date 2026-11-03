@@ -46,6 +46,12 @@ class _FakeCatalogRepository implements CatalogRepository {
 
   @override
   Future<Result<Unit>> getUnit(String id) => throw UnimplementedError();
+
+  @override
+  Future<Result<List<InstallmentOffer>>> getUnitPlans(String unitId) => throw UnimplementedError();
+
+  @override
+  Future<Result<ProjectPlanSummary>> getProjectPlans(String projectId) => throw UnimplementedError();
 }
 
 ProjectListItem _project(String id) => ProjectListItem(

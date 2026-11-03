@@ -4,6 +4,7 @@ import '../design/theme/app_theme_ext.dart';
 import '../design/tokens/app_colors.dart';
 import '../design/tokens/app_radii.dart';
 import '../design/tokens/app_spacing.dart';
+import 'app_detail_kit.dart';
 import 'app_nav_header.dart';
 
 /// The detail page of a project or a unit, in both apps: the navy header
@@ -17,6 +18,10 @@ class AppDetailPage extends StatelessWidget {
     required this.slivers,
     this.subtitle,
     this.gallery,
+    this.photos,
+    this.photoPlaceholder,
+    this.photoBadge,
+    this.photoOverlay,
     this.actions = const [],
     this.onBack,
     this.bottomBar,
@@ -27,6 +32,13 @@ class AppDetailPage extends StatelessWidget {
 
   /// The photos (a carousel, a placeholder…), shown in a 16:10 rounded card.
   final Widget? gallery;
+
+  /// The photos, shown by [AppPhotoGallery] (counter, thumbnails, full
+  /// screen). Takes the place of [gallery] when set.
+  final List<String>? photos;
+  final Widget? photoPlaceholder;
+  final Widget? photoBadge;
+  final Widget? photoOverlay;
 
   /// The sections. Box widgets go in [AppDetailPage.box].
   final List<Widget> slivers;
@@ -58,7 +70,17 @@ class AppDetailPage extends StatelessWidget {
                 leadingAction: NavHeaderBack(onTap: onBack),
                 actions: actions,
               ),
-              if (gallery != null)
+              if (photos != null)
+                box(
+                  AppPhotoGallery(
+                    images: photos!,
+                    placeholder: photoPlaceholder,
+                    badge: photoBadge,
+                    overlay: photoOverlay,
+                  ),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+                )
+              else if (gallery != null)
                 box(
                   Container(
                     key: const Key('detail-gallery'),

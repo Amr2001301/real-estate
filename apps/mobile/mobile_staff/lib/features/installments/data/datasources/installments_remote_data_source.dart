@@ -7,6 +7,9 @@ import '../dtos/plan_template_dto.dart';
 abstract interface class InstallmentsRemoteDataSource {
   Future<List<PlanTemplateDto>> listTemplates({String? projectId});
   Future<InstallmentResult> calculateInstallment(InstallmentInput input);
+
+  /// The project's plan templates as the API sends them (for a unit's offers).
+  Future<List<Map<String, dynamic>>> listTemplatesJson({required String projectId});
 }
 
 class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
@@ -51,5 +54,14 @@ class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
       durationMonths: input.durationMonths,
       schedule: List<double>.filled(input.durationMonths, monthly),
     );
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listTemplatesJson({required String projectId}) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/installment-plan-templates',
+      queryParameters: {'page': 1, 'pageSize': 100, 'projectId': projectId, 'status': 'ACTIVE'},
+    );
+    return ((res.data?['data'] as List?) ?? const []).whereType<Map<String, dynamic>>().toList();
   }
 }
