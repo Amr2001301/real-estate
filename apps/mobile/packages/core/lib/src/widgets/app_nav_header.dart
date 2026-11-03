@@ -539,3 +539,41 @@ class NavHeaderButton extends StatelessWidget {
     );
   }
 }
+
+/// Puts any icon button (a favourite toggle, a compare button…) in the
+/// header's glass circle, white, so it matches [NavHeaderAction].
+class NavHeaderGlass extends StatelessWidget {
+  const NavHeaderGlass({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.20), width: 0.8),
+      ),
+      child: ClipOval(
+        child: IconTheme.merge(
+          data: const IconThemeData(color: Colors.white, size: 20),
+          child: IconButtonTheme(
+            data: IconButtonThemeData(
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white,
+                minimumSize: const Size(40, 40),
+                maximumSize: const Size(40, 40),
+                padding: EdgeInsets.zero,
+                iconSize: 20,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+}

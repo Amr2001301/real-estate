@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
@@ -38,56 +37,24 @@ class _BrokerProjectDetailScreenState
     final p = widget.project;
     final name = p.name.resolve(lang);
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
-      child: Scaffold(
-        backgroundColor: context.appColors.canvas,
-        body: CustomScrollView(
+    return AppDetailPage(
+          onBack: () => context.pop(),
+          title: name,
+          gallery: _HeroBackground(project: p, l10n: l10n, lang: lang),
           slivers: [
-            // ── Collapsing hero ─────────────────────────────────────────────
-            SliverAppBar(
-              expandedHeight: 300,
-              pinned: true,
-              stretch: true,
-              backgroundColor: _navyDeep,
-              surfaceTintColor: Colors.transparent,
-              systemOverlayStyle: SystemUiOverlayStyle.light,
-              automaticallyImplyLeading: false,
-              leading: Padding(
-                padding: const EdgeInsets.all(8),
-                child: _CircleBackButton(onTap: () => context.pop()),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                stretchModes: const [StretchMode.zoomBackground],
-                titlePadding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.lg),
-                title: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                    shadows: [
-                      Shadow(color: Colors.black54, blurRadius: 10),
-                    ],
-                  ),
-                ),
-                background:
-                    _HeroBackground(project: p, l10n: l10n, lang: lang),
-              ),
-            ),
-
             // ── Body ────────────────────────────────────────────────────────
             SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MetaStrip(project: p, l10n: l10n),
+                  const SizedBox(height: AppSpacing.md),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.lg),
+                      child: _MetaStrip(project: p, l10n: l10n),
+                    ),
+                  ),
 
                   // Add lead CTA
                   Padding(
@@ -119,17 +86,14 @@ class _BrokerProjectDetailScreenState
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md),
-                    child: AppSectionHeader(title: l10n.navUnits),
+                    child: AppDetailSectionTitle(l10n.navUnits),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _Units(projectId: p.id),
-                  const SizedBox(height: 48),
                 ],
               ),
             ),
           ],
-        ),
-      ),
     );
   }
 }
@@ -148,7 +112,6 @@ class _HeroBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -161,8 +124,8 @@ class _HeroBackground extends StatelessWidget {
               colors: [
                 Color(0x88000000),
                 Color(0x22000000),
-                Color(0xCC000000),
-                Color(0xF2050E18),
+                Color(0x33000000),
+                Color(0x88050E18),
               ],
               stops: [0.0, 0.30, 0.70, 1.0],
             ),
@@ -186,7 +149,7 @@ class _HeroBackground extends StatelessWidget {
           ),
         ),
         PositionedDirectional(
-          top: topPad + 10,
+          top: AppSpacing.sm,
           end: AppSpacing.md,
           child: StatusBadge(
             label: projectStatusLabel(l10n, project.status),
@@ -196,14 +159,14 @@ class _HeroBackground extends StatelessWidget {
         ),
         if (project.commissionPct != null)
           PositionedDirectional(
-            top: topPad + 10,
-            start: 56,
+            top: AppSpacing.sm,
+            start: AppSpacing.sm,
             child: _CommissionPill(pct: project.commissionPct!, lang: lang),
           ),
         if (project.city != null)
           PositionedDirectional(
-            bottom: AppSpacing.xl + 36,
-            start: AppSpacing.lg,
+            bottom: AppSpacing.sm,
+            start: AppSpacing.md,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -279,16 +242,6 @@ class _CommissionPill extends StatelessWidget {
 }
 
 // ── Circle back button ────────────────────────────────────────────────────────
-
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
-  }
-}
 
 // ── Meta strip ────────────────────────────────────────────────────────────────
 
@@ -500,7 +453,7 @@ class _AboutSectionState extends State<_AboutSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: context.l10n.aboutTheProject),
+          AppDetailSectionTitle(context.l10n.aboutTheProject),
           const SizedBox(height: AppSpacing.sm),
           Container(
             width: double.infinity,
@@ -632,7 +585,7 @@ class _ServicesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: context.l10n.projectFeatures),
+          AppDetailSectionTitle(context.l10n.projectFeatures),
           const SizedBox(height: AppSpacing.sm),
           Container(
             width: double.infinity,
@@ -723,7 +676,7 @@ class _MapSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: context.l10n.projectLocationTitle),
+          AppDetailSectionTitle(context.l10n.projectLocationTitle),
           const SizedBox(height: AppSpacing.sm),
           ClipRRect(
             borderRadius: AppRadii.card,

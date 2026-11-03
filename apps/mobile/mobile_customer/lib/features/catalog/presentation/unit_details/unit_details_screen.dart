@@ -1,6 +1,5 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,216 +58,65 @@ class UnitDetailsScreen extends StatelessWidget {
 // Floating-sheet detail page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DetailPage extends StatefulWidget {
+class _DetailPage extends StatelessWidget {
   const _DetailPage({required this.unit});
   final Unit unit;
 
-  static const double _heroH = 400.0;
-  static const double _peekH = 48.0;
-
-  @override
-  State<_DetailPage> createState() => _DetailPageState();
-}
-
-class _DetailPageState extends State<_DetailPage> {
-  late final ScrollController _scroll;
-  double _px = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll = ScrollController()
-      ..addListener(() {
-        if (mounted) {
-          setState(() => _px = _scroll.offset.clamp(0.0, double.infinity));
-        }
-      });
-  }
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  bool get _overSheet =>
-      _px > (_DetailPage._heroH - _DetailPage._peekH - 56);
-
   @override
   Widget build(BuildContext context) {
-    final unit = widget.unit;
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final topInset = MediaQuery.paddingOf(context).top;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final project = unit.project;
+    Widget section(String title) => AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
+            child: AppDetailSectionTitle(title),
+          ),
+        );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: colors.canvas,
-        body: Stack(
-          children: [
-            // ── 1. Pinned hero ──────────────────────────────────────────────
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: _DetailPage._heroH + topInset,
-              child: _HeroPanel(unit: unit, lang: lang),
-            ),
-
-            // ── 2. Scrollable cream sheet ───────────────────────────────────
-            SingleChildScrollView(
-              controller: _scroll,
-              physics: const ClampingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    height: topInset + _DetailPage._heroH - _DetailPage._peekH,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colors.canvas,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(AppRadii.xxl + 10),
-                        topRight: Radius.circular(AppRadii.xxl + 10),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.20),
-                          blurRadius: 36,
-                          offset: const Offset(0, -8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _SheetHandle(colors: colors),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.xs,
-                            AppSpacing.lg,
-                            0,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _IdentityRow(unit: unit),
-                              const SizedBox(height: AppSpacing.sm),
-                              Text(
-                                unit.typeLabel(Localizations.localeOf(context).languageCode),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: colors.inkStrong,
-                                      height: 1.1,
-                                    ),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              _PriceBlock(unit: unit),
-                              const SizedBox(height: AppSpacing.xl),
-                              _SectionTitle(l10n.unitOverview),
-                              const SizedBox(height: AppSpacing.md),
-                              _SpecsRow(unit: unit),
-                              // EE2/EE5 — the specs the website shows (only those it has).
-                              if (!unit.specs.isEmpty) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                UnitSpecsGrid(specs: unit.specs),
-                              ],
-                              const SizedBox(height: AppSpacing.xl),
-                              _SectionTitle(l10n.unitAbout),
-                              const SizedBox(height: AppSpacing.md),
-                              _AboutCard(text: l10n.unitAboutGeneric),
-                              if (unit.project != null) ...[
-                                const SizedBox(height: AppSpacing.xl),
-                                _SectionTitle(l10n.unitWithinProject),
-                                const SizedBox(height: AppSpacing.md),
-                                _WithinProject(project: unit.project!),
-                              ],
-                              const SizedBox(height: AppSpacing.xl),
-                              _SectionTitle(l10n.unitPlanTitle),
-                              const SizedBox(height: AppSpacing.md),
-                              _UnitPlan(
-                                unit: unit,
-                                onRequest: () =>
-                                    showUnitContactSheet(context, unit),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (unit.project != null)
-                          _SimilarUnits(
-                            projectId: unit.project!.id,
-                            currentUnitId: unit.id,
-                          ),
-                        SizedBox(height: 104 + bottomInset),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── 3. Floating nav (back + favorite + compare) ─────────────────
-            Positioned(
-              top: topInset,
-              left: 0,
-              right: 0,
-              height: 68,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _NavBtn(
-                      overSheet: _overSheet,
-                      child: BackButton(
-                        color: _overSheet ? colors.inkStrong : Colors.white,
-                        onPressed: () => context.canPop()
-                            ? context.pop()
-                            : context.go('/home'),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        _NavBtn(
-                          overSheet: _overSheet,
-                          child: FavoriteToggleButton(
-                            isProject: false,
-                            id: unit.id,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        _NavBtn(
-                          overSheet: _overSheet,
-                          child: _CompareButton(unit: unit),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── 4. Sticky dock ──────────────────────────────────────────────
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _StickyActionBar(unit: unit),
-            ),
-          ],
+    return AppDetailPage(
+      onBack: () => context.canPop() ? context.pop() : context.go('/home'),
+      title: unit.typeLabel(lang),
+      subtitle: [
+        ltr(unit.code),
+        if (project != null) project.name.resolve(lang),
+      ].join(' · '),
+      actions: [
+        NavHeaderGlass(child: FavoriteToggleButton(isProject: false, id: unit.id)),
+        NavHeaderGlass(child: _CompareButton(unit: unit)),
+      ],
+      gallery: ImageGallery(images: unit.galleryImages),
+      bottomBar: _StickyActionBar(unit: unit),
+      slivers: [
+        AppDetailPage.box(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              _IdentityRow(unit: unit),
+              const SizedBox(height: AppSpacing.md),
+              _PriceBlock(unit: unit),
+            ],
+          ),
         ),
-      ),
+        section(l10n.unitOverview),
+        AppDetailPage.box(_SpecsRow(unit: unit)),
+        // EE2/EE5 — the specs the website shows (only those it has).
+        if (!unit.specs.isEmpty)
+          AppDetailPage.box(
+            Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: UnitSpecsGrid(specs: unit.specs)),
+          ),
+        section(l10n.unitAbout),
+        AppDetailPage.box(_AboutCard(text: l10n.unitAboutGeneric)),
+        if (project != null) ...[
+          section(l10n.unitWithinProject),
+          AppDetailPage.box(_WithinProject(project: project)),
+        ],
+        section(l10n.unitPlanTitle),
+        AppDetailPage.box(_UnitPlan(unit: unit, onRequest: () => showUnitContactSheet(context, unit))),
+        if (project != null)
+          SliverToBoxAdapter(child: _SimilarUnits(projectId: project.id, currentUnitId: unit.id)),
+      ],
     );
   }
 }
@@ -277,182 +125,9 @@ class _DetailPageState extends State<_DetailPage> {
 // Hero
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HeroPanel extends StatelessWidget {
-  const _HeroPanel({required this.unit, required this.lang});
-  final Unit unit;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    final project = unit.project;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ImageGallery(images: unit.galleryImages),
-        // Top scrim — status bar legibility
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 180,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xCC000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-        // Bottom scrim — location pill readability
-        const Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 100,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0x88000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (project != null)
-          PositionedDirectional(
-            bottom: AppSpacing.xl + 4,
-            start: AppSpacing.lg,
-            end: AppSpacing.lg,
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.sizeOf(context).width * 0.72,
-                ),
-                child: _LocationPill(
-                  label: '${project.name.resolve(lang)} · ${project.city}',
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _LocationPill extends StatelessWidget {
-  const _LocationPill({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppPalette.navy.withValues(alpha: 0.85),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.location_on_rounded, size: 14, color: Colors.white),
-          const SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Sheet chrome
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _SheetHandle extends StatelessWidget {
-  const _SheetHandle({required this.colors});
-  final AppColorsExt colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 6),
-      child: Center(
-        child: Container(
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-            color: colors.hairline,
-            borderRadius: AppRadii.pillAll,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Floating action button — glass (over hero) or solid surface circle (over sheet).
-class _NavBtn extends StatelessWidget {
-  const _NavBtn({required this.overSheet, required this.child});
-  final bool overSheet;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: overSheet
-            ? colors.surface
-            : Colors.white.withValues(alpha: 0.18),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: overSheet
-              ? colors.hairline
-              : Colors.white.withValues(alpha: 0.30),
-        ),
-        boxShadow: overSheet ? colors.shadowSoft : null,
-      ),
-      child: ClipOval(
-        child: IconButtonTheme(
-          data: IconButtonThemeData(
-            style: IconButton.styleFrom(
-              minimumSize: const Size(42, 42),
-              maximumSize: const Size(42, 42),
-              padding: EdgeInsets.zero,
-              iconSize: 20,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Identity + pricing
@@ -549,40 +224,6 @@ class _PriceBlock extends StatelessWidget {
 // Section heading
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Spec chips
 // ─────────────────────────────────────────────────────────────────────────────
@@ -635,45 +276,7 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.md,
-        horizontal: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 22, color: colors.brandGold),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colors.inkStrong,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style:
-                theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
-          ),
-        ],
-      ),
-    );
+    return AppDetailStat(icon: icon, value: value, label: label);
   }
 }
 
@@ -1271,7 +874,6 @@ class _CompareButton extends StatelessWidget {
           tooltip: inCompare
               ? context.l10n.compareRemove
               : context.l10n.compareAdd,
-          color: context.appColors.inkStrong,
           icon: Icon(inCompare
               ? Icons.compare_arrows_rounded
               : Icons.add_to_photos_outlined),

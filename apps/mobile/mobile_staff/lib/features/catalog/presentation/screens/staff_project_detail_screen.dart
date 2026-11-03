@@ -106,51 +106,16 @@ class _StaffProjectDetailScreenState
                     ? p.availableUnitsCount
                     : availableUnits.length;
 
-            return CustomScrollView(
-              controller: _scroll,
+            return AppDetailPage(
+              onBack: () => context.pop(),
+              title: name,
+              subtitle: p.city,
+              gallery: _HeroBackground(
+                project: p,
+                statusLabel: projectStatusLabel(l10n, p.status),
+                statusTone: projectStatusTone(p.status),
+              ),
               slivers: [
-                // ── Collapsible hero ────────────────────────────────────────
-                SliverAppBar(
-                  expandedHeight: 370,
-                  pinned: true,
-                  stretch: true,
-                  backgroundColor: _navyDeep,
-                  surfaceTintColor: Colors.transparent,
-                  systemOverlayStyle: SystemUiOverlayStyle.light,
-                  automaticallyImplyLeading: false,
-                  leading: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: _CircleBackButton(
-                        onTap: () => context.pop()),
-                  ),
-                  flexibleSpace: FlexibleSpaceBar(
-                    collapseMode: CollapseMode.parallax,
-                    stretchModes: const [StretchMode.zoomBackground],
-                    titlePadding:
-                        const EdgeInsetsDirectional.fromSTEB(
-                            AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.lg),
-                    title: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                        shadows: [
-                          Shadow(color: Colors.black54, blurRadius: 10),
-                        ],
-                      ),
-                    ),
-                    background: _HeroBackground(
-                      project: p,
-                      statusLabel: projectStatusLabel(l10n, p.status),
-                      statusTone: projectStatusTone(p.status),
-                    ),
-                  ),
-                ),
-
                 // ── Actions + stats + about + units header ──────────────────
                 SliverToBoxAdapter(
                   child: Column(
@@ -160,7 +125,7 @@ class _StaffProjectDetailScreenState
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                             AppSpacing.lg,
-                            AppSpacing.xl,
+                            AppSpacing.lg,
                             AppSpacing.lg,
                             0),
                         child: const _StaffActions(),
@@ -465,16 +430,6 @@ class _FallbackBackButton extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Glass circle back button (used in hero AppBar)
 // ══════════════════════════════════════════════════════════════════════════════
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
-  }
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Hero background (used inside FlexibleSpaceBar)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -540,14 +495,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           top: 0,
           left: 0,
           right: 0,
-          height: 160,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xCC000000), Color(0x00000000)],
+                  colors: [Color(0x33000000), Color(0x00000000)],
                 ),
               ),
             ),
@@ -559,14 +514,14 @@ class _HeroBackgroundState extends State<_HeroBackground> {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 160,
+          height: 80,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Color(0xEE050E18), Color(0x00000000)],
+                  colors: [Color(0x88050E18), Color(0x00000000)],
                 ),
               ),
             ),
@@ -576,7 +531,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
         // Page dot indicators (above the title area)
         if (multi)
           Positioned(
-            bottom: 86,
+            bottom: 12,
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -586,7 +541,7 @@ class _HeroBackgroundState extends State<_HeroBackground> {
 
         // Status badge + media count at top-end
         PositionedDirectional(
-          top: kToolbarHeight + 6,
+          top: AppSpacing.sm,
           end: AppSpacing.lg,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1044,38 +999,12 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                ),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                    letterSpacing: -0.2,
-                  ),
-            ),
-          ],
-        ),
+        AppDetailSectionTitle(title),
         if (child is! SizedBox) ...[
-          const SizedBox(height: AppSpacing.md + 2),
+          const SizedBox(height: AppSpacing.md),
           child,
         ],
       ],
