@@ -48,6 +48,7 @@ import 'load_by_id.dart';
 import '../features/contracts/domain/repositories/contracts_repository.dart';
 import '../features/contracts/domain/usecases/get_my_contracts.dart';
 import '../features/contracts/presentation/contract_detail_screen.dart';
+import '../features/contracts/presentation/contract_statement_screen.dart';
 import '../features/contracts/presentation/contracts_cubit.dart';
 import '../features/contracts/presentation/contracts_screen.dart';
 import '../features/deposits/domain/entities/deposit.dart';
@@ -478,6 +479,14 @@ GoRouter createCustomerRouter(
             builder: detail,
           );
         },
+      ),
+
+      GoRoute(
+        path: '/account/contracts/:id/statement',
+        builder: (context, state) => ContractStatementScreen(
+          contractId: state.pathParameters['id']!,
+          contractNumber: state.extra as String?,
+        ),
       ),
 
       // ── Deposits / payments (list + receipt detail) ──────────────────────

@@ -7,6 +7,7 @@ import 'package:mobile_customer/features/contracts/data/mappers/contract_mapper.
 import 'package:mobile_customer/features/contracts/data/repositories/contracts_repository_impl.dart';
 import 'package:mobile_customer/features/contracts/domain/entities/contract.dart';
 import 'package:mobile_customer/features/contracts/domain/repositories/contracts_repository.dart';
+import 'package:mobile_customer/features/contracts/domain/entities/contract_statement.dart';
 import 'package:mobile_customer/features/contracts/domain/usecases/get_my_contracts.dart';
 import 'package:mobile_customer/features/contracts/presentation/contracts_cubit.dart';
 
@@ -20,6 +21,9 @@ class _FakeDataSource implements ContractsRemoteDataSource {
     if (error != null) throw error!;
     return rows;
   }
+
+  @override
+  Future<Map<String, dynamic>> getStatement(String contractId) => throw UnimplementedError();
 }
 
 class _FakeRepo implements ContractsRepository {
@@ -27,6 +31,9 @@ class _FakeRepo implements ContractsRepository {
   final Result<List<Contract>> _result;
   @override
   Future<Result<List<Contract>>> getMyContracts() async => _result;
+
+  @override
+  Future<Result<ContractStatement>> getStatement(String contractId) => throw UnimplementedError();
 }
 
 Map<String, dynamic> _json({String? signedAt}) => {

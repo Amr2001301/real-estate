@@ -8587,6 +8587,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notification settings'**
   String get notificationPrefsTitle;
+
+  /// No description provided for @statementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement of account'**
+  String get statementTitle;
+
+  /// No description provided for @statementOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything you paid and what is left'**
+  String get statementOpenHint;
+
+  /// No description provided for @statementBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Left on the contract'**
+  String get statementBalance;
+
+  /// No description provided for @statementAsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'As of {date}'**
+  String statementAsOf(String date);
+
+  /// No description provided for @statementPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get statementPaid;
+
+  /// No description provided for @statementDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get statementDueToday;
+
+  /// No description provided for @statementUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Not due yet'**
+  String get statementUpcoming;
+
+  /// No description provided for @statementAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting confirmation'**
+  String get statementAwaiting;
+
+  /// No description provided for @statementMovements.
+  ///
+  /// In en, this message translates to:
+  /// **'Movements'**
+  String get statementMovements;
+
+  /// No description provided for @statementContractValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get statementContractValue;
+
+  /// No description provided for @statementPaymentOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment: {what}'**
+  String statementPaymentOf(String what);
+
+  /// No description provided for @statementPaymentOfBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment: {what} — {how}'**
+  String statementPaymentOfBy(String what, String how);
+
+  /// No description provided for @statementReversalOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment reversed: {what}'**
+  String statementReversalOf(String what);
+
+  /// No description provided for @statementWaiverOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Waived: {what}'**
+  String statementWaiverOf(String what);
+
+  /// No description provided for @statementDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'due {date}'**
+  String statementDueOn(String date);
+
+  /// No description provided for @statementMarkedPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'marked paid'**
+  String get statementMarkedPaid;
+
+  /// No description provided for @statementReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String statementReason(String reason);
+
+  /// No description provided for @statementBalanceAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance {amount}'**
+  String statementBalanceAfter(String amount);
+
+  /// No description provided for @statementAwaitingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments awaiting confirmation (a proof under review, a cheque not cleared) are not in the balance until they are confirmed.'**
+  String get statementAwaitingNote;
 }
 
 class _AppLocalizationsDelegate

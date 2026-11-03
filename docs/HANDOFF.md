@@ -71,7 +71,7 @@
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #243 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #244 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -417,7 +417,10 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 | #241 | Mobile PR3b | Core `AppInfoChip` (label ellipsizes) and `AppKpiTile` (value scales down); six staff `_InfoChip` and two `_KpiTile` now render them; reservation chips wrap; cheque amount on one line; `AppTone.navy` lighter on dark surfaces. |
 | #242 | Mobile PR3c | Core `AppFormSection` (numbered form step) replaces four private `_SectionCard` copies; broker «إضافة عميل محتمل» and «حجز جديد» are numbered steps with `AppTextField`; the customer app has one `InstallmentCard` (`features/installments/presentation/widgets/installment_card.dart`) for «أقساطي» and a property's installments tab, label «إرسال إثبات الدفع». |
 | #243 | Mobile PR2b-1 | ~170 Arabic ARB values in Egyptian dialect rewritten in MSA (placeholders kept); follow-up "when" reads اليوم / غدًا / أمس from ARB. |
-| PR 2b-2 | Mobile | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. Open — merge on «ادمج». After it: the mobile QA plan is done; next items are in 2h ("Other open items") and section 5. |
+| #244 | Mobile PR2b-2 | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. |
+| ST1 | Customer app | Statement of account (كشف حساب) on a signed contract: `GET /contracts/me/contracts/:id/statement` (customer, own contract only; same figures as staff, without who reversed a payment or deposit ids); screen `contract_statement_screen.dart`. e2e `e2e-st1-customer-statement`. Open — merge on «ادمج». |
+
+**Owner decisions (2026-11-03) on the open items:** customer statement in the app — yes (ST1); an unsigned contract's due rows — remind staff only, never the customer (ST2, next); the broker does not get the customer's national ID / address / extra fields; e-signing the contract itself is postponed (needs a lawyer's view on Egyptian law first). «ليا وعليا» must show the same numbers in the staff app and on the dashboard — the staff app has no ledger screen yet; plan: the same `GET /reports/ledger` + rows, same permission (`reports:financial:read`) — to confirm with the owner before building.
 
 **Next, in this order (one PR each, owner approves each merge):**
 1. **PR 2b — Modern Standard Arabic (owner: «فصحى») — split into 2b-1 (ARB values) and 2b-2 (strings in the code), see the table.** About 124 ARB values read as Egyptian dialect → MSA. About 470 hard-coded Arabic strings in `lib/` move to ARB keys (ar + en). Includes the strings added in 3a ('خدماتك المالية', 'طلبات الخدمة', 'جديد', 'تفاصيل الطلب', 'المساعد الذكي', …). Find them with `grep -rnP "'[^']*[\x{0600}-\x{06FF}]" lib/`.

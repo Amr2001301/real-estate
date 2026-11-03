@@ -4609,4 +4609,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPrefsTitle => 'Notification settings';
+
+  @override
+  String get statementTitle => 'Statement of account';
+
+  @override
+  String get statementOpenHint => 'Everything you paid and what is left';
+
+  @override
+  String get statementBalance => 'Left on the contract';
+
+  @override
+  String statementAsOf(String date) {
+    return 'As of $date';
+  }
+
+  @override
+  String get statementPaid => 'Paid';
+
+  @override
+  String get statementDueToday => 'Due today';
+
+  @override
+  String get statementUpcoming => 'Not due yet';
+
+  @override
+  String get statementAwaiting => 'Awaiting confirmation';
+
+  @override
+  String get statementMovements => 'Movements';
+
+  @override
+  String get statementContractValue => 'Contract value';
+
+  @override
+  String statementPaymentOf(String what) {
+    return 'Payment: $what';
+  }
+
+  @override
+  String statementPaymentOfBy(String what, String how) {
+    return 'Payment: $what — $how';
+  }
+
+  @override
+  String statementReversalOf(String what) {
+    return 'Payment reversed: $what';
+  }
+
+  @override
+  String statementWaiverOf(String what) {
+    return 'Waived: $what';
+  }
+
+  @override
+  String statementDueOn(String date) {
+    return 'due $date';
+  }
+
+  @override
+  String get statementMarkedPaid => 'marked paid';
+
+  @override
+  String statementReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String statementBalanceAfter(String amount) {
+    return 'Balance $amount';
+  }
+
+  @override
+  String get statementAwaitingNote =>
+      'Payments awaiting confirmation (a proof under review, a cheque not cleared) are not in the balance until they are confirmed.';
 }

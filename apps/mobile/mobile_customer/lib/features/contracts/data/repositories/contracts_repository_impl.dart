@@ -1,8 +1,10 @@
 import 'package:core/core.dart';
 
 import '../../domain/entities/contract.dart';
+import '../../domain/entities/contract_statement.dart';
 import '../../domain/repositories/contracts_repository.dart';
 import '../datasources/contracts_remote_data_source.dart';
+import '../dtos/contract_statement_dto.dart';
 import '../mappers/contract_mapper.dart';
 
 class ContractsRepositoryImpl implements ContractsRepository {
@@ -15,5 +17,10 @@ class ContractsRepositoryImpl implements ContractsRepository {
       final rows = await _remote.listContracts();
       return rows.map((r) => r.toEntity()).toList();
     });
+  }
+
+  @override
+  Future<Result<ContractStatement>> getStatement(String contractId) {
+    return guardApiCall(() async => contractStatementFromJson(await _remote.getStatement(contractId)));
   }
 }
