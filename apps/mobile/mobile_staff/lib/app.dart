@@ -20,6 +20,8 @@ import 'features/e_sign/data/signature_requests_repository_impl.dart';
 import 'features/e_sign/domain/signature_request.dart';
 import 'features/calendar/domain/calendar_event.dart';
 import 'features/cheques/data/cheques_repository_impl.dart';
+import 'features/ledger/data/ledger_repository_impl.dart';
+import 'features/ledger/domain/ledger.dart';
 import 'features/cheques/domain/cheque.dart';
 import 'features/auth/data/datasources/staff_auth_remote_data_source.dart';
 import 'features/auth/data/repositories/staff_auth_repository_impl.dart';
@@ -137,6 +139,9 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<CalendarRepository>(
           create: (ctx) => CalendarRepositoryImpl(ctx.read<Dio>()),
+        ),
+        RepositoryProvider<LedgerRepository>(
+          create: (ctx) => LedgerRepositoryImpl(ctx.read<Dio>()),
         ),
         RepositoryProvider<ChequesRepository>(
           create: (ctx) => ChequesRepositoryImpl(ctx.read<Dio>()),

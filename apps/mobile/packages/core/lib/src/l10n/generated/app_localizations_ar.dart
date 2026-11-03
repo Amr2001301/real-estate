@@ -4632,4 +4632,121 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get statementAwaitingNote =>
       'الدفعات بانتظار التأكيد (إيصال قيد المراجعة أو شيك لم يُصرف) لا تُحسب في الرصيد حتى تتأكد.';
+
+  @override
+  String get ledgerTitle => 'ليا وعليا';
+
+  @override
+  String get ledgerSubtitle => 'المستحقات والالتزامات';
+
+  @override
+  String get ledgerNet => 'صافي المركز';
+
+  @override
+  String get ledgerNetForCompany => 'لصالح الشركة';
+
+  @override
+  String get ledgerNetOnCompany => 'على الشركة';
+
+  @override
+  String get ledgerReceivables => 'المستحقات';
+
+  @override
+  String get ledgerPayables => 'الالتزامات';
+
+  @override
+  String get ledgerReceivablesTitle => 'المستحقات — مبالغ مستحقة للشركة';
+
+  @override
+  String get ledgerPayablesTitle => 'الالتزامات — مبالغ مستحقة على الشركة';
+
+  @override
+  String get ledgerGroupInstallments => 'أقساط العقود';
+
+  @override
+  String get ledgerGroupBookings => 'مبالغ الحجز';
+
+  @override
+  String get ledgerGroupFees => 'الرسوم والغرامات';
+
+  @override
+  String get ledgerGroupClawbacks => 'مبالغ مستردة من الوسطاء والموظفين';
+
+  @override
+  String get ledgerGroupCommissions => 'عمولات الوسطاء';
+
+  @override
+  String get ledgerGroupBonuses => 'مكافآت فريق المبيعات';
+
+  @override
+  String get ledgerGroupTopUps => 'فروق العمولات';
+
+  @override
+  String get ledgerGroupRefunds => 'مبالغ مستحقة الرد للعملاء';
+
+  @override
+  String get ledgerGroupOnHold => 'معلّق لحين القرار';
+
+  @override
+  String get ledgerOnHoldNote => 'خارج الإجمالي';
+
+  @override
+  String get statementDueTodayShort => 'مستحق اليوم';
+
+  @override
+  String get ledgerStateUpcoming => 'لم يحن موعده';
+
+  @override
+  String get ledgerStateOnItsWay => 'قيد التحصيل';
+
+  @override
+  String get ledgerStatePendingApproval => 'بانتظار الاعتماد';
+
+  @override
+  String get ledgerTypeCommission => 'عمولة';
+
+  @override
+  String get ledgerTypeBonus => 'مكافأة';
+
+  @override
+  String get ledgerTypeCommissionClawback => 'استرداد عمولة';
+
+  @override
+  String get ledgerTypeBonusClawback => 'استرداد مكافأة';
+
+  @override
+  String get ledgerTypePriceChangeClawback => 'تخفيض عمولة';
+
+  @override
+  String get ledgerPeriodAll => 'كل الأرصدة القائمة';
+
+  @override
+  String get ledgerPeriodThisMonth => 'الشهر الحالي';
+
+  @override
+  String get ledgerPeriodNextMonth => 'الشهر القادم';
+
+  @override
+  String get ledgerPeriodQuarter => 'الربع الحالي';
+
+  @override
+  String get ledgerPeriodYear => 'السنة الحالية';
+
+  @override
+  String ledgerItems(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n بند',
+      many: '$n بندًا',
+      few: '$n بنود',
+      two: 'بندان',
+      one: 'بند واحد',
+      zero: 'لا توجد بنود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ledgerEmpty => 'لا توجد بنود في هذه الفترة.';
 }
