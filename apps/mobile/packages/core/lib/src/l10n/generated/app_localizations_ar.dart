@@ -4558,4 +4558,78 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get notificationPrefsTitle => 'تفضيلات الإشعارات';
+
+  @override
+  String get statementTitle => 'كشف الحساب';
+
+  @override
+  String get statementOpenHint => 'كل ما دفعته وما تبقّى عليك';
+
+  @override
+  String get statementBalance => 'المتبقي على العقد';
+
+  @override
+  String statementAsOf(String date) {
+    return 'حتى $date';
+  }
+
+  @override
+  String get statementPaid => 'المدفوع';
+
+  @override
+  String get statementDueToday => 'مستحق اليوم';
+
+  @override
+  String get statementUpcoming => 'لم يحن موعده';
+
+  @override
+  String get statementAwaiting => 'بانتظار التأكيد';
+
+  @override
+  String get statementMovements => 'الحركات';
+
+  @override
+  String get statementContractValue => 'قيمة العقد';
+
+  @override
+  String statementPaymentOf(String what) {
+    return 'سداد $what';
+  }
+
+  @override
+  String statementPaymentOfBy(String what, String how) {
+    return 'سداد $what — $how';
+  }
+
+  @override
+  String statementReversalOf(String what) {
+    return 'عكس سداد $what';
+  }
+
+  @override
+  String statementWaiverOf(String what) {
+    return 'إعفاء من $what';
+  }
+
+  @override
+  String statementDueOn(String date) {
+    return 'مستحق يوم $date';
+  }
+
+  @override
+  String get statementMarkedPaid => 'مُسجَّل مدفوعًا';
+
+  @override
+  String statementReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String statementBalanceAfter(String amount) {
+    return 'الرصيد $amount';
+  }
+
+  @override
+  String get statementAwaitingNote =>
+      'الدفعات بانتظار التأكيد (إيصال قيد المراجعة أو شيك لم يُصرف) لا تُحسب في الرصيد حتى تتأكد.';
 }

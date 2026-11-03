@@ -4,6 +4,7 @@ import '../dtos/contract_dto.dart';
 
 abstract interface class ContractsRemoteDataSource {
   Future<List<ContractDto>> listContracts();
+  Future<Map<String, dynamic>> getStatement(String contractId);
 }
 
 class ContractsRemoteDataSourceImpl implements ContractsRemoteDataSource {
@@ -23,5 +24,11 @@ class ContractsRemoteDataSourceImpl implements ContractsRemoteDataSource {
         .whereType<Map<String, dynamic>>()
         .map(ContractDto.fromJson)
         .toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getStatement(String contractId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/contracts/me/contracts/$contractId/statement');
+    return res.data ?? const {};
   }
 }

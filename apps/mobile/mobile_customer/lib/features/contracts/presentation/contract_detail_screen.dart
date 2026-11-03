@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../documents/presentation/widgets/documents_list_view.dart';
 import '../domain/entities/contract.dart';
@@ -56,7 +57,19 @@ class ContractDetailScreen extends StatelessWidget {
                   theme: theme,
                   signed: signed,
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Statement of account
+                if (signed) ...[
+                  _StatementLink(
+                    onTap: () => context.push(
+                      '/account/contracts/${contract.id}/statement',
+                      extra: contract.contractNumber,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                const SizedBox(height: AppSpacing.sm),
 
                 // ── Documents section header
                 Row(
@@ -322,3 +335,49 @@ class _SummaryCard extends StatelessWidget {
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
+
+// ── Statement link ────────────────────────────────────────────────────────────
+
+class _StatementLink extends StatelessWidget {
+  const _StatementLink({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return AppCard(
+      key: const Key('contract-statement-link'),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [_navyLight, _navyDeep]),
+              borderRadius: BorderRadius.circular(AppRadii.md),
+            ),
+            child: const Icon(Icons.receipt_long_rounded, color: AppPalette.gold300, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.statementTitle,
+                  style: theme.textTheme.titleSmall?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 2),
+                Text(l10n.statementOpenHint, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded, color: colors.inkMuted, textDirection: Directionality.of(context)),
+        ],
+      ),
+    );
+  }
+}
