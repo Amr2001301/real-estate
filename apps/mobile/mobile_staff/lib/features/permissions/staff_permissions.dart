@@ -27,6 +27,9 @@ abstract final class StaffAccess {
   /// their starting set, so the role alone would open a page that answers 403.
   static bool cheques(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('payment-instruments:manage');
 
+  /// «ليا وعليا» — the dashboard's receivables & payables (admin, or reports:financial:read).
+  static bool ledger(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:financial:read');
+
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
 }

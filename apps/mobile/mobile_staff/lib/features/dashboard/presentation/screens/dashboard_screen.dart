@@ -139,6 +139,7 @@ class _DashboardBody extends StatelessWidget {
     final perms = context.watch<StaffPermissionsCubit>().state;
     final canReviewPayments = StaffAccess.paymentsReview(role, perms);
     final canCheques = StaffAccess.cheques(role, perms);
+    final canLedger = StaffAccess.ledger(role, perms);
     final canCampaigns = StaffAccess.campaigns(role, perms);
     final canManageSales =
         role == AppRole.admin || role == AppRole.salesManager;
@@ -176,6 +177,7 @@ class _DashboardBody extends StatelessWidget {
             l10n: l10n,
             canReviewPayments: canReviewPayments,
             canCheques: canCheques,
+            canLedger: canLedger,
             canCampaigns: canCampaigns,
             canManageSales: canManageSales,
           ),
@@ -692,12 +694,14 @@ class _CompactQuickActions extends StatelessWidget {
     required this.l10n,
     required this.canReviewPayments,
     required this.canCheques,
+    required this.canLedger,
     required this.canCampaigns,
     required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
   final bool canCheques;
+  final bool canLedger;
   final bool canCampaigns;
   final bool canManageSales;
 
@@ -707,6 +711,7 @@ class _CompactQuickActions extends StatelessWidget {
       l10n: l10n,
       canReviewPayments: canReviewPayments,
       canCheques: canCheques,
+      canLedger: canLedger,
       canCampaigns: canCampaigns,
       canManageSales: canManageSales,
     );
@@ -803,12 +808,14 @@ class _SecondaryActionsGrid extends StatelessWidget {
     required this.l10n,
     required this.canReviewPayments,
     required this.canCheques,
+    required this.canLedger,
     required this.canCampaigns,
     required this.canManageSales,
   });
   final AppLocalizations l10n;
   final bool canReviewPayments;
   final bool canCheques;
+  final bool canLedger;
   final bool canCampaigns;
   final bool canManageSales;
 
@@ -902,6 +909,14 @@ class _SecondaryActionsGrid extends StatelessWidget {
                 icon: Icons.receipt_long_outlined,
                 label: l10n.paymentReviewTitle,
                 onTap: () => context.push('/payments-review'),
+              ),
+            // «ليا وعليا» — same numbers as the dashboard's receivables & payables.
+            if (canLedger)
+              _SecondaryActionCell(
+                key: const Key('dashboard-ledger'),
+                icon: Icons.balance_rounded,
+                label: l10n.ledgerTitle,
+                onTap: () => context.push('/ledger'),
               ),
             // FG-01 — customers' cheques.
             if (canCheques)

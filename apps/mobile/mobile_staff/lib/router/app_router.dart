@@ -24,6 +24,9 @@ import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/cheques/domain/cheque.dart';
+import '../features/ledger/domain/ledger.dart';
+import '../features/ledger/presentation/ledger_group_screen.dart';
+import '../features/ledger/presentation/ledger_screen.dart';
 import '../features/cheques/presentation/cheque_detail_screen.dart';
 import '../features/cheques/presentation/cheques_cubit.dart';
 import '../features/cheques/presentation/cheques_screen.dart';
@@ -430,6 +433,20 @@ GoRouter createStaffRouter(
           create: (ctx) => SecurityCubit(ctx.read<SecurityRepository>()),
           child: const SecurityScreen(),
         ),
+      ),
+
+      // ── «ليا وعليا»: the dashboard's receivables & payables ──────────────
+      GoRoute(path: '/ledger', builder: (context, state) => const LedgerScreen()),
+      GoRoute(
+        path: '/ledger/:group',
+        builder: (context, state) {
+          final range = state.extra as ({String? dateFrom, String? dateTo})?;
+          return LedgerGroupScreen(
+            group: LedgerGroup.fromWire(state.pathParameters['group']) ?? LedgerGroup.installments,
+            dateFrom: range?.dateFrom,
+            dateTo: range?.dateTo,
+          );
+        },
       ),
 
       // ── Cheques (FG-01): admin and sales manager, read-only ─────────────

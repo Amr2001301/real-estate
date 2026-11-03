@@ -8701,6 +8701,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payments awaiting confirmation (a proof under review, a cheque not cleared) are not in the balance until they are confirmed.'**
   String get statementAwaitingNote;
+
+  /// No description provided for @ledgerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Owed to us & by us'**
+  String get ledgerTitle;
+
+  /// No description provided for @ledgerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receivables & payables'**
+  String get ledgerSubtitle;
+
+  /// No description provided for @ledgerNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net position'**
+  String get ledgerNet;
+
+  /// No description provided for @ledgerNetForCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'In the company\'s favour'**
+  String get ledgerNetForCompany;
+
+  /// No description provided for @ledgerNetOnCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Owed by the company'**
+  String get ledgerNetOnCompany;
+
+  /// No description provided for @ledgerReceivables.
+  ///
+  /// In en, this message translates to:
+  /// **'Receivables'**
+  String get ledgerReceivables;
+
+  /// No description provided for @ledgerPayables.
+  ///
+  /// In en, this message translates to:
+  /// **'Payables'**
+  String get ledgerPayables;
+
+  /// No description provided for @ledgerReceivablesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receivables — owed to the company'**
+  String get ledgerReceivablesTitle;
+
+  /// No description provided for @ledgerPayablesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payables — owed by the company'**
+  String get ledgerPayablesTitle;
+
+  /// No description provided for @ledgerGroupInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract installments'**
+  String get ledgerGroupInstallments;
+
+  /// No description provided for @ledgerGroupBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amounts'**
+  String get ledgerGroupBookings;
+
+  /// No description provided for @ledgerGroupFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees & penalties'**
+  String get ledgerGroupFees;
+
+  /// No description provided for @ledgerGroupClawbacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Clawbacks from brokers & staff'**
+  String get ledgerGroupClawbacks;
+
+  /// No description provided for @ledgerGroupCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker commissions'**
+  String get ledgerGroupCommissions;
+
+  /// No description provided for @ledgerGroupBonuses.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales team bonuses'**
+  String get ledgerGroupBonuses;
+
+  /// No description provided for @ledgerGroupTopUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission top-ups'**
+  String get ledgerGroupTopUps;
+
+  /// No description provided for @ledgerGroupRefunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunds owed to customers'**
+  String get ledgerGroupRefunds;
+
+  /// No description provided for @ledgerGroupOnHold.
+  ///
+  /// In en, this message translates to:
+  /// **'On hold pending a decision'**
+  String get ledgerGroupOnHold;
+
+  /// No description provided for @ledgerOnHoldNote.
+  ///
+  /// In en, this message translates to:
+  /// **'not in the total'**
+  String get ledgerOnHoldNote;
+
+  /// No description provided for @statementDueTodayShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get statementDueTodayShort;
+
+  /// No description provided for @ledgerStateUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Not due yet'**
+  String get ledgerStateUpcoming;
+
+  /// No description provided for @ledgerStateOnItsWay.
+  ///
+  /// In en, this message translates to:
+  /// **'On its way'**
+  String get ledgerStateOnItsWay;
+
+  /// No description provided for @ledgerStatePendingApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting approval'**
+  String get ledgerStatePendingApproval;
+
+  /// No description provided for @ledgerTypeCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get ledgerTypeCommission;
+
+  /// No description provided for @ledgerTypeBonus.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus'**
+  String get ledgerTypeBonus;
+
+  /// No description provided for @ledgerTypeCommissionClawback.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission clawback'**
+  String get ledgerTypeCommissionClawback;
+
+  /// No description provided for @ledgerTypeBonusClawback.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus clawback'**
+  String get ledgerTypeBonusClawback;
+
+  /// No description provided for @ledgerTypePriceChangeClawback.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission reduction'**
+  String get ledgerTypePriceChangeClawback;
+
+  /// No description provided for @ledgerPeriodAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All open balances'**
+  String get ledgerPeriodAll;
+
+  /// No description provided for @ledgerPeriodThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get ledgerPeriodThisMonth;
+
+  /// No description provided for @ledgerPeriodNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get ledgerPeriodNextMonth;
+
+  /// No description provided for @ledgerPeriodQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'This quarter'**
+  String get ledgerPeriodQuarter;
+
+  /// No description provided for @ledgerPeriodYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get ledgerPeriodYear;
+
+  /// No description provided for @ledgerItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No items} =1{1 item} other{{n} items}}'**
+  String ledgerItems(int n);
+
+  /// No description provided for @ledgerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No items in this period.'**
+  String get ledgerEmpty;
 }
 
 class _AppLocalizationsDelegate

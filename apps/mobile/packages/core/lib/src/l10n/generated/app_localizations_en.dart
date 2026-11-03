@@ -4683,4 +4683,118 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get statementAwaitingNote =>
       'Payments awaiting confirmation (a proof under review, a cheque not cleared) are not in the balance until they are confirmed.';
+
+  @override
+  String get ledgerTitle => 'Owed to us & by us';
+
+  @override
+  String get ledgerSubtitle => 'Receivables & payables';
+
+  @override
+  String get ledgerNet => 'Net position';
+
+  @override
+  String get ledgerNetForCompany => 'In the company\'s favour';
+
+  @override
+  String get ledgerNetOnCompany => 'Owed by the company';
+
+  @override
+  String get ledgerReceivables => 'Receivables';
+
+  @override
+  String get ledgerPayables => 'Payables';
+
+  @override
+  String get ledgerReceivablesTitle => 'Receivables — owed to the company';
+
+  @override
+  String get ledgerPayablesTitle => 'Payables — owed by the company';
+
+  @override
+  String get ledgerGroupInstallments => 'Contract installments';
+
+  @override
+  String get ledgerGroupBookings => 'Booking amounts';
+
+  @override
+  String get ledgerGroupFees => 'Fees & penalties';
+
+  @override
+  String get ledgerGroupClawbacks => 'Clawbacks from brokers & staff';
+
+  @override
+  String get ledgerGroupCommissions => 'Broker commissions';
+
+  @override
+  String get ledgerGroupBonuses => 'Sales team bonuses';
+
+  @override
+  String get ledgerGroupTopUps => 'Commission top-ups';
+
+  @override
+  String get ledgerGroupRefunds => 'Refunds owed to customers';
+
+  @override
+  String get ledgerGroupOnHold => 'On hold pending a decision';
+
+  @override
+  String get ledgerOnHoldNote => 'not in the total';
+
+  @override
+  String get statementDueTodayShort => 'Due today';
+
+  @override
+  String get ledgerStateUpcoming => 'Not due yet';
+
+  @override
+  String get ledgerStateOnItsWay => 'On its way';
+
+  @override
+  String get ledgerStatePendingApproval => 'Awaiting approval';
+
+  @override
+  String get ledgerTypeCommission => 'Commission';
+
+  @override
+  String get ledgerTypeBonus => 'Bonus';
+
+  @override
+  String get ledgerTypeCommissionClawback => 'Commission clawback';
+
+  @override
+  String get ledgerTypeBonusClawback => 'Bonus clawback';
+
+  @override
+  String get ledgerTypePriceChangeClawback => 'Commission reduction';
+
+  @override
+  String get ledgerPeriodAll => 'All open balances';
+
+  @override
+  String get ledgerPeriodThisMonth => 'This month';
+
+  @override
+  String get ledgerPeriodNextMonth => 'Next month';
+
+  @override
+  String get ledgerPeriodQuarter => 'This quarter';
+
+  @override
+  String get ledgerPeriodYear => 'This year';
+
+  @override
+  String ledgerItems(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n items',
+      one: '1 item',
+      zero: 'No items',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ledgerEmpty => 'No items in this period.';
 }
