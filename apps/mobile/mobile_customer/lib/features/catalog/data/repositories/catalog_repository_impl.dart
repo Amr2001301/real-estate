@@ -80,4 +80,13 @@ class CatalogRepositoryImpl implements CatalogRepository {
   Future<Result<Unit>> getUnit(String id) {
     return guardApiCall(() async => (await _remote.getUnit(id)).toEntity());
   }
+
+  @override
+  Future<Result<List<InstallmentOffer>>> getUnitPlans(String unitId) => guardApiCall(
+        () async => [for (final j in await _remote.getUnitPlans(unitId)) installmentOfferFromPublicJson(j)],
+      );
+
+  @override
+  Future<Result<ProjectPlanSummary>> getProjectPlans(String projectId) =>
+      guardApiCall(() async => ProjectPlanSummary.fromJson(await _remote.getProjectPlans(projectId)));
 }

@@ -8,11 +8,12 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../router/auth_navigation.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
+import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/project.dart';
+import '../../domain/entities/unit.dart';
+import '../../domain/repositories/catalog_repository.dart';
 import '../widgets/amenity_chips.dart';
 import '../widgets/contact_buttons.dart';
-import '../widgets/glass.dart';
-import '../widgets/image_gallery.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
@@ -79,17 +80,55 @@ class _LoadingScaffold extends StatelessWidget {
 // Main page — Stack: pinned hero + scrollable sheet + floating nav + dock
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DetailPage extends StatelessWidget {
+class _DetailPage extends StatefulWidget {
   const _DetailPage({required this.state});
   final ProjectDetailsState state;
 
   @override
+  State<_DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<_DetailPage> {
+  final _aboutKey = GlobalKey();
+  final _unitsKey = GlobalKey();
+  final _amenitiesKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  ProjectPlanSummary _plans = const ProjectPlanSummary();
+  String? _startingPrice;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  // Both best-effort: the page shows without them.
+  Future<void> _load() async {
+    final repo = context.read<CatalogRepository>();
+    final id = widget.state.project!.id;
+    final results = await Future.wait([
+      repo.getProjectPlans(id),
+      repo.listUnits(projectId: id, status: UnitStatus.available, sort: UnitSort.priceAsc, pageSize: 1),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      if (results[0] case Ok<ProjectPlanSummary>(:final data)) _plans = data;
+      if (results[1] case Ok<Paginated<Unit>>(:final data)) _startingPrice = data.data.firstOrNull?.price;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final project = state.project!;
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
-    Widget section(String title, Widget child) => AppDetailPage.box(
+    final whatsapp = EnvConfig.current.whatsappNumber;
+    final offerLine = projectOfferLine(l10n, _plans);
+    Widget section(String title, Widget child, {Key? key}) => AppDetailPage.box(
           Padding(
+            key: key,
             padding: const EdgeInsets.only(top: AppSpacing.xl),
             child: _Section(title: title, child: child),
           ),
@@ -100,32 +139,101 @@ class _DetailPage extends StatelessWidget {
       title: project.name.resolve(lang),
       subtitle: project.city,
       actions: [NavHeaderGlass(child: FavoriteToggleButton(isProject: true, id: project.id))],
-      gallery: _HeroPanel(project: project, l10n: l10n),
-      bottomBar: _StickyDock(project: project),
+      photos: project.galleryImages,
+      photoBadge: project.featured ? _FeaturedPill(label: l10n.featuredBadge) : null,
+      bottomBar: AppDetailBottomBar(
+        children: [
+          if (whatsapp.isNotEmpty)
+            AppDetailIconButton(
+              key: const Key('project-whatsapp'),
+              icon: Icons.chat_rounded,
+              tooltip: l10n.contactWhatsapp,
+              onPressed: () => ContactActions.whatsApp(number: whatsapp, message: project.name.resolve(lang)),
+            ),
+          AppDetailSecondaryButton(
+            key: const Key('project-browse-units'),
+            label: l10n.viewProjectUnits,
+            onPressed: () => context.push('/projects/${project.id}/units'),
+          ),
+          AppDetailPrimaryButton(
+            key: const Key('project-request-visit'),
+            label: l10n.requestVisit,
+            onPressed: () => _requestVisit(context, project),
+          ),
+        ],
+      ),
       slivers: [
         AppDetailPage.box(
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: _IdentityBlock(project: project, lang: lang, l10n: l10n),
+            child: AppPriceCard(
+              label: _startingPrice != null ? l10n.detailPricesFrom : l10n.labelPrice,
+              price: _startingPrice != null
+                  ? PriceFormatter.formatString(_startingPrice, languageCode: lang)
+                  : l10n.priceOnRequest,
+              caption: offerLine,
+              facts: [
+                AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
+                AppPriceFact(l10n.labelCity, project.city),
+                if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
+              ],
+              actionLabel: l10n.requestInfo,
+              actionIcon: Icons.info_outline_rounded,
+              onAction: () => _requestInfo(context, project),
+            ),
           ),
         ),
-        AppDetailPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.lg),
-            child: _StatTiles(project: project, l10n: l10n),
-          ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        AppSectionTabsSliver(
+          tabs: [
+            AppSectionTab(l10n.detailTabOverview, _aboutKey),
+            if (state.previewUnits.isNotEmpty) AppSectionTab(l10n.detailTabUnits, _unitsKey),
+            if (project.services.isNotEmpty) AppSectionTab(l10n.detailTabAmenities, _amenitiesKey),
+            if (!_plans.isEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
+            if (project.hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
+          ],
         ),
-        if (!project.description.isEmpty)
-          section(l10n.projectAbout, _AboutBlock(text: project.description.resolve(lang))),
-        if (project.services.isNotEmpty) section(l10n.projectAmenities, AmenityChips(services: project.services)),
-        if (project.hasLocation)
-          section(l10n.projectLocation, _LocationTile(project: project, lang: lang, l10n: l10n)),
+        section(
+          l10n.projectAbout,
+          project.description.isEmpty
+              ? _AboutBlock(text: l10n.unitAboutGeneric)
+              : _AboutBlock(text: project.description.resolve(lang)),
+          key: _aboutKey,
+        ),
         if (state.previewUnits.isNotEmpty)
           SliverToBoxAdapter(
-            child: Padding(padding: const EdgeInsets.only(top: AppSpacing.xl), child: _UnitsPreview(state: state)),
+            child: Padding(
+              key: _unitsKey,
+              padding: const EdgeInsets.only(top: AppSpacing.xl),
+              child: _UnitsPreview(state: state),
+            ),
           ),
+        if (project.services.isNotEmpty)
+          section(l10n.projectAmenities, AmenityChips(services: project.services), key: _amenitiesKey),
+        if (!_plans.isEmpty)
+          section(l10n.detailPaymentPlans, AppPlanOfferCards(plans: _plans), key: _paymentKey),
+        if (project.hasLocation)
+          section(l10n.projectLocation, _LocationTile(project: project, lang: lang, l10n: l10n), key: _locationKey),
       ],
     );
+  }
+}
+
+void _requestVisit(BuildContext context, ProjectDetail project) {
+  final authed = context.read<SessionCubit>().state.isAuthenticated;
+  if (authed) {
+    context.push('/visit-request', extra: {'projectId': project.id});
+  } else {
+    _showVisitPrompt(context, project);
+  }
+}
+
+void _requestInfo(BuildContext context, ProjectDetail project) {
+  final authed = context.read<SessionCubit>().state.isAuthenticated;
+  if (authed) {
+    context.push('/info-request', extra: {'projectId': project.id});
+  } else {
+    _showVisitPrompt(context, project);
   }
 }
 
@@ -133,436 +241,25 @@ class _DetailPage extends StatelessWidget {
 // Hero panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _HeroPanel extends StatelessWidget {
-  const _HeroPanel({required this.project, required this.l10n});
-  final ProjectDetail project;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Gallery
-        ImageGallery(images: project.galleryImages),
-
-        // Top scrim — protects nav buttons
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 140,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x33000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Bottom scrim — hero fades into the sheet's rounded corners
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 120,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0x88000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Pills — bottom of hero
-        PositionedDirectional(
-          bottom: AppSpacing.md,
-          start: AppSpacing.md,
-          end: AppSpacing.md,
-          child: Row(
-            children: [
-              if (project.featured) ...[
-                _HeroPill.gold(label: l10n.featuredBadge),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              _HeroPill.glass(
-                icon: Icons.location_on_rounded,
-                label: project.city,
-              ),
-            ],
-          ),
-        ),
-
-        // Page indicator dots
-        PositionedDirectional(
-          bottom: AppSpacing.xs,
-          start: 0,
-          end: 0,
-          child: _HeroDots(count: project.galleryImages.length),
-        ),
-      ],
-    );
-  }
-}
-
-class _HeroPill extends StatelessWidget {
-  const _HeroPill._({
-    required this.label,
-    required this.isGold,
-    this.icon,
-  });
-
-  factory _HeroPill.gold({required String label}) =>
-      _HeroPill._(label: label, isGold: true);
-
-  factory _HeroPill.glass({required String label, required IconData icon}) =>
-      _HeroPill._(label: label, isGold: false, icon: icon);
-
+/// "مميز" on the photos of a featured project.
+class _FeaturedPill extends StatelessWidget {
+  const _FeaturedPill({required this.label});
   final String label;
-  final bool isGold;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    if (isGold) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppPalette.gold300, AppPalette.gold500],
-          ),
-          borderRadius: AppRadii.pillAll,
-          boxShadow: [
-            BoxShadow(
-              color: AppPalette.gold400.withValues(alpha: 0.40),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star_rounded, size: 13, color: AppPalette.navy),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppPalette.navy,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.38),
+        gradient: const LinearGradient(colors: [AppPalette.gold300, AppPalette.gold500]),
         borderRadius: AppRadii.pillAll,
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.28),
-          width: 0.8,
-        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: Colors.white),
-            const SizedBox(width: 5),
-          ],
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Minimal gold dash page indicator.
-class _HeroDots extends StatelessWidget {
-  const _HeroDots({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    if (count <= 1) return const SizedBox.shrink();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < count.clamp(0, 5); i++)
-          Container(
-            width: i == 0 ? 20 : 6,
-            height: 3,
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            decoration: BoxDecoration(
-              color: i == 0
-                  ? AppPalette.gold400
-                  : Colors.white.withValues(alpha: 0.45),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet handle
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Adaptive nav overlay
-// Three states as user scrolls:
-//   1. Over hero    → glass circles, white icons
-//   2. Over sheet   → surface circles, inkStrong icons
-//   3. showHeader   → full-width navy bar with project title
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Identity block
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _IdentityBlock extends StatelessWidget {
-  const _IdentityBlock({
-    required this.project,
-    required this.lang,
-    required this.l10n,
-  });
-
-  final ProjectDetail project;
-  final String lang;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Featured badge
-        if (project.featured) ...[
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppPalette.gold300, AppPalette.gold500],
-              ),
-              borderRadius: AppRadii.pillAll,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star_rounded,
-                    size: 11, color: AppPalette.navy),
-                const SizedBox(width: 4),
-                Text(
-                  l10n.featuredBadge,
-                  style: const TextStyle(
-                    color: AppPalette.navy,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-
-        // Name — headline anchor
-        Text(
-          project.name.resolve(lang),
-          style: theme.textTheme.headlineLarge?.copyWith(
-            fontWeight: FontWeight.w900,
-            color: colors.inkStrong,
-            height: 1.05,
-            letterSpacing: -0.6,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs + 2),
-
-        // City
-        Row(
-          children: [
-            const Icon(Icons.location_on_rounded,
-                size: 15, color: AppPalette.gold400),
-            const SizedBox(width: 4),
-            Text(
-              project.city,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.inkMuted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-
-        // Gold separator line
-        Container(
-          width: 48,
-          height: 2,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                AppPalette.gold400,
-                Color(0x00B8941F),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Stat tiles — 3 individual surface cards, each with a gold top border
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatTiles extends StatelessWidget {
-  const _StatTiles({required this.project, required this.l10n});
-  final ProjectDetail project;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final stats = <(IconData, String, String)>[
-      (
-        Icons.meeting_room_outlined,
-        '${project.availableUnitsCount}',
-        l10n.labelAvailableUnits,
-      ),
-      (Icons.location_city_outlined, project.city, l10n.labelCity),
-      if (project.services.isNotEmpty)
-        (
-          Icons.spa_outlined,
-          '${project.services.length}',
-          l10n.labelAmenities,
-        ),
-    ];
-
-    return Row(
-      children: [
-        for (var i = 0; i < stats.length; i++) ...[
-          if (i > 0) const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: _StatCard(
-              icon: stats[i].$1,
-              value: stats[i].$2,
-              label: stats[i].$3,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    // Flutter requires uniform border colors when borderRadius is set.
-    // Instead, we render the gold top accent as the first child of the card.
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Gold top accent bar — clipped to match the card's corner radius.
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(AppRadii.lg - 1),
-              topRight: Radius.circular(AppRadii.lg - 1),
-            ),
-            child: Container(
-              height: 2.5,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xs, AppSpacing.md, AppSpacing.xs, AppSpacing.md),
-            child: Column(
-              children: [
-                Icon(icon, size: 22, color: colors.brandGold),
-                const SizedBox(height: 8),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: colors.inkMuted),
-                ),
-              ],
-            ),
-          ),
+          const Icon(Icons.star_rounded, size: 13, color: AppPalette.navy),
+          const SizedBox(width: 5),
+          Text(label, style: const TextStyle(color: AppPalette.navy, fontSize: 12, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -817,136 +514,6 @@ class _UnitsPreview extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Sticky action dock
 // ─────────────────────────────────────────────────────────────────────────────
-
-class _StickyDock extends StatelessWidget {
-  const _StickyDock({required this.project});
-  final ProjectDetail project;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, AppSpacing.sm),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            boxShadow: colors.shadowLift,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppPalette.navy700, AppPalette.navy],
-                      ),
-                    ),
-                  ),
-                ),
-                const Positioned(
-                  top: 0,
-                  left: AppSpacing.xl,
-                  right: AppSpacing.xl,
-                  child: GoldHairline(),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          label: l10n.requestVisit,
-                          icon: Icons.event_available_outlined,
-                          variant: AppButtonVariant.gold,
-                          size: AppButtonSize.medium,
-                          expand: true,
-                          onPressed: () => _onRequestVisit(context),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _GlassBtn(
-                        icon: Icons.info_outline_rounded,
-                        tooltip: l10n.requestInfo,
-                        onTap: () => _onRequestInfo(context),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _GlassBtn(
-                        icon: Icons.auto_awesome_rounded,
-                        tooltip: l10n.homeAskAssistant,
-                        onTap: () => context.push('/chat'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onRequestVisit(BuildContext context) {
-    final authed = context.read<SessionCubit>().state.isAuthenticated;
-    if (authed) {
-      context.push('/visit-request', extra: {'projectId': project.id});
-    } else {
-      _showVisitPrompt(context, project);
-    }
-  }
-
-  void _onRequestInfo(BuildContext context) {
-    final authed = context.read<SessionCubit>().state.isAuthenticated;
-    if (authed) {
-      context.push('/info-request', extra: {'projectId': project.id});
-    } else {
-      _showVisitPrompt(context, project);
-    }
-  }
-}
-
-class _GlassBtn extends StatelessWidget {
-  const _GlassBtn(
-      {required this.icon, required this.onTap, required this.tooltip});
-  final IconData icon;
-  final VoidCallback onTap;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.14),
-        shape: CircleBorder(
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.40)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: 46,
-            height: 46,
-            child: Icon(icon, color: Colors.white, size: 22),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guest visit prompt sheet

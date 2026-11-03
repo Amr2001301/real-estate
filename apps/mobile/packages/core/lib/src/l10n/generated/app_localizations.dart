@@ -8911,6 +8911,276 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No items in this period.'**
   String get ledgerEmpty;
+
+  /// No description provided for @detailPhotosFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'View photos full screen'**
+  String get detailPhotosFullscreen;
+
+  /// No description provided for @detailClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get detailClose;
+
+  /// No description provided for @detailTotalPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Total price'**
+  String get detailTotalPrice;
+
+  /// No description provided for @detailPricesFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Prices from'**
+  String get detailPricesFrom;
+
+  /// No description provided for @detailOrFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'or from {amount} {period}'**
+  String detailOrFrom(String amount, String period);
+
+  /// No description provided for @detailPeriodMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'a month'**
+  String get detailPeriodMonthly;
+
+  /// No description provided for @detailPeriodQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'every 3 months'**
+  String get detailPeriodQuarterly;
+
+  /// No description provided for @detailPeriodSemiAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'every 6 months'**
+  String get detailPeriodSemiAnnual;
+
+  /// No description provided for @detailPeriodYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'a year'**
+  String get detailPeriodYearly;
+
+  /// No description provided for @detailUpfrontPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Down {pct}'**
+  String detailUpfrontPct(String pct);
+
+  /// No description provided for @detailTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Term'**
+  String get detailTerm;
+
+  /// No description provided for @detailYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 year} other{{n} years}}'**
+  String detailYears(int n);
+
+  /// No description provided for @detailMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 month} other{{n} months}}'**
+  String detailMonths(int n);
+
+  /// No description provided for @detailHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover'**
+  String get detailHandover;
+
+  /// No description provided for @detailCalcInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Work out your instalment'**
+  String get detailCalcInstallment;
+
+  /// No description provided for @detailTabOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get detailTabOverview;
+
+  /// No description provided for @detailTabFloorPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor plan'**
+  String get detailTabFloorPlan;
+
+  /// No description provided for @detailTabPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plan'**
+  String get detailTabPayment;
+
+  /// No description provided for @detailTabLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get detailTabLocation;
+
+  /// No description provided for @detailTabSimilar.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar'**
+  String get detailTabSimilar;
+
+  /// No description provided for @detailTabUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get detailTabUnits;
+
+  /// No description provided for @detailTabAmenities.
+  ///
+  /// In en, this message translates to:
+  /// **'Amenities'**
+  String get detailTabAmenities;
+
+  /// No description provided for @detailRowBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get detailRowBooking;
+
+  /// No description provided for @detailRowDownPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get detailRowDownPayment;
+
+  /// No description provided for @detailRowInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments ({count})'**
+  String detailRowInstallments(int count);
+
+  /// No description provided for @detailRowFinal.
+  ///
+  /// In en, this message translates to:
+  /// **'Final payment'**
+  String get detailRowFinal;
+
+  /// No description provided for @detailRowTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get detailRowTotal;
+
+  /// No description provided for @detailRowDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'Discount'**
+  String get detailRowDiscount;
+
+  /// No description provided for @detailCashPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash payment'**
+  String get detailCashPayment;
+
+  /// No description provided for @detailInstallmentMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly instalment'**
+  String get detailInstallmentMonthly;
+
+  /// No description provided for @detailInstallmentQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly instalment'**
+  String get detailInstallmentQuarterly;
+
+  /// No description provided for @detailInstallmentSemiAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'Half-yearly instalment'**
+  String get detailInstallmentSemiAnnual;
+
+  /// No description provided for @detailInstallmentYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly instalment'**
+  String get detailInstallmentYearly;
+
+  /// No description provided for @detailCalcPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get detailCalcPlan;
+
+  /// No description provided for @detailCalcDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get detailCalcDuration;
+
+  /// No description provided for @detailCalcUpfront.
+  ///
+  /// In en, this message translates to:
+  /// **'Down'**
+  String get detailCalcUpfront;
+
+  /// No description provided for @detailCalcCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments'**
+  String get detailCalcCount;
+
+  /// No description provided for @detailCalcTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total paid'**
+  String get detailCalcTotal;
+
+  /// No description provided for @detailCalcNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Figures come from the current payment plans; the final plan is set at signing.'**
+  String get detailCalcNote;
+
+  /// No description provided for @detailProjectOffer.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} down, up to {term}'**
+  String detailProjectOffer(String pct, String term);
+
+  /// No description provided for @detailAvailableUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get detailAvailableUnits;
+
+  /// No description provided for @detailSimilarUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Similar units'**
+  String get detailSimilarUnits;
+
+  /// No description provided for @detailPaymentPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plans'**
+  String get detailPaymentPlans;
+
+  /// No description provided for @detailPlanTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} down'**
+  String detailPlanTerm(String pct);
+
+  /// No description provided for @detailUpTo.
+  ///
+  /// In en, this message translates to:
+  /// **'up to {term}'**
+  String detailUpTo(String term);
 }
 
 class _AppLocalizationsDelegate

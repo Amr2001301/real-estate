@@ -12,8 +12,6 @@ import '../../domain/usecases/get_units.dart';
 import '../compare/compare_cubit.dart';
 import '../widgets/contact_buttons.dart';
 import '../widgets/glass.dart';
-import '../widgets/image_gallery.dart';
-import '../widgets/price_text.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
 import '../widgets/unit_status_chip.dart';
@@ -58,17 +56,67 @@ class UnitDetailsScreen extends StatelessWidget {
 // Floating-sheet detail page
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _DetailPage extends StatelessWidget {
+class _DetailPage extends StatefulWidget {
   const _DetailPage({required this.unit});
   final Unit unit;
 
   @override
+  State<_DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<_DetailPage> {
+  final _overviewKey = GlobalKey();
+  final _planKey = GlobalKey();
+  final _paymentKey = GlobalKey();
+  List<InstallmentOffer> _offers = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlans();
+  }
+
+  Future<void> _loadPlans() async {
+    final result = await context.read<CatalogRepository>().getUnitPlans(widget.unit.id);
+    if (!mounted) return;
+    if (result case Ok(:final data)) setState(() => _offers = data);
+  }
+
+  void _openCalculator() {
+    final unit = widget.unit;
+    final lang = Localizations.localeOf(context).languageCode;
+    showInstallmentCalculator(
+      context,
+      subtitle: '${unit.typeLabel(lang)} · ${ltr(unit.code)} · ${PriceFormatter.formatString(unit.price, languageCode: lang)}',
+      offers: _offers,
+      actions: (sheetContext) => [
+        AppDetailPrimaryButton(
+          label: context.l10n.requestVisit,
+          icon: Icons.event_available_outlined,
+          onPressed: () {
+            Navigator.of(sheetContext).pop();
+            requestUnitVisit(context, unit);
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final unit = widget.unit;
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
     final project = unit.project;
-    Widget section(String title) => AppDetailPage.box(
+    final price = PriceFormatter.formatString(unit.price, languageCode: lang);
+    final monthlyLine = cheapestInstallmentLine(l10n, lang, _offers);
+    final offer = _offers.where((o) => o.options.isNotEmpty).firstOrNull;
+    final longest = offer?.longest;
+    final handover = unit.specs.deliveryDate;
+    final whatsapp = EnvConfig.current.whatsappNumber;
+    Widget section(String title, {Key? key}) => AppDetailPage.box(
           Padding(
+            key: key,
             padding: const EdgeInsets.only(top: AppSpacing.xl, bottom: AppSpacing.md),
             child: AppDetailSectionTitle(title),
           ),
@@ -85,137 +133,97 @@ class _DetailPage extends StatelessWidget {
         NavHeaderGlass(child: FavoriteToggleButton(isProject: false, id: unit.id)),
         NavHeaderGlass(child: _CompareButton(unit: unit)),
       ],
-      gallery: ImageGallery(images: unit.galleryImages),
-      bottomBar: _StickyActionBar(unit: unit),
+      photos: unit.galleryImages,
+      photoBadge: UnitStatusChip(unit.status),
+      bottomBar: AppDetailBottomBar(
+        price: price,
+        priceCaption: monthlyLine,
+        children: [
+          if (whatsapp.isNotEmpty)
+            AppDetailIconButton(
+              key: const Key('unit-whatsapp'),
+              icon: Icons.chat_rounded,
+              tooltip: l10n.contactWhatsapp,
+              onPressed: () => ContactActions.whatsApp(
+                number: whatsapp,
+                message: '${unit.typeLabel(lang)} · ${unit.code}',
+              ),
+            ),
+          AppDetailPrimaryButton(
+            key: const Key('unit-request-visit'),
+            label: l10n.requestVisit,
+            onPressed: () => requestUnitVisit(context, unit),
+          ),
+        ],
+      ),
       slivers: [
         AppDetailPage.box(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              _IdentityRow(unit: unit),
-              const SizedBox(height: AppSpacing.md),
-              _PriceBlock(unit: unit),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: AppPriceCard(
+              label: l10n.detailTotalPrice,
+              price: price,
+              caption: monthlyLine,
+              facts: [
+                if (offer != null)
+                  AppPriceFact(
+                    l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
+                    PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
+                  ),
+                if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
+                if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
+              ],
+              actionLabel: offer != null ? l10n.detailCalcInstallment : null,
+              onAction: offer != null ? _openCalculator : null,
+            ),
           ),
         ),
-        section(l10n.unitOverview),
-        AppDetailPage.box(_SpecsRow(unit: unit)),
+        AppDetailPage.box(
+          Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: _SpecsRow(unit: unit)),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        AppSectionTabsSliver(
+          tabs: [
+            AppSectionTab(l10n.detailTabOverview, _overviewKey),
+            AppSectionTab(l10n.detailTabFloorPlan, _planKey),
+            if (_offers.isNotEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
+          ],
+        ),
+        section(l10n.unitAbout, key: _overviewKey),
+        AppDetailPage.box(_AboutCard(text: l10n.unitAboutGeneric)),
         // EE2/EE5 — the specs the website shows (only those it has).
         if (!unit.specs.isEmpty)
           AppDetailPage.box(
             Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: UnitSpecsGrid(specs: unit.specs)),
           ),
-        section(l10n.unitAbout),
-        AppDetailPage.box(_AboutCard(text: l10n.unitAboutGeneric)),
+        section(l10n.unitPlanTitle, key: _planKey),
+        AppDetailPage.box(_UnitPlan(unit: unit, onRequest: () => showUnitContactSheet(context, unit))),
+        if (_offers.isNotEmpty) ...[
+          section(l10n.detailTabPayment, key: _paymentKey),
+          for (final o in _offers)
+            AppDetailPage.box(
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_offers.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                        child: Text(o.name, style: Theme.of(context).textTheme.titleSmall),
+                      ),
+                    AppPaymentPlanTable(offer: o),
+                  ],
+                ),
+              ),
+            ),
+        ],
         if (project != null) ...[
           section(l10n.unitWithinProject),
           AppDetailPage.box(_WithinProject(project: project)),
-        ],
-        section(l10n.unitPlanTitle),
-        AppDetailPage.box(_UnitPlan(unit: unit, onRequest: () => showUnitContactSheet(context, unit))),
-        if (project != null)
           SliverToBoxAdapter(child: _SimilarUnits(projectId: project.id, currentUnitId: unit.id)),
+        ],
       ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Hero
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Sheet chrome
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Identity + pricing
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _IdentityRow extends StatelessWidget {
-  const _IdentityRow({required this.unit});
-  final Unit unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        UnitStatusChip(unit.status),
-        Text(
-          context.l10n.unitCode(unit.code),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colors.inkMuted,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PriceBlock extends StatelessWidget {
-  const _PriceBlock({required this.unit});
-  final Unit unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-          color: AppPalette.gold400.withValues(alpha: 0.25),
-        ),
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              width: 3,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                ),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.l10n.labelPrice,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: colors.inkMuted,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  PriceText(
-                    unit.price,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -689,175 +697,6 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sticky action dock
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StickyActionBar extends StatelessWidget {
-  const _StickyActionBar({required this.unit});
-  final Unit unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xs,
-          AppSpacing.lg,
-          AppSpacing.sm,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            boxShadow: colors.shadowLift,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppPalette.navy700, AppPalette.navy],
-                      ),
-                    ),
-                  ),
-                ),
-                const Positioned(
-                  top: 0,
-                  left: AppSpacing.xl,
-                  right: AppSpacing.xl,
-                  child: GoldHairline(),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          label: l10n.requestVisit,
-                          icon: Icons.event_available_outlined,
-                          variant: AppButtonVariant.gold,
-                          size: AppButtonSize.medium,
-                          expand: true,
-                          onPressed: () => _onRequestVisit(context),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _GlassAction(
-                        tooltip: l10n.homeAskAssistant,
-                        icon: Icons.auto_awesome_rounded,
-                        onTap: () => context.push('/chat'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onRequestVisit(BuildContext context) {
-    final authed = context.read<SessionCubit>().state.isAuthenticated;
-    final projectId = unit.project?.id;
-    if (authed && projectId != null) {
-      context.push('/visit-request', extra: {
-        'projectId': projectId,
-        'unitId': unit.id,
-      });
-    } else {
-      _showVisitPrompt(context);
-    }
-  }
-
-  void _showVisitPrompt(BuildContext context) {
-    final l10n = context.l10n;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(l10n.requestVisit,
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: AppSpacing.xs),
-            Text(l10n.requestVisitPrompt,
-                style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton(
-              label: l10n.actionLogin,
-              icon: Icons.login_rounded,
-              expand: true,
-              onPressed: () {
-                Navigator.of(sheetContext).pop();
-                context.pushLoginWithRedirect();
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            ContactButtons(whatsappMessage: '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${unit.code}'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassAction extends StatelessWidget {
-  const _GlassAction({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-  });
-  final IconData icon;
-  final VoidCallback onTap;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        label: tooltip,
-        child: Material(
-          color: Colors.white.withValues(alpha: 0.14),
-          shape: CircleBorder(
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.40)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Compare toggle
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -930,6 +769,55 @@ void showUnitContactSheet(BuildContext context, Unit unit) {
                 ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          ContactButtons(whatsappMessage: '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${unit.code}'),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Opens the visit request (signed in), or asks to sign in / get in touch.
+void requestUnitVisit(BuildContext context, Unit unit) {
+  final authed = context.read<SessionCubit>().state.isAuthenticated;
+  final projectId = unit.project?.id;
+  if (authed && projectId != null) {
+    context.push('/visit-request', extra: {
+      'projectId': projectId,
+      'unitId': unit.id,
+    });
+  } else {
+    _showVisitPrompt(context, unit);
+  }
+}
+
+void _showVisitPrompt(BuildContext context, Unit unit) {
+  final l10n = context.l10n;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.requestVisit,
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text(l10n.requestVisitPrompt,
+              style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            label: l10n.actionLogin,
+            icon: Icons.login_rounded,
+            expand: true,
+            onPressed: () {
+              Navigator.of(sheetContext).pop();
+              context.pushLoginWithRedirect();
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
           ContactButtons(whatsappMessage: '${unit.typeLabel(Localizations.localeOf(context).languageCode)} · ${unit.code}'),
         ],
       ),

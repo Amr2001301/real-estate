@@ -13,6 +13,7 @@ export 'src/common/json_amount.dart';
 export 'src/common/unit_type_label.dart';
 export 'src/common/ltr_isolate.dart';
 export 'src/common/unit_specs.dart';
+export 'src/common/installment_offer.dart';
 export 'src/error/app_failure.dart';
 export 'src/error/failure_type.dart';
 export 'src/error/result.dart';

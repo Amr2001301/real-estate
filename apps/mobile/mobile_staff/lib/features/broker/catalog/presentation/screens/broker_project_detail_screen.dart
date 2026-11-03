@@ -24,6 +24,11 @@ class BrokerProjectDetailScreen extends StatefulWidget {
 
 class _BrokerProjectDetailScreenState
     extends State<BrokerProjectDetailScreen> {
+  final _aboutKey = GlobalKey();
+  final _servicesKey = GlobalKey();
+  final _mapKey = GlobalKey();
+  final _unitsKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -36,392 +41,80 @@ class _BrokerProjectDetailScreenState
     final lang = Localizations.localeOf(context).languageCode;
     final p = widget.project;
     final name = p.name.resolve(lang);
+    final hasServices = p.services != null && p.services!.isNotEmpty;
+    final hasMap = p.lat != null && p.lng != null;
+    Widget anchored(Key key, Widget child) => Padding(
+          key: key,
+          padding: const EdgeInsets.only(top: AppSpacing.lg),
+          child: child,
+        );
 
     return AppDetailPage(
-          onBack: () => context.pop(),
-          title: name,
-          gallery: _HeroBackground(project: p, l10n: l10n, lang: lang),
-          slivers: [
-            // ── Body ────────────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadii.lg),
-                      child: _MetaStrip(project: p, l10n: l10n),
-                    ),
-                  ),
-
-                  // Add lead CTA
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                    child: _AddLeadCard(projectId: p.id, l10n: l10n),
-                  ),
-
-                  // About
-                  if (p.description != null) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _AboutSection(project: p, lang: lang, l10n: l10n),
-                  ],
-
-                  // Services / advantages
-                  if (p.services != null && p.services!.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _ServicesSection(project: p, lang: lang, l10n: l10n),
-                  ],
-
-                  // Map
-                  if (p.lat != null && p.lng != null) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _MapSection(project: p, lang: lang),
-                  ],
-
-                  // Units
-                  const SizedBox(height: AppSpacing.lg),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md),
-                    child: AppDetailSectionTitle(l10n.navUnits),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _Units(projectId: p.id),
-                ],
+      onBack: () => context.pop(),
+      title: name,
+      subtitle: p.city,
+      photos: [if (p.coverImageUrl != null) p.coverImageUrl!],
+      photoBadge: StatusBadge(label: projectStatusLabel(l10n, p.status), tone: projectStatusTone(p.status)),
+      bottomBar: AppDetailBottomBar(
+        children: [
+          AppDetailPrimaryButton(
+            key: const Key('broker-project-add-lead'),
+            label: l10n.brokerLeadNew,
+            icon: Icons.person_add_alt_1_rounded,
+            onPressed: () => context.push('/broker/leads/new', extra: {'projectId': p.id}),
+          ),
+        ],
+      ),
+      slivers: [
+        if (p.commissionPct != null)
+          AppDetailPage.box(
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: AppPriceCard(
+                label: l10n.brokerCommissionPct,
+                price: '${p.commissionPct}%',
+                facts: [if (p.city != null) AppPriceFact(l10n.labelCity, p.city!)],
               ),
             ),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        AppSectionTabsSliver(
+          tabs: [
+            if (p.description != null) AppSectionTab(l10n.detailTabOverview, _aboutKey),
+            if (hasServices) AppSectionTab(l10n.detailTabAmenities, _servicesKey),
+            if (hasMap) AppSectionTab(l10n.detailTabLocation, _mapKey),
+            AppSectionTab(l10n.detailTabUnits, _unitsKey),
           ],
+        ),
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (p.description != null) anchored(_aboutKey, _AboutSection(project: p, lang: lang, l10n: l10n)),
+              if (hasServices) anchored(_servicesKey, _ServicesSection(project: p, lang: lang, l10n: l10n)),
+              if (hasMap) anchored(_mapKey, _MapSection(project: p, lang: lang)),
+              Padding(
+                key: _unitsKey,
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, 0),
+                child: AppDetailSectionTitle(l10n.navUnits),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _Units(projectId: p.id),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
 // ── Hero background ───────────────────────────────────────────────────────────
 
-class _HeroBackground extends StatelessWidget {
-  const _HeroBackground({
-    required this.project,
-    required this.l10n,
-    required this.lang,
-  });
-  final BrokerProject project;
-  final AppLocalizations l10n;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        AppNetworkImage(url: project.coverImageUrl),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Color(0x88000000),
-                Color(0x22000000),
-                Color(0x33000000),
-                Color(0x88050E18),
-              ],
-              stops: [0.0, 0.30, 0.70, 1.0],
-            ),
-          ),
-        ),
-        const Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: SizedBox(
-            height: 1.5,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Color(0x66C8A24B),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        PositionedDirectional(
-          top: AppSpacing.sm,
-          end: AppSpacing.md,
-          child: StatusBadge(
-            label: projectStatusLabel(l10n, project.status),
-            tone: projectStatusTone(project.status),
-            variant: BadgeVariant.solid,
-          ),
-        ),
-        if (project.commissionPct != null)
-          PositionedDirectional(
-            top: AppSpacing.sm,
-            start: AppSpacing.sm,
-            child: _CommissionPill(pct: project.commissionPct!, lang: lang),
-          ),
-        if (project.city != null)
-          PositionedDirectional(
-            bottom: AppSpacing.sm,
-            start: AppSpacing.md,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: AppPalette.gold400,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppPalette.gold400.withValues(alpha: 0.6),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  project.city!.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppPalette.gold300,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.6,
-                    shadows: [
-                      Shadow(color: Color(0x88000000), blurRadius: 6),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _CommissionPill extends StatelessWidget {
-  const _CommissionPill({required this.pct, required this.lang});
-  final String pct;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        boxShadow: [
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.40),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Text(
-        lang == 'ar' ? 'عمولة $pct%' : '$pct% comm.',
-        style: const TextStyle(
-          color: Color(0xFF0B1726),
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-}
-
 // ── Circle back button ────────────────────────────────────────────────────────
 
 // ── Meta strip ────────────────────────────────────────────────────────────────
 
-class _MetaStrip extends StatelessWidget {
-  const _MetaStrip({required this.project, required this.l10n});
-  final BrokerProject project;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            if (project.commissionPct != null) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${project.commissionPct}%',
-                    style: const TextStyle(
-                      color: AppPalette.gold500,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      height: 1.0,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.brokerCommissionPct,
-                    style: TextStyle(
-                        color: colors.inkMuted,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                margin:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                color: colors.hairline,
-              ),
-            ],
-            if (project.city != null) ...[
-              Icon(Icons.location_on_rounded,
-                  size: 14, color: colors.inkMuted),
-              const SizedBox(width: 4),
-              Text(
-                project.city!,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: colors.inkStrong,
-                ),
-              ),
-            ],
-            const Spacer(),
-            StatusBadge(
-              label: projectStatusLabel(l10n, project.status),
-              tone: projectStatusTone(project.status),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Add lead CTA ──────────────────────────────────────────────────────────────
-
-class _AddLeadCard extends StatefulWidget {
-  const _AddLeadCard({required this.projectId, required this.l10n});
-  final String projectId;
-  final AppLocalizations l10n;
-
-  @override
-  State<_AddLeadCard> createState() => _AddLeadCardState();
-}
-
-class _AddLeadCardState extends State<_AddLeadCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/broker/leads/new',
-          extra: {'projectId': widget.projectId}),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            boxShadow: [
-              BoxShadow(
-                color: AppPalette.gold400.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25)),
-                ),
-                child: const Icon(Icons.person_add_alt_1_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.l10n.brokerLeadNew,
-                      style: const TextStyle(
-                        color: Color(0xFF0B1726),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      context.l10n.brokerAddLeadForProject,
-                      style: TextStyle(
-                        color: const Color(0xFF0B1726)
-                            .withValues(alpha: 0.55),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.add_circle_rounded,
-                color: const Color(0xFF0B1726).withValues(alpha: 0.45),
-                size: 26,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── About section ─────────────────────────────────────────────────────────────
 

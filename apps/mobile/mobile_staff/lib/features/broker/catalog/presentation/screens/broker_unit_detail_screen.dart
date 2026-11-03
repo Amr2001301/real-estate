@@ -11,254 +11,124 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyMid = Color(0xFF14273F);
 const _navyLight = Color(0xFF243F62);
 
-class BrokerUnitDetailScreen extends StatelessWidget {
-  const BrokerUnitDetailScreen(
-      {super.key, required this.unit, this.projectId});
+class BrokerUnitDetailScreen extends StatefulWidget {
+  const BrokerUnitDetailScreen({super.key, required this.unit, this.projectId});
 
   final BrokerUnit unit;
   final String? projectId;
 
   @override
+  State<BrokerUnitDetailScreen> createState() => _BrokerUnitDetailScreenState();
+}
+
+class _BrokerUnitDetailScreenState extends State<BrokerUnitDetailScreen> {
+  final _detailsKey = GlobalKey();
+  final _planKey = GlobalKey();
+  final _locationKey = GlobalKey();
+  final _projectKey = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
+    final unit = widget.unit;
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
     final available = unit.status.toUpperCase() == 'AVAILABLE';
-    final effProjectId = projectId ?? unit.projectId;
+    final effProjectId = widget.projectId ?? unit.projectId;
+    final hasPrice = unit.price != null && unit.price!.isNotEmpty;
+    final projectName = lang == 'ar' ? (unit.projectNameAr ?? unit.projectNameEn) : (unit.projectNameEn ?? unit.projectNameAr);
+    final hasSpecs = _hasSpecs(unit);
+    final hasLocation = unit.hasLocation || unit.address != null;
+
+    Widget section(String title, {Key? key}) => SliverToBoxAdapter(
+          child: Padding(
+            key: key,
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+            child: _SectionTitle(title),
+          ),
+        );
+    Widget box(Widget child) => SliverToBoxAdapter(
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg), child: child),
+        );
 
     return AppDetailPage(
-          onBack: () => context.pop(),
-          title: ltr(unit.code),
-          gallery: _HeroBackground(unit: unit, l10n: l10n),
-          slivers: [
-            // ── Type · price · status ─────────────────────────────────────
-            AppDetailPage.box(
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadii.lg),
-                child: _MetaStrip(unit: unit, l10n: l10n, lang: lang),
-              ),
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-            ),
-
-            // ── Add lead CTA card (AVAILABLE only) ────────────────────────
-            if (available)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                  child: _AddLeadCard(
-                      projectId: effProjectId, unitId: unit.id, l10n: l10n),
+      onBack: () => context.pop(),
+      title: ltr(unit.code),
+      subtitle: [
+        if (unit.type != null) unitTypeLabel(unit.type, languageCode: lang),
+        ?projectName,
+      ].join(' · '),
+      photos: unit.allImageUrls,
+      photoPlaceholder: _NavyFallback(),
+      photoBadge: StatusBadge(label: unitStatusLabel(l10n, unit.status), tone: unitStatusTone(unit.status)),
+      bottomBar: available
+          ? AppDetailBottomBar(
+              children: [
+                AppDetailPrimaryButton(
+                  key: const Key('broker-unit-add-lead'),
+                  label: l10n.brokerLeadNew,
+                  icon: Icons.person_add_alt_1_rounded,
+                  onPressed: () => context.push('/broker/leads/new', extra: {
+                    'projectId': ?effProjectId,
+                    'unitId': unit.id,
+                  }),
                 ),
-              ),
-
-            // ── Unit details ─────────────────────────────────────────────
-            if (_hasSpecs(unit)) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
-                  child: _SectionTitle(l10n.unitDetails),
-                ),
-              ),
-              SliverPadding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                sliver: _SpecsGrid(unit: unit, l10n: l10n),
-              ),
-            ],
-
-            // ── Floor plans ──────────────────────────────────────────────
-            if (unit.floorPlanUrls.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
-                  child: _SectionTitle(l10n.sectionFloorPlans),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg),
-                  child: _MediaGallery(urls: unit.floorPlanUrls),
-                ),
-              ),
-            ],
-
-            // ── Location ─────────────────────────────────────────────────
-            if (unit.hasLocation || unit.address != null) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
-                  child: _SectionTitle(l10n.projectLocation),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg),
-                  child: _LocationCard(unit: unit, l10n: l10n),
-                ),
-              ),
-            ],
-
-            // ── Project ──────────────────────────────────────────────────
-            if (unit.projectId != null) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
-                      AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
-                  child: _SectionTitle(l10n.navProjects),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg),
-                  child: _ProjectCard(unit: unit, lang: lang),
-                ),
-              ),
-            ],
-
-          ],
-    );
-  }
-
-  bool _hasSpecs(BrokerUnit u) =>
-      u.bedrooms != null ||
-      u.bathrooms != null ||
-      u.area != null ||
-      u.floor != null;
-}
-
-// ── Hero background ───────────────────────────────────────────────────────────
-
-class _HeroBackground extends StatefulWidget {
-  const _HeroBackground({required this.unit, required this.l10n});
-  final BrokerUnit unit;
-  final AppLocalizations l10n;
-
-  @override
-  State<_HeroBackground> createState() => _HeroBackgroundState();
-}
-
-class _HeroBackgroundState extends State<_HeroBackground> {
-  final _ctrl = PageController();
-  int _page = 0;
-
-  List<String> get _urls => widget.unit.allImageUrls;
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final urls = _urls;
-    final multi = urls.length > 1;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Image carousel or navy-gradient fallback
-        if (urls.isEmpty)
-          _NavyFallback()
-        else if (!multi)
-          AppNetworkImage(url: urls.first)
-        else
-          PageView.builder(
-            controller: _ctrl,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemCount: urls.length,
-            itemBuilder: (_, i) => AppNetworkImage(url: urls[i]),
-          ),
-
-        // Top gradient — protects back button
-        const Positioned(
-          top: 0, left: 0, right: 0, height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x33000000), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Bottom gradient — behind title
-        const Positioned(
-          left: 0, right: 0, bottom: 0, height: 80,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0x88050E18), Color(0x00000000)],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Gold hairline at the very bottom
-        const Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: SizedBox(
-            height: 1.5,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Color(0x66C8A24B),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Page dots
-        if (multi)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: _PageDots(count: urls.length, current: _page),
-            ),
-          ),
-
-        // Status + media count badges — top end
-        PositionedDirectional(
-          top: AppSpacing.sm,
-          end: AppSpacing.lg,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (multi) ...[
-                _CountPill(current: _page + 1, total: urls.length),
-                const SizedBox(width: AppSpacing.xs),
               ],
-              _StatusPill(
-                label: unitStatusLabel(widget.l10n, widget.unit.status),
-                tone: unitStatusTone(widget.unit.status),
-              ),
-            ],
+            )
+          : null,
+      slivers: [
+        AppDetailPage.box(
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: AppPriceCard(
+              label: l10n.detailTotalPrice,
+              price: hasPrice ? PriceFormatter.formatString(unit.price, languageCode: lang) : l10n.priceOnRequest,
+            ),
           ),
         ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+        AppSectionTabsSliver(
+          tabs: [
+            if (hasSpecs) AppSectionTab(l10n.detailTabOverview, _detailsKey),
+            if (unit.floorPlanUrls.isNotEmpty) AppSectionTab(l10n.detailTabFloorPlan, _planKey),
+            if (hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
+            if (unit.projectId != null) AppSectionTab(l10n.navProjects, _projectKey),
+          ],
+        ),
+
+        // ── Unit details ─────────────────────────────────────────────
+        if (hasSpecs) ...[
+          section(l10n.unitDetails, key: _detailsKey),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            sliver: _SpecsGrid(unit: unit, l10n: l10n),
+          ),
+        ],
+
+        // ── Floor plans ──────────────────────────────────────────────
+        if (unit.floorPlanUrls.isNotEmpty) ...[
+          section(l10n.sectionFloorPlans, key: _planKey),
+          box(_MediaGallery(urls: unit.floorPlanUrls)),
+        ],
+
+        // ── Location ─────────────────────────────────────────────────
+        if (hasLocation) ...[
+          section(l10n.projectLocation, key: _locationKey),
+          box(_LocationCard(unit: unit, l10n: l10n)),
+        ],
+
+        // ── Project ──────────────────────────────────────────────────
+        if (unit.projectId != null) ...[
+          section(l10n.navProjects, key: _projectKey),
+          box(_ProjectCard(unit: unit, lang: lang)),
+        ],
       ],
     );
   }
+
+  bool _hasSpecs(BrokerUnit u) => u.bedrooms != null || u.bathrooms != null || u.area != null || u.floor != null;
 }
+
+// ── Hero background ───────────────────────────────────────────────────────────
 
 class _NavyFallback extends StatelessWidget {
   @override
@@ -307,268 +177,9 @@ class _NavyFallback extends StatelessWidget {
   }
 }
 
-class _PageDots extends StatelessWidget {
-  const _PageDots({required this.count, required this.current});
-  final int count;
-  final int current;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < count; i++) ...[
-          if (i > 0) const SizedBox(width: 5),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            width: current == i ? 20 : 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: current == i
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _CountPill extends StatelessWidget {
-  const _CountPill({required this.current, required this.total});
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.45),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.28), width: 0.8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.photo_library_outlined,
-              size: 12, color: Colors.white70),
-          const SizedBox(width: 4),
-          Text('$current / $total',
-              style:
-                  const TextStyle(fontSize: 11, color: Colors.white70)),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Meta strip ────────────────────────────────────────────────────────────────
 
-class _MetaStrip extends StatelessWidget {
-  const _MetaStrip(
-      {required this.unit, required this.l10n, required this.lang});
-  final BrokerUnit unit;
-  final AppLocalizations l10n;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final hasPrice = unit.price != null && unit.price!.isNotEmpty;
-    final available = unit.status.toUpperCase() == 'AVAILABLE';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            // Type chip
-            if (unit.type != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _navyLight.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  border: Border.all(
-                      color: _navyLight.withValues(alpha: 0.18)),
-                ),
-                child: Text(
-                  unitTypeLabel(unit.type, languageCode: Localizations.localeOf(context).languageCode),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: _navyMid,
-                  ),
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 28,
-                margin: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md),
-                color: colors.hairline,
-              ),
-            ],
-            // Price
-            if (hasPrice)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      PriceFormatter.formatString(unit.price,
-                          languageCode: lang),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: available
-                            ? AppPalette.gold500
-                            : colors.inkMuted,
-                        letterSpacing: -0.5,
-                        height: 1.0,
-                      ),
-                    ),
-                    Text(
-                      l10n.unitPrice,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: colors.inkMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              const Spacer(),
-            // Status badge
-            StatusBadge(
-              label: unitStatusLabel(l10n, unit.status),
-              tone: unitStatusTone(unit.status),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Add lead CTA card ─────────────────────────────────────────────────────────
-
-class _AddLeadCard extends StatefulWidget {
-  const _AddLeadCard(
-      {required this.projectId, required this.unitId, required this.l10n});
-  final String? projectId;
-  final String unitId;
-  final AppLocalizations l10n;
-
-  @override
-  State<_AddLeadCard> createState() => _AddLeadCardState();
-}
-
-class _AddLeadCardState extends State<_AddLeadCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/broker/leads/new', extra: {
-        if (widget.projectId != null) 'projectId': widget.projectId,
-        'unitId': widget.unitId,
-      }),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFAA8528), Color(0xFFC8A24B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            boxShadow: [
-              BoxShadow(
-                color: AppPalette.gold400.withValues(alpha: 0.35),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.25)),
-                ),
-                child: const Icon(Icons.person_add_alt_1_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.l10n.brokerLeadNew,
-                      style: const TextStyle(
-                        color: _navyDeep,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      context.l10n.brokerAddLeadForUnit,
-                      style: TextStyle(
-                        color: _navyDeep.withValues(alpha: 0.55),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.add_circle_rounded,
-                color: _navyDeep.withValues(alpha: 0.45),
-                size: 26,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── Section title ─────────────────────────────────────────────────────────────
 
@@ -952,41 +563,6 @@ class _ProjectCard extends StatelessWidget {
 }
 
 // ── Status pill ───────────────────────────────────────────────────────────────
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.tone});
-  final String label;
-  final BadgeTone tone;
-
-  Color _bg() => switch (tone) {
-        BadgeTone.success =>
-          const Color(0xFF22C55E).withValues(alpha: 0.90),
-        BadgeTone.warning =>
-          const Color(0xFFF59E0B).withValues(alpha: 0.90),
-        _ => Colors.black.withValues(alpha: 0.50),
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: _bg(),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.25), width: 0.8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
 
 // ── Circle back button ────────────────────────────────────────────────────────
 

@@ -34,4 +34,10 @@ abstract interface class CatalogRepository {
   });
 
   Future<Result<Unit>> getUnit(String id);
+
+  /// The payment plans the company shows customers for a unit.
+  Future<Result<List<InstallmentOffer>>> getUnitPlans(String unitId);
+
+  /// A project's payment offers (lowest down payment, longest term).
+  Future<Result<ProjectPlanSummary>> getProjectPlans(String projectId);
 }
