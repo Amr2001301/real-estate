@@ -292,4 +292,66 @@ describe('PP1 — public payment plans (e2e)', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it("PP1-7: several plans change at once, only the company's own; sales cannot", async () => {
+    const a = await plan({
+      name: `PP1 bulk a ${stamp}`,
+      downPaymentType: 'FIXED',
+      downPaymentValue: 100_000,
+      installmentsCount: 10,
+      frequency: 'MONTHLY',
+      status: 'ACTIVE',
+    });
+    const b = await plan({
+      name: `PP1 bulk b ${stamp}`,
+      downPaymentType: 'FIXED',
+      downPaymentValue: 100_000,
+      installmentsCount: 10,
+      frequency: 'MONTHLY',
+      status: 'ACTIVE',
+    });
+    const foreignId = (
+      await testApp.rawPrisma.installmentPlanTemplate.findFirstOrThrow({
+        where: { companyId: otherCompanyId },
+        select: { id: true },
+      })
+    ).id;
+    const res = await asAdmin(http().post('/v1/installment-plan-templates/visibility'))
+      .send({ ids: [a.id, b.id, foreignId], visibility: 'PUBLIC' })
+      .expect(201);
+    expect(res.body).toEqual({ updated: 2 });
+    expect(await plansOf(a.unitId)).toHaveLength(1);
+    expect(await plansOf(b.unitId)).toHaveLength(1);
+    // The other company's plan is untouched (it was PUBLIC; flip it back and check).
+    await asAdmin(http().post('/v1/installment-plan-templates/visibility'))
+      .send({ ids: [foreignId], visibility: 'SALES_ONLY' })
+      .expect(201)
+      .expect(({ body }) => expect(body).toEqual({ updated: 0 }));
+    const foreign = await testApp.rawPrisma.installmentPlanTemplate.findUniqueOrThrow({
+      where: { id: foreignId },
+    });
+    expect(foreign.visibility).toBe('PUBLIC');
+    // The list filters by who sees it.
+    const listed = await asAdmin(
+      http().get(
+        `/v1/installment-plan-templates?projectId=${projectId}&visibility=PUBLIC&pageSize=100`,
+      ),
+    ).expect(200);
+    expect(listed.body.data.map((x: { id: string }) => x.id)).toEqual(
+      expect.arrayContaining([a.id, b.id]),
+    );
+    expect(listed.body.data.every((x: { visibility: string }) => x.visibility === 'PUBLIC')).toBe(
+      true,
+    );
+    // Sales cannot change it; bad input is refused.
+    const salesToken = await loginAs(testApp.app, 'sales@example.com', 'SalesPass123!');
+    await http()
+      .post('/v1/installment-plan-templates/visibility')
+      .set('Authorization', bearer(salesToken))
+      .send({ ids: [a.id], visibility: 'SALES_ONLY' })
+      .expect(403);
+    await asAdmin(http().post('/v1/installment-plan-templates/visibility'))
+      .send({ ids: [], visibility: 'PUBLIC' })
+      .expect(400);
+  });
 });

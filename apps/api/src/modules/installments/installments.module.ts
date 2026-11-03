@@ -28,6 +28,8 @@ import {
   IsDateString,
   IsEnum,
   IsIn,
+  ArrayMaxSize,
+  ArrayMinSize,
   IsInt,
   IsNumber,
   IsOptional,
@@ -206,6 +208,11 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsIn(PLAN_VISIBILITIES) visibility?: PlanVisibility;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
+}
+
+class BulkPlanVisibilityDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @IsUUID('4', { each: true }) ids!: string[];
+  @IsIn(PLAN_VISIBILITIES) visibility!: PlanVisibility;
 }
 
 // ─── Calculator DTO ──────────────────────────────────────────────────────────
@@ -1126,9 +1133,10 @@ export class PlanTemplatesService {
     q?: string;
     projectId?: string;
     status?: PlanTemplateStatus;
+    visibility?: string;
     role: UserRole;
   }) {
-    const { page, pageSize, q, projectId, status, role } = query;
+    const { page, pageSize, q, projectId, status, visibility, role } = query;
 
     const where: Prisma.InstallmentPlanTemplateWhereInput = {};
 
@@ -1140,6 +1148,7 @@ export class PlanTemplatesService {
     }
 
     if (projectId) where.projectId = projectId;
+    if (visibility && (PLAN_VISIBILITIES as readonly string[]).includes(visibility)) where.visibility = visibility;
 
     if (q) {
       where.OR = [
@@ -1178,6 +1187,20 @@ export class PlanTemplatesService {
         totalPages: Math.ceil(total / pageSize),
       },
     };
+  }
+
+  /**
+   * Who sees several plans at once (the dashboard's plan list). Only the
+   * tenant's own plans change; the count is returned. Visibility is not a
+   * term, so plans open reservations use may change too.
+   */
+  async setVisibility(ids: string[], visibility: PlanVisibility) {
+    const companyId = getRequiredCompanyId();
+    const res = await this.prisma.installmentPlanTemplate.updateMany({
+      where: { companyId, id: { in: ids } },
+      data: { visibility },
+    });
+    return { updated: res.count };
   }
 
   // ─── Customer-facing (the app's unit and project pages) ─────────────────────
@@ -2243,6 +2266,7 @@ class PlanTemplatesController {
     @Query('projectId') projectId?: string,
     @Query('status') status?: string,
     @Req() req?: { user?: { role?: UserRole } },
+    @Query('visibility') visibility?: string,
   ) {
     return this.svc.list({
       page: Number(page),
@@ -2250,6 +2274,7 @@ class PlanTemplatesController {
       q,
       projectId,
       status: status as PlanTemplateStatus | undefined,
+      visibility,
       role: req?.user?.role ?? UserRole.SALES,
     });
   }
@@ -2283,6 +2308,14 @@ class PlanTemplatesController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
+  }
+
+  // Literal path: declared before ':id' routes.
+  @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
+  @Post('visibility')
+  setVisibility(@Body() dto: BulkPlanVisibilityDto) {
+    return this.svc.setVisibility(dto.ids, dto.visibility);
   }
 
   @Roles(UserRole.ADMIN)
