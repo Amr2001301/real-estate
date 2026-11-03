@@ -193,37 +193,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
-          borderRadius: AppRadii.pillAll,
-          border: Border.all(color: active ? colors.brandNavy : colors.hairline, width: active ? 0 : 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!active && dotColor != null) ...[
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-              const SizedBox(width: AppSpacing.xxs + 2),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? Colors.white : colors.inkStrong,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return AppFilterChip(label: label, selected: active, onTap: onTap, dotColor: dotColor);
   }
 }
 

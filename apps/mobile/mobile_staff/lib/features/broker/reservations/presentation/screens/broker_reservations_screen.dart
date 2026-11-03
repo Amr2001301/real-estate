@@ -406,67 +406,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm + 4, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
-          borderRadius: AppRadii.pillAll,
-          border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
-            width: active ? 0 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs, vertical: 2),
-              decoration: BoxDecoration(
-                color: active
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : colors.surfaceSoft,
-                borderRadius: BorderRadius.circular(100),
-              ),
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: active ? Colors.white : colors.inkStrong,
-                  height: 1.2,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            if (!active && dotColor != null) ...[
-              Container(
-                width: 6,
-                height: 6,
-                decoration:
-                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: AppSpacing.xxs + 2),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? Colors.white : colors.inkStrong,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return AppFilterChip(label: label, count: count, selected: active, onTap: onTap, dotColor: dotColor);
   }
 }
 
