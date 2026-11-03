@@ -1,3 +1,4 @@
+import 'load_by_id.dart';
 import 'dart:async';
 
 import 'package:core/core.dart';
@@ -219,6 +220,9 @@ GoRouter createStaffRouter(
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
+    // A wrong or outdated link (an old notification, a typo) opens a page in
+    // the app's own words with a way home, not the router's raw error.
+    errorBuilder: (context, state) => AppNotFoundPage(onHome: () => context.go('/home')),
     refreshListenable: Listenable.merge([
       _CubitRefresh(sessionCubit.stream),
       SplashScreen.splashDone,
@@ -253,18 +257,31 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/broker/projects/:id',
         builder: (context, state) {
-          final project = state.extra! as BrokerProject;
-          return BlocProvider(
-            create: (ctx) => BrokerUnitsCubit(
-              GetBrokerProjectUnits(ctx.read<BrokerCatalogRepository>()),
-              projectId: project.id,
-            ),
-            child: BrokerProjectDetailScreen(project: project),
+          Widget screen(BrokerProject project) => BlocProvider(
+                create: (ctx) => BrokerUnitsCubit(
+                  GetBrokerProjectUnits(ctx.read<BrokerCatalogRepository>()),
+                  projectId: project.id,
+                ),
+                child: BrokerProjectDetailScreen(project: project),
+              );
+          final project = state.extra as BrokerProject?;
+          if (project != null) return screen(project);
+          // Opened from a link or a reload: find it among the broker's projects.
+          final id = state.pathParameters['id']!;
+          return LoadById<BrokerProject>(
+            load: () => context.read<BrokerCatalogRepository>().getProjects(),
+            matches: (p) => p.id == id,
+            builder: screen,
+            fallbackPath: '/broker/home',
           );
         },
       ),
       GoRoute(
         path: '/broker/units/:id',
+        // The unit comes from the project it was opened from; a link or a
+        // reload without it goes back to the broker's home.
+        redirect: (context, state) =>
+            (state.extra as Map<String, dynamic>?)?['unit'] is BrokerUnit ? null : '/broker/home',
         builder: (context, state) {
           final args = (state.extra as Map<String, dynamic>?) ?? const {};
           return BrokerUnitDetailScreen(
@@ -724,6 +741,12 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/deposits/record',
+        // Opened from an instalment row (contract + instalment ids); a link
+        // or a reload without them goes back to the deposits list.
+        redirect: (context, state) {
+          final args = state.extra as Map<String, dynamic>?;
+          return args?['contractId'] is String && args?['installmentId'] is String ? null : '/deposits';
+        },
         builder: (context, state) {
           final args = (state.extra as Map<String, dynamic>?) ?? const {};
           return BlocProvider(
@@ -742,6 +765,8 @@ GoRouter createStaffRouter(
       // ── Documents viewer ─────────────────────────────────────────────────
       GoRoute(
         path: '/documents-view',
+        // Needs the record whose documents it shows; without one, go home.
+        redirect: (context, state) => (state.uri.queryParameters['ownerId'] ?? '').isEmpty ? '/home' : null,
         builder: (context, state) {
           final q = state.uri.queryParameters;
           final ownerType = q['ownerType'] ?? 'CONTRACT';

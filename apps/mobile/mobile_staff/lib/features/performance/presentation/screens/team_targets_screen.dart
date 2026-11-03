@@ -414,7 +414,12 @@ class _TargetTile extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       // Amount + units
-                      Row(
+                      // Wraps the units under the amount rather than
+                      // overflow onto the avatar at phone width.
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             PriceFormatter.formatString(target.amountTarget,
@@ -427,16 +432,20 @@ class _TargetTile extends StatelessWidget {
                                   fontWeight: FontWeight.w700,
                                 ),
                           ),
-                          const Spacer(),
-                          Icon(Icons.home_work_outlined,
-                              size: 13, color: colors.inkMuted),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${target.unitsTarget} ${l10n.targetUnits}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: colors.inkMuted),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.home_work_outlined,
+                                  size: 13, color: colors.inkMuted),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${target.unitsTarget} ${l10n.targetUnits}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: colors.inkMuted),
+                              ),
+                            ],
                           ),
                         ],
                       ),

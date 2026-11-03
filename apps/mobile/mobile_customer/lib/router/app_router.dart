@@ -152,6 +152,9 @@ GoRouter createCustomerRouter(
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
+    // A wrong or outdated link (an old notification, a typo) opens a page in
+    // the app's own words with a way home, not the router's raw error.
+    errorBuilder: (context, state) => AppNotFoundPage(onHome: () => context.go('/home')),
     refreshListenable: Listenable.merge([
       _CubitRefresh(sessionCubit.stream),
       SplashScreen.splashDone,
@@ -530,16 +533,25 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/account/installments/:id/submit-proof',
         builder: (context, state) {
-          final installment = state.extra! as Installment;
-          return BlocProvider(
-            create: (ctx) => SubmitProofCubit(
-              submit: SubmitPaymentProof(ctx.read<InstallmentsRepository>()),
-              resubmit: ResubmitPaymentProof(
-                ctx.read<InstallmentsRepository>(),
-              ),
-              installment: installment,
-            ),
-            child: const SubmitProofScreen(),
+          Widget screen(Installment installment) => BlocProvider(
+                create: (ctx) => SubmitProofCubit(
+                  submit: SubmitPaymentProof(ctx.read<InstallmentsRepository>()),
+                  resubmit: ResubmitPaymentProof(
+                    ctx.read<InstallmentsRepository>(),
+                  ),
+                  installment: installment,
+                ),
+                child: const SubmitProofScreen(),
+              );
+          final installment = state.extra as Installment?;
+          if (installment != null) return screen(installment);
+          // Opened from a link or a reload: find it in the customer's own list.
+          final id = state.pathParameters['id']!;
+          return LoadById<Installment>(
+            load: () =>
+                GetMyInstallments(context.read<InstallmentsRepository>())(const NoParams()),
+            matches: (i) => i.id == id,
+            builder: screen,
           );
         },
       ),
@@ -567,6 +579,9 @@ GoRouter createCustomerRouter(
       // ── Property detail ───────────────────────────────────────────────────
       GoRoute(
         path: '/account/property/detail',
+        // The unit comes from the list it was opened from; a link or a
+        // reload without it goes back to the list rather than crash.
+        redirect: (context, state) => state.extra is Property ? null : '/account/property',
         builder: (context, state) {
           final property = state.extra! as Property;
           return BlocProvider(

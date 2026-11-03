@@ -60,8 +60,11 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
         : DateFormatter.mediumDate(_date!, languageCode: lang);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.visitRequestTitle)),
-      body: BlocConsumer<VisitRequestCubit, VisitFormState>(
+      body: Column(
+        children: [
+          AppNavHeader(title: l10n.visitRequestTitle, compact: true, leadingAction: const NavHeaderBack()),
+          Expanded(
+            child: BlocConsumer<VisitRequestCubit, VisitFormState>(
         listener: (context, state) {
           if (state.status == VisitFormStatus.success) {
             Navigator.of(context).pop();
@@ -113,6 +116,9 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
             ],
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }

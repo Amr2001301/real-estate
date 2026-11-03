@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../common/installment_offer.dart';
+import '../common/ltr_isolate.dart';
 import '../common/price_formatter.dart';
 import '../design/theme/app_theme_ext.dart';
 import '../design/tokens/app_colors.dart';
@@ -890,7 +891,7 @@ class _CalculatorSheetState extends State<_CalculatorSheet> {
               const SizedBox(height: AppSpacing.lg),
               label(l10n.detailCalcPlan),
               choices(
-                [for (final o in widget.offers) o.name],
+                [for (final o in widget.offers) ltrRuns(o.name)],
                 _plan,
                 (i) => setState(() {
                   _plan = i;

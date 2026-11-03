@@ -38,8 +38,11 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.infoRequestTitle)),
-      body: BlocConsumer<InfoRequestCubit, InfoRequestState>(
+      body: Column(
+        children: [
+          AppNavHeader(title: l10n.infoRequestTitle, compact: true, leadingAction: const NavHeaderBack()),
+          Expanded(
+            child: BlocConsumer<InfoRequestCubit, InfoRequestState>(
         listener: (context, state) {
           if (state.status == InfoRequestStatus.success) {
             Navigator.of(context).pop();
@@ -91,6 +94,9 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
             ),
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }

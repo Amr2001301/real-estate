@@ -1693,5 +1693,8 @@
   "detailPlanTerm": "{pct} down",
   "@detailPlanTerm": {"placeholders": {"pct": {"type": "String"}}},
   "detailUpTo": "up to {term}",
-  "@detailUpTo": {"placeholders": {"term": {"type": "String"}}}
+  "@detailUpTo": {"placeholders": {"term": {"type": "String"}}},
+  "pageNotFoundTitle": "Page not found",
+  "pageNotFoundMessage": "The link is wrong or this page is no longer available.",
+  "pageNotFoundHome": "Back to home"
 }

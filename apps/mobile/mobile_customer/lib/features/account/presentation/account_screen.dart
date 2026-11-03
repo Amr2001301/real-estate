@@ -393,7 +393,8 @@ class _QuickTile extends StatelessWidget {
                   Text(
                     item.label,
                     textAlign: TextAlign.center,
-                    maxLines: 1,
+                    // Two lines: «الملف الشخصي» does not fit one at phone width.
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.inkStrong,
