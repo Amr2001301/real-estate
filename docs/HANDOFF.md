@@ -71,7 +71,7 @@
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #246 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #247 مدموج. لو PR 2b-1 أو 2b-2 لسه مفتوح، شوفه الأول (ادمجه لو أخضر ووافقت)؛ **وبعدين ابدأ بالقسم 2i**؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -420,7 +420,8 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 | #244 | Mobile PR2b-2 | ~200 Arabic strings typed in widgets move to ARB keys (MSA + English); `l10n_msa_test` blocks dialect words in `app_ar.arb`. |
 | #245 | Customer app ST1 | Statement of account (كشف حساب) on a signed contract: `GET /contracts/me/contracts/:id/statement` (customer, own contract only; same figures as staff, without who reversed a payment or deposit ids); screen `contract_statement_screen.dart`. e2e `e2e-st1-customer-statement`. |
 | #246 | Staff app LG-M | «ليا وعليا»: the dashboard's receivables & payables (`GET /reports/ledger`, `/reports/ledger/rows`) — same numbers by construction; admin or `reports:financial:read` (`StaffAccess.ledger`); periods, groups with state split, rows per group. `features/ledger/`. |
-| PR 3d | Mobile | Core `AppFilterChip` — one list filter pill (dot, count, navy when selected) replacing 16 private copies in both apps. Open. Next (owner approved 2026-11-03): project and unit detail pages in the staff and broker apps follow the customer app's design (PR 3e). |
+| #247 | Mobile PR3d | Core `AppFilterChip` — one list filter pill (dot, count, navy when selected) replacing 16 private copies in both apps. |
+| PR 3e | Mobile | Core `AppDetailSheetPage` (+ `AppDetailSectionTitle`, `AppDetailStat`): the staff and broker project / unit pages use the customer app's detail design (photo hero, sliding sheet, floating buttons, fact tiles). Open. |
 
 **Owner decisions (2026-11-03) on the open items:** customer statement in the app — yes (ST1); an unsigned contract's due rows — remind staff only, never the customer (ST2, next); the broker does not get the customer's national ID / address / extra fields; e-signing the contract itself is postponed (needs a lawyer's view on Egyptian law first). «ليا وعليا» must show the same numbers in the staff app and on the dashboard — the staff app has no ledger screen yet; owner approved: built in LG-M (same API and permission).
 
