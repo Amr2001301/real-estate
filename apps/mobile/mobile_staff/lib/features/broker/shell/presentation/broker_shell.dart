@@ -1,15 +1,16 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../shell/presentation/staff_shell.dart';
+import '../../home/broker_home_data.dart';
+import '../../home/broker_home_screen.dart';
 
 import '../../catalog/domain/repositories/broker_catalog_repository.dart';
 import '../../catalog/domain/usecases/broker_catalog_use_cases.dart';
 import '../../catalog/presentation/cubit/broker_projects_cubit.dart';
 import '../../catalog/presentation/screens/broker_projects_screen.dart';
-import '../../dashboard/domain/repositories/broker_dashboard_repository.dart';
-import '../../dashboard/domain/usecases/get_broker_dashboard.dart';
-import '../../dashboard/presentation/cubit/broker_dashboard_cubit.dart';
-import '../../dashboard/presentation/screens/broker_dashboard_screen.dart';
 import '../../leads/domain/repositories/broker_leads_repository.dart';
 import '../../leads/domain/usecases/broker_lead_use_cases.dart';
 import '../../leads/presentation/cubit/broker_leads_cubit.dart';
@@ -54,10 +55,12 @@ class _BrokerShellState extends State<BrokerShell> {
   void _switchTab(int index) => setState(() => _index = index);
 
   late final List<Widget> _tabs = [
+    // The approved design (2026-11-04), with the website's broker figures.
     BlocProvider(
-      create: (ctx) => BrokerDashboardCubit(
-          GetBrokerDashboard(ctx.read<BrokerDashboardRepository>())),
-      child: BrokerDashboardScreen(onSwitchTab: _switchTab),
+      create: (ctx) => BrokerHomeCubit(
+        BrokerHomeRepository(ctx.read<Dio>(), ctx.read<BrokerCatalogRepository>()),
+      ),
+      child: BrokerHomeScreen(onSwitchTab: _switchTab),
     ),
     const BrokerProjectsScreen(),
     BlocProvider(
@@ -79,36 +82,18 @@ class _BrokerShellState extends State<BrokerShell> {
     return BlocProvider.value(
       value: _projectsCubit,
       child: Scaffold(
+        extendBody: true,
         body: IndexedStack(index: _index, children: _tabs),
-        bottomNavigationBar: AppBottomNav(
+        // The navy bar floating over the page, as the other staff homes.
+        bottomNavigationBar: StaffFloatingNav(
           currentIndex: _index,
           onSelect: (i) => setState(() => _index = i),
           items: [
-            AppBottomNavItem(
-              icon: Icons.dashboard_outlined,
-              activeIcon: Icons.dashboard_rounded,
-              label: l10n.navDashboard,
-            ),
-            AppBottomNavItem(
-              icon: Icons.apartment_outlined,
-              activeIcon: Icons.apartment_rounded,
-              label: l10n.navProjects,
-            ),
-            AppBottomNavItem(
-              icon: Icons.people_alt_outlined,
-              activeIcon: Icons.people_alt_rounded,
-              label: l10n.navLeads,
-            ),
-            AppBottomNavItem(
-              icon: Icons.bookmark_border_rounded,
-              activeIcon: Icons.bookmark_rounded,
-              label: l10n.navReservations,
-            ),
-            AppBottomNavItem(
-              icon: Icons.person_outline_rounded,
-              activeIcon: Icons.person_rounded,
-              label: l10n.navProfile,
-            ),
+            AppBottomNavItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard_rounded, label: l10n.navHome),
+            AppBottomNavItem(icon: Icons.apartment_outlined, activeIcon: Icons.apartment_rounded, label: l10n.navProjects),
+            AppBottomNavItem(icon: Icons.people_alt_outlined, activeIcon: Icons.people_alt_rounded, label: l10n.bhNavClients),
+            AppBottomNavItem(icon: Icons.bookmark_border_rounded, activeIcon: Icons.bookmark_rounded, label: l10n.navReservations),
+            AppBottomNavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: l10n.bhNavAccount),
           ],
         ),
       ),
