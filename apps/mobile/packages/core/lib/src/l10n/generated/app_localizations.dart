@@ -12013,6 +12013,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Price per m²'**
   String get upPerMeter;
+
+  /// No description provided for @upReservedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit is reserved until {date}.'**
+  String upReservedUntil(String date);
+
+  /// No description provided for @upReservedNoDate.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit is reserved.'**
+  String get upReservedNoDate;
+
+  /// No description provided for @upSoldNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit is sold.'**
+  String get upSoldNote;
 }
 
 class _AppLocalizationsDelegate

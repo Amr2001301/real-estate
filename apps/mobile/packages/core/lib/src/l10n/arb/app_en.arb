@@ -2240,5 +2240,9 @@
   "upMaintenance": "Maintenance and warranty",
   "upWarrantyUntil": "Warranty until {date}",
   "@upWarrantyUntil": {"placeholders": {"date": {"type": "String"}}},
-  "upPerMeter": "Price per m²"
+  "upPerMeter": "Price per m²",
+  "upReservedUntil": "The unit is reserved until {date}.",
+  "@upReservedUntil": {"placeholders": {"date": {"type": "String"}}},
+  "upReservedNoDate": "The unit is reserved.",
+  "upSoldNote": "The unit is sold."
 }

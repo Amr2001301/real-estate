@@ -454,8 +454,20 @@ class _Reservation extends StatelessWidget {
             Icon(Icons.bookmark_border_rounded, color: unitStatusColor(page.unit.status)),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(page.unit.status == 'AVAILABLE' ? l10n.upNoReservation : l10n.upNoActive,
-                  style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+              // A rep sees only their own reservations (the server's scope):
+              // a unit a colleague holds still reads as held, from the unit.
+              child: Text(
+                key: const Key('unit-reservation-note'),
+                switch (page.unit.status) {
+                  'AVAILABLE' => l10n.upNoReservation,
+                  'RESERVED' => page.reservedUntil == null
+                      ? l10n.upReservedNoDate
+                      : l10n.upReservedUntil(DateFormatter.dayMonth(page.reservedUntil!, languageCode: lang)),
+                  'SOLD' => l10n.upSoldNote,
+                  _ => l10n.upNoActive,
+                },
+                style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
+              ),
             ),
           ]),
         ),

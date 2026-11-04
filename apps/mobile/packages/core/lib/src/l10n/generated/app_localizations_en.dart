@@ -6690,4 +6690,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upPerMeter => 'Price per m²';
+
+  @override
+  String upReservedUntil(String date) {
+    return 'The unit is reserved until $date.';
+  }
+
+  @override
+  String get upReservedNoDate => 'The unit is reserved.';
+
+  @override
+  String get upSoldNote => 'The unit is sold.';
 }
