@@ -4941,4 +4941,34 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get companyUnavailableMessage =>
       'الخدمة متوقفة مؤقتًا. حاول مرة أخرى لاحقًا أو تواصل مع الشركة.';
+
+  @override
+  String get pageKindAboutSub => 'تعرّف على الشركة ومشاريعها';
+
+  @override
+  String get pageKindPrivacySub => 'كيف نحافظ على بياناتك';
+
+  @override
+  String get pageKindTermsSub => 'شروط استخدام الخدمة';
+
+  @override
+  String get pageKindPaymentSub => 'طرق وأنظمة السداد المتاحة';
+
+  @override
+  String get pageKindFaqSub => 'إجابات أكثر الأسئلة شيوعًا';
+
+  @override
+  String get pageKindContactSub => 'طرق التواصل مع الشركة';
+
+  @override
+  String get contentContactTitle => 'تواصل معنا';
+
+  @override
+  String get contentContactSub => 'فريقنا جاهز للرد على استفساراتك.';
+
+  @override
+  String get contentContactCall => 'اتصال';
+
+  @override
+  String get contentContactWhatsApp => 'واتساب';
 }

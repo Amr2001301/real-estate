@@ -153,8 +153,32 @@ class _CarouselState extends State<_Carousel> {
   }
 }
 
+const _navyDeep = Color(0xFF0B1726);
+const _navyLight = Color(0xFF243F62);
+
+IconData _kindIcon(PageKind k) => switch (k) {
+      PageKind.about => Icons.info_outline_rounded,
+      PageKind.privacy => Icons.verified_user_outlined,
+      PageKind.terms => Icons.gavel_rounded,
+      PageKind.payment => Icons.payments_outlined,
+      PageKind.faq => Icons.help_outline_rounded,
+      PageKind.contact => Icons.support_agent_rounded,
+      PageKind.other => Icons.article_outlined,
+    };
+
+String? _kindSubtitle(AppLocalizations l10n, PageKind k) => switch (k) {
+      PageKind.about => l10n.pageKindAboutSub,
+      PageKind.privacy => l10n.pageKindPrivacySub,
+      PageKind.terms => l10n.pageKindTermsSub,
+      PageKind.payment => l10n.pageKindPaymentSub,
+      PageKind.faq => l10n.pageKindFaqSub,
+      PageKind.contact => l10n.pageKindContactSub,
+      PageKind.other => null,
+    };
+
 /// CMS1 — the company's published pages (about, terms…), as in the
-/// website's footer. Nothing when there are none.
+/// website's footer, in the same card as «خدمات العميل»: each page with its
+/// own icon and a line saying what it is. Nothing when there are none.
 class CompanyPagesCard extends StatelessWidget {
   const CompanyPagesCard({super.key, this.title});
 
@@ -173,20 +197,22 @@ class CompanyPagesCard extends StatelessWidget {
           final pages = state.data ?? const <ContentPage>[];
           if (pages.isEmpty) return const SizedBox.shrink();
           final c = context.appColors;
-          final lang = Localizations.localeOf(context).languageCode;
           return Column(
             key: const Key('company-pages'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (title != null) ...[
-                Text(title!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: c.inkMuted)),
+                _GoldLabel(title: title!),
                 const SizedBox(height: AppSpacing.sm),
               ],
               Container(
                 decoration: BoxDecoration(
                   color: c.surface,
-                  borderRadius: BorderRadius.circular(AppRadii.lg),
-                  border: Border.all(color: c.hairline.withValues(alpha: 0.6)),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: c.hairline.withValues(alpha: 0.45)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4)),
+                  ],
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Material(
@@ -194,18 +220,12 @@ class CompanyPagesCard extends StatelessWidget {
                   child: Column(
                     children: [
                       for (var i = 0; i < pages.length; i++) ...[
-                        if (i > 0) Divider(height: 1, indent: AppSpacing.md, endIndent: AppSpacing.md, color: c.hairline),
-                        ListTile(
-                          key: ValueKey('page-${pages[i].slug}'),
-                          leading: Icon(Icons.article_outlined, color: AppPalette.gold500),
-                          title: Text(
-                            pages[i].title.resolve(lang),
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.inkStrong),
+                        if (i > 0)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            child: Divider(height: 1, color: c.hairline),
                           ),
-                          // Mirrors itself in Arabic.
-                          trailing: Icon(Icons.chevron_right_rounded, color: c.inkMuted),
-                          onTap: () => context.push('/pages/${pages[i].slug}'),
-                        ),
+                        _PageRow(page: pages[i], navy: i.isEven),
                       ],
                     ],
                   ),
@@ -219,7 +239,103 @@ class CompanyPagesCard extends StatelessWidget {
   }
 }
 
-/// One published page: its title and paragraphs.
+class _GoldLabel extends StatelessWidget {
+  const _GoldLabel({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppPalette.gold300, AppPalette.gold500],
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: c.inkStrong, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageRow extends StatelessWidget {
+  const _PageRow({required this.page, required this.navy});
+  final ContentPage page;
+  final bool navy;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    final kind = pageKindOf(page);
+    final subtitle = _kindSubtitle(context.l10n, kind);
+    return InkWell(
+      key: ValueKey('page-${page.slug}'),
+      onTap: () => context.push('/pages/${page.slug}'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: navy
+                    ? const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                    : const LinearGradient(colors: [Color(0xFFC8A24B), AppPalette.gold500], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(_kindIcon(kind), size: 21, color: navy ? AppPalette.gold300 : _navyDeep),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    page.title.resolve(lang),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(color: c.inkStrong, fontWeight: FontWeight.w800),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(color: c.inkMuted),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400.withValues(alpha: 0.7)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One published page: the company's header (logo, name, the page's title),
+/// the body as headings, lists and paragraphs in a reading card, then a
+/// way to reach the company.
 class ContentPageScreen extends StatelessWidget {
   const ContentPageScreen({super.key, required this.slug});
   final String slug;
@@ -233,49 +349,200 @@ class ContentPageScreen extends StatelessWidget {
         builder: (context, state) {
           final lang = Localizations.localeOf(context).languageCode;
           final page = state.data;
-          final c = context.appColors;
+          final company = companyBrandOf(context).name;
+          final back = NavHeaderAction(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () => context.canPop() ? context.pop() : context.go('/home'),
+          );
           return Scaffold(
-            body: Column(
-              children: [
-                AppNavHeader(
-                  title: page?.title.resolve(lang) ?? '',
-                  compact: true,
-                  leadingAction: NavHeaderAction(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-                  ),
+            body: switch (state.status) {
+              DataStatus.initial || DataStatus.loading => Column(
+                  children: [
+                    AppNavHeader(title: '', compact: true, leadingAction: back),
+                    const Expanded(child: Center(child: CircularProgressIndicator())),
+                  ],
                 ),
-                Expanded(
-                  child: switch (state.status) {
-                    DataStatus.initial || DataStatus.loading => const Center(child: CircularProgressIndicator()),
-                    DataStatus.failure => ErrorState(
-                        failure: state.failure,
-                        onRetry: context.read<LoadCubit<ContentPage>>().load,
-                      ),
-                    _ => ListView(
-                        key: const Key('content-page'),
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.lg,
-                          AppSpacing.lg,
-                          MediaQuery.paddingOf(context).bottom + AppSpacing.xl,
-                        ),
-                        children: [
-                          for (final p in paragraphsOf(page!.body.resolve(lang)))
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                              child: Text(p, style: TextStyle(fontSize: 15, height: 1.8, color: c.ink)),
-                            ),
-                          if (paragraphsOf(page.body.resolve(lang)).isEmpty)
-                            Text(l10n.contentPageEmpty, style: TextStyle(fontSize: 14, color: c.inkMuted)),
-                        ],
-                      ),
-                  },
+              DataStatus.failure => Column(
+                  children: [
+                    AppNavHeader(title: '', compact: true, leadingAction: back),
+                    Expanded(
+                      child: ErrorState(failure: state.failure, onRetry: context.read<LoadCubit<ContentPage>>().load),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              _ => ListView(
+                  key: const Key('content-page'),
+                  padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + AppSpacing.xl),
+                  children: [
+                    AppNavHeader(
+                      title: page!.title.resolve(lang),
+                      subtitle: company,
+                      leadingAction: back,
+                      avatarWidget: const BrandMark(size: 52),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+                      child: _PageBody(blocks: blocksOf(page.body.resolve(lang)), emptyText: l10n.contentPageEmpty),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+                      child: _ContactCard(),
+                    ),
+                  ],
+                ),
+            },
           );
         },
+      ),
+    );
+  }
+}
+
+class _PageBody extends StatelessWidget {
+  const _PageBody({required this.blocks, required this.emptyText});
+  final List<PageBlock> blocks;
+  final String emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    final body = TextStyle(fontSize: 15, height: 1.9, color: c.ink);
+    final children = <Widget>[];
+    for (final b in blocks) {
+      if (children.isNotEmpty) children.add(const SizedBox(height: AppSpacing.md));
+      children.add(switch (b) {
+        PageHeading(:final text) => Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: _GoldLabel(title: text),
+          ),
+        PageBullets(:final items) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 11),
+                        child: Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(child: Text(item, style: body)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        PageParagraph(:final text) => Text(text, style: body),
+      });
+    }
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.hairline.withValues(alpha: 0.45)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
+      child: blocks.isEmpty
+          ? Text(emptyText, style: TextStyle(fontSize: 14, color: c.inkMuted))
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    );
+  }
+}
+
+/// The company's phone and WhatsApp, from its branding (as its website shows
+/// them), or the build's numbers. Nothing when it has neither.
+class _ContactCard extends StatelessWidget {
+  const _ContactCard();
+
+  @override
+  Widget build(BuildContext context) {
+    BrandTokens? tokens;
+    try {
+      tokens = context.watch<BrandingCubit>().state;
+    } catch (_) {}
+    EnvConfig? env;
+    try {
+      env = EnvConfig.current;
+    } catch (_) {
+      // Not set up (tests): the company's branding alone decides.
+    }
+    String? pick(String? a, String? b) =>
+        (a != null && a.trim().isNotEmpty) ? a.trim() : ((b == null || b.isEmpty) ? null : b);
+    final phone = pick(tokens?.contactPhone, env?.contactPhone);
+    final whatsapp = pick(tokens?.contactWhatsApp, env?.whatsappNumber);
+    if (phone == null && whatsapp == null) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final c = context.appColors;
+    return Container(
+      key: const Key('content-contact'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.45)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.support_agent_rounded, size: 20, color: AppPalette.gold300),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.contentContactTitle,
+                        style: theme.textTheme.titleMedium?.copyWith(color: c.inkStrong, fontWeight: FontWeight.w800)),
+                    Text(l10n.contentContactSub, style: theme.textTheme.bodySmall?.copyWith(color: c.inkMuted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              if (phone != null)
+                Expanded(
+                  child: AppButton(
+                    label: l10n.contentContactCall,
+                    icon: Icons.call_rounded,
+                    variant: AppButtonVariant.gold,
+                    onPressed: () => ContactActions.call(phone),
+                  ),
+                ),
+              if (phone != null && whatsapp != null) const SizedBox(width: AppSpacing.sm),
+              if (whatsapp != null)
+                Expanded(
+                  child: AppButton(
+                    label: l10n.contentContactWhatsApp,
+                    icon: Icons.chat_rounded,
+                    variant: AppButtonVariant.outline,
+                    onPressed: () => ContactActions.whatsApp(number: whatsapp),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

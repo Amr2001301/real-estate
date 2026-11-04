@@ -4985,4 +4985,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get companyUnavailableMessage =>
       'The service is paused for now. Try again later or contact the company.';
+
+  @override
+  String get pageKindAboutSub => 'Get to know the company and its projects';
+
+  @override
+  String get pageKindPrivacySub => 'How we look after your data';
+
+  @override
+  String get pageKindTermsSub => 'The terms of using the service';
+
+  @override
+  String get pageKindPaymentSub => 'The payment plans and methods on offer';
+
+  @override
+  String get pageKindFaqSub => 'Answers to the most common questions';
+
+  @override
+  String get pageKindContactSub => 'Ways to reach the company';
+
+  @override
+  String get contentContactTitle => 'Contact us';
+
+  @override
+  String get contentContactSub => 'Our team is ready to answer your questions.';
+
+  @override
+  String get contentContactCall => 'Call';
+
+  @override
+  String get contentContactWhatsApp => 'WhatsApp';
 }

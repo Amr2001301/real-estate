@@ -1692,5 +1692,15 @@
   "pageNoAccessTitle": "هذه الصفحة غير متاحة لحسابك",
   "pageNoAccessMessage": "اطلب من مدير النظام في شركتك صلاحية الوصول إليها.",
   "companyUnavailableTitle": "التطبيق غير متاح حاليًا",
-  "companyUnavailableMessage": "الخدمة متوقفة مؤقتًا. حاول مرة أخرى لاحقًا أو تواصل مع الشركة."
+  "companyUnavailableMessage": "الخدمة متوقفة مؤقتًا. حاول مرة أخرى لاحقًا أو تواصل مع الشركة.",
+  "pageKindAboutSub": "تعرّف على الشركة ومشاريعها",
+  "pageKindPrivacySub": "كيف نحافظ على بياناتك",
+  "pageKindTermsSub": "شروط استخدام الخدمة",
+  "pageKindPaymentSub": "طرق وأنظمة السداد المتاحة",
+  "pageKindFaqSub": "إجابات أكثر الأسئلة شيوعًا",
+  "pageKindContactSub": "طرق التواصل مع الشركة",
+  "contentContactTitle": "تواصل معنا",
+  "contentContactSub": "فريقنا جاهز للرد على استفساراتك.",
+  "contentContactCall": "اتصال",
+  "contentContactWhatsApp": "واتساب"
 }
