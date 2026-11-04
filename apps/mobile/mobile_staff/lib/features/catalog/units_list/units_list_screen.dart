@@ -113,37 +113,37 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
                       ]),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 0),
-                      child: Wrap(spacing: 8, runSpacing: 8, children: [
-                        _FilterChip(
-                          key: const Key('units-filter-project'),
-                          icon: Icons.apartment_rounded,
-                          label: state.projectName(q.projectId) ?? l10n.cuAllProjects,
-                          on: q.projectId != null,
-                          onTap: _filters,
-                        ),
-                        _FilterChip(
-                          icon: Icons.bed_rounded,
-                          label: q.bedrooms == null ? l10n.cuRooms : l10n.cuRoomsN(q.bedrooms!),
-                          on: q.bedrooms != null,
-                          onTap: _filters,
-                        ),
-                        _FilterChip(
-                          icon: Icons.payments_rounded,
-                          label: q.priceMin == null && q.priceMax == null
-                              ? l10n.cuPrice
-                              : [
-                                  if (q.priceMin != null) '${l10n.cuPriceFrom} ${homeCompactText(q.priceMin!, l10n)}',
-                                  if (q.priceMax != null) '${l10n.cuPriceTo} ${homeCompactText(q.priceMax!, l10n)}',
-                                ].join(' '),
-                          on: q.priceMin != null || q.priceMax != null,
-                          onTap: _filters,
-                        ),
-                      ]),
+                  // Only what is picked in the filter sheet, each with ✕ to drop it.
+                  if (q.advanced)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 0),
+                        child: Wrap(spacing: 8, runSpacing: 8, children: [
+                          if (q.projectId != null)
+                            _ActiveChip(
+                              key: const Key('units-chip-project'),
+                              icon: Icons.apartment_rounded,
+                              label: state.projectName(q.projectId) ?? l10n.cuProject,
+                              onRemove: () => cubit.apply(q.without(project: true)),
+                            ),
+                          if (q.bedrooms != null)
+                            _ActiveChip(
+                              icon: Icons.bed_rounded,
+                              label: l10n.cuRoomsN(q.bedrooms!),
+                              onRemove: () => cubit.apply(q.without(bedrooms: true)),
+                            ),
+                          if (q.priceMin != null || q.priceMax != null)
+                            _ActiveChip(
+                              icon: Icons.payments_rounded,
+                              label: [
+                                if (q.priceMin != null) '${l10n.cuPriceFrom} ${homeCompactText(q.priceMin!, l10n)}',
+                                if (q.priceMax != null) '${l10n.cuPriceTo} ${homeCompactText(q.priceMax!, l10n)}',
+                              ].join(' '),
+                              onRemove: () => cubit.apply(q.without(price: true)),
+                            ),
+                        ]),
+                      ),
                     ),
-                  ),
                   ..._body(context, state),
                   if (state.loadingMore)
                     const SliverToBoxAdapter(
@@ -215,35 +215,23 @@ class _Figures extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({super.key, required this.icon, required this.label, required this.on, required this.onTap});
+class _ActiveChip extends StatelessWidget {
+  const _ActiveChip({super.key, required this.icon, required this.label, required this.onRemove});
   final IconData icon;
   final String label;
-  final bool on;
-  final VoidCallback onTap;
+  final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: on ? AppPalette.gold50 : colors.surface,
-      shape: StadiumBorder(side: BorderSide(color: on ? AppPalette.gold300 : colors.hairline)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 16, color: AppPalette.gold500),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkStrong)),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more_rounded, size: 16, color: colors.inkMuted),
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => InputChip(
+        avatar: Icon(icon, size: 16, color: AppPalette.gold500),
+        label: Text(label),
+        labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appColors.inkStrong),
+        backgroundColor: AppPalette.gold50,
+        side: const BorderSide(color: AppPalette.gold300),
+        shape: const StadiumBorder(),
+        deleteIcon: const Icon(Icons.close_rounded, size: 16),
+        onDeleted: onRemove,
+      );
 }
 
 /// One unit: the code, status and type; the project and building; the

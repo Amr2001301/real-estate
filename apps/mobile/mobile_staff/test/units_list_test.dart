@@ -105,5 +105,11 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.queries.last.projectId, 'p1');
     expect(repo.queries.last.status, 'AVAILABLE'); // kept
+    // The pick shows as a chip; ✕ drops it.
+    expect(find.byKey(const Key('units-chip-project')), findsOneWidget);
+    await t.tap(find.descendant(of: find.byKey(const Key('units-chip-project')), matching: find.byIcon(Icons.close_rounded)));
+    await t.pumpAndSettle();
+    expect(repo.queries.last.projectId, isNull);
+    expect(find.byKey(const Key('units-chip-project')), findsNothing);
   });
 }

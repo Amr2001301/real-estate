@@ -97,6 +97,16 @@ class UnitsQuery extends Equatable {
   final num? priceMax;
   final String search;
 
+  /// The same query with a filter-sheet choice dropped.
+  UnitsQuery without({bool project = false, bool bedrooms = false, bool price = false}) => UnitsQuery(
+        status: status,
+        search: search,
+        projectId: project ? null : projectId,
+        bedrooms: bedrooms ? null : this.bedrooms,
+        priceMin: price ? null : priceMin,
+        priceMax: price ? null : priceMax,
+      );
+
   bool get advanced => projectId != null || bedrooms != null || priceMin != null || priceMax != null;
 
   Map<String, dynamic> params(int page, int pageSize) => {
