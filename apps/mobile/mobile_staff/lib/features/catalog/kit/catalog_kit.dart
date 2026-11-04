@@ -18,6 +18,17 @@ Color unitStatusColor(String status) => switch (status) {
       _ => const Color(0xFF8A7F70),
     };
 
+/// 5920000 → "5,920,000".
+String catalogGrouped(num v) {
+  final s = v.round().abs().toString();
+  final b = StringBuffer(v < 0 ? '-' : '');
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
+    b.write(s[i]);
+  }
+  return b.toString();
+}
+
 /// The project type's name, as on the website's project form.
 String projectTypeLabel(AppLocalizations l10n, String? type) => switch (type) {
       'RESIDENTIAL' => l10n.cpTypeResidential,

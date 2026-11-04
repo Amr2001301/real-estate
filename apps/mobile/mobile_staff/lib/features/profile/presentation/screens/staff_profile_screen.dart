@@ -743,6 +743,13 @@ class _StaffOperationsCard extends StatelessWidget {
         onTap: () => context.push('/projects'),
       ),
       _SItem(
+        icon: Icons.door_front_door_rounded,
+        label: l10n.navUnits,
+        subtitle: l10n.cuProfileDesc,
+        navyStyle: true,
+        onTap: () => context.push('/units'),
+      ),
+      _SItem(
         icon: Icons.calculate_rounded,
         label: l10n.planTemplatesTitle,
         subtitle: l10n.staffMyCalculatorDesc,

@@ -91,6 +91,8 @@ import '../features/catalog/presentation/cubit/staff_unit_detail_cubit.dart';
 import '../features/catalog/presentation/screens/staff_project_detail_screen.dart';
 import '../features/catalog/projects_list/projects_list_data.dart';
 import '../features/catalog/projects_list/projects_list_screen.dart';
+import '../features/catalog/units_list/units_list_data.dart';
+import '../features/catalog/units_list/units_list_screen.dart';
 import '../features/catalog/presentation/screens/staff_unit_detail_screen.dart';
 import '../features/clients/domain/entities/staff_client.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
@@ -598,6 +600,17 @@ GoRouter createStaffRouter(
             child: StaffProjectDetailScreen(fallback: project),
           );
         },
+      ),
+      // ── Units list (?projectId= narrows it to a project) ─────────────────
+      GoRoute(
+        path: '/units',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => UnitsListCubit(
+            UnitsListRepository(ctx.read<Dio>()),
+            projectId: state.uri.queryParameters['projectId'],
+          ),
+          child: const UnitsListScreen(),
+        ),
       ),
       GoRoute(
         path: '/units/:id',

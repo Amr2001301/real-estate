@@ -58,6 +58,14 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
                       title: l10n.navProjects,
                       subtitle: d == null ? null : l10n.cpCountN(d.projects),
                       back: Navigator.of(context).canPop(),
+                      actions: [
+                        HomeHeroButton(
+                          key: const Key('projects-units'),
+                          icon: Icons.door_front_door_rounded,
+                          tooltip: l10n.cuAllUnits,
+                          onTap: () => context.push('/units'),
+                        ),
+                      ],
                       bottom: HomeSearchField(
                         controller: _search,
                         hint: l10n.cpSearchHint,

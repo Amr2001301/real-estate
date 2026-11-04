@@ -11629,6 +11629,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mixed use'**
   String get cpTypeMixedUse;
+
+  /// No description provided for @cuCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{1 unit} other{{n} units}}'**
+  String cuCountN(int n);
+
+  /// No description provided for @cuSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by unit code'**
+  String get cuSearchHint;
+
+  /// No description provided for @cuReservedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} reserved'**
+  String cuReservedN(int n);
+
+  /// No description provided for @cuAllProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'All projects'**
+  String get cuAllProjects;
+
+  /// No description provided for @cuRooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms'**
+  String get cuRooms;
+
+  /// No description provided for @cuPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get cuPrice;
+
+  /// No description provided for @cuRoomsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No rooms} =1{1 room} other{{n} rooms}}'**
+  String cuRoomsN(int n);
+
+  /// No description provided for @cuFloorN.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor {n}'**
+  String cuFloorN(String n);
+
+  /// No description provided for @cuGroundFloor.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground floor'**
+  String get cuGroundFloor;
+
+  /// No description provided for @cuReservedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved until {date}'**
+  String cuReservedUntil(String date);
+
+  /// No description provided for @cuEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No units'**
+  String get cuEmpty;
+
+  /// No description provided for @cuEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No units have been added for this company yet.'**
+  String get cuEmptyMessage;
+
+  /// No description provided for @cuNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No units match this choice'**
+  String get cuNoMatch;
+
+  /// No description provided for @cuFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter units'**
+  String get cuFilters;
+
+  /// No description provided for @cuProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get cuProject;
+
+  /// No description provided for @cuPriceFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get cuPriceFrom;
+
+  /// No description provided for @cuPriceTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get cuPriceTo;
+
+  /// No description provided for @cuApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get cuApply;
+
+  /// No description provided for @cuClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get cuClear;
+
+  /// No description provided for @cuAny.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get cuAny;
+
+  /// No description provided for @cuAllUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'All units'**
+  String get cuAllUnits;
+
+  /// No description provided for @cuProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Every unit, with its status and price'**
+  String get cuProfileDesc;
 }
 
 class _AppLocalizationsDelegate

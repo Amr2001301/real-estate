@@ -6428,4 +6428,98 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cpTypeMixedUse => 'متعدد الاستخدامات';
+
+  @override
+  String cuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة',
+      few: '$n وحدات',
+      two: 'وحدتان',
+      one: 'وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuSearchHint => 'ابحث بكود الوحدة';
+
+  @override
+  String cuReservedN(int n) {
+    return '$n محجوزة';
+  }
+
+  @override
+  String get cuAllProjects => 'كل المشاريع';
+
+  @override
+  String get cuRooms => 'الغرف';
+
+  @override
+  String get cuPrice => 'السعر';
+
+  @override
+  String cuRoomsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n غرفة',
+      few: '$n غرف',
+      two: 'غرفتان',
+      one: 'غرفة',
+      zero: 'بلا غرف',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuFloorN(String n) {
+    return 'الدور $n';
+  }
+
+  @override
+  String get cuGroundFloor => 'الدور الأرضي';
+
+  @override
+  String cuReservedUntil(String date) {
+    return 'محجوزة حتى $date';
+  }
+
+  @override
+  String get cuEmpty => 'لا توجد وحدات';
+
+  @override
+  String get cuEmptyMessage => 'لم تُضَف وحدات لهذه الشركة بعد.';
+
+  @override
+  String get cuNoMatch => 'لا توجد وحدات بهذا الاختيار';
+
+  @override
+  String get cuFilters => 'تصفية الوحدات';
+
+  @override
+  String get cuProject => 'المشروع';
+
+  @override
+  String get cuPriceFrom => 'من';
+
+  @override
+  String get cuPriceTo => 'إلى';
+
+  @override
+  String get cuApply => 'تطبيق';
+
+  @override
+  String get cuClear => 'مسح الكل';
+
+  @override
+  String get cuAny => 'الكل';
+
+  @override
+  String get cuAllUnits => 'كل الوحدات';
+
+  @override
+  String get cuProfileDesc => 'كل وحدات الشركة بحالتها وسعرها';
 }

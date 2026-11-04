@@ -6435,4 +6435,94 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cpTypeMixedUse => 'Mixed use';
+
+  @override
+  String cuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+      zero: 'No units',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuSearchHint => 'Search by unit code';
+
+  @override
+  String cuReservedN(int n) {
+    return '$n reserved';
+  }
+
+  @override
+  String get cuAllProjects => 'All projects';
+
+  @override
+  String get cuRooms => 'Rooms';
+
+  @override
+  String get cuPrice => 'Price';
+
+  @override
+  String cuRoomsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n rooms',
+      one: '1 room',
+      zero: 'No rooms',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuFloorN(String n) {
+    return 'Floor $n';
+  }
+
+  @override
+  String get cuGroundFloor => 'Ground floor';
+
+  @override
+  String cuReservedUntil(String date) {
+    return 'Reserved until $date';
+  }
+
+  @override
+  String get cuEmpty => 'No units';
+
+  @override
+  String get cuEmptyMessage => 'No units have been added for this company yet.';
+
+  @override
+  String get cuNoMatch => 'No units match this choice';
+
+  @override
+  String get cuFilters => 'Filter units';
+
+  @override
+  String get cuProject => 'Project';
+
+  @override
+  String get cuPriceFrom => 'From';
+
+  @override
+  String get cuPriceTo => 'To';
+
+  @override
+  String get cuApply => 'Apply';
+
+  @override
+  String get cuClear => 'Clear all';
+
+  @override
+  String get cuAny => 'All';
+
+  @override
+  String get cuAllUnits => 'All units';
+
+  @override
+  String get cuProfileDesc => 'Every unit, with its status and price';
 }

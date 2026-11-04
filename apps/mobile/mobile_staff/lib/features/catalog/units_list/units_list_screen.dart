@@ -1,0 +1,511 @@
+import 'package:core/core.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../common/catalog_status_label.dart';
+import '../../../common/staff_list_skeleton.dart';
+import '../../../common/staff_share.dart';
+import '../../dashboard/home_kit/home_kit.dart';
+import '../kit/catalog_kit.dart';
+import 'units_list_data.dart';
+
+/// The units list (owner-approved design, 2026-11-04), as the website's
+/// units page: the inventory value, the free and the sold units over the
+/// whole portfolio; filters by status, project, rooms and price; and the
+/// units one under another.
+class UnitsListScreen extends StatefulWidget {
+  const UnitsListScreen({super.key});
+
+  @override
+  State<UnitsListScreen> createState() => _UnitsListScreenState();
+}
+
+class _UnitsListScreenState extends State<UnitsListScreen> {
+  final _search = TextEditingController();
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<UnitsListCubit>().load();
+    _scroll.addListener(() {
+      if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) context.read<UnitsListCubit>().loadMore();
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _filters() {
+    final cubit = context.read<UnitsListCubit>();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _FilterSheet(state: cubit.state, onApply: cubit.apply),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final cubit = context.read<UnitsListCubit>();
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocBuilder<UnitsListCubit, UnitsListState>(
+          builder: (context, state) {
+            final s = state.strip;
+            final q = state.query;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                controller: _scroll,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.navUnits,
+                      subtitle: s == null ? null : l10n.cuCountN(s.total),
+                      back: Navigator.of(context).canPop(),
+                      actions: [
+                        HomeHeroButton(
+                          key: const Key('units-filters'),
+                          icon: Icons.tune_rounded,
+                          dot: q.advanced,
+                          tooltip: l10n.cuFilters,
+                          onTap: _filters,
+                        ),
+                      ],
+                      bottom: HomeSearchField(
+                        controller: _search,
+                        hint: l10n.cuSearchHint,
+                        onSubmitted: cubit.setSearch,
+                        onClear: () {
+                          _search.clear();
+                          cubit.setSearch('');
+                        },
+                      ),
+                    ),
+                  ),
+                  if (s != null) SliverToBoxAdapter(child: _Figures(strip: s)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: HomePills(pills: [
+                        HomePill(id: 'all', label: l10n.lvAll, count: s?.total, selected: q.status == null, onTap: () => cubit.setStatus(null)),
+                        for (final (st, n) in [('AVAILABLE', s?.available), ('RESERVED', s?.reserved), ('SOLD', s?.sold)])
+                          HomePill(
+                            id: st,
+                            label: unitStatusLabel(l10n, st),
+                            count: n,
+                            dot: unitStatusColor(st),
+                            selected: q.status == st,
+                            onTap: () => cubit.setStatus(st),
+                          ),
+                      ]),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 0),
+                      child: Wrap(spacing: 8, runSpacing: 8, children: [
+                        _FilterChip(
+                          key: const Key('units-filter-project'),
+                          icon: Icons.apartment_rounded,
+                          label: state.projectName(q.projectId) ?? l10n.cuAllProjects,
+                          on: q.projectId != null,
+                          onTap: _filters,
+                        ),
+                        _FilterChip(
+                          icon: Icons.bed_rounded,
+                          label: q.bedrooms == null ? l10n.cuRooms : l10n.cuRoomsN(q.bedrooms!),
+                          on: q.bedrooms != null,
+                          onTap: _filters,
+                        ),
+                        _FilterChip(
+                          icon: Icons.payments_rounded,
+                          label: q.priceMin == null && q.priceMax == null
+                              ? l10n.cuPrice
+                              : [
+                                  if (q.priceMin != null) '${l10n.cuPriceFrom} ${homeCompactText(q.priceMin!, l10n)}',
+                                  if (q.priceMax != null) '${l10n.cuPriceTo} ${homeCompactText(q.priceMax!, l10n)}',
+                                ].join(' '),
+                          on: q.priceMin != null || q.priceMax != null,
+                          onTap: _filters,
+                        ),
+                      ]),
+                    ),
+                  ),
+                  ..._body(context, state),
+                  if (state.loadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(padding: EdgeInsets.all(AppSpacing.md), child: Center(child: CircularProgressIndicator())),
+                    ),
+                  SliverPadding(padding: EdgeInsets.only(bottom: bottomPad + 40)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _body(BuildContext context, UnitsListState state) {
+    final l10n = context.l10n;
+    switch (state.status) {
+      case DataStatus.initial:
+      case DataStatus.loading:
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+      case DataStatus.failure:
+        return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<UnitsListCubit>().load))];
+      case DataStatus.empty:
+        final filtered = state.query.status != null || state.query.advanced || state.query.search.isNotEmpty;
+        return [
+          SliverToBoxAdapter(
+            child: filtered
+                ? EmptyState(icon: Icons.filter_list_off_rounded, title: l10n.cuNoMatch)
+                : EmptyState(icon: Icons.door_front_door_rounded, title: l10n.cuEmpty, message: l10n.cuEmptyMessage),
+          ),
+        ];
+      case DataStatus.success:
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+            sliver: SliverList.separated(
+              itemCount: state.rows.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, i) => UnitCard(row: state.rows[i]),
+            ),
+          ),
+        ];
+    }
+  }
+}
+
+class _Figures extends StatelessWidget {
+  const _Figures({required this.strip});
+  final UnitsStrip strip;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (value, unit) = homeCompact(strip.value, l10n);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+      child: HomeBand(figures: [
+        HomeFigure(
+          id: 'inventory',
+          value: value,
+          label: unit.isEmpty ? l10n.cpInventory : l10n.cpInventoryIn(unit),
+          hint: l10n.cuCountN(strip.total),
+        ),
+        HomeFigure(id: 'available', value: '${strip.available}', label: l10n.unitStatusAvailable, hint: l10n.cpOfUnitsN(strip.total)),
+        HomeFigure(id: 'sold', value: '${strip.sold}', label: l10n.unitStatusSold, hint: l10n.cuReservedN(strip.reserved)),
+      ]),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({super.key, required this.icon, required this.label, required this.on, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: on ? AppPalette.gold50 : colors.surface,
+      shape: StadiumBorder(side: BorderSide(color: on ? AppPalette.gold300 : colors.hairline)),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 16, color: AppPalette.gold500),
+            const SizedBox(width: 5),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+            const SizedBox(width: 2),
+            Icon(Icons.expand_more_rounded, size: 16, color: colors.inkMuted),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// One unit: the code, status and type; the project and building; the
+/// area, rooms, bathrooms and floor; when a reservation lapses; and the
+/// price with the calculator and sharing.
+class UnitCard extends StatelessWidget {
+  const UnitCard({super.key, required this.row});
+  final CatalogUnitRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final color = unitStatusColor(row.status);
+    final where = [if ((row.projectName ?? '').isNotEmpty) row.projectName!, if ((row.buildingName ?? '').isNotEmpty) row.buildingName!].join(' · ');
+    String num0(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+    final specs = <(IconData, String)>[
+      if (row.area != null) (Icons.straighten_rounded, l10n.unitAreaValue(num0(row.area!))),
+      if (row.bedrooms != null) (Icons.bed_rounded, l10n.cuRoomsN(row.bedrooms!)),
+      if (row.bathrooms != null) (Icons.bathtub_rounded, ltr('${row.bathrooms}')),
+      if (row.floor != null) (Icons.stairs_rounded, row.floor == 0 ? l10n.cuGroundFloor : l10n.cuFloorN(ltr('${row.floor}'))),
+    ];
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: Key('unit-card-${row.id}'),
+        onTap: () => context.push('/units/${row.id}'),
+        child: DecoratedBox(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Stack(clipBehavior: Clip.none, children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
+                    child: const Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
+                  ),
+                  PositionedDirectional(
+                    bottom: -3,
+                    end: -3,
+                    child: Container(
+                      width: 13,
+                      height: 13,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: colors.surface, width: 2.5)),
+                    ),
+                  ),
+                ]),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(ltr(row.code), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(16, colors.inkStrong)),
+                        ),
+                      ),
+                      CatalogBadge.status(unitStatusLabel(l10n, row.status), color),
+                    ]),
+                    if ((row.typeName ?? '').isNotEmpty)
+                      Text(row.typeName!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                    if (where.isNotEmpty)
+                      Row(children: [
+                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        ),
+                      ]),
+                  ]),
+                ),
+              ]),
+            ),
+            if (specs.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final (icon, text) in specs)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(icon, size: 13, color: AppPalette.gold500),
+                        const SizedBox(width: 4),
+                        Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                      ]),
+                    ),
+                ]),
+              ),
+            if (row.reservedUntil != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(color: const Color(0xFFFFF6E6), borderRadius: BorderRadius.circular(10)),
+                child: Row(children: [
+                  const Icon(Icons.timer_rounded, size: 14, color: Color(0xFF8A5A12)),
+                  const SizedBox(width: 4),
+                  Text(l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
+                      key: Key('unit-reserved-${row.id}'), style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A5A12))),
+                ]),
+              ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft.withValues(alpha: 0.6),
+                border: Border(top: BorderSide(color: colors.hairline)),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(l10n.cuPrice, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    if (row.price != null)
+                      Text.rich(TextSpan(children: [
+                        TextSpan(
+                          text: ltr(catalogGrouped(row.price!)),
+                          style: homeDisplay(18, AppPalette.gold600),
+                        ),
+                        TextSpan(text: ' ${PriceFormatter.symbol(lang)}', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      ]))
+                    else
+                      Text(l10n.priceOnRequest, style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+                  ]),
+                ),
+                _RoundAction(
+                  key: Key('unit-calc-${row.id}'),
+                  icon: Icons.calculate_rounded,
+                  onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
+                ),
+                const SizedBox(width: 6),
+                _RoundAction(
+                  icon: Icons.ios_share_rounded,
+                  onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({super.key, required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppPalette.navy.withValues(alpha: 0.08),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 18, color: AppPalette.navy)),
+        ),
+      );
+}
+
+/// The project, the rooms and the price range, as the website's filters.
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.state, required this.onApply});
+  final UnitsListState state;
+  final Future<void> Function(UnitsQuery) onApply;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late String? _project = widget.state.query.projectId;
+  late int? _rooms = widget.state.query.bedrooms;
+  late final _min = TextEditingController(text: widget.state.query.priceMin?.toString() ?? '');
+  late final _max = TextEditingController(text: widget.state.query.priceMax?.toString() ?? '');
+
+  @override
+  void dispose() {
+    _min.dispose();
+    _max.dispose();
+    super.dispose();
+  }
+
+  Widget _choice(String label, bool on, VoidCallback onTap, {Key? key}) => ChoiceChip(
+        key: key,
+        label: Text(label),
+        selected: on,
+        onSelected: (_) => setState(onTap),
+        selectedColor: AppPalette.navy,
+        labelStyle: TextStyle(color: on ? Colors.white : context.appColors.inkStrong, fontWeight: FontWeight.w600),
+        showCheckmark: false,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final q = widget.state.query;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+      child: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(l10n.cuFilters, style: homeDisplay(18, context.appColors.inkStrong)),
+          const SizedBox(height: 14),
+          Text(l10n.cuProject, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _choice(l10n.cuAllProjects, _project == null, () => _project = null),
+            for (final (id, name) in widget.state.projects)
+              _choice(name, _project == id, () => _project = id, key: Key('units-project-$id')),
+          ]),
+          const SizedBox(height: 16),
+          Text(l10n.cuRooms, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, children: [
+            _choice(l10n.cuAny, _rooms == null, () => _rooms = null),
+            for (final n in [1, 2, 3, 4, 5]) _choice(ltr('$n'), _rooms == n, () => _rooms = n),
+          ]),
+          const SizedBox(height: 16),
+          Text(l10n.cuPrice, style: const TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: TextField(controller: _min, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.cuPriceFrom)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(controller: _max, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.cuPriceTo)),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          Row(children: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onApply(UnitsQuery(status: q.status, search: q.search));
+              },
+              child: Text(l10n.cuClear),
+            ),
+            const Spacer(),
+            FilledButton(
+              key: const Key('units-apply'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                widget.onApply(UnitsQuery(
+                  status: q.status,
+                  search: q.search,
+                  projectId: _project,
+                  bedrooms: _rooms,
+                  priceMin: num.tryParse(_min.text.trim()),
+                  priceMax: num.tryParse(_max.text.trim()),
+                ));
+              },
+              child: Text(l10n.cuApply),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
