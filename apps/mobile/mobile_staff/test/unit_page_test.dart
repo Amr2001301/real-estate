@@ -55,6 +55,15 @@ class _Repo implements UnitPageRepository {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
+/// The server shows a rep only their own reservations.
+class _NoReservations implements UnitPageRepository {
+  @override
+  Future<Result<UnitPage>> load(String id) async =>
+      Ok(UnitPage.parse({..._unit('RESERVED'), 'reservationExpiresAt': '2026-11-14T09:02:32Z'}, reservations: const []));
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 Future<void> _pump(WidgetTester t, String status) async {
   t.view.physicalSize = const Size(390 * 3, 3200 * 3);
   t.view.devicePixelRatio = 3;
@@ -99,6 +108,29 @@ void main() {
     expect(find.text('شريف إبراهيم'), findsOneWidget);
     expect(find.text('عمارة 2'), findsOneWidget);
     expect(find.byKey(const Key('unit-reserve')), findsNothing);
+  });
+
+  testWidgets('a rep who cannot see a colleague\'s reservation still sees the unit is held', (t) async {
+    t.view.physicalSize = const Size(390 * 3, 3200 * 3);
+    t.view.devicePixelRatio = 3;
+    addTearDown(t.view.reset);
+    final cubit = UnitPageCubit(_NoReservations(), unitId: 'u1');
+    addTearDown(cubit.close);
+    await t.pumpWidget(BlocProvider.value(
+      value: cubit,
+      child: MaterialApp(
+        theme: ThemeData(extensions: [AppColorsExt.resolve(Brightness.light)]),
+        locale: const Locale('ar'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const UnitPageScreen(),
+      ),
+    ));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('unit-active-reservation')), findsNothing);
+    expect(find.textContaining('الوحدة محجوزة حتى'), findsOneWidget);
+    expect(find.textContaining('لا يوجد حجز نشط'), findsNothing);
   });
 
   testWidgets('a free unit has the one booking button at the bottom', (t) async {

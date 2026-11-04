@@ -56,6 +56,7 @@ class UnitPage extends Equatable {
     this.buildingName,
     this.updatedAt,
     this.pricePerMeter,
+    this.reservedUntil,
     this.history = const [],
     this.reservations = const [],
   });
@@ -66,6 +67,10 @@ class UnitPage extends Equatable {
   final String? buildingName;
   final DateTime? updatedAt;
   final double? pricePerMeter;
+
+  /// When the unit's reservation lapses — on the unit itself, so a rep who
+  /// may not see a colleague's reservation still sees that it is held.
+  final DateTime? reservedUntil;
   final List<UnitHistoryRow> history;
   final List<UnitReservationRow> reservations;
 
@@ -83,6 +88,7 @@ class UnitPage extends Equatable {
       buildingName: building?['name'] as String?,
       updatedAt: DateTime.tryParse('${j['updatedAt']}')?.toLocal(),
       pricePerMeter: readAmount(j['pricePerMeter']),
+      reservedUntil: j['status'] == 'RESERVED' ? DateTime.tryParse('${j['reservationExpiresAt']}')?.toLocal() : null,
       history: [
         for (final h in (j['history'] as List?)?.whereType<Map<String, dynamic>>() ?? const <Map<String, dynamic>>[])
           UnitHistoryRow(

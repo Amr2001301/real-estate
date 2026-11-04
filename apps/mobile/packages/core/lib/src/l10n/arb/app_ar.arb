@@ -2232,5 +2232,9 @@
   "upMaintenance": "الصيانة والضمان",
   "upWarrantyUntil": "الضمان حتى {date}",
   "@upWarrantyUntil": {"placeholders": {"date": {"type": "String"}}},
-  "upPerMeter": "سعر المتر"
+  "upPerMeter": "سعر المتر",
+  "upReservedUntil": "الوحدة محجوزة حتى {date}.",
+  "@upReservedUntil": {"placeholders": {"date": {"type": "String"}}},
+  "upReservedNoDate": "الوحدة محجوزة.",
+  "upSoldNote": "الوحدة مباعة."
 }
