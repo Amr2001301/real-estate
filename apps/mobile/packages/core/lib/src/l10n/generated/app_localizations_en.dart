@@ -5689,4 +5689,227 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ahExpected30Sub => 'in the next 30 days';
+
+  @override
+  String get bhSalesVolume => 'Your sales';
+
+  @override
+  String get bhApprovalRate => 'Approval rate';
+
+  @override
+  String get bhMyCommissions => 'Your commissions';
+
+  @override
+  String get bhPaidOut => 'Paid out';
+
+  @override
+  String get bhActCommissions => 'Commissions';
+
+  @override
+  String get bhPerformance => 'Your performance';
+
+  @override
+  String get bhLeadsSent => 'Leads sent';
+
+  @override
+  String bhPendingN(int n) {
+    return '$n under review';
+  }
+
+  @override
+  String get bhNonePending => 'Nothing pending';
+
+  @override
+  String get bhSigned => 'Contracts signed';
+
+  @override
+  String bhOfReservations(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'of $n bookings',
+      one: 'of 1 booking',
+      zero: 'no bookings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhPendingCommission => 'Pending commission';
+
+  @override
+  String bhPendingCommissionUnit(String unit) {
+    return 'Pending commission ($unit)';
+  }
+
+  @override
+  String bhCommissionsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n commissions',
+      one: '1 commission',
+      zero: 'no commissions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhReservations => 'Bookings';
+
+  @override
+  String get bhUnitsForYou => 'Units for you';
+
+  @override
+  String bhInProjects(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'in $n projects',
+      one: 'in 1 project',
+      zero: 'no projects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhPayoutRate => 'Payout rate';
+
+  @override
+  String bhPayoutsPaid(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n payouts paid',
+      one: '1 payout paid',
+      zero: 'no payouts yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhContractRate => 'Closing rate';
+
+  @override
+  String get bhOfBookings => 'of bookings';
+
+  @override
+  String get bhFollow => 'Needs your follow-up';
+
+  @override
+  String get bhAttLeads => 'Leads awaiting the company\'s approval';
+
+  @override
+  String get bhAttReservations => 'Bookings awaiting review';
+
+  @override
+  String get bhRecentLeads => 'Your latest leads';
+
+  @override
+  String get bhSentToday => 'Sent today';
+
+  @override
+  String get bhNoLeads => 'No leads sent yet.';
+
+  @override
+  String get bhFunnel => 'Your funnel';
+
+  @override
+  String get bhStSent => 'Sent';
+
+  @override
+  String get bhStApproved => 'Approved';
+
+  @override
+  String get bhStReservations => 'Bookings';
+
+  @override
+  String get bhStContracts => 'Contracts';
+
+  @override
+  String get bhStPayouts => 'Paid';
+
+  @override
+  String get bhProjects => 'Projects for you';
+
+  @override
+  String bhUnitsAvailable(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units available',
+      one: '1 unit available',
+      zero: 'no units available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhNoProjects => 'No projects for you yet.';
+
+  @override
+  String get bhCompanyLevel => 'Brokerage-wide';
+
+  @override
+  String get bhToday => 'Today';
+
+  @override
+  String get bhYesterday => 'Yesterday';
+
+  @override
+  String get bhNavClients => 'Leads';
+
+  @override
+  String get bhNavAccount => 'Account';
+
+  @override
+  String get bhEvLeadSubmitted => 'Lead sent';
+
+  @override
+  String get bhEvVisitRequested => 'Visit requested';
+
+  @override
+  String get bhEvLeadApproved => 'Lead approved';
+
+  @override
+  String get bhEvLeadRejected => 'Lead rejected';
+
+  @override
+  String get bhEvLeadDuplicate => 'Duplicate lead';
+
+  @override
+  String get bhEvReservationCreated => 'Booking created';
+
+  @override
+  String get bhEvContractCreated => 'Contract created';
+
+  @override
+  String get bhEvContractSigned => 'Contract signed';
+
+  @override
+  String get bhEvCommissionEarned => 'Commission earned';
+
+  @override
+  String get bhEvCommissionApproved => 'Commission approved';
+
+  @override
+  String get bhEvCommissionRejected => 'Commission rejected';
+
+  @override
+  String get bhEvCommissionCancelled => 'Commission cancelled';
+
+  @override
+  String get bhEvPayoutCreated => 'Payout created';
+
+  @override
+  String get bhEvPayoutApproved => 'Payout approved';
+
+  @override
+  String get bhEvPayoutProcessing => 'Payout in progress';
+
+  @override
+  String get bhEvPayoutPaid => 'Payout paid';
+
+  @override
+  String get bhEvPayoutCancelled => 'Payout cancelled';
 }

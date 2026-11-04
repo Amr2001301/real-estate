@@ -5666,4 +5666,237 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ahExpected30Sub => 'خلال 30 يومًا';
+
+  @override
+  String get bhSalesVolume => 'حجم مبيعاتك';
+
+  @override
+  String get bhApprovalRate => 'نسبة القبول';
+
+  @override
+  String get bhMyCommissions => 'عمولاتك';
+
+  @override
+  String get bhPaidOut => 'صُرف منها';
+
+  @override
+  String get bhActCommissions => 'العمولات';
+
+  @override
+  String get bhPerformance => 'أداؤك';
+
+  @override
+  String get bhLeadsSent => 'عملاء مرسلون';
+
+  @override
+  String bhPendingN(int n) {
+    return '$n قيد المراجعة';
+  }
+
+  @override
+  String get bhNonePending => 'لا شيء معلّق';
+
+  @override
+  String get bhSigned => 'عقود موقَّعة';
+
+  @override
+  String bhOfReservations(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'من $n حجزًا',
+      few: 'من $n حجوزات',
+      two: 'من حجزين',
+      one: 'من حجز واحد',
+      zero: 'لا حجوزات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhPendingCommission => 'عمولة معلّقة';
+
+  @override
+  String bhPendingCommissionUnit(String unit) {
+    return 'عمولة معلّقة ($unit)';
+  }
+
+  @override
+  String bhCommissionsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عمولة',
+      few: '$n عمولات',
+      two: 'عمولتان',
+      one: 'عمولة واحدة',
+      zero: 'لا عمولات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhReservations => 'حجوزات';
+
+  @override
+  String get bhUnitsForYou => 'وحدات متاحة لك';
+
+  @override
+  String bhInProjects(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'في $n مشروعًا',
+      few: 'في $n مشاريع',
+      two: 'في مشروعين',
+      one: 'في مشروع واحد',
+      zero: 'لا مشاريع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhPayoutRate => 'نسبة الصرف';
+
+  @override
+  String bhPayoutsPaid(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n دفعة صُرفت',
+      few: '$n دفعات صُرفت',
+      two: 'دفعتان صُرفتا',
+      one: 'دفعة واحدة صُرفت',
+      zero: 'لم تُصرف دفعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhContractRate => 'نسبة التعاقد';
+
+  @override
+  String get bhOfBookings => 'من الحجوزات';
+
+  @override
+  String get bhFollow => 'تحتاج متابعتك';
+
+  @override
+  String get bhAttLeads => 'عملاء ينتظرون موافقة الشركة';
+
+  @override
+  String get bhAttReservations => 'حجوزات تنتظر المراجعة';
+
+  @override
+  String get bhRecentLeads => 'آخر عملائك';
+
+  @override
+  String get bhSentToday => 'أُرسل اليوم';
+
+  @override
+  String get bhNoLeads => 'لم ترسل عملاء بعد.';
+
+  @override
+  String get bhFunnel => 'مسار أدائك';
+
+  @override
+  String get bhStSent => 'مرسلون';
+
+  @override
+  String get bhStApproved => 'مقبولون';
+
+  @override
+  String get bhStReservations => 'حجوزات';
+
+  @override
+  String get bhStContracts => 'عقود';
+
+  @override
+  String get bhStPayouts => 'صرف';
+
+  @override
+  String get bhProjects => 'المشاريع المتاحة لك';
+
+  @override
+  String bhUnitsAvailable(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة متاحة',
+      few: '$n وحدات متاحة',
+      two: 'وحدتان متاحتان',
+      one: 'وحدة واحدة متاحة',
+      zero: 'لا وحدات متاحة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bhNoProjects => 'لا مشاريع متاحة لك بعد.';
+
+  @override
+  String get bhCompanyLevel => 'على مستوى شركة الوساطة';
+
+  @override
+  String get bhToday => 'اليوم';
+
+  @override
+  String get bhYesterday => 'أمس';
+
+  @override
+  String get bhNavClients => 'العملاء';
+
+  @override
+  String get bhNavAccount => 'حسابي';
+
+  @override
+  String get bhEvLeadSubmitted => 'أرسل عميل محتمل';
+
+  @override
+  String get bhEvVisitRequested => 'طلب زيارة';
+
+  @override
+  String get bhEvLeadApproved => 'قُبل عميل محتمل';
+
+  @override
+  String get bhEvLeadRejected => 'رُفض عميل محتمل';
+
+  @override
+  String get bhEvLeadDuplicate => 'عميل محتمل مكرر';
+
+  @override
+  String get bhEvReservationCreated => 'أُنشئ حجز';
+
+  @override
+  String get bhEvContractCreated => 'أُنشئ عقد';
+
+  @override
+  String get bhEvContractSigned => 'وُقِّع عقد';
+
+  @override
+  String get bhEvCommissionEarned => 'استُحقت عمولة';
+
+  @override
+  String get bhEvCommissionApproved => 'اعتُمدت عمولة';
+
+  @override
+  String get bhEvCommissionRejected => 'رُفضت عمولة';
+
+  @override
+  String get bhEvCommissionCancelled => 'أُلغيت عمولة';
+
+  @override
+  String get bhEvPayoutCreated => 'أُنشئت دفعة عمولة';
+
+  @override
+  String get bhEvPayoutApproved => 'اعتُمدت دفعة العمولة';
+
+  @override
+  String get bhEvPayoutProcessing => 'دفعة العمولة قيد التنفيذ';
+
+  @override
+  String get bhEvPayoutPaid => 'صُرفت دفعة العمولة';
+
+  @override
+  String get bhEvPayoutCancelled => 'أُلغيت دفعة العمولة';
 }

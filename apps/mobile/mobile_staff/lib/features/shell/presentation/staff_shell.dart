@@ -151,7 +151,7 @@ class _StaffShellState extends State<StaffShell> {
       return Scaffold(
         extendBody: true,
         body: IndexedStack(index: _index, children: _tabs),
-        bottomNavigationBar: _FloatingNav(
+        bottomNavigationBar: StaffFloatingNav(
           items: items,
           currentIndex: _index,
           onSelect: (i) => setState(() => _index = i),
@@ -170,8 +170,8 @@ class _StaffShellState extends State<StaffShell> {
 }
 
 /// A navy bar floating above the page's bottom edge; the chosen tab in gold.
-class _FloatingNav extends StatelessWidget {
-  const _FloatingNav({required this.items, required this.currentIndex, required this.onSelect});
+class StaffFloatingNav extends StatelessWidget {
+  const StaffFloatingNav({super.key, required this.items, required this.currentIndex, required this.onSelect});
   final List<AppBottomNavItem> items;
   final int currentIndex;
   final ValueChanged<int> onSelect;

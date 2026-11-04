@@ -10399,6 +10399,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'in the next 30 days'**
   String get ahExpected30Sub;
+
+  /// No description provided for @bhSalesVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sales'**
+  String get bhSalesVolume;
+
+  /// No description provided for @bhApprovalRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval rate'**
+  String get bhApprovalRate;
+
+  /// No description provided for @bhMyCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commissions'**
+  String get bhMyCommissions;
+
+  /// No description provided for @bhPaidOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid out'**
+  String get bhPaidOut;
+
+  /// No description provided for @bhActCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions'**
+  String get bhActCommissions;
+
+  /// No description provided for @bhPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Your performance'**
+  String get bhPerformance;
+
+  /// No description provided for @bhLeadsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads sent'**
+  String get bhLeadsSent;
+
+  /// No description provided for @bhPendingN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} under review'**
+  String bhPendingN(int n);
+
+  /// No description provided for @bhNonePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing pending'**
+  String get bhNonePending;
+
+  /// No description provided for @bhSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts signed'**
+  String get bhSigned;
+
+  /// No description provided for @bhOfReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no bookings} =1{of 1 booking} other{of {n} bookings}}'**
+  String bhOfReservations(int n);
+
+  /// No description provided for @bhPendingCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending commission'**
+  String get bhPendingCommission;
+
+  /// No description provided for @bhPendingCommissionUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending commission ({unit})'**
+  String bhPendingCommissionUnit(String unit);
+
+  /// No description provided for @bhCommissionsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no commissions} =1{1 commission} other{{n} commissions}}'**
+  String bhCommissionsN(int n);
+
+  /// No description provided for @bhReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get bhReservations;
+
+  /// No description provided for @bhUnitsForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Units for you'**
+  String get bhUnitsForYou;
+
+  /// No description provided for @bhInProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no projects} =1{in 1 project} other{in {n} projects}}'**
+  String bhInProjects(int n);
+
+  /// No description provided for @bhPayoutRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout rate'**
+  String get bhPayoutRate;
+
+  /// No description provided for @bhPayoutsPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no payouts yet} =1{1 payout paid} other{{n} payouts paid}}'**
+  String bhPayoutsPaid(int n);
+
+  /// No description provided for @bhContractRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Closing rate'**
+  String get bhContractRate;
+
+  /// No description provided for @bhOfBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'of bookings'**
+  String get bhOfBookings;
+
+  /// No description provided for @bhFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your follow-up'**
+  String get bhFollow;
+
+  /// No description provided for @bhAttLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads awaiting the company\'s approval'**
+  String get bhAttLeads;
+
+  /// No description provided for @bhAttReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings awaiting review'**
+  String get bhAttReservations;
+
+  /// No description provided for @bhRecentLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Your latest leads'**
+  String get bhRecentLeads;
+
+  /// No description provided for @bhSentToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent today'**
+  String get bhSentToday;
+
+  /// No description provided for @bhNoLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'No leads sent yet.'**
+  String get bhNoLeads;
+
+  /// No description provided for @bhFunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your funnel'**
+  String get bhFunnel;
+
+  /// No description provided for @bhStSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get bhStSent;
+
+  /// No description provided for @bhStApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get bhStApproved;
+
+  /// No description provided for @bhStReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get bhStReservations;
+
+  /// No description provided for @bhStContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get bhStContracts;
+
+  /// No description provided for @bhStPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bhStPayouts;
+
+  /// No description provided for @bhProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects for you'**
+  String get bhProjects;
+
+  /// No description provided for @bhUnitsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no units available} =1{1 unit available} other{{n} units available}}'**
+  String bhUnitsAvailable(int n);
+
+  /// No description provided for @bhNoProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects for you yet.'**
+  String get bhNoProjects;
+
+  /// No description provided for @bhCompanyLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokerage-wide'**
+  String get bhCompanyLevel;
+
+  /// No description provided for @bhToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get bhToday;
+
+  /// No description provided for @bhYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get bhYesterday;
+
+  /// No description provided for @bhNavClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get bhNavClients;
+
+  /// No description provided for @bhNavAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get bhNavAccount;
+
+  /// No description provided for @bhEvLeadSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead sent'**
+  String get bhEvLeadSubmitted;
+
+  /// No description provided for @bhEvVisitRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit requested'**
+  String get bhEvVisitRequested;
+
+  /// No description provided for @bhEvLeadApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead approved'**
+  String get bhEvLeadApproved;
+
+  /// No description provided for @bhEvLeadRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead rejected'**
+  String get bhEvLeadRejected;
+
+  /// No description provided for @bhEvLeadDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate lead'**
+  String get bhEvLeadDuplicate;
+
+  /// No description provided for @bhEvReservationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking created'**
+  String get bhEvReservationCreated;
+
+  /// No description provided for @bhEvContractCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract created'**
+  String get bhEvContractCreated;
+
+  /// No description provided for @bhEvContractSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract signed'**
+  String get bhEvContractSigned;
+
+  /// No description provided for @bhEvCommissionEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission earned'**
+  String get bhEvCommissionEarned;
+
+  /// No description provided for @bhEvCommissionApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission approved'**
+  String get bhEvCommissionApproved;
+
+  /// No description provided for @bhEvCommissionRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission rejected'**
+  String get bhEvCommissionRejected;
+
+  /// No description provided for @bhEvCommissionCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission cancelled'**
+  String get bhEvCommissionCancelled;
+
+  /// No description provided for @bhEvPayoutCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout created'**
+  String get bhEvPayoutCreated;
+
+  /// No description provided for @bhEvPayoutApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout approved'**
+  String get bhEvPayoutApproved;
+
+  /// No description provided for @bhEvPayoutProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout in progress'**
+  String get bhEvPayoutProcessing;
+
+  /// No description provided for @bhEvPayoutPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout paid'**
+  String get bhEvPayoutPaid;
+
+  /// No description provided for @bhEvPayoutCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout cancelled'**
+  String get bhEvPayoutCancelled;
 }
 
 class _AppLocalizationsDelegate
