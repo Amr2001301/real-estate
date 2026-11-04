@@ -5185,4 +5185,161 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceDoneHome => 'العودة إلى الرئيسية';
+
+  @override
+  String get shGreetMorning => 'صباح الخير،';
+
+  @override
+  String get shGreetEvening => 'مساء الخير،';
+
+  @override
+  String get shGoalTitle => 'هدف الشهر';
+
+  @override
+  String shOfTarget(String target) {
+    return 'من $target';
+  }
+
+  @override
+  String get shOfGoal => 'من الهدف';
+
+  @override
+  String get shGoalUnits => 'الوحدات';
+
+  @override
+  String get shDaysLeftLabel => 'متبقٍّ من الشهر';
+
+  @override
+  String shDaysLeft(int n) {
+    return '$n يومًا';
+  }
+
+  @override
+  String get shNoTarget => 'لم يُحدَّد لك هدف لهذا الشهر بعد.';
+
+  @override
+  String get shActLead => 'عميل محتمل';
+
+  @override
+  String get shActVisit => 'جدولة زيارة';
+
+  @override
+  String get shActReservation => 'حجز جديد';
+
+  @override
+  String get shActCalculator => 'الحاسبة';
+
+  @override
+  String get shFigures => 'أرقامك هذا الشهر';
+
+  @override
+  String get shOpenLeads => 'عملاء مفتوحون';
+
+  @override
+  String shStaleN(int n) {
+    return '$n بلا متابعة';
+  }
+
+  @override
+  String get shAllFollowed => 'الكل متابَع';
+
+  @override
+  String get shUpcomingVisits => 'زيارات قادمة';
+
+  @override
+  String shTodayN(int n) {
+    return '$n اليوم';
+  }
+
+  @override
+  String get shActiveReservations => 'حجوزات نشطة';
+
+  @override
+  String shExpiringN(int n) {
+    return '$n تنتهي قريبًا';
+  }
+
+  @override
+  String get shNoneExpiring => 'لا شيء ينتهي قريبًا';
+
+  @override
+  String get shContractsMonth => 'عقود الشهر';
+
+  @override
+  String shUnitsSoldN(int n) {
+    return '$n وحدة مبيعة';
+  }
+
+  @override
+  String get shRealized => 'قيمة المبيعات';
+
+  @override
+  String get shAvgDeal => 'متوسط الصفقة';
+
+  @override
+  String get shAttention => 'تحتاج انتباهك';
+
+  @override
+  String shAttStale(int n) {
+    return 'عملاء بلا متابعة منذ $n أيام';
+  }
+
+  @override
+  String get shAttLapsing => 'حجوزات تنتهي هذا الأسبوع';
+
+  @override
+  String get shAttUnconfirmed => 'زيارات لم تُؤكَّد بعد';
+
+  @override
+  String get shFollowUps => 'المتابعات';
+
+  @override
+  String get shAll => 'الكل';
+
+  @override
+  String get shOverdue => 'متأخرة';
+
+  @override
+  String get shToday => 'اليوم';
+
+  @override
+  String get shUpcoming => 'قادمة';
+
+  @override
+  String get shNoFollowUps => 'لا توجد متابعات في هذه القائمة.';
+
+  @override
+  String get shAgenda => 'أجندة الأسبوع';
+
+  @override
+  String get shAllAppointments => 'كل المواعيد';
+
+  @override
+  String get shTagVisit => 'زيارة';
+
+  @override
+  String get shTagExpiry => 'انتهاء حجز';
+
+  @override
+  String get shConfirmed => 'مؤكَّدة';
+
+  @override
+  String get shDayEmpty => 'لا توجد مواعيد في هذا اليوم.';
+
+  @override
+  String shNextUp(String when) {
+    return 'التالي: $when';
+  }
+
+  @override
+  String get shPipeline => 'مسار المبيعات';
+
+  @override
+  String get shLeadsLink => 'العملاء';
+
+  @override
+  String get shMillion => 'مليون';
+
+  @override
+  String get shThousand => 'ألف';
 }

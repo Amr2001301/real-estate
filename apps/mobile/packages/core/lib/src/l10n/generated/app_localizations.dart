@@ -9685,6 +9685,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Back to home'**
   String get maintenanceDoneHome;
+
+  /// No description provided for @shGreetMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning,'**
+  String get shGreetMorning;
+
+  /// No description provided for @shGreetEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening,'**
+  String get shGreetEvening;
+
+  /// No description provided for @shGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This month\'s target'**
+  String get shGoalTitle;
+
+  /// No description provided for @shOfTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'of {target}'**
+  String shOfTarget(String target);
+
+  /// No description provided for @shOfGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'of target'**
+  String get shOfGoal;
+
+  /// No description provided for @shGoalUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get shGoalUnits;
+
+  /// No description provided for @shDaysLeftLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Left this month'**
+  String get shDaysLeftLabel;
+
+  /// No description provided for @shDaysLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days'**
+  String shDaysLeft(int n);
+
+  /// No description provided for @shNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target set for you this month yet.'**
+  String get shNoTarget;
+
+  /// No description provided for @shActLead.
+  ///
+  /// In en, this message translates to:
+  /// **'New lead'**
+  String get shActLead;
+
+  /// No description provided for @shActVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule visit'**
+  String get shActVisit;
+
+  /// No description provided for @shActReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'New booking'**
+  String get shActReservation;
+
+  /// No description provided for @shActCalculator.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculator'**
+  String get shActCalculator;
+
+  /// No description provided for @shFigures.
+  ///
+  /// In en, this message translates to:
+  /// **'Your month in numbers'**
+  String get shFigures;
+
+  /// No description provided for @shOpenLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Open leads'**
+  String get shOpenLeads;
+
+  /// No description provided for @shStaleN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} need follow-up'**
+  String shStaleN(int n);
+
+  /// No description provided for @shAllFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'All followed up'**
+  String get shAllFollowed;
+
+  /// No description provided for @shUpcomingVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming visits'**
+  String get shUpcomingVisits;
+
+  /// No description provided for @shTodayN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} today'**
+  String shTodayN(int n);
+
+  /// No description provided for @shActiveReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Active bookings'**
+  String get shActiveReservations;
+
+  /// No description provided for @shExpiringN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} expiring soon'**
+  String shExpiringN(int n);
+
+  /// No description provided for @shNoneExpiring.
+  ///
+  /// In en, this message translates to:
+  /// **'None expiring soon'**
+  String get shNoneExpiring;
+
+  /// No description provided for @shContractsMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts this month'**
+  String get shContractsMonth;
+
+  /// No description provided for @shUnitsSoldN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} units sold'**
+  String shUnitsSoldN(int n);
+
+  /// No description provided for @shRealized.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales value'**
+  String get shRealized;
+
+  /// No description provided for @shAvgDeal.
+  ///
+  /// In en, this message translates to:
+  /// **'Average deal'**
+  String get shAvgDeal;
+
+  /// No description provided for @shAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your attention'**
+  String get shAttention;
+
+  /// No description provided for @shAttStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads with no follow-up for {n} days'**
+  String shAttStale(int n);
+
+  /// No description provided for @shAttLapsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings ending this week'**
+  String get shAttLapsing;
+
+  /// No description provided for @shAttUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits not confirmed yet'**
+  String get shAttUnconfirmed;
+
+  /// No description provided for @shFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get shFollowUps;
+
+  /// No description provided for @shAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get shAll;
+
+  /// No description provided for @shOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get shOverdue;
+
+  /// No description provided for @shToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get shToday;
+
+  /// No description provided for @shUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get shUpcoming;
+
+  /// No description provided for @shNoFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-ups in this list.'**
+  String get shNoFollowUps;
+
+  /// No description provided for @shAgenda.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get shAgenda;
+
+  /// No description provided for @shAllAppointments.
+  ///
+  /// In en, this message translates to:
+  /// **'All appointments'**
+  String get shAllAppointments;
+
+  /// No description provided for @shTagVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get shTagVisit;
+
+  /// No description provided for @shTagExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking ends'**
+  String get shTagExpiry;
+
+  /// No description provided for @shConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get shConfirmed;
+
+  /// No description provided for @shDayEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on this day.'**
+  String get shDayEmpty;
+
+  /// No description provided for @shNextUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {when}'**
+  String shNextUp(String when);
+
+  /// No description provided for @shPipeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales pipeline'**
+  String get shPipeline;
+
+  /// No description provided for @shLeadsLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get shLeadsLink;
+
+  /// No description provided for @shMillion.
+  ///
+  /// In en, this message translates to:
+  /// **'M'**
+  String get shMillion;
+
+  /// No description provided for @shThousand.
+  ///
+  /// In en, this message translates to:
+  /// **'K'**
+  String get shThousand;
 }
 
 class _AppLocalizationsDelegate
