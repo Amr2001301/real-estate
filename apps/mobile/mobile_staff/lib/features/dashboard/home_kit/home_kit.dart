@@ -227,6 +227,211 @@ class HomeHero extends StatelessWidget {
   }
 }
 
+/// The navy header of a list page, in the homes' look: the title and a
+/// count, round actions, and what goes under (a search field, chips).
+class HomeListHero extends StatelessWidget {
+  const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false});
+
+  final String title;
+  final String? subtitle;
+  final List<Widget> actions;
+  final Widget? bottom;
+
+  /// A back button before the title (pages opened from another).
+  final bool back;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppPalette.navy700, AppPalette.navy, Color(0xFF0B1727)],
+          ),
+        ),
+        child: Stack(children: [
+          const Positioned.fill(child: CustomPaint(painter: _HeroPainter())),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, top + 10, 16, 16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [
+                if (back) ...[
+                  HomeHeroButton(icon: Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                      onTap: () => Navigator.of(context).maybePop()),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(22, Colors.white)),
+                    if ((subtitle ?? '').isNotEmpty)
+                      Text(subtitle!, style: const TextStyle(color: AppPalette.gold200, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+                for (final a in actions) ...[const SizedBox(width: 8), a],
+              ]),
+              if (bottom != null) ...[const SizedBox(height: 14), bottom!],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// A round glass button on the navy header; gold when [active].
+class HomeHeroButton extends StatelessWidget {
+  const HomeHeroButton({super.key, required this.icon, required this.onTap, this.active = false, this.tooltip, this.dot = false});
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool active;
+  final String? tooltip;
+
+  /// A gold dot: something is filtered.
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Material(
+      color: active ? AppPalette.gold400 : Colors.white.withValues(alpha: 0.10),
+      shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: active ? 0 : 0.16))),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(alignment: Alignment.center, children: [
+            Icon(icon, size: 20, color: active ? AppPalette.navy : Colors.white),
+            if (dot)
+              const PositionedDirectional(
+                top: 8,
+                end: 8,
+                child: SizedBox(width: 8, height: 8, child: DecoratedBox(decoration: BoxDecoration(color: AppPalette.gold300, shape: BoxShape.circle))),
+              ),
+          ]),
+        ),
+      ),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+  }
+}
+
+/// The white search field on the navy header.
+class HomeSearchField extends StatelessWidget {
+  const HomeSearchField({super.key, required this.controller, required this.hint, required this.onSubmitted, this.onClear});
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 46,
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        child: Row(children: [
+          const SizedBox(width: 12),
+          const Icon(Icons.search_rounded, size: 20, color: AppPalette.navy),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              onSubmitted: onSubmitted,
+              style: const TextStyle(fontSize: 14, color: AppPalette.navy),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF8A94A6)),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                isDense: true,
+              ),
+            ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (_, v, _) => v.text.isEmpty || onClear == null
+                ? const SizedBox(width: 12)
+                : IconButton(icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF8A94A6)), onPressed: onClear),
+          ),
+        ]),
+      );
+}
+
+/// A row of filter pills; the chosen one navy with gold text.
+class HomePills extends StatelessWidget {
+  const HomePills({super.key, required this.pills, this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.md)});
+  final List<HomePill> pills;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        padding: padding,
+        scrollDirection: Axis.horizontal,
+        itemCount: pills.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final p = pills[i];
+          return Material(
+            color: p.selected ? AppPalette.navy : colors.surface,
+            shape: StadiumBorder(side: BorderSide(color: p.selected ? AppPalette.navy : colors.hairline)),
+            child: InkWell(
+              key: Key('home-pill-${p.id}'),
+              customBorder: const StadiumBorder(),
+              onTap: p.onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (p.dot != null) ...[
+                    Container(width: 7, height: 7, decoration: BoxDecoration(color: p.dot, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(p.label,
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: p.selected ? Colors.white : colors.inkStrong)),
+                  if (p.count != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: p.selected ? AppPalette.gold400 : colors.surfaceSoft,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(ltr('${p.count}'),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: p.selected ? AppPalette.navy : colors.inkMuted)),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class HomePill {
+  const HomePill({required this.id, required this.label, required this.selected, required this.onTap, this.count, this.dot});
+  final String id;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final int? count;
+  final Color? dot;
+}
+
 class _LogoInitials extends StatelessWidget {
   const _LogoInitials(this.name);
   final String? name;

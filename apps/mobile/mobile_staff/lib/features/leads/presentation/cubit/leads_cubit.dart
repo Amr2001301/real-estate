@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -5,7 +7,7 @@ import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../../domain/usecases/lead_use_cases.dart';
 
-export '../../domain/repositories/leads_repository.dart' show LeadSource;
+export '../../domain/repositories/leads_repository.dart' show LeadSource, StaffOption;
 
 class LeadsListState extends Equatable {
   const LeadsListState({
@@ -21,6 +23,12 @@ class LeadsListState extends Equatable {
     this.sourceId,
     this.dateFrom,
     this.dateTo,
+    this.salesId,
+    this.salesName,
+    this.unassigned = false,
+    this.pipeline = const {},
+    this.unassignedCount = 0,
+    this.overdueFollowUps = 0,
   });
 
   final DataStatus status;
@@ -36,7 +44,30 @@ class LeadsListState extends Equatable {
   final String? dateFrom;
   final String? dateTo;
 
-  bool get hasAdvancedFilters => sourceId != null || dateFrom != null || dateTo != null;
+  /// Managers and admins: one rep's leads (and the rep's name for the chip).
+  final String? salesId;
+  final String? salesName;
+
+  /// Managers and admins: the queue of leads nobody owns yet.
+  final bool unassigned;
+
+  /// How many leads stand in each stage, in the caller's scope (the
+  /// website's pipeline counts, not just the loaded page).
+  final Map<String, int> pipeline;
+  final int unassignedCount;
+
+  /// The caller's follow-ups past their time.
+  final int overdueFollowUps;
+
+  int get pipelineTotal => pipeline.values.fold(0, (a, b) => a + b);
+
+  /// Leads still open: neither won nor lost.
+  int get openCount => pipelineTotal - (pipeline['WON'] ?? 0) - (pipeline['LOST'] ?? 0);
+
+  /// Won over all leads, as on the website; null with no leads.
+  int? get conversionRate => pipelineTotal == 0 ? null : ((pipeline['WON'] ?? 0) / pipelineTotal * 100).round();
+
+  bool get hasAdvancedFilters => sourceId != null || dateFrom != null || dateTo != null || salesId != null;
 
   LeadsListState copyWith({
     DataStatus? status,
@@ -55,6 +86,13 @@ class LeadsListState extends Equatable {
     bool clearDateFrom = false,
     String? dateTo,
     bool clearDateTo = false,
+    String? salesId,
+    String? salesName,
+    bool clearSales = false,
+    bool? unassigned,
+    Map<String, int>? pipeline,
+    int? unassignedCount,
+    int? overdueFollowUps,
   }) =>
       LeadsListState(
         status: status ?? this.status,
@@ -69,12 +107,18 @@ class LeadsListState extends Equatable {
         sourceId: clearSourceId ? null : (sourceId ?? this.sourceId),
         dateFrom: clearDateFrom ? null : (dateFrom ?? this.dateFrom),
         dateTo: clearDateTo ? null : (dateTo ?? this.dateTo),
+        salesId: clearSales ? null : (salesId ?? this.salesId),
+        salesName: clearSales ? null : (salesName ?? this.salesName),
+        unassigned: unassigned ?? this.unassigned,
+        pipeline: pipeline ?? this.pipeline,
+        unassignedCount: unassignedCount ?? this.unassignedCount,
+        overdueFollowUps: overdueFollowUps ?? this.overdueFollowUps,
       );
 
   @override
   List<Object?> get props =>
       [status, leads, failure, stage, search, mine, page, hasMore, isLoadingMore,
-       sourceId, dateFrom, dateTo];
+       sourceId, dateFrom, dateTo, salesId, unassigned, pipeline, unassignedCount, overdueFollowUps];
 }
 
 class LeadsCubit extends Cubit<LeadsListState> {
@@ -96,10 +140,50 @@ class LeadsCubit extends Cubit<LeadsListState> {
         sourceId: state.sourceId,
         dateFrom: state.dateFrom,
         dateTo: state.dateTo,
+        salesId: state.unassigned ? null : state.salesId,
+        unassigned: state.unassigned,
       );
+
+  /// Managers and admins see the unassigned queue (as on the website).
+  bool queue = false;
+
+  /// The figures above the list: the stage counts, the overdue follow-ups
+  /// and, for managers, the unassigned queue. Best-effort.
+  Future<void> loadSummary() async {
+    final results = await Future.wait<Object?>([
+      _repo.getPipeline(),
+      _repo.getFollowUpSummary(),
+      if (queue) _repo.countUnassigned(),
+    ]);
+    if (isClosed) return;
+    emit(state.copyWith(
+      pipeline: (results[0]! as Result<Map<String, int>>).dataOrNull,
+      overdueFollowUps: (results[1]! as Result<FollowUpSummary>).dataOrNull?.overdue,
+      unassignedCount: queue ? (results[2]! as Result<int>).dataOrNull : null,
+    ));
+  }
+
+  Future<List<StaffOption>> fetchStaff() async =>
+      (await _repo.getSalesStaff()).when(ok: (l) => l, err: (_) => const []);
+
+  /// Managers and admins: only the leads nobody owns, or back to all.
+  Future<void> toggleUnassigned() async {
+    emit(state.copyWith(unassigned: !state.unassigned, clearStage: true));
+    await load();
+  }
+
+  Future<void> setSales(String? id, String? name) async {
+    emit(id == null ? state.copyWith(clearSales: true) : state.copyWith(salesId: id, salesName: name));
+    await load();
+  }
+
+  /// A call or WhatsApp press, logged on the lead; the phone to open.
+  Future<String?> openContact(String id, String kind) async =>
+      (await _repo.openContact(id, kind)).dataOrNull;
 
   Future<void> load() async {
     emit(state.copyWith(status: DataStatus.loading, page: 1, hasMore: false));
+    unawaited(loadSummary());
     final result = await _getLeads(_buildQuery());
     result.when(
       ok: (paged) => emit(state.copyWith(
@@ -167,6 +251,7 @@ class LeadsCubit extends Cubit<LeadsListState> {
       clearSourceId: true,
       clearDateFrom: true,
       clearDateTo: true,
+      clearSales: true,
     ));
     await load();
   }

@@ -26,6 +26,10 @@ abstract final class DateFormatter {
   static String monthShort(DateTime date, {required String languageCode}) =>
       _western(languageCode == 'ar' ? DateFormat('MMMM', 'ar') : DateFormat('MMM', 'en')).format(date);
 
+  /// Time of day ("3:30 م", "3:30 PM"), Western digits.
+  static String time(DateTime date, {required String languageCode}) =>
+      _western(DateFormat('h:mm a', _locale(languageCode))).format(date);
+
   static String _locale(String languageCode) => languageCode == 'ar' ? 'ar' : 'en';
 
   static DateFormat _western(DateFormat f) => f..useNativeDigits = false;

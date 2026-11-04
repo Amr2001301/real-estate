@@ -5912,4 +5912,125 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bhEvPayoutCancelled => 'Payout cancelled';
+
+  @override
+  String lvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n leads',
+      one: '1 lead',
+      zero: 'no leads',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lvTotal => 'Total';
+
+  @override
+  String lvOpenN(int n) {
+    return '$n open';
+  }
+
+  @override
+  String get lvConversion => 'Conversion';
+
+  @override
+  String lvWonN(int n) {
+    return '$n won';
+  }
+
+  @override
+  String get lvUnassigned => 'Unassigned';
+
+  @override
+  String get lvUnassignedHint => 'Waiting to be assigned';
+
+  @override
+  String get lvOverdue => 'Overdue follow-ups';
+
+  @override
+  String get lvOverdueNone => 'All on time';
+
+  @override
+  String get lvOverdueSome => 'Need a contact';
+
+  @override
+  String get lvAll => 'All';
+
+  @override
+  String lvInStage(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'in stage $n days',
+      one: 'in stage 1 day',
+      zero: 'in stage since today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lvVisit(String when) {
+    return 'Visit $when';
+  }
+
+  @override
+  String lvLastContact(String when) {
+    return 'Last contact $when';
+  }
+
+  @override
+  String get lvNoContact => 'Not contacted yet';
+
+  @override
+  String lvFollowOverdue(String when) {
+    return 'Overdue follow-up · $when';
+  }
+
+  @override
+  String lvFollowToday(String when) {
+    return 'Follow-up today · $when';
+  }
+
+  @override
+  String lvFollowNext(String when) {
+    return 'Follow-up $when';
+  }
+
+  @override
+  String get lvToday => 'today';
+
+  @override
+  String get lvTomorrow => 'tomorrow';
+
+  @override
+  String get lvYesterday => 'yesterday';
+
+  @override
+  String get lvBroker => 'Broker';
+
+  @override
+  String get lvDirect => 'Direct';
+
+  @override
+  String get lvRep => 'Sales rep';
+
+  @override
+  String get lvAllReps => 'All reps';
+
+  @override
+  String lvRepChip(String name) {
+    return 'Rep: $name';
+  }
+
+  @override
+  String get lvMine => 'Mine only';
+
+  @override
+  String get lvFilters => 'Filters';
+
+  @override
+  String get lvNoPhone => 'This lead has no phone number.';
 }

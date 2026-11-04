@@ -14,6 +14,15 @@ import 'package:mobile_staff/features/leads/presentation/cubit/leads_cubit.dart'
 import 'package:mobile_staff/features/leads/presentation/screens/lost_reason_sheet.dart';
 
 class _FakeRemote implements LeadsRemoteDataSource {
+  @override
+  Future<Map<String, int>> pipeline() async => const {};
+  @override
+  Future<int> countUnassigned() async => 0;
+  @override
+  Future<List<StaffOption>> salesStaff() async => const [];
+  @override
+  Future<String> openContact(String id, String kind) async => '';
+
   _FakeRemote({this.rows = const [], this.error});
   final List<LeadRowDto> rows;
   final DioException? error;
@@ -47,6 +56,15 @@ class _FakeRemote implements LeadsRemoteDataSource {
 }
 
 class _FakeRepo implements LeadsRepository {
+  @override
+  Future<Result<Map<String, int>>> getPipeline() async => const Ok({});
+  @override
+  Future<Result<int>> countUnassigned() async => const Ok(0);
+  @override
+  Future<Result<List<StaffOption>>> getSalesStaff() async => const Ok([]);
+  @override
+  Future<Result<String>> openContact(String id, String kind) async => const Ok('');
+
   _FakeRepo(this._leads, {this.reasons = const []});
   final Result<List<Lead>> _leads;
   final List<LostReason> reasons;

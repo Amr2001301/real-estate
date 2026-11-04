@@ -10747,6 +10747,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payout cancelled'**
   String get bhEvPayoutCancelled;
+
+  /// No description provided for @lvCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no leads} =1{1 lead} other{{n} leads}}'**
+  String lvCountN(int n);
+
+  /// No description provided for @lvTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get lvTotal;
+
+  /// No description provided for @lvOpenN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} open'**
+  String lvOpenN(int n);
+
+  /// No description provided for @lvConversion.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion'**
+  String get lvConversion;
+
+  /// No description provided for @lvWonN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} won'**
+  String lvWonN(int n);
+
+  /// No description provided for @lvUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get lvUnassigned;
+
+  /// No description provided for @lvUnassignedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to be assigned'**
+  String get lvUnassignedHint;
+
+  /// No description provided for @lvOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue follow-ups'**
+  String get lvOverdue;
+
+  /// No description provided for @lvOverdueNone.
+  ///
+  /// In en, this message translates to:
+  /// **'All on time'**
+  String get lvOverdueNone;
+
+  /// No description provided for @lvOverdueSome.
+  ///
+  /// In en, this message translates to:
+  /// **'Need a contact'**
+  String get lvOverdueSome;
+
+  /// No description provided for @lvAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get lvAll;
+
+  /// No description provided for @lvInStage.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{in stage since today} =1{in stage 1 day} other{in stage {n} days}}'**
+  String lvInStage(int n);
+
+  /// No description provided for @lvVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit {when}'**
+  String lvVisit(String when);
+
+  /// No description provided for @lvLastContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Last contact {when}'**
+  String lvLastContact(String when);
+
+  /// No description provided for @lvNoContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Not contacted yet'**
+  String get lvNoContact;
+
+  /// No description provided for @lvFollowOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue follow-up · {when}'**
+  String lvFollowOverdue(String when);
+
+  /// No description provided for @lvFollowToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up today · {when}'**
+  String lvFollowToday(String when);
+
+  /// No description provided for @lvFollowNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up {when}'**
+  String lvFollowNext(String when);
+
+  /// No description provided for @lvToday.
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get lvToday;
+
+  /// No description provided for @lvTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'tomorrow'**
+  String get lvTomorrow;
+
+  /// No description provided for @lvYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'yesterday'**
+  String get lvYesterday;
+
+  /// No description provided for @lvBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker'**
+  String get lvBroker;
+
+  /// No description provided for @lvDirect.
+  ///
+  /// In en, this message translates to:
+  /// **'Direct'**
+  String get lvDirect;
+
+  /// No description provided for @lvRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales rep'**
+  String get lvRep;
+
+  /// No description provided for @lvAllReps.
+  ///
+  /// In en, this message translates to:
+  /// **'All reps'**
+  String get lvAllReps;
+
+  /// No description provided for @lvRepChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rep: {name}'**
+  String lvRepChip(String name);
+
+  /// No description provided for @lvMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Mine only'**
+  String get lvMine;
+
+  /// No description provided for @lvFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get lvFilters;
+
+  /// No description provided for @lvNoPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'This lead has no phone number.'**
+  String get lvNoPhone;
 }
 
 class _AppLocalizationsDelegate

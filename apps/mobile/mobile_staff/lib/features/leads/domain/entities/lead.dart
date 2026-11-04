@@ -17,6 +17,13 @@ class Lead extends Equatable {
     this.nextActionNote,
     this.campaignName,
     this.campaignChannel,
+    this.projectName,
+    this.unitCode,
+    this.sourceName,
+    this.brokerName,
+    this.upcomingVisitAt,
+    this.stageChangedAt,
+    this.lastContactAt,
   });
 
   final String id;
@@ -38,9 +45,36 @@ class Lead extends Equatable {
   final String? campaignName;
   final String? campaignChannel;
 
+  /// The project of interest in both languages (the website's card shows
+  /// it in the reader's language).
+  final Translatable? projectName;
+
+  /// The unit of interest's code.
+  final String? unitCode;
+
+  /// Where the lead came from (a lead source); null for broker leads.
+  final Translatable? sourceName;
+
+  /// The broker firm that sent the lead (broker leads only).
+  final String? brokerName;
+
+  /// The next visit booked with the lead.
+  final DateTime? upcomingVisitAt;
+
+  /// When the lead entered its current stage.
+  final DateTime? stageChangedAt;
+
+  /// The latest activity logged on the lead.
+  final DateTime? lastContactAt;
+
+  /// Nobody owns it yet (website, imports).
+  bool get unassigned => assignedSalesName == null;
+
   @override
-  List<Object?> get props =>
-      [id, fullName, stage, phone, createdAt, nextActionAt, nextActionType, nextActionNote, campaignName];
+  List<Object?> get props => [
+        id, fullName, stage, phone, createdAt, nextActionAt, nextActionType, nextActionNote, campaignName,
+        unitCode, sourceName, brokerName, upcomingVisitAt, stageChangedAt, lastContactAt, assignedSalesName,
+      ];
 }
 
 /// One entry on a lead's timeline — a logged activity (note, call, meeting,
