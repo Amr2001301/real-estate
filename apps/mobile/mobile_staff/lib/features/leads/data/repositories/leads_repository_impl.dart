@@ -98,4 +98,10 @@ class LeadsRepositoryImpl implements LeadsRepository {
 
   @override
   Future<Result<String>> openContact(String id, String kind) => guardApiCall(() => _remote.openContact(id, kind));
+
+  @override
+  Future<Result<LeadLinks>> getLeadLinks(String id) => guardApiCall(() => _remote.links(id));
+
+  @override
+  Future<Result<void>> assignLead(String id, String salesId) => guardApiCall(() => _remote.assign(id, salesId));
 }

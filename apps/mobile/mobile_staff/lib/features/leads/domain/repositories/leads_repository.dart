@@ -149,6 +149,12 @@ abstract interface class LeadsRepository {
   /// A call or WhatsApp press: logged on the lead, returns the phone to dial
   /// (`POST /leads/:id/contact`), as on the website.
   Future<Result<String>> openContact(String id, String kind);
+
+  /// The lead's visit requests, appointments and bookings (as on the website).
+  Future<Result<LeadLinks>> getLeadLinks(String id);
+
+  /// Managers and admins: hand the lead to a rep (`PATCH /leads/:id/assign`).
+  Future<Result<void>> assignLead(String id, String salesId);
 }
 
 /// A sales rep or manager, for pickers.

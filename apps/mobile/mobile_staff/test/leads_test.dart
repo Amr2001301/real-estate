@@ -15,6 +15,11 @@ import 'package:mobile_staff/features/leads/presentation/screens/lost_reason_she
 
 class _FakeRemote implements LeadsRemoteDataSource {
   @override
+  Future<LeadLinks> links(String id) async => const LeadLinks();
+  @override
+  Future<void> assign(String id, String salesId) async {}
+
+  @override
   Future<Map<String, int>> pipeline() async => const {};
   @override
   Future<int> countUnassigned() async => 0;
@@ -56,6 +61,11 @@ class _FakeRemote implements LeadsRemoteDataSource {
 }
 
 class _FakeRepo implements LeadsRepository {
+  @override
+  Future<Result<LeadLinks>> getLeadLinks(String id) async => const Ok(LeadLinks());
+  @override
+  Future<Result<void>> assignLead(String id, String salesId) async => const Ok(null);
+
   @override
   Future<Result<Map<String, int>>> getPipeline() async => const Ok({});
   @override

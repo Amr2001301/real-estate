@@ -6033,4 +6033,244 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lvNoPhone => 'This lead has no phone number.';
+
+  @override
+  String get ldCall => 'Call';
+
+  @override
+  String get ldWhatsApp => 'WhatsApp';
+
+  @override
+  String get ldEmail => 'Email';
+
+  @override
+  String get ldStateOverdue => 'Overdue';
+
+  @override
+  String get ldStateToday => 'Today';
+
+  @override
+  String get ldStateUpcoming => 'Upcoming';
+
+  @override
+  String get ldFollowLog => 'Follow-up log';
+
+  @override
+  String get ldNoNotes => 'No contact logged yet.';
+
+  @override
+  String get ldVisitsBookings => 'Visits and bookings';
+
+  @override
+  String get ldVisitRequest => 'Visit request';
+
+  @override
+  String get ldAppointment => 'Visit';
+
+  @override
+  String get ldReservation => 'Booking';
+
+  @override
+  String ldExpires(String date) {
+    return 'Expires $date';
+  }
+
+  @override
+  String get ldActivityLog => 'Activity';
+
+  @override
+  String get ldAssignment => 'Assignment';
+
+  @override
+  String get ldReassign => 'Change rep';
+
+  @override
+  String get ldAssign => 'Assign';
+
+  @override
+  String get ldAssignTo => 'Assign the lead to';
+
+  @override
+  String get ldClient => 'Client';
+
+  @override
+  String get ldOwner => 'Unit owner';
+
+  @override
+  String get ldBrowser => 'Browsing client';
+
+  @override
+  String get ldClientProfile => 'Client profile';
+
+  @override
+  String get ldOpportunity => 'Lead details';
+
+  @override
+  String get ldProject => 'Project';
+
+  @override
+  String get ldUnit => 'Unit';
+
+  @override
+  String get ldSource => 'Source';
+
+  @override
+  String get ldBrokerLbl => 'Broker';
+
+  @override
+  String get ldBrokerAgent => 'Broker agent';
+
+  @override
+  String get ldCampaign => 'Campaign';
+
+  @override
+  String get ldCreated => 'Added on';
+
+  @override
+  String get ldLeadId => 'Lead ID';
+
+  @override
+  String get ldAds => 'Ad attribution';
+
+  @override
+  String ldLostOn(String date) {
+    return 'Lost on $date';
+  }
+
+  @override
+  String get ldNoReason => 'No reason given';
+
+  @override
+  String get ldActCreated => 'Lead created';
+
+  @override
+  String get ldActAssigned => 'Lead assigned';
+
+  @override
+  String ldActStage(String from, String to) {
+    return 'Moved from \"$from\" to \"$to\"';
+  }
+
+  @override
+  String get ldActConverted => 'Reservation converted to a contract';
+
+  @override
+  String get ldActResCreated => 'Booking created';
+
+  @override
+  String get ldActResApproved => 'Booking approved';
+
+  @override
+  String get ldActResRejected => 'Booking rejected';
+
+  @override
+  String get ldActResCancelled => 'Booking cancelled';
+
+  @override
+  String get ldActResExpired => 'Booking expired';
+
+  @override
+  String get ldActResOther => 'Booking updated';
+
+  @override
+  String get ldActVisitScheduled => 'Visit scheduled';
+
+  @override
+  String get ldActVisitConfirmed => 'Visit confirmed';
+
+  @override
+  String get ldActVisitPending => 'Customer asked to reschedule';
+
+  @override
+  String get ldActVisitRescheduled => 'Visit rescheduled';
+
+  @override
+  String get ldActVisitCompleted => 'Visit done';
+
+  @override
+  String get ldActVisitCancelled => 'Visit cancelled';
+
+  @override
+  String get ldActVisitNoShow => 'Customer did not show up';
+
+  @override
+  String get ldActVisitOther => 'Visit updated';
+
+  @override
+  String get ldActNote => 'Note added';
+
+  @override
+  String get ldActBrokerSubmitted => 'Lead submitted by broker';
+
+  @override
+  String get ldActBrokerApproved => 'Broker lead approved';
+
+  @override
+  String get ldActBrokerRejected => 'Broker lead rejected';
+
+  @override
+  String get ldActBrokerDuplicate => 'Broker lead marked duplicate';
+
+  @override
+  String get ldActBrokerNote => 'Note from the broker';
+
+  @override
+  String get ldActBrokerReservation => 'Booking by the broker';
+
+  @override
+  String get ldActBrokerContract => 'Contract from the broker\'s lead';
+
+  @override
+  String get ldActBrokerCommission => 'Broker commission earned';
+
+  @override
+  String get ldActBrokerVisit => 'Broker requested a visit';
+
+  @override
+  String get ldActReturned => 'The customer came in again (ad / form)';
+
+  @override
+  String get ldActRelinked => 'Linked to another record';
+
+  @override
+  String get ldActCall => 'Customer called';
+
+  @override
+  String get ldActWhatsApp => 'WhatsApp chat opened';
+
+  @override
+  String ldActMerged(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n duplicate leads were merged into this one',
+      one: 'A duplicate lead was merged into this one',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ldActOther => 'Lead updated';
+
+  @override
+  String get ldNoActivity => 'No activity yet.';
+
+  @override
+  String get ldReqNew => 'New';
+
+  @override
+  String get ldReqReview => 'Under review';
+
+  @override
+  String get ldReqConverted => 'Became a visit';
+
+  @override
+  String get ldReqRejected => 'Rejected';
+
+  @override
+  String get ldReqCancelled => 'Cancelled';
+
+  @override
+  String get ldWonByBooking =>
+      'A lead is won when its booking becomes a contract.';
 }

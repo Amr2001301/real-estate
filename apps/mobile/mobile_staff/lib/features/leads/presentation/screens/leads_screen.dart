@@ -160,6 +160,14 @@ class _LeadsScreenState extends State<LeadsScreen> {
                             active: state.mine,
                             tooltip: l10n.lvMine,
                             onTap: cubit.toggleMine,
+                          )
+                        else
+                          // Admins and sales managers merge duplicates, as on the website.
+                          HomeHeroButton(
+                            key: const Key('leads-duplicates'),
+                            icon: Icons.content_copy_rounded,
+                            tooltip: l10n.duplicatesTitle,
+                            onTap: () => context.push('/duplicates'),
                           ),
                         HomeHeroButton(
                           icon: Icons.tune_rounded,

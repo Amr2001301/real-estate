@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/lead.dart';
+import '../../domain/repositories/leads_repository.dart';
 import '../../domain/usecases/lead_use_cases.dart';
 
 class LeadDetailState extends Equatable {
@@ -11,6 +14,7 @@ class LeadDetailState extends Equatable {
     this.failure,
     this.working = false,
     this.actionFailure,
+    this.links = const LeadLinks(),
   });
 
   final DataStatus status;
@@ -21,6 +25,9 @@ class LeadDetailState extends Equatable {
   final bool working;
   final AppFailure? actionFailure;
 
+  /// The lead's visits and bookings (loaded with the lead, best-effort).
+  final LeadLinks links;
+
   LeadDetailState copyWith({
     DataStatus? status,
     LeadDetail? detail,
@@ -28,6 +35,7 @@ class LeadDetailState extends Equatable {
     bool? working,
     AppFailure? actionFailure,
     bool clearActionFailure = false,
+    LeadLinks? links,
   }) =>
       LeadDetailState(
         status: status ?? this.status,
@@ -35,10 +43,11 @@ class LeadDetailState extends Equatable {
         failure: failure ?? this.failure,
         working: working ?? this.working,
         actionFailure: clearActionFailure ? null : (actionFailure ?? this.actionFailure),
+        links: links ?? this.links,
       );
 
   @override
-  List<Object?> get props => [status, detail, failure, working, actionFailure];
+  List<Object?> get props => [status, detail, failure, working, actionFailure, links];
 }
 
 class LeadDetailCubit extends Cubit<LeadDetailState> {
@@ -48,8 +57,13 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
     this._addNote, {
     required this.leadId,
     required GetLostReasons getLostReasons,
+    LeadsRepository? repo,
   })  : _getLostReasons = getLostReasons,
+        _repo = repo,
         super(const LeadDetailState());
+
+  /// Visits, bookings, reassigning and the contact log (null in older tests).
+  final LeadsRepository? _repo;
 
   final GetLeadDetail _getDetail;
   final UpdateLeadStage _updateStage;
@@ -59,6 +73,7 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
 
   Future<void> load() async {
     emit(state.copyWith(status: DataStatus.loading));
+    _loadLinks();
     final result = await _getDetail(leadId);
     result.when(
       ok: (detail) => emit(state.copyWith(status: DataStatus.success, detail: detail)),
@@ -73,6 +88,36 @@ class LeadDetailCubit extends Cubit<LeadDetailState> {
       UpdateLeadStageParams(id: leadId, stage: stage, reason: reason),
     );
     await _afterAction(result);
+  }
+
+  Future<void> _loadLinks() async {
+    final r = await _repo?.getLeadLinks(leadId);
+    final links = r?.dataOrNull;
+    if (!isClosed && links != null) emit(state.copyWith(links: links));
+  }
+
+  /// Managers and admins: the reps to hand the lead to.
+  Future<List<StaffOption>> salesStaff() async =>
+      (await _repo?.getSalesStaff())?.dataOrNull ?? const [];
+
+  /// Managers and admins: hand the lead to [salesId].
+  Future<void> assign(String salesId) async {
+    final repo = _repo;
+    if (repo == null || state.working) return;
+    emit(state.copyWith(working: true, clearActionFailure: true));
+    await _afterAction(await repo.assignLead(leadId, salesId));
+  }
+
+  /// A call or WhatsApp press, logged on the lead; the phone to open.
+  Future<String?> openContact(String kind) async {
+    final phone = (await _repo?.openContact(leadId, kind))?.dataOrNull;
+    unawaited(_refresh());
+    return phone;
+  }
+
+  Future<void> _refresh() async {
+    final r = await _getDetail(leadId);
+    if (!isClosed) r.when(ok: (d) => emit(state.copyWith(detail: d)), err: (_) {});
   }
 
   /// LR1 — the reasons to pick from when the lead is lost.

@@ -64,6 +64,7 @@ extension LeadDetailDtoMapper on LeadDetailDto {
           body: a.type,
           isNote: false,
           createdAt: DateTime.tryParse(a.createdAt ?? '')?.toLocal(),
+          payload: a.payload,
         ),
     ]..sort((a, b) {
         final at = a.createdAt, bt = b.createdAt;
@@ -79,6 +80,14 @@ extension LeadDetailDtoMapper on LeadDetailDto {
       unitInterest: unitInterest,
       lostReason: lostReason,
       lostNote: lostNote,
+      lostAt: DateTime.tryParse(lostAt ?? '')?.toLocal(),
+      unitType: unitType,
+      clientId: clientId,
+      clientRole: clientRole,
+      assignedSalesId: assignedSalesId,
+      brokerAgentName: brokerAgentName,
+      campaignId: campaignId,
+      utm: utm,
     );
   }
 }
