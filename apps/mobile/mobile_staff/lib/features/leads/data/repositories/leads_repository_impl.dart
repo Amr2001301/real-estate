@@ -86,4 +86,16 @@ class LeadsRepositoryImpl implements LeadsRepository {
           .toList();
     });
   }
+
+  @override
+  Future<Result<Map<String, int>>> getPipeline() => guardApiCall(_remote.pipeline);
+
+  @override
+  Future<Result<int>> countUnassigned() => guardApiCall(_remote.countUnassigned);
+
+  @override
+  Future<Result<List<StaffOption>>> getSalesStaff() => guardApiCall(_remote.salesStaff);
+
+  @override
+  Future<Result<String>> openContact(String id, String kind) => guardApiCall(() => _remote.openContact(id, kind));
 }

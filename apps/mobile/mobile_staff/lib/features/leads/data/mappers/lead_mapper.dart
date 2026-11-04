@@ -16,6 +16,13 @@ extension LeadRowDtoMapper on LeadRowDto {
         nextActionNote: nextActionNote,
         campaignName: campaignName,
         campaignChannel: campaignChannel,
+        projectName: projectName,
+        unitCode: unitCode,
+        sourceName: sourceName,
+        brokerName: brokerName,
+        upcomingVisitAt: DateTime.tryParse(upcomingVisitAt ?? '')?.toLocal(),
+        stageChangedAt: DateTime.tryParse(stageChangedAt ?? '')?.toLocal(),
+        lastContactAt: DateTime.tryParse(lastContactAt ?? '')?.toLocal(),
       );
 }
 

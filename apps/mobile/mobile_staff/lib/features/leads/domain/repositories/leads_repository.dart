@@ -12,6 +12,9 @@ class LeadsQuery {
     this.sourceId,
     this.dateFrom,
     this.dateTo,
+    this.salesId,
+    this.unassigned = false,
+    this.pageSize = 20,
   });
   final String? stage;
   final String? search;
@@ -21,7 +24,14 @@ class LeadsQuery {
   final String? dateFrom;
   final String? dateTo;
 
-  bool get hasAdvancedFilters => sourceId != null || dateFrom != null || dateTo != null;
+  /// Managers and admins: one rep's leads.
+  final String? salesId;
+
+  /// Managers and admins: the leads nobody owns yet.
+  final bool unassigned;
+  final int pageSize;
+
+  bool get hasAdvancedFilters => sourceId != null || dateFrom != null || dateTo != null || salesId != null;
 }
 
 class NewLead {
@@ -125,4 +135,25 @@ abstract interface class LeadsRepository {
   Future<Result<Lead>> createLead(NewLead input);
   Future<Result<List<LeadSource>>> getSources();
   Future<Result<List<ClientSearchResult>>> searchClients(String q);
+
+  /// How many leads stand in each stage, in the caller's scope — the
+  /// website's pipeline counts (`GET /leads/pipeline`).
+  Future<Result<Map<String, int>>> getPipeline();
+
+  /// How many leads nobody owns yet (managers and admins).
+  Future<Result<int>> countUnassigned();
+
+  /// The sales reps and managers, for the rep filter (managers and admins).
+  Future<Result<List<StaffOption>>> getSalesStaff();
+
+  /// A call or WhatsApp press: logged on the lead, returns the phone to dial
+  /// (`POST /leads/:id/contact`), as on the website.
+  Future<Result<String>> openContact(String id, String kind);
+}
+
+/// A sales rep or manager, for pickers.
+class StaffOption {
+  const StaffOption({required this.id, required this.name});
+  final String id;
+  final String name;
 }

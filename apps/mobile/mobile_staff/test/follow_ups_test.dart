@@ -21,6 +21,15 @@ Paginated<T> _page<T>(List<T> data, {int page = 1, int totalPages = 1}) =>
 FollowUp _fu(String id) => FollowUp(lead: Lead(id: id, fullName: 'Lead $id', stage: 'INTERESTED'));
 
 class _Repo implements LeadsRepository {
+  @override
+  Future<Result<Map<String, int>>> getPipeline() async => const Ok({});
+  @override
+  Future<Result<int>> countUnassigned() async => const Ok(0);
+  @override
+  Future<Result<List<StaffOption>>> getSalesStaff() async => const Ok([]);
+  @override
+  Future<Result<String>> openContact(String id, String kind) async => const Ok('');
+
   _Repo({this.summary = const FollowUpSummary(), Map<FollowUpBucket, List<Paginated<FollowUp>>>? pages})
       : pages = pages ?? {};
   final FollowUpSummary summary;

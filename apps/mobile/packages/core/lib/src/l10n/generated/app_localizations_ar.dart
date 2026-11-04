@@ -5899,4 +5899,129 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bhEvPayoutCancelled => 'أُلغيت دفعة العمولة';
+
+  @override
+  String lvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عميلًا',
+      few: '$n عملاء',
+      two: 'عميلان',
+      one: 'عميل واحد',
+      zero: 'لا عملاء',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lvTotal => 'الإجمالي';
+
+  @override
+  String lvOpenN(int n) {
+    return '$n مفتوح';
+  }
+
+  @override
+  String get lvConversion => 'نسبة التحويل';
+
+  @override
+  String lvWonN(int n) {
+    return '$n تم البيع';
+  }
+
+  @override
+  String get lvUnassigned => 'غير مُسنَد';
+
+  @override
+  String get lvUnassignedHint => 'بانتظار التوزيع';
+
+  @override
+  String get lvOverdue => 'متابعات متأخرة';
+
+  @override
+  String get lvOverdueNone => 'كلها في موعدها';
+
+  @override
+  String get lvOverdueSome => 'تحتاج تواصلًا';
+
+  @override
+  String get lvAll => 'الكل';
+
+  @override
+  String lvInStage(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'في المرحلة منذ $n يومًا',
+      few: 'في المرحلة منذ $n أيام',
+      two: 'في المرحلة منذ يومين',
+      one: 'في المرحلة منذ يوم',
+      zero: 'في المرحلة من اليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lvVisit(String when) {
+    return 'زيارة $when';
+  }
+
+  @override
+  String lvLastContact(String when) {
+    return 'آخر تواصل $when';
+  }
+
+  @override
+  String get lvNoContact => 'لم يُتواصَل معه بعد';
+
+  @override
+  String lvFollowOverdue(String when) {
+    return 'متابعة متأخرة · $when';
+  }
+
+  @override
+  String lvFollowToday(String when) {
+    return 'متابعة اليوم · $when';
+  }
+
+  @override
+  String lvFollowNext(String when) {
+    return 'متابعة $when';
+  }
+
+  @override
+  String get lvToday => 'اليوم';
+
+  @override
+  String get lvTomorrow => 'غدًا';
+
+  @override
+  String get lvYesterday => 'أمس';
+
+  @override
+  String get lvBroker => 'وسيط';
+
+  @override
+  String get lvDirect => 'مباشر';
+
+  @override
+  String get lvRep => 'المستشار';
+
+  @override
+  String get lvAllReps => 'كل المستشارين';
+
+  @override
+  String lvRepChip(String name) {
+    return 'المستشار: $name';
+  }
+
+  @override
+  String get lvMine => 'عملائي فقط';
+
+  @override
+  String get lvFilters => 'تصفية';
+
+  @override
+  String get lvNoPhone => 'لا يوجد رقم هاتف لهذا العميل.';
 }

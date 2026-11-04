@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/leads_cubit.dart';
 
@@ -13,28 +14,63 @@ export '../cubit/leads_cubit.dart' show LeadSource;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-Color _stageColor(String stage, AppColorsExt colors) => switch (stage) {
-  'NEW' => colors.inkMuted,
-  'INTERESTED' => colors.info,
-  'VISIT' => colors.brandGold,
-  'NEGOTIATION' => colors.warning,
-  'WON' => colors.success,
-  'LOST' => colors.error,
-  _ => colors.inkMuted,
-};
+const _stages = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION', 'WON', 'LOST'];
 
-String _initials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  final a = parts.first.characters.firstOrNull ?? '?';
-  if (parts.length >= 2) {
-    final b = parts.last.characters.firstOrNull ?? '';
-    return '$a$b'.toUpperCase();
+Color leadStageColor(String stage, AppColorsExt colors) => switch (stage) {
+      'NEW' => colors.inkMuted,
+      'INTERESTED' => colors.info,
+      'VISIT' => colors.brandGold,
+      'NEGOTIATION' => colors.warning,
+      'WON' => colors.success,
+      'LOST' => colors.error,
+      _ => colors.inkMuted,
+    };
+
+/// «اليوم 3:30 م», «غدًا 11:00 ص», «أمس», or the date.
+String leadWhen(BuildContext context, DateTime at, {bool withTime = true, DateTime? now}) {
+  final l10n = context.l10n;
+  final lang = Localizations.localeOf(context).languageCode;
+  final today = homeDay(now ?? DateTime.now());
+  final days = homeDay(at).difference(today).inDays;
+  final day = switch (days) {
+    0 => l10n.lvToday,
+    1 => l10n.lvTomorrow,
+    -1 => l10n.lvYesterday,
+    _ => DateFormatter.dayMonth(at, languageCode: lang),
+  };
+  return withTime ? '$day ${DateFormatter.time(at, languageCode: lang)}' : day;
+}
+
+/// overdue / today / upcoming, as the website's follow-up colours.
+enum LeadFollowState { overdue, today, upcoming }
+
+LeadFollowState leadFollowState(DateTime at, DateTime now) {
+  if (at.isBefore(now)) return LeadFollowState.overdue;
+  if (homeDay(at) == homeDay(now)) return LeadFollowState.today;
+  return LeadFollowState.upcoming;
+}
+
+/// A call or WhatsApp press: logged on the lead (as on the website), then
+/// opened on the phone.
+Future<void> leadContact(BuildContext context, Lead lead, String kind) async {
+  final cubit = context.read<LeadsCubit>();
+  final messenger = ScaffoldMessenger.of(context);
+  final noPhone = context.l10n.lvNoPhone;
+  final phone = await cubit.openContact(lead.id, kind) ?? lead.phone;
+  if (phone == null || phone.isEmpty) {
+    messenger.showSnackBar(SnackBar(content: Text(noPhone)));
+    return;
   }
-  return a.toUpperCase();
+  kind == 'WHATSAPP' ? await ContactActions.whatsApp(number: phone) : await ContactActions.call(phone);
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
+/// The leads list (owner-approved look, 2026-11-04), with the figures of the
+/// website's leads page: the stage counts for the whole scope, the open
+/// leads and the conversion, the queue nobody owns (managers), and on each
+/// card the source or broker, the unit, the next follow-up or visit, the
+/// last contact, the days in stage and the rep.
 class LeadsScreen extends StatefulWidget {
   const LeadsScreen({super.key});
 
@@ -45,11 +81,16 @@ class LeadsScreen extends StatefulWidget {
 class _LeadsScreenState extends State<LeadsScreen> {
   final _search = TextEditingController();
   final _scrollCtrl = ScrollController();
+  late final bool _manager;
 
   @override
   void initState() {
     super.initState();
-    context.read<LeadsCubit>().load();
+    final role = context.read<SessionCubit>().state.role;
+    _manager = role == AppRole.admin || role == AppRole.salesManager;
+    context.read<LeadsCubit>()
+      ..queue = _manager
+      ..load();
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -61,8 +102,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-        _scrollCtrl.position.maxScrollExtent - 200) {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200) {
       context.read<LeadsCubit>().loadMore();
     }
   }
@@ -72,7 +112,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _LeadFilterSheet(cubit: cubit),
+      builder: (_) => _LeadFilterSheet(cubit: cubit, manager: _manager),
     );
   }
 
@@ -80,903 +120,420 @@ class _LeadsScreenState extends State<LeadsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<LeadsCubit>();
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
     final lang = Localizations.localeOf(context).languageCode;
-
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final created = await context.push<bool>('/leads/new');
-          if (created == true && context.mounted) cubit.load();
-        },
-        tooltip: l10n.leadNew,
-        child: const Icon(Icons.add_rounded),
-      ),
-      body: Column(
-        children: [
-          // ── Header + embedded search ────────────────────────────────────────
-          BlocBuilder<LeadsCubit, LeadsListState>(
-            buildWhen: (a, b) =>
-                a.mine != b.mine ||
-                a.hasAdvancedFilters != b.hasAdvancedFilters,
-            builder: (context, state) => _LeadsHeader(
-              title: l10n.navLeads,
-              isMine: state.mine,
-              hasFilters: state.hasAdvancedFilters,
-              searchController: _search,
-              searchHint: l10n.leadsSearchHint,
-              onToggleMine: cubit.toggleMine,
-              onFilterTap: () => _showFilterSheet(context, cubit),
-              onSearch: cubit.setSearch,
-              onClearSearch: () {
-                _search.clear();
-                cubit.setSearch('');
-              },
-            ),
-          ),
-          // ── Stage filter chips ───────────────────────────────────────────────
-          BlocBuilder<LeadsCubit, LeadsListState>(
-            buildWhen: (a, b) =>
-                a.stage != b.stage ||
-                a.leads != b.leads ||
-                a.status != b.status,
-            builder: (context, state) {
-              final stageCounts = <String, int>{};
-              for (final lead in state.leads) {
-                stageCounts[lead.stage] = (stageCounts[lead.stage] ?? 0) + 1;
-              }
-              return _StageFilterRow(
-                selected: state.stage,
-                lang: lang,
-                stageCounts: stageCounts,
-                totalCount: state.leads.length,
-                onSelected: (s) => cubit.setStage(s == state.stage ? null : s),
-              );
-            },
-          ),
-          // ── Active advanced filter chips ─────────────────────────────────────
-          BlocBuilder<LeadsCubit, LeadsListState>(
-            buildWhen: (a, b) =>
-                a.sourceId != b.sourceId ||
-                a.dateFrom != b.dateFrom ||
-                a.dateTo != b.dateTo,
-            builder: (context, state) {
-              if (!state.hasAdvancedFilters) return const SizedBox.shrink();
-              return _ActiveFilterChips(state: state, cubit: cubit, lang: lang);
-            },
-          ),
-          // ── Body ────────────────────────────────────────────────────────────
-          Expanded(
-            child: BlocBuilder<LeadsCubit, LeadsListState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(
-                      failure: state.failure,
-                      onRetry: cubit.load,
-                    );
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.people_outline_rounded,
-                      title: l10n.leadsEmptyTitle,
-                      message: l10n.leadsEmptyMessage,
-                    );
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: CustomScrollView(
-                        controller: _scrollCtrl,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: _KpiRow(leads: state.leads, lang: lang),
-                          ),
-                          SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
-                              AppSpacing.md,
-                              AppSpacing.xs,
-                              AppSpacing.md,
-                              AppSpacing.md,
-                            ),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                i,
-                              ) {
-                                if (i.isOdd) {
-                                  return const SizedBox(height: AppSpacing.sm);
-                                }
-                                return _LeadCard(lead: state.leads[i ~/ 2]);
-                              }, childCount: state.leads.length * 2 - 1),
-                            ),
-                          ),
-                          if (state.isLoadingMore)
-                            const SliverToBoxAdapter(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSpacing.md,
-                                ),
-                                child: Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                            ),
-                          SliverPadding(
-                            padding: EdgeInsets.only(bottom: bottomPad + 100),
-                          ),
-                        ],
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Leads-specific header (avoids core-package hot-reload issues) ─────────────
-
-class _LeadsHeader extends StatelessWidget {
-  const _LeadsHeader({
-    required this.title,
-    required this.isMine,
-    required this.hasFilters,
-    required this.searchController,
-    required this.searchHint,
-    required this.onToggleMine,
-    required this.onFilterTap,
-    required this.onSearch,
-    required this.onClearSearch,
-  });
-
-  final String title;
-  final bool isMine;
-  final bool hasFilters;
-  final TextEditingController searchController;
-  final String searchHint;
-  final VoidCallback onToggleMine;
-  final VoidCallback onFilterTap;
-  final ValueChanged<String> onSearch;
-  final VoidCallback onClearSearch;
-
-  static const _navyDeep = Color(0xFF0B1726);
-  static const _navyMid = Color(0xFF14273F);
-  static const _navyLight = Color(0xFF243F62);
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_navyLight, _navyMid, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
+      child: Scaffold(
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 84),
+          child: FloatingActionButton(
+            key: const Key('leads-add'),
+            backgroundColor: AppPalette.gold400,
+            foregroundColor: AppPalette.navy,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            onPressed: () async {
+              final created = await context.push<bool>('/leads/new');
+              if (created == true && context.mounted) cubit.load();
+            },
+            tooltip: l10n.leadNew,
+            child: const Icon(Icons.person_add_rounded),
           ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(AppRadii.xl + 4),
-            bottomRight: Radius.circular(AppRadii.xl + 4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x33000000),
-              blurRadius: 22,
-              offset: Offset(0, 8),
-            ),
-          ],
         ),
-        child: Stack(
-          children: [
-            // Dot texture
-            const Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(AppRadii.xl + 4),
-                  bottomRight: Radius.circular(AppRadii.xl + 4),
-                ),
-                child: IgnorePointer(child: _HeaderDotsBg()),
-              ),
-            ),
-            // Gold radial bloom
-            PositionedDirectional(
-              top: 0,
-              end: -30,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
-                    stops: [0.0, 0.75],
-                  ),
-                ),
-              ),
-            ),
-            // Gold hairline at bottom
-            Positioned(
-              bottom: 0,
-              left: 40,
-              right: 40,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      AppPalette.gold400.withValues(alpha: 0.50),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.md,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Action buttons row
-                    Row(
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.3,
+        body: BlocBuilder<LeadsCubit, LeadsListState>(
+          builder: (context, state) {
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                controller: _scrollCtrl,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.navLeads,
+                      subtitle: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
+                      actions: [
+                        if (!_manager)
+                          HomeHeroButton(
+                            icon: Icons.person_rounded,
+                            active: state.mine,
+                            tooltip: l10n.lvMine,
+                            onTap: cubit.toggleMine,
                           ),
-                        ),
-                        const Spacer(),
-                        _GlassBtn(
-                          icon: isMine
-                              ? Icons.person_rounded
-                              : Icons.person_outline_rounded,
-                          onTap: onToggleMine,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        _GlassBtn(
-                          icon: hasFilters
-                              ? Icons.filter_alt_rounded
-                              : Icons.filter_alt_outlined,
-                          onTap: onFilterTap,
+                        HomeHeroButton(
+                          icon: Icons.tune_rounded,
+                          dot: state.hasAdvancedFilters,
+                          tooltip: l10n.lvFilters,
+                          onTap: () => _showFilterSheet(context, cubit),
                         ),
                       ],
+                      bottom: HomeSearchField(
+                        controller: _search,
+                        hint: l10n.leadsSearchHint,
+                        onSubmitted: cubit.setSearch,
+                        onClear: () {
+                          _search.clear();
+                          cubit.setSearch('');
+                        },
+                      ),
                     ),
-
-                    // ── gap between buttons and title ──
-
-                    // Title
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Search bar
-                    _NavSearchBar(
-                      controller: searchController,
-                      hint: searchHint,
-                      onSubmitted: onSearch,
-                      onClear: onClearSearch,
+                  ),
+                  SliverToBoxAdapter(child: _Figures(state: state, manager: _manager)),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      child: HomePills(pills: [
+                        HomePill(
+                          id: 'all',
+                          label: l10n.lvAll,
+                          count: state.pipeline.isEmpty ? null : state.pipelineTotal,
+                          selected: state.stage == null && !state.unassigned,
+                          onTap: () => state.unassigned ? cubit.toggleUnassigned() : cubit.setStage(null),
+                        ),
+                        if (_manager)
+                          HomePill(
+                            id: 'unassigned',
+                            label: l10n.lvUnassigned,
+                            count: state.unassignedCount,
+                            dot: AppPalette.gold400,
+                            selected: state.unassigned,
+                            onTap: cubit.toggleUnassigned,
+                          ),
+                        for (final s in _stages)
+                          HomePill(
+                            id: s,
+                            label: leadStageLabel(l10n, s),
+                            count: state.pipeline[s],
+                            dot: leadStageColor(s, context.appColors),
+                            selected: state.stage == s,
+                            onTap: () async {
+                              if (state.unassigned) await cubit.toggleUnassigned();
+                              await cubit.setStage(state.stage == s ? null : s);
+                            },
+                          ),
+                      ]),
                     ),
-                  ],
-                ),
+                  ),
+                  if (state.hasAdvancedFilters)
+                    SliverToBoxAdapter(child: _ActiveFilterChips(state: state, cubit: cubit, lang: lang)),
+                  ..._body(context, state),
+                  if (state.isLoadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
+                  SliverPadding(padding: EdgeInsets.only(bottom: bottomPad + 120)),
+                ],
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _body(BuildContext context, LeadsListState state) {
+    final l10n = context.l10n;
+    final cubit = context.read<LeadsCubit>();
+    switch (state.status) {
+      case DataStatus.initial:
+      case DataStatus.loading:
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+      case DataStatus.failure:
+        return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))];
+      case DataStatus.empty:
+        return [
+          SliverToBoxAdapter(
+            child: EmptyState(icon: Icons.people_outline_rounded, title: l10n.leadsEmptyTitle, message: l10n.leadsEmptyMessage),
+          ),
+        ];
+      case DataStatus.success:
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            sliver: SliverList.separated(
+              itemCount: state.leads.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, i) => LeadCard(lead: state.leads[i], showRep: _manager),
             ),
-          ],
+          ),
+        ];
+    }
+  }
+}
+
+/// The navy band: the scope's leads (and how many are open), the conversion,
+/// and the unassigned queue (managers) or the overdue follow-ups (reps).
+class _Figures extends StatelessWidget {
+  const _Figures({required this.state, required this.manager});
+  final LeadsListState state;
+  final bool manager;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (state.pipeline.isEmpty) return const SizedBox(height: 4);
+    final rate = state.conversionRate;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+      child: HomeBand(figures: [
+        HomeFigure(id: 'total', value: '${state.pipelineTotal}', label: l10n.lvTotal, hint: l10n.lvOpenN(state.openCount)),
+        HomeFigure(
+          id: 'conversion',
+          value: rate == null ? '—' : '$rate%',
+          label: l10n.lvConversion,
+          hint: l10n.lvWonN(state.pipeline['WON'] ?? 0),
+        ),
+        if (manager)
+          HomeFigure(
+            id: 'unassigned',
+            value: '${state.unassignedCount}',
+            label: l10n.lvUnassigned,
+            hint: l10n.lvUnassignedHint,
+            warn: state.unassignedCount > 0,
+          )
+        else
+          HomeFigure(
+            id: 'overdue',
+            value: '${state.overdueFollowUps}',
+            label: l10n.lvOverdue,
+            hint: state.overdueFollowUps > 0 ? l10n.lvOverdueSome : l10n.lvOverdueNone,
+            warn: state.overdueFollowUps > 0,
+          ),
+      ]),
+    );
+  }
+}
+
+/// One lead: who, which project and unit, where from, the stage, and what
+/// comes next (the follow-up, else the visit, else the last contact), with
+/// call and WhatsApp.
+class LeadCard extends StatelessWidget {
+  const LeadCard({super.key, required this.lead, this.showRep = false});
+  final Lead lead;
+
+  /// Managers see whose lead it is.
+  final bool showRep;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final now = DateTime.now();
+    final stageColor = leadStageColor(lead.stage, colors);
+    final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
+    final where = [
+      if ((project ?? '').isNotEmpty) project!,
+      if ((lead.unitCode ?? '').isNotEmpty) ltr(lead.unitCode!),
+    ].join(' · ');
+    final source = lead.brokerName != null ? '${l10n.lvBroker} · ${lead.brokerName}' : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect);
+
+    // What comes next: the follow-up, else the booked visit, else the last contact.
+    final (IconData nextIcon, String nextText, Color nextColor) = () {
+      final f = lead.nextActionAt;
+      if (f != null && lead.stage != 'WON' && lead.stage != 'LOST') {
+        return switch (leadFollowState(f, now)) {
+          LeadFollowState.overdue => (Icons.alarm_rounded, l10n.lvFollowOverdue(leadWhen(context, f)), colors.error),
+          LeadFollowState.today => (Icons.alarm_rounded, l10n.lvFollowToday(DateFormatter.time(f, languageCode: lang)), colors.warning),
+          LeadFollowState.upcoming => (Icons.event_repeat_rounded, l10n.lvFollowNext(leadWhen(context, f)), AppPalette.gold600),
+        };
+      }
+      if (lead.upcomingVisitAt != null) {
+        return (Icons.event_rounded, l10n.lvVisit(leadWhen(context, lead.upcomingVisitAt!)), colors.info);
+      }
+      if (lead.lastContactAt != null) {
+        return (Icons.history_rounded, l10n.lvLastContact(leadWhen(context, lead.lastContactAt!, withTime: false)), colors.inkMuted);
+      }
+      return (Icons.history_rounded, l10n.lvNoContact, colors.inkMuted);
+    }();
+    final days = lead.stageChangedAt == null ? null : homeDay(now).difference(homeDay(lead.stageChangedAt!)).inDays;
+
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: Key('lead-card-${lead.id}'),
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => context.push('/leads/${lead.id}', extra: lead).then((_) {
+          if (context.mounted) context.read<LeadsCubit>().loadSummary();
+        }),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.hairline),
+          ),
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                  child: Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(lead.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+                        child: Text(leadStageLabel(l10n, lead.stage),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: stageColor)),
+                      ),
+                    ]),
+                    if (where.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Row(children: [
+                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(where,
+                              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        ),
+                      ]),
+                    ],
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 6, runSpacing: 4, children: [
+                      _Tag(icon: lead.brokerName != null ? Icons.handshake_rounded : Icons.call_received_rounded, text: source),
+                      if (showRep)
+                        lead.unassigned
+                            ? _Tag(icon: Icons.person_off_rounded, text: l10n.lvUnassigned, color: AppPalette.gold600)
+                            : _Tag(icon: Icons.person_rounded, text: lead.assignedSalesName!),
+                    ]),
+                  ]),
+                ),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+              decoration: BoxDecoration(
+                color: colors.surfaceSoft.withValues(alpha: 0.6),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                border: Border(top: BorderSide(color: colors.hairline)),
+              ),
+              child: Row(children: [
+                Icon(nextIcon, size: 15, color: nextColor),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(nextText,
+                        key: Key('lead-next-${lead.id}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: nextColor)),
+                    if (days != null)
+                      Text(l10n.lvInStage(days),
+                          style: TextStyle(fontSize: 10.5, color: days >= 14 ? colors.warning : colors.inkMuted)),
+                  ]),
+                ),
+                if ((lead.phone ?? '').isNotEmpty) ...[
+                  _RoundAction(
+                    key: Key('lead-whatsapp-${lead.id}'),
+                    icon: Icons.chat_rounded,
+                    color: const Color(0xFF1E9E5A),
+                    onTap: () => leadContact(context, lead, 'WHATSAPP'),
+                  ),
+                  const SizedBox(width: 6),
+                  _RoundAction(
+                    key: Key('lead-call-${lead.id}'),
+                    icon: Icons.phone_rounded,
+                    color: AppPalette.navy,
+                    onTap: () => leadContact(context, lead, 'CALL'),
+                  ),
+                ],
+              ]),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
-class _GlassBtn extends StatelessWidget {
-  const _GlassBtn({required this.icon, required this.onTap});
+class _Tag extends StatelessWidget {
+  const _Tag({required this.icon, required this.text, this.color});
   final IconData icon;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? context.appColors.inkMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: context.appColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 12, color: c),
+        const SizedBox(width: 4),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({super.key, required this.icon, required this.color, required this.onTap});
+  final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white.withValues(alpha: 0.10),
-    shape: const CircleBorder(),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.20),
-            width: 0.8,
-          ),
+        color: color.withValues(alpha: 0.10),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 18, color: color)),
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
-      ),
-    ),
-  );
+      );
 }
 
-class _HeaderDotsBg extends StatelessWidget {
-  const _HeaderDotsBg();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotsBgPainter(), child: SizedBox.expand());
-}
-
-class _DotsBgPainter extends CustomPainter {
-  const _DotsBgPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 8.0; y < size.height; y += step) {
-      for (var x = 8.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotsBgPainter _) => false;
-}
-
-// ── Nav search bar (white pill embedded in AppNavHeader bottom:) ──────────────
-
-class _NavSearchBar extends StatefulWidget {
-  const _NavSearchBar({
-    required this.controller,
-    required this.hint,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  @override
-  State<_NavSearchBar> createState() => _NavSearchBarState();
-}
-
-class _NavSearchBarState extends State<_NavSearchBar> {
-  bool _hasText = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(
-      () => setState(() => _hasText = widget.controller.text.isNotEmpty),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      height: 46,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: AppSpacing.md),
-          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              onSubmitted: widget.onSubmitted,
-              textInputAction: TextInputAction.search,
-              style: theme.textTheme.bodyMedium,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: widget.hint,
-                hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkMuted,
-                ),
-              ),
-            ),
-          ),
-          if (_hasText)
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
-              onPressed: widget.onClear,
-            ),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Stage filter row ──────────────────────────────────────────────────────────
-
-class _StageFilterRow extends StatelessWidget {
-  const _StageFilterRow({
-    required this.selected,
-    required this.lang,
-    required this.stageCounts,
-    required this.totalCount,
-    required this.onSelected,
-  });
-  final String? selected;
-  final String lang;
-  final Map<String, int> stageCounts;
-  final int totalCount;
-  final ValueChanged<String?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: 6,
-        ),
-        child: Row(
-          children: [
-            _FilterChip(
-              label: lang == 'ar' ? 'الكل' : 'All',
-              count: totalCount,
-              active: selected == null,
-              onTap: () => onSelected(null),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            for (final stage in kLeadStages) ...[
-              _FilterChip(
-                label: leadStageLabel(l10n, stage),
-                count: stageCounts[stage] ?? 0,
-                dotColor: _stageColor(stage, colors),
-                active: selected == stage,
-                onTap: () => onSelected(stage),
-              ),
-              if (stage != kLeadStages.last)
-                const SizedBox(width: AppSpacing.xs),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+/// A choice in the filter sheet.
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.count,
-    this.dotColor,
-  });
+  const _FilterChip({required this.label, required this.active, required this.onTap});
   final String label;
-  final int? count;
   final bool active;
   final VoidCallback onTap;
-  final Color? dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppFilterChip(label: label, count: count, selected: active, onTap: onTap, dotColor: dotColor);
-  }
-}
-
-// ── KPI summary row ───────────────────────────────────────────────────────────
-
-class _KpiRow extends StatelessWidget {
-  const _KpiRow({required this.leads, required this.lang});
-  final List<Lead> leads;
-  final String lang;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final total = leads.length;
-    final pipeline = leads
-        .where(
-          (l) =>
-              l.stage == 'INTERESTED' ||
-              l.stage == 'VISIT' ||
-              l.stage == 'NEGOTIATION',
-        )
-        .length;
-    final won = leads.where((l) => l.stage == 'WON').length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.xs,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: AppRadii.card,
-          border: Border.all(color: colors.hairline, width: 0.8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              Expanded(
-                child: _KpiStat(
-                  value: '$total',
-                  label: lang == 'ar' ? 'الإجمالي' : 'Total',
-                  color: colors.brandNavy,
-                ),
-              ),
-              VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
-              Expanded(
-                child: _KpiStat(
-                  value: '$pipeline',
-                  label: lang == 'ar' ? 'في المسار' : 'Pipeline',
-                  color: colors.brandGold,
-                ),
-              ),
-              VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
-              Expanded(
-                child: _KpiStat(
-                  value: '$won',
-                  label: lang == 'ar' ? 'مكتمل' : 'Won',
-                  color: colors.success,
-                ),
-              ),
-            ],
-          ),
+    return Material(
+      color: active ? AppPalette.navy : colors.surface,
+      shape: StadiumBorder(side: BorderSide(color: active ? AppPalette.navy : colors.hairline)),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Text(label,
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: active ? Colors.white : colors.inkStrong)),
         ),
       ),
     );
   }
 }
-
-class _KpiStat extends StatelessWidget {
-  const _KpiStat({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-  final String value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: color,
-              height: 1.1,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colors.inkMuted,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Lead card ─────────────────────────────────────────────────────────────────
-
-class _LeadCard extends StatefulWidget {
-  const _LeadCard({required this.lead});
-  final Lead lead;
-
-  @override
-  State<_LeadCard> createState() => _LeadCardState();
-}
-
-class _LeadCardState extends State<_LeadCard> {
-  bool _pressed = false;
-  Lead get lead => widget.lead;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = context.read<LocaleCubit>().isRtl;
-    final stageColor = _stageColor(lead.stage, colors);
-    final initials = _initials(lead.fullName);
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/leads/${lead.id}', extra: lead),
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(
-              color: stageColor.withValues(alpha: 0.14),
-              width: 0.8,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: stageColor.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 5),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top gradient accent strip ─────────────────────────────
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                    colors: [stageColor, stageColor.withValues(alpha: 0.0)],
-                  ),
-                ),
-              ),
-              // ── Card body ─────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Avatar + name/project + badge + chevron ──────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: stageColor.withValues(alpha: 0.12),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: stageColor.withValues(alpha: 0.30),
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            initials,
-                            style: TextStyle(
-                              color: stageColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                lead.fullName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              if (lead.projectInterest != null)
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.apartment_outlined,
-                                      size: 12,
-                                      color: colors.inkMuted,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Expanded(
-                                      child: Text(
-                                        lead.projectInterest!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colors.inkMuted,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else if (lead.phone != null)
-                                Text(
-                                  ltr(lead.phone),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: colors.inkMuted,
-                                    height: 1.3,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        StatusBadge(
-                          label: leadStageLabel(l10n, lead.stage),
-                          tone: leadStageTone(lead.stage),
-                        ),
-                        const SizedBox(width: AppSpacing.xxs),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 20,
-                          color: colors.inkMuted,
-                        ),
-                      ],
-                    ),
-                    // ── Date chip + call button ──────────────────────────
-                    const SizedBox(height: AppSpacing.xs),
-                    Container(height: 0.5, color: colors.hairline),
-                    const SizedBox(height: AppSpacing.xs),
-                    Row(
-                      children: [
-                        if (lead.createdAt != null)
-                          _LeadInfoChip(
-                            icon: Icons.calendar_today_outlined,
-                            label: DateFormatter.shortDate(
-                              lead.createdAt!,
-                              languageCode: lang,
-                            ),
-                            color: colors.brandNavy,
-                          )
-                        else
-                          const SizedBox.shrink(),
-                        const Spacer(),
-                        if (lead.phone != null)
-                          GestureDetector(
-                            onTap: () => ContactActions.call(lead.phone!),
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: colors.success.withValues(alpha: 0.10),
-                                border: Border.all(
-                                  color: colors.success.withValues(alpha: 0.25),
-                                ),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.call_rounded,
-                                size: 15,
-                                color: colors.success,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Shared info chip ──────────────────────────────────────────────────────────
-
-class _LeadInfoChip extends StatelessWidget {
-  const _LeadInfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        border: Border.all(color: color.withValues(alpha: 0.20)),
-        borderRadius: AppRadii.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color.withValues(alpha: 0.80)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Active filter chip row ────────────────────────────────────────────────────
 
 class _ActiveFilterChips extends StatelessWidget {
   const _ActiveFilterChips({
@@ -1015,6 +572,14 @@ class _ActiveFilterChips extends StatelessWidget {
             _DismissChip(
               label: lang == 'ar' ? 'المصدر: …' : 'Source: …',
               onTap: () => cubit.setAdvancedFilters(clearSourceId: true),
+              colors: colors,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          if (state.salesId != null) ...[
+            _DismissChip(
+              label: l10n.lvRepChip(state.salesName ?? ''),
+              onTap: () => cubit.setSales(null, null),
               colors: colors,
             ),
             const SizedBox(width: AppSpacing.xs),
@@ -1092,8 +657,11 @@ class _DismissChip extends StatelessWidget {
 // ── Filter bottom sheet ───────────────────────────────────────────────────────
 
 class _LeadFilterSheet extends StatefulWidget {
-  const _LeadFilterSheet({required this.cubit});
+  const _LeadFilterSheet({required this.cubit, this.manager = false});
   final LeadsCubit cubit;
+
+  /// Managers and admins also filter by rep.
+  final bool manager;
 
   @override
   State<_LeadFilterSheet> createState() => _LeadFilterSheetState();
@@ -1106,6 +674,8 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
   String? _sourceId;
   String? _dateFrom;
   String? _dateTo;
+  List<StaffOption> _staff = const [];
+  String? _salesId;
 
   @override
   void initState() {
@@ -1114,7 +684,13 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
     _sourceId = s.sourceId;
     _dateFrom = s.dateFrom;
     _dateTo = s.dateTo;
+    _salesId = s.salesId;
     _loadSources();
+    if (widget.manager) {
+      widget.cubit.fetchStaff().then((list) {
+        if (mounted) setState(() => _staff = list);
+      });
+    }
   }
 
   Future<void> _loadSources() async {
@@ -1153,6 +729,10 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
   }
 
   void _apply() {
+    if (widget.manager && _salesId != widget.cubit.state.salesId) {
+      final name = _staff.where((o) => o.id == _salesId).firstOrNull?.name;
+      widget.cubit.setSales(_salesId, name);
+    }
     widget.cubit.setAdvancedFilters(
       sourceId: _sourceId,
       clearSourceId: _sourceId == null,
@@ -1169,6 +749,7 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
       _sourceId = null;
       _dateFrom = null;
       _dateTo = null;
+      _salesId = null;
     });
   }
 
@@ -1311,6 +892,35 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
               ),
             ],
           ),
+          if (widget.manager && _staff.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.lvRep,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _FilterChip(
+                    label: l10n.lvAllReps,
+                    active: _salesId == null,
+                    onTap: () => setState(() => _salesId = null),
+                  ),
+                  for (final o in _staff) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _FilterChip(
+                      label: o.name,
+                      active: _salesId == o.id,
+                      onTap: () => setState(() => _salesId = _salesId == o.id ? null : o.id),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
 
           // Apply button

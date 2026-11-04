@@ -54,6 +54,13 @@ class LeadRowDto {
     this.nextActionNote,
     this.campaignName,
     this.campaignChannel,
+    this.projectName,
+    this.unitCode,
+    this.sourceName,
+    this.brokerName,
+    this.upcomingVisitAt,
+    this.stageChangedAt,
+    this.lastContactAt,
   });
 
   final String id;
@@ -69,6 +76,13 @@ class LeadRowDto {
   final String? nextActionNote;
   final String? campaignName;
   final String? campaignChannel;
+  final Translatable? projectName;
+  final String? unitCode;
+  final Translatable? sourceName;
+  final String? brokerName;
+  final String? upcomingVisitAt;
+  final String? stageChangedAt;
+  final String? lastContactAt;
 
   factory LeadRowDto.fromJson(Map<String, dynamic> json) {
     final client = json['client'] as Map<String, dynamic>?;
@@ -91,6 +105,16 @@ class LeadRowDto {
       nextActionNote: json['nextActionNote'] as String?,
       campaignName: campaign?['name'] as String?,
       campaignChannel: campaign?['channel'] as String?,
+      projectName: projectName == null ? null : Translatable.fromJson(projectName),
+      unitCode: (json['unitInterest'] as Map?)?['code'] as String?,
+      sourceName: (json['source'] as Map?)?['name'] == null ? null : Translatable.fromJson((json['source'] as Map)['name']),
+      brokerName: () {
+        final b = json['broker'] as Map?;
+        return (b?['commercialName'] as String?)?.trim().isNotEmpty == true ? b!['commercialName'] as String : b?['companyName'] as String?;
+      }(),
+      upcomingVisitAt: (json['upcomingVisit'] as Map?)?['scheduledAt'] as String?,
+      stageChangedAt: json['stageChangedAt'] as String?,
+      lastContactAt: json['lastContactAt'] as String?,
     );
   }
 }
