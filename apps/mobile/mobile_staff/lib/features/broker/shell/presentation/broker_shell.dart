@@ -65,7 +65,7 @@ class _BrokerShellState extends State<BrokerShell> {
     const BrokerProjectsScreen(),
     BlocProvider(
       create: (ctx) =>
-          BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>())),
+          BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>()), ctx.read<BrokerLeadsRepository>()),
       child: const BrokerLeadsScreen(),
     ),
     BlocProvider(

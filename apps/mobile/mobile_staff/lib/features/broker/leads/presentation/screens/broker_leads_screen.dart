@@ -6,34 +6,27 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../common/broker_status_label.dart';
 import '../../../../../common/lead_stage_label.dart';
+import '../../../../dashboard/home_kit/home_kit.dart';
+import '../../../../leads/presentation/screens/leads_screen.dart' show leadStageColor, leadWhen;
 import '../../domain/entities/broker_lead.dart';
 import '../cubit/broker_leads_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Broker Leads Screen
-// ─────────────────────────────────────────────────────────────────────────────
-
-String _initials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  final a = parts.first.characters.firstOrNull ?? '?';
-  if (parts.length >= 2) {
-    final b = parts.last.characters.firstOrNull ?? '';
-    return '$a$b'.toUpperCase();
-  }
-  return a.toUpperCase();
-}
-
-Color _statusColor(String s, AppColorsExt colors) => switch (s) {
+/// The colour of a broker lead's approval status.
+Color brokerApprovalColor(String status, AppColorsExt colors) => switch (status) {
       'APPROVED' => colors.success,
       'REJECTED' => colors.error,
-      'DUPLICATE' => colors.inkMuted,
-      'EXPIRED' => colors.inkMuted,
-      _ => colors.warning, // PENDING
+      'PENDING' => AppPalette.gold600,
+      _ => colors.inkMuted,
     };
 
+const _stages = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION', 'WON', 'LOST'];
+
+/// The broker's leads (owner-approved look, 2026-11-04), with the broker
+/// portal's figures on the website: how many were sent, wait for the
+/// company, were approved or rejected; filters by approval and stage; and
+/// on each card the project and unit, the company's rep and when it was
+/// sent. An agent sees their own leads, the firm's manager all of them
+/// (the server decides).
 class BrokerLeadsScreen extends StatefulWidget {
   const BrokerLeadsScreen({super.key});
 
@@ -61,692 +54,279 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
     if (created == true && mounted) context.read<BrokerLeadsCubit>().load();
   }
 
+  Future<void> _pickStage(BrokerLeadsCubit cubit) async {
+    final l10n = context.l10n;
+    final current = cubit.state.stage;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: ListView(shrinkWrap: true, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(l10n.blStage, style: homeDisplay(16, ctx.appColors.inkStrong)),
+          ),
+          for (final s in ['', ..._stages])
+            ListTile(
+              key: Key('broker-stage-${s.isEmpty ? 'all' : s}'),
+              title: Text(s.isEmpty ? l10n.lvAll : leadStageLabel(l10n, s)),
+              leading: s.isEmpty
+                  ? null
+                  : Container(width: 10, height: 10, decoration: BoxDecoration(color: leadStageColor(s, ctx.appColors), shape: BoxShape.circle)),
+              trailing: (current ?? '') == s ? const Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
+              onTap: () => Navigator.of(ctx).pop(s),
+            ),
+        ]),
+      ),
+    );
+    if (picked != null) await cubit.setStage(picked.isEmpty ? null : picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<BrokerLeadsCubit>();
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-    final lang = Localizations.localeOf(context).languageCode;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: context.appColors.canvas,
-        body: Column(
-          children: [
-            // ── Header with embedded search ───────────────────────────────
-            BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
-              buildWhen: (a, b) =>
-                  a.status != b.status ||
-                  a.leads.length != b.leads.length,
-              builder: (context, state) => _LeadsHeader(
-                l10n: l10n,
-                lang: lang,
-                count: state.status == DataStatus.success
-                    ? state.leads.length
-                    : null,
-                onAdd: _create,
-                searchController: _search,
-                onSearch: cubit.setSearch,
-                onClearSearch: () {
-                  _search.clear();
-                  cubit.setSearch('');
-                },
-              ),
-            ),
-
-            // ── Filter chips ──────────────────────────────────────────────
-            BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
-              buildWhen: (a, b) =>
-                  a.approvalStatus != b.approvalStatus ||
-                  a.leads != b.leads,
-              builder: (context, state) {
-                final counts = <String, int>{};
-                for (final lead in state.leads) {
-                  counts[lead.approvalStatus] =
-                      (counts[lead.approvalStatus] ?? 0) + 1;
-                }
-                return _FilterRow(
-                  l10n: l10n,
-                  lang: lang,
-                  selected: state.approvalStatus,
-                  total: state.leads.length,
-                  counts: counts,
-                  onSelected: (s) =>
-                      cubit.setApprovalStatus(s == state.approvalStatus ? null : s),
-                );
-              },
-            ),
-
-            // ── List ──────────────────────────────────────────────────────
-            Expanded(
-              child: BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
-                builder: (context, state) {
-                  switch (state.status) {
-                    case DataStatus.initial:
-                    case DataStatus.loading:
-                      return _LeadsSkeleton(
-                        bottomPad: bottomPad,
-                        lang: lang,
-                        l10n: l10n,
-                      );
-                    case DataStatus.failure:
-                      return ErrorState(
-                        failure: state.failure,
-                        onRetry: cubit.load,
-                      );
-                    case DataStatus.empty:
-                      return EmptyState(
-                        icon: Icons.people_outline_rounded,
-                        title: l10n.leadsEmptyTitle,
-                        message: l10n.brokerLeadsEmptyMessage,
-                      );
-                    case DataStatus.success:
-                      if (state.leads.isEmpty) {
-                        return EmptyState(
-                          icon: Icons.filter_list_off_rounded,
-                          title: lang == 'ar' ? 'لا توجد نتائج' : 'No results',
-                          message: lang == 'ar'
-                              ? 'جرّب تصفية أخرى'
-                              : 'Try a different filter',
-                        );
-                      }
-                      return RefreshIndicator(
-                        onRefresh: cubit.load,
-                        child: CustomScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          slivers: [
-                            SliverToBoxAdapter(
-                              child: _KpiBar(
-                                leads: state.leads,
-                                lang: lang,
-                                l10n: l10n,
-                              ),
-                            ),
-                            SliverPadding(
-                              padding: EdgeInsets.fromLTRB(
-                                AppSpacing.md,
-                                AppSpacing.xs,
-                                AppSpacing.md,
-                                bottomPad + 100,
-                              ),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, i) {
-                                    if (i.isOdd) {
-                                      return const SizedBox(
-                                          height: AppSpacing.sm);
-                                    }
-                                    return _LeadCard(
-                                        lead: state.leads[i ~/ 2]);
-                                  },
-                                  childCount: state.leads.length * 2 - 1,
-                                ),
-                              ),
-                            ),
-                          ],
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 84),
+          child: FloatingActionButton(
+            key: const Key('broker-leads-add'),
+            backgroundColor: AppPalette.gold400,
+            foregroundColor: AppPalette.navy,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            onPressed: _create,
+            child: const Icon(Icons.person_add_rounded),
+          ),
+        ),
+        body: BlocBuilder<BrokerLeadsCubit, BrokerLeadsListState>(
+          builder: (context, state) {
+            final c = state.counts;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.navLeads,
+                      subtitle: c == null ? null : l10n.lvCountN(c.total),
+                      actions: [
+                        HomeHeroButton(
+                          key: const Key('broker-leads-stage'),
+                          icon: Icons.tune_rounded,
+                          dot: state.stage != null,
+                          tooltip: l10n.blStage,
+                          onTap: () => _pickStage(cubit),
                         ),
-                      );
-                  }
-                },
+                      ],
+                      bottom: HomeSearchField(
+                        controller: _search,
+                        hint: l10n.leadsSearchHint,
+                        onSubmitted: cubit.setSearch,
+                        onClear: () {
+                          _search.clear();
+                          cubit.setSearch('');
+                        },
+                      ),
+                    ),
+                  ),
+                  if (c != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                        child: HomeBand(figures: [
+                          HomeFigure(id: 'total', value: '${c.total}', label: l10n.lvTotal, hint: l10n.blApprovedN(c.approved)),
+                          HomeFigure(
+                            id: 'pending',
+                            value: '${c.pending}',
+                            label: l10n.brokerLeadStatusPending,
+                            hint: l10n.blWaitingCompany,
+                            warn: c.pending > 0,
+                          ),
+                          HomeFigure(
+                            id: 'rejected',
+                            value: '${c.rejected}',
+                            label: l10n.brokerLeadStatusRejected,
+                            hint: c.rejected > 0 ? l10n.blSeeReason : l10n.blNoneRejected,
+                          ),
+                        ]),
+                      ),
+                    ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      child: HomePills(pills: [
+                        HomePill(
+                          id: 'all',
+                          label: l10n.lvAll,
+                          count: c?.total,
+                          selected: state.approvalStatus == null,
+                          onTap: () => cubit.setApprovalStatus(null),
+                        ),
+                        for (final s in kBrokerLeadStatuses)
+                          HomePill(
+                            id: s,
+                            label: brokerLeadStatusLabel(l10n, s),
+                            count: switch (s) {
+                              'PENDING' => c?.pending,
+                              'APPROVED' => c?.approved,
+                              'REJECTED' => c?.rejected,
+                              _ => null,
+                            },
+                            dot: brokerApprovalColor(s, context.appColors),
+                            selected: state.approvalStatus == s,
+                            onTap: () => cubit.setApprovalStatus(state.approvalStatus == s ? null : s),
+                          ),
+                      ]),
+                    ),
+                  ),
+                  if (state.stage != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 6, AppSpacing.md, 0),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: InputChip(
+                            key: const Key('broker-stage-chip'),
+                            label: Text('${l10n.blStage}: ${leadStageLabel(l10n, state.stage!)}'),
+                            onDeleted: () => cubit.setStage(null),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ..._body(context, state),
+                  SliverPadding(padding: EdgeInsets.only(bottom: bottomPad + 120)),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Header with embedded search ───────────────────────────────────────────────
-
-class _LeadsHeader extends StatelessWidget {
-  const _LeadsHeader({
-    required this.l10n,
-    required this.lang,
-    required this.onAdd,
-    required this.searchController,
-    required this.onSearch,
-    required this.onClearSearch,
-    this.count,
-  });
-
-  final AppLocalizations l10n;
-  final String lang;
-  final int? count;
-  final VoidCallback onAdd;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearch;
-  final VoidCallback onClearSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    final sub = lang == 'ar' ? 'قائمة العملاء المحتملين' : 'Your prospect list';
-    return AppNavHeader(
-      title: l10n.navLeads,
-      subtitle: count != null ? '$sub · $count' : sub,
-      compact: true,
-      leadingAction: Navigator.canPop(context) ? const NavHeaderBack() : null,
-      actions: [NavHeaderButton(label: lang == 'ar' ? 'جديد' : 'New', onTap: onAdd)],
-      bottom: _SearchBar(
-        controller: searchController,
-        hint: l10n.leadsSearchHint,
-        onSubmitted: onSearch,
-        onClear: onClearSearch,
-      ),
-    );
-  }
-}
-
-// ── Search bar ────────────────────────────────────────────────────────────────
-
-class _SearchBar extends StatefulWidget {
-  const _SearchBar({
-    required this.controller,
-    required this.hint,
-    required this.onSubmitted,
-    required this.onClear,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onSubmitted;
-  final VoidCallback onClear;
-
-  @override
-  State<_SearchBar> createState() => _SearchBarState();
-}
-
-class _SearchBarState extends State<_SearchBar> {
-  bool _hasText = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(
-        () => setState(() => _hasText = widget.controller.text.isNotEmpty));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      height: 46,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: AppSpacing.md),
-          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              onSubmitted: widget.onSubmitted,
-              textInputAction: TextInputAction.search,
-              style: theme.textTheme.bodyMedium,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: widget.hint,
-                hintStyle: theme.textTheme.bodyMedium
-                    ?.copyWith(color: colors.inkMuted),
-              ),
-            ),
-          ),
-          if (_hasText)
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              icon:
-                  Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
-              onPressed: widget.onClear,
-            ),
-          const SizedBox(width: AppSpacing.xs),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Filter chips row ──────────────────────────────────────────────────────────
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.l10n,
-    required this.lang,
-    required this.selected,
-    required this.total,
-    required this.counts,
-    required this.onSelected,
-  });
-
-  final AppLocalizations l10n;
-  final String lang;
-  final String? selected;
-  final int total;
-  final Map<String, int> counts;
-  final ValueChanged<String?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border:
-            Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: 6),
-        child: Row(
-          children: [
-            _FilterChip(
-              label: lang == 'ar' ? 'الكل' : 'All',
-              count: total,
-              active: selected == null,
-              onTap: () => onSelected(null),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            for (final s in kBrokerLeadStatuses) ...[
-              _FilterChip(
-                label: brokerLeadStatusLabel(l10n, s),
-                count: counts[s] ?? 0,
-                dotColor: _dotColor(s, colors),
-                active: selected == s,
-                onTap: () => onSelected(s),
-              ),
-              if (s != kBrokerLeadStatuses.last)
-                const SizedBox(width: AppSpacing.xs),
-            ],
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Color _dotColor(String s, AppColorsExt colors) => switch (s) {
-        'APPROVED' => colors.success,
-        'REJECTED' => colors.error,
-        'DUPLICATE' => colors.inkMuted,
-        'EXPIRED' => colors.inkMuted,
-        _ => colors.warning,
-      };
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.count,
-    required this.active,
-    required this.onTap,
-    this.dotColor,
-  });
-  final String label;
-  final int count;
-  final bool active;
-  final VoidCallback onTap;
-  final Color? dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppFilterChip(label: label, count: count, selected: active, onTap: onTap, dotColor: dotColor);
+  List<Widget> _body(BuildContext context, BrokerLeadsListState state) {
+    final l10n = context.l10n;
+    switch (state.status) {
+      case DataStatus.initial:
+      case DataStatus.loading:
+        return const [
+          SliverToBoxAdapter(child: Padding(padding: EdgeInsets.only(top: 80), child: Center(child: CircularProgressIndicator()))),
+        ];
+      case DataStatus.failure:
+        return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<BrokerLeadsCubit>().load))];
+      case DataStatus.empty:
+        return [
+          SliverToBoxAdapter(
+            child: EmptyState(icon: Icons.people_outline_rounded, title: l10n.leadsEmptyTitle, message: l10n.brokerLeadsEmptyMessage),
+          ),
+        ];
+      case DataStatus.success:
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            sliver: SliverList.separated(
+              itemCount: state.leads.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, i) => BrokerLeadCard(lead: state.leads[i]),
+            ),
+          ),
+        ];
+    }
   }
 }
 
-// ── KPI bar ───────────────────────────────────────────────────────────────────
-
-class _KpiBar extends StatelessWidget {
-  const _KpiBar(
-      {required this.leads, required this.lang, required this.l10n});
-  final List<BrokerLead> leads;
-  final String lang;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final total = leads.length;
-    final approved =
-        leads.where((l) => l.approvalStatus == 'APPROVED').length;
-    final pending = leads.where((l) => l.approvalStatus == 'PENDING').length;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: AppRadii.card,
-          border: Border.all(color: colors.hairline, width: 0.8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              Expanded(
-                child: _KpiStat(
-                  value: '$total',
-                  label: lang == 'ar' ? 'الإجمالي' : 'Total',
-                  color: colors.brandNavy,
-                ),
-              ),
-              VerticalDivider(
-                  width: 1, thickness: 0.8, color: colors.hairline),
-              Expanded(
-                child: _KpiStat(
-                  value: '$approved',
-                  label: lang == 'ar' ? 'معتمد' : 'Approved',
-                  color: colors.success,
-                ),
-              ),
-              VerticalDivider(
-                  width: 1, thickness: 0.8, color: colors.hairline),
-              Expanded(
-                child: _KpiStat(
-                  value: '$pending',
-                  label: lang == 'ar' ? 'قيد المراجعة' : 'Pending',
-                  color: colors.warning,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _KpiStat extends StatelessWidget {
-  const _KpiStat(
-      {required this.value, required this.label, required this.color});
-  final String value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: color,
-              height: 1.1,
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colors.inkMuted,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Lead card ─────────────────────────────────────────────────────────────────
-
-class _LeadCard extends StatefulWidget {
-  const _LeadCard({required this.lead});
+class BrokerLeadCard extends StatelessWidget {
+  const BrokerLeadCard({super.key, required this.lead});
   final BrokerLead lead;
-
-  @override
-  State<_LeadCard> createState() => _LeadCardState();
-}
-
-class _LeadCardState extends State<_LeadCard> {
-  bool _pressed = false;
-  BrokerLead get lead => widget.lead;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final statusColor = _statusColor(lead.approvalStatus, colors);
-    final initials = _initials(lead.fullName);
-    final subtitle = lead.phone != null ? ltr(lead.phone) : lead.email;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(
-                color: statusColor.withValues(alpha: 0.14), width: 0.8),
-            boxShadow: [
-              BoxShadow(
-                color: statusColor.withValues(alpha: 0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 5),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top accent strip ──────────────────────────────────────
+    final approval = brokerApprovalColor(lead.approvalStatus, colors);
+    final duplicate = lead.approvalStatus == 'DUPLICATE';
+    final where = [
+      if ((lead.projectName ?? '').isNotEmpty) lead.projectName!,
+      (lead.unitCode ?? '').isNotEmpty ? ltr(lead.unitCode!) : l10n.blAnyUnit,
+    ].join(' · ');
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: Key('broker-lead-${lead.id}'),
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
+        child: Opacity(
+          opacity: duplicate ? 0.6 : 1,
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: homeCard(context),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: isRtl
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    end: isRtl
-                        ? Alignment.centerLeft
-                        : Alignment.centerRight,
-                    colors: [
-                      statusColor,
-                      statusColor.withValues(alpha: 0.0)
-                    ],
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                child: duplicate
+                    ? const Icon(Icons.content_copy_rounded, size: 18, color: AppPalette.gold300)
+                    : Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(lead.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                    ),
+                    _Pill(text: brokerLeadStatusLabel(l10n, lead.approvalStatus), color: approval),
+                  ]),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    _Pill(text: leadStageLabel(l10n, lead.stage), color: leadStageColor(lead.stage, colors)),
+                    if ((lead.assignedSalesName ?? '').isNotEmpty)
+                      _Pill(text: l10n.blRep(lead.assignedSalesName!), color: colors.inkMuted, icon: Icons.person_rounded),
+                    if (lead.sentAt != null)
+                      Text(l10n.blSent(leadWhen(context, lead.sentAt!, withTime: false)),
+                          style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  ]),
+                  if (lead.approvalStatus == 'REJECTED' && (lead.rejectionReason ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(lead.rejectionReason!,
+                        maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.error)),
+                  ],
+                ]),
+              ),
+              if ((lead.phone ?? '').isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Material(
+                  color: AppPalette.navy.withValues(alpha: 0.08),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    key: Key('broker-lead-call-${lead.id}'),
+                    customBorder: const CircleBorder(),
+                    onTap: () => ContactActions.call(lead.phone!),
+                    child: const SizedBox(width: 36, height: 36, child: Icon(Icons.phone_rounded, size: 18, color: AppPalette.navy)),
                   ),
                 ),
-              ),
-              // ── Card body ─────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Avatar + name/subtitle + badge + chevron ──────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Circle avatar with navy gradient
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [_navyLight, _navyDeep],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: statusColor.withValues(alpha: 0.35),
-                              width: 1.5,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            initials,
-                            style: const TextStyle(
-                              color: AppPalette.gold300,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              height: 1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        // Name + subtitle
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                lead.fullName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
-                                ),
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      lead.phone != null
-                                          ? Icons.phone_outlined
-                                          : Icons.email_outlined,
-                                      size: 11,
-                                      color: colors.inkMuted,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Expanded(
-                                      child: Text(
-                                        subtitle,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colors.inkMuted,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        StatusBadge(
-                          label: brokerLeadStatusLabel(
-                              l10n, lead.approvalStatus),
-                          tone: brokerLeadStatusTone(lead.approvalStatus),
-                        ),
-                        const SizedBox(width: AppSpacing.xxs),
-                        Icon(Icons.chevron_right_rounded,
-                            size: 20, color: colors.inkMuted),
-                      ],
-                    ),
-                    // ── Divider ───────────────────────────────────────────
-                    const SizedBox(height: 8),
-                    Container(height: 0.5, color: colors.hairline),
-                    const SizedBox(height: 8),
-                    // ── Bottom row: stage + project + date + call ─────────
-                    Row(
-                      children: [
-                        // Sales stage chip
-                        _InfoChip(
-                          icon: Icons.radio_button_checked_rounded,
-                          label: leadStageLabel(l10n, lead.stage),
-                          color: colors.brandNavy,
-                        ),
-                        if (lead.projectName != null) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          Flexible(
-                            child: _InfoChip(
-                              icon: Icons.apartment_outlined,
-                              label: lead.projectName!,
-                              color: colors.brandGold,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        // Date chip
-                        if (lead.createdAt != null)
-                          _InfoChip(
-                            icon: Icons.calendar_today_outlined,
-                            label: DateFormatter.shortDate(
-                              lead.createdAt!,
-                              languageCode: lang,
-                            ),
-                            color: colors.inkMuted,
-                          ),
-                        const SizedBox(width: AppSpacing.xs),
-                        // Call button
-                        if (lead.phone != null)
-                          GestureDetector(
-                            onTap: () =>
-                                ContactActions.call(lead.phone!),
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color:
-                                    colors.success.withValues(alpha: 0.10),
-                                border: Border.all(
-                                    color: colors.success
-                                        .withValues(alpha: 0.25)),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.call_rounded,
-                                  size: 16, color: colors.success),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ]),
           ),
         ),
       ),
@@ -754,133 +334,22 @@ class _LeadCardState extends State<_LeadCard> {
   }
 }
 
-// ── Info chip ─────────────────────────────────────────────────────────────────
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-  final IconData icon;
-  final String label;
+class _Pill extends StatelessWidget {
+  const _Pill({required this.text, required this.color, this.icon});
+  final String text;
   final Color color;
+  final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
-    return AppInfoChip(icon: icon, label: label, color: color);
-  }
-}
-
-// ── Shared ────────────────────────────────────────────────────────────────────
-
-// ── Leads loading skeleton ────────────────────────────────────────────────────
-
-class _LeadsSkeleton extends StatelessWidget {
-  const _LeadsSkeleton({
-    required this.bottomPad,
-    required this.lang,
-    required this.l10n,
-  });
-  final double bottomPad;
-  final String lang;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AppSkeletonizer(
-      enabled: true,
-      child: CustomScrollView(
-        physics: const NeverScrollableScrollPhysics(),
-        slivers: [
-          // ── Fake KPI bar ────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: AppRadii.card,
-                  border: Border.all(color: colors.hairline, width: 0.8),
-                ),
-                child: IntrinsicHeight(
-                  child: Row(children: [
-                    Expanded(child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('8', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.brandNavy)),
-                        const SizedBox(height: 3),
-                        Text(lang == 'ar' ? 'الإجمالي' : 'Total', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                      ]),
-                    )),
-                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
-                    Expanded(child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('5', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.success)),
-                        const SizedBox(height: 3),
-                        Text(lang == 'ar' ? 'معتمد' : 'Approved', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                      ]),
-                    )),
-                    VerticalDivider(width: 1, thickness: 0.8, color: colors.hairline),
-                    Expanded(child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Text('3', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: colors.warning)),
-                        const SizedBox(height: 3),
-                        Text(lang == 'ar' ? 'قيد المراجعة' : 'Pending', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                      ]),
-                    )),
-                  ]),
-                ),
-              ),
-            ),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[Icon(icon, size: 12, color: color), const SizedBox(width: 3)],
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 170),
+            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
           ),
-          // ── Fake lead cards ──────────────────────────────────────────────
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md, AppSpacing.sm, AppSpacing.md,
-              AppSpacing.xl + bottomPad,
-            ),
-            sliver: SliverList.separated(
-              itemCount: 6,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (context, index) => Container(
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: AppRadii.card,
-                  border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Container(height: 3, color: colors.warning.withValues(alpha: 0.5)),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                      Container(
-                        width: 48, height: 48,
-                        decoration: const BoxDecoration(color: _navyLight, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('محمد أحمد العمري', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                        const SizedBox(height: 4),
-                        Text('+966 50 123 4567', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ])),
-                      StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
-                      const SizedBox(width: AppSpacing.xs),
-                      Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: colors.inkMuted),
-                    ]),
-                  ),
-                ]),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ]),
+      );
 }

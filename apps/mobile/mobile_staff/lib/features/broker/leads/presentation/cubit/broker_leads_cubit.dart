@@ -12,6 +12,8 @@ class BrokerLeadsListState extends Equatable {
     this.failure,
     this.approvalStatus,
     this.search = '',
+    this.stage,
+    this.counts,
   });
 
   final DataStatus status;
@@ -19,6 +21,10 @@ class BrokerLeadsListState extends Equatable {
   final AppFailure? failure;
   final String? approvalStatus;
   final String search;
+  final String? stage;
+
+  /// Leads per approval status, for the whole list (not the loaded page).
+  final BrokerLeadCounts? counts;
 
   BrokerLeadsListState copyWith({
     DataStatus? status,
@@ -27,6 +33,9 @@ class BrokerLeadsListState extends Equatable {
     String? approvalStatus,
     bool clearApprovalStatus = false,
     String? search,
+    String? stage,
+    bool clearStage = false,
+    BrokerLeadCounts? counts,
   }) =>
       BrokerLeadsListState(
         status: status ?? this.status,
@@ -34,21 +43,30 @@ class BrokerLeadsListState extends Equatable {
         failure: failure ?? this.failure,
         approvalStatus: clearApprovalStatus ? null : (approvalStatus ?? this.approvalStatus),
         search: search ?? this.search,
+        stage: clearStage ? null : (stage ?? this.stage),
+        counts: counts ?? this.counts,
       );
 
   @override
-  List<Object?> get props => [status, leads, failure, approvalStatus, search];
+  List<Object?> get props => [status, leads, failure, approvalStatus, search, stage, counts];
 }
 
 class BrokerLeadsCubit extends Cubit<BrokerLeadsListState> {
-  BrokerLeadsCubit(this._getLeads) : super(const BrokerLeadsListState());
+  BrokerLeadsCubit(this._getLeads, [this._repo]) : super(const BrokerLeadsListState());
 
   final GetBrokerLeads _getLeads;
 
+  /// For the figures above the list (null in older tests).
+  final BrokerLeadsRepository? _repo;
+
   Future<void> load() async {
     emit(state.copyWith(status: DataStatus.loading));
+    _repo?.getCounts().then((r) {
+      final c = r.dataOrNull;
+      if (!isClosed && c != null) emit(state.copyWith(counts: c));
+    });
     final result = await _getLeads(
-      BrokerLeadsQuery(approvalStatus: state.approvalStatus, search: state.search),
+      BrokerLeadsQuery(approvalStatus: state.approvalStatus, search: state.search, stage: state.stage),
     );
     result.when(
       ok: (leads) => emit(state.copyWith(
@@ -63,6 +81,11 @@ class BrokerLeadsCubit extends Cubit<BrokerLeadsListState> {
     emit(status == null
         ? state.copyWith(clearApprovalStatus: true)
         : state.copyWith(approvalStatus: status));
+    await load();
+  }
+
+  Future<void> setStage(String? stage) async {
+    emit(stage == null ? state.copyWith(clearStage: true) : state.copyWith(stage: stage));
     await load();
   }
 

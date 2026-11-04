@@ -6,24 +6,23 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../common/broker_status_label.dart';
 import '../../../../../common/lead_stage_label.dart';
-import '../../../../../common/staff_contact_actions.dart';
+import '../../../../../common/visit_status_label.dart';
+import '../../../../dashboard/home_kit/home_kit.dart';
+import '../../../../leads/presentation/screens/leads_screen.dart' show leadStageColor, leadWhen;
 import '../../domain/entities/broker_lead.dart';
 import '../cubit/broker_lead_detail_cubit.dart';
+import 'broker_leads_screen.dart' show brokerApprovalColor;
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Broker Lead Detail Screen
-// ─────────────────────────────────────────────────────────────────────────────
-
+/// A broker's lead (owner-approved look, 2026-11-04), with what the broker
+/// portal's lead page shows: the approval and stage, why it was rejected,
+/// the client and the company's rep, the interest, the request's track
+/// with its dates, and the visits. The company's notes stay internal.
 class BrokerLeadDetailScreen extends StatefulWidget {
   const BrokerLeadDetailScreen({super.key, this.fallback});
   final BrokerLead? fallback;
 
   @override
-  State<BrokerLeadDetailScreen> createState() =>
-      _BrokerLeadDetailScreenState();
+  State<BrokerLeadDetailScreen> createState() => _BrokerLeadDetailScreenState();
 }
 
 class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
@@ -35,40 +34,69 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: context.appColors.canvas,
         body: BlocBuilder<BrokerLeadDetailCubit, BrokerLeadDetailState>(
           builder: (context, state) {
-            switch (state.status) {
-              case DataStatus.initial:
-              case DataStatus.loading:
-                return Column(
-                  children: [
-                    _LeadHeader(name: widget.fallback?.fullName),
-                    Expanded(child: _DetailSkeleton()),
+            final detail = state.data;
+            final lead = detail?.lead ?? widget.fallback;
+            final hero = HomeListHero(
+              back: true,
+              title: lead?.fullName ?? l10n.leadSingular,
+              subtitle: lead?.projectName,
+            );
+            if (detail == null) {
+              return Column(children: [
+                hero,
+                Expanded(
+                  child: state.status == DataStatus.failure
+                      ? ErrorState(failure: state.failure, onRetry: () => context.read<BrokerLeadDetailCubit>().load())
+                      : const Center(child: CircularProgressIndicator()),
+                ),
+              ]);
+            }
+            final l = detail.lead;
+            // The server books only leads the company approved.
+            final canBook = l.approvalStatus == 'APPROVED' && l.stage != 'WON' && l.stage != 'LOST';
+            return RefreshIndicator(
+              onRefresh: () => context.read<BrokerLeadDetailCubit>().load(),
+              child: ListView(
+                key: const Key('broker-lead-detail'),
+                padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
+                children: [
+                  hero,
+                  const SizedBox(height: AppSpacing.md),
+                  Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: _ClientCard(lead: l)),
+                  if (l.approvalStatus == 'REJECTED' && (l.rejectionReason ?? '').isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: _RejectionBox(reason: l.rejectionReason!),
+                    ),
                   ],
-                );
-              case DataStatus.failure:
-                return Column(
-                  children: [
-                    _LeadHeader(name: widget.fallback?.fullName),
-                    Expanded(
-                      child: ErrorState(
-                        failure: state.failure,
-                        onRetry: () =>
-                            context.read<BrokerLeadDetailCubit>().load(),
+                  if (canBook) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: AppButton(
+                        key: const Key('broker-lead-book'),
+                        label: l10n.reservationNew,
+                        icon: Icons.bookmark_add_rounded,
+                        variant: AppButtonVariant.gold,
+                        expand: true,
+                        onPressed: () => context.push('/broker/reservations/new', extra: {'leadId': l.id}),
                       ),
                     ),
                   ],
-                );
-              case DataStatus.empty:
-              case DataStatus.success:
-                return _Body(detail: state.data!);
-            }
+                  HomeSection(icon: Icons.timeline_rounded, title: l10n.blTrack, child: _Track(lead: l)),
+                  HomeSection(icon: Icons.apartment_rounded, title: l10n.blInterest, child: _Interest(lead: l, unitCode: detail.unitCode)),
+                  HomeSection(icon: Icons.event_rounded, title: l10n.blVisits, child: _Visits(visits: detail.visits)),
+                ],
+              ),
+            );
           },
         ),
       ),
@@ -76,477 +104,292 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
   }
 }
 
-// ── Body ──────────────────────────────────────────────────────────────────────
-
-class _Body extends StatelessWidget {
-  const _Body({required this.detail});
-  final BrokerLeadDetail detail;
+class _ClientCard extends StatelessWidget {
+  const _ClientCard({required this.lead});
+  final BrokerLead lead;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final theme = Theme.of(context);
-    final lead = detail.lead;
-
-    return Column(
-      children: [
-        _LeadHeader(
-          name: lead.fullName,
-          approvalStatus: lead.approvalStatus,
-          l10n: l10n,
-        ),
-        Expanded(
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.xl + MediaQuery.of(context).padding.bottom,
-            ),
-            children: [
-              // ── Contact card ──────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: colors.hairline.withValues(alpha: 0.4),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [_navyLight, _navyDeep],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: Center(
-                            child: Text(
-                              lead.fullName.isNotEmpty
-                                  ? lead.fullName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                color: AppPalette.gold300,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                lead.fullName,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              StatusBadge(
-                                label: leadStageLabel(l10n, lead.stage),
-                                tone: leadStageTone(lead.stage),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (lead.projectName != null)
-                          Flexible(
-                            child: Text(
-                              lead.projectName!,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.inkMuted,
-                              ),
-                              textAlign: TextAlign.end,
-                              maxLines: 2,
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (lead.phone != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      Divider(height: 1, color: colors.hairline),
-                      const SizedBox(height: AppSpacing.md),
-                      StaffContactButtons(phone: lead.phone),
-                    ],
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
-              // ── New reservation CTA ───────────────────────────────────────
-              GestureDetector(
-                onTap: () => context.push(
-                  '/broker/reservations/new',
-                  extra: {'leadId': lead.id},
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF7C5200).withValues(alpha: 0.35),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.bookmark_add_rounded,
-                          color: AppPalette.gold300,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.reservationNew,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              context.l10n.brokerReserveForLead,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
-                        size: 14,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // ── Timeline section ──────────────────────────────────────────
-              _SectionLabel(label: l10n.leadTimeline),
-              const SizedBox(height: AppSpacing.sm),
-
-              if (detail.timeline.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Text(
-                    l10n.leadTimelineEmpty,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.inkMuted,
-                    ),
-                  ),
-                )
-              else
-                for (final e in detail.timeline) ...[
-                  _TimelineEntry(entry: e, lang: lang),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Lead header ───────────────────────────────────────────────────────────────
-
-class _LeadHeader extends StatelessWidget {
-  const _LeadHeader({this.name, this.approvalStatus, this.l10n});
-
-  final String? name;
-  final String? approvalStatus;
-  final AppLocalizations? l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppNavHeader(
-      title: name ?? context.l10n.leadSingular,
-      subtitle: name != null ? context.l10n.leadSingular : null,
-      compact: true,
-      leadingAction: const NavHeaderBack(),
-      actions: [
-        if (approvalStatus != null && l10n != null) NavHeaderPill(label: brokerLeadStatusLabel(l10n!, approvalStatus!)),
-      ],
-    );
-  }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppPalette.gold400, AppPalette.gold300],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: colors.inkStrong,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Timeline entry ────────────────────────────────────────────────────────────
-
-class _TimelineEntry extends StatelessWidget {
-  const _TimelineEntry({required this.entry, required this.lang});
-  final BrokerLeadTimelineEntry entry;
-  final String lang;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
+    final approval = brokerApprovalColor(lead.approvalStatus, colors);
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      key: const Key('broker-lead-card'),
+      padding: const EdgeInsets.all(14),
+      decoration: homeCard(context, radius: 24),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
           Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: entry.isNote
-                  ? AppPalette.gold300.withValues(alpha: 0.12)
-                  : colors.inkMuted.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(
-              entry.isNote
-                  ? Icons.sticky_note_2_rounded
-                  : Icons.history_rounded,
-              size: 16,
-              color: entry.isNote ? AppPalette.gold300 : colors.inkMuted,
-            ),
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(17)),
+            child: Text(homeInitials(lead.fullName), style: homeDisplay(17, AppPalette.gold300)),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  entry.body,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                if (entry.createdAt != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    [
-                      if (entry.authorName != null) entry.authorName!,
-                      DateFormatter.shortDate(
-                        entry.createdAt!,
-                        languageCode: lang,
-                      ),
-                    ].join(' · '),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colors.inkMuted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(lead.fullName, style: homeDisplay(18, colors.inkStrong)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                _Pill(text: brokerLeadStatusLabel(l10n, lead.approvalStatus), color: approval),
+                _Pill(text: leadStageLabel(l10n, lead.stage), color: leadStageColor(lead.stage, colors)),
+              ]),
+            ]),
           ),
+        ]),
+        const SizedBox(height: 12),
+        _Line(icon: Icons.badge_rounded, text: '${l10n.blRepFollows}: ${lead.assignedSalesName ?? l10n.blNoRep}'),
+        if ((lead.phone ?? '').isNotEmpty) _Line(icon: Icons.phone_rounded, text: ltr(lead.phone!)),
+        if ((lead.email ?? '').isNotEmpty) _Line(icon: Icons.alternate_email_rounded, text: lead.email!),
+        if ((lead.phone ?? '').isNotEmpty || (lead.email ?? '').isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            if ((lead.phone ?? '').isNotEmpty) ...[
+              Expanded(child: _Btn(icon: Icons.phone_rounded, label: l10n.ldCall, filled: true, onTap: () => ContactActions.call(lead.phone!))),
+              const SizedBox(width: 8),
+              Expanded(child: _Btn(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: lead.phone!))),
+            ],
+            if ((lead.email ?? '').isNotEmpty) ...[
+              if ((lead.phone ?? '').isNotEmpty) const SizedBox(width: 8),
+              Expanded(child: _Btn(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:${lead.email}'))),
+            ],
+          ]),
         ],
-      ),
+      ]),
     );
   }
 }
 
-// ── Shared ────────────────────────────────────────────────────────────────────
-
-// ── Lead detail loading skeleton ──────────────────────────────────────────────
-
-class _DetailSkeleton extends StatelessWidget {
-  const _DetailSkeleton();
+class _RejectionBox extends StatelessWidget {
+  const _RejectionBox({required this.reason});
+  final String reason;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    return Container(
+      key: const Key('broker-lead-rejection'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.error.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.error.withValues(alpha: 0.25)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(context.l10n.blRejectionReason, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.error)),
+        const SizedBox(height: 4),
+        Text(reason, style: TextStyle(fontSize: 13, color: colors.inkStrong, height: 1.4)),
+      ]),
+    );
+  }
+}
 
-    return AppSkeletonizer(
-      enabled: true,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
-          AppSpacing.xl + bottomPad,
-        ),
-        children: [
-          // ── Fake contact card ─────────────────────────────────────────────
+/// Sent, under review, then approved / rejected / already registered, with
+/// the dates — the portal's status timeline.
+class _Track extends StatelessWidget {
+  const _Track({required this.lead});
+  final BrokerLead lead;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    String? day(DateTime? d) => d == null ? null : leadWhen(context, d, withTime: false);
+    final steps = <(IconData, String, String?, Color, bool)>[
+      (Icons.send_rounded, l10n.blStepSent, day(lead.sentAt), colors.info, true),
+      switch (lead.approvalStatus) {
+        'APPROVED' => (Icons.check_circle_rounded, l10n.blStepApproved, day(lead.approvedAt), colors.success, true),
+        'REJECTED' => (Icons.cancel_rounded, l10n.blStepRejected, day(lead.rejectedAt), colors.error, true),
+        'DUPLICATE' => (Icons.content_copy_rounded, l10n.blStepDuplicate, null, colors.inkMuted, true),
+        'EXPIRED' => (Icons.timer_off_rounded, l10n.blStepExpired, null, colors.inkMuted, true),
+        _ => (Icons.hourglass_top_rounded, l10n.blStepReview, null, AppPalette.gold600, false),
+      },
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: homeCard(context, radius: 20),
+      child: Column(children: [
+        for (var i = 0; i < steps.length; i++)
           Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
+            key: Key('broker-track-$i'),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
+            child: Row(children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(color: steps[i].$4.withValues(alpha: steps[i].$5 ? 0.14 : 0.08), shape: BoxShape.circle),
+                child: Icon(steps[i].$1, size: 17, color: steps[i].$4),
+              ),
+              const SizedBox(width: 11),
+              Expanded(child: Text(steps[i].$2, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong))),
+              if (steps[i].$3 != null) Text(steps[i].$3!, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+            ]),
+          ),
+      ]),
+    );
+  }
+}
+
+class _Interest extends StatelessWidget {
+  const _Interest({required this.lead, this.unitCode});
+  final BrokerLead lead;
+  final String? unitCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
+    final code = unitCode ?? lead.unitCode;
+    final unit = (code ?? '').isEmpty
+        ? l10n.blAnyUnit
+        : [ltr(code!), if ((lead.unitType ?? '').isNotEmpty) unitTypeLabel(lead.unitType, languageCode: lang)].join(' · ');
+    return _Rows(rows: [
+      if ((lead.projectName ?? '').isNotEmpty)
+        (l10n.ldProject, [lead.projectName!, if ((lead.projectCity ?? '').isNotEmpty) lead.projectCity!].join(' · ')),
+      (l10n.ldUnit, unit),
+      (l10n.blStage, leadStageLabel(l10n, lead.stage)),
+    ]);
+  }
+}
+
+class _Visits extends StatelessWidget {
+  const _Visits({required this.visits});
+  final List<BrokerLeadVisit> visits;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    if (visits.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: homeCard(context, radius: 20),
+        child: Text(l10n.blNoVisits, style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+      );
+    }
+    final now = DateTime.now();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: homeCard(context, radius: 20),
+      child: Column(children: [
+        for (var i = 0; i < visits.length; i++)
+          () {
+            final v = visits[i];
+            final upcoming = v.at != null && v.at!.isAfter(now) && (v.status == 'SCHEDULED' || v.status == 'CONFIRMED');
+            return Container(
+              key: Key('broker-visit-${v.id}'),
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
+              child: Row(children: [
                 Container(
-                  width: 46, height: 46,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: _navyLight,
-                    borderRadius: BorderRadius.circular(13),
+                    color: (upcoming ? AppPalette.gold400 : colors.info).withValues(alpha: upcoming ? 0.22 : 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Icon(Icons.event_rounded, size: 18, color: upcoming ? AppPalette.gold600 : colors.info),
                 ),
-                const SizedBox(width: 14),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('محمد أحمد العمري',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                  const SizedBox(height: 4),
-                  StatusBadge(label: 'قيد المراجعة', tone: BadgeTone.warning),
-                ])),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${l10n.ldAppointment} ${ltr(v.number ?? '')}'.trim(),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                    if (v.at != null) Text(leadWhen(context, v.at!), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                  ]),
+                ),
+                _Pill(text: visitStatusLabel(l10n, v.status), color: colors.info),
               ]),
-              const SizedBox(height: AppSpacing.md),
-              Divider(height: 1, color: colors.hairline),
-              const SizedBox(height: AppSpacing.md),
-              Row(children: [
-                Container(width: 36, height: 36,
-                    decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(10))),
-                const SizedBox(width: 10),
-                Container(width: 36, height: 36,
-                    decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(10))),
-              ]),
-            ]),
-          ),
-          const SizedBox(height: AppSpacing.md),
+            );
+          }(),
+      ]),
+    );
+  }
+}
 
-          // ── Fake info rows card ───────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-            ),
-            child: Column(children: [
-              for (int i = 0; i < 4; i++) ...[
-                if (i > 0) Divider(height: AppSpacing.lg, color: colors.hairline),
-                Row(children: [
-                  Icon(Icons.info_outline_rounded, size: 18, color: colors.inkMuted),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text('التسمية', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-                  const Spacer(),
-                  Text('القيمة هنا', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkStrong)),
-                ]),
-              ],
-            ]),
-          ),
-          const SizedBox(height: AppSpacing.md),
+class _Rows extends StatelessWidget {
+  const _Rows({required this.rows});
+  final List<(String, String)> rows;
 
-          // ── Fake timeline card ────────────────────────────────────────────
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: homeCard(context, radius: 20),
+      child: Column(children: [
+        for (var i = 0; i < rows.length; i++)
           Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: colors.hairline.withValues(alpha: 0.4)),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('سجل النشاط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              const SizedBox(height: AppSpacing.md),
-              for (int i = 0; i < 3; i++) ...[
-                if (i > 0) const SizedBox(height: AppSpacing.sm),
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 4),
-                      decoration: BoxDecoration(color: colors.brandGold, shape: BoxShape.circle)),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('تم تسجيل العميل المحتمل', style: TextStyle(fontSize: 13, color: colors.inkStrong)),
-                    Text('15/06/2026', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                  ])),
-                ]),
-              ],
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 100, child: Text(rows[i].$1, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+              Expanded(child: Text(rows[i].$2, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
             ]),
           ),
-        ],
+      ]),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
+        child: Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+      );
+}
+
+class _Line extends StatelessWidget {
+  const _Line({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(children: [
+          Icon(icon, size: 15, color: AppPalette.gold500),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: context.appColors.inkStrong))),
+        ]),
+      );
+}
+
+class _Btn extends StatelessWidget {
+  const _Btn({required this.icon, required this.label, required this.onTap, this.filled = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: filled ? AppPalette.navy : colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: filled ? AppPalette.navy : colors.hairline),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : AppPalette.navy),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : AppPalette.navy)),
+          ]),
+        ),
       ),
     );
   }

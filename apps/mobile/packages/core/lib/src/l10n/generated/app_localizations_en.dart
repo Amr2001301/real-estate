@@ -6273,4 +6273,73 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ldWonByBooking =>
       'A lead is won when its booking becomes a contract.';
+
+  @override
+  String blApprovedN(int n) {
+    return '$n approved';
+  }
+
+  @override
+  String get blWaitingCompany => 'Waiting for the company';
+
+  @override
+  String get blNoneRejected => 'None';
+
+  @override
+  String get blSeeReason => 'See why';
+
+  @override
+  String get blStage => 'Stage';
+
+  @override
+  String get blAnyUnit => 'Any unit';
+
+  @override
+  String blRep(String name) {
+    return 'Rep: $name';
+  }
+
+  @override
+  String blSent(String date) {
+    return 'Sent $date';
+  }
+
+  @override
+  String get blRejectionReason => 'Why it was rejected';
+
+  @override
+  String get blInterest => 'Interest';
+
+  @override
+  String get blTrack => 'Request status';
+
+  @override
+  String get blStepSent => 'Sent to the company';
+
+  @override
+  String get blStepReview => 'Under review';
+
+  @override
+  String get blStepApproved => 'Approved by the company';
+
+  @override
+  String get blStepRejected => 'Rejected by the company';
+
+  @override
+  String get blStepDuplicate => 'Already registered with the company';
+
+  @override
+  String get blStepExpired => 'The request expired';
+
+  @override
+  String get blVisits => 'Visits';
+
+  @override
+  String get blNoVisits => 'No visits yet.';
+
+  @override
+  String get blRepFollows => 'Following rep';
+
+  @override
+  String get blNoRep => 'Not assigned yet';
 }

@@ -8,6 +8,7 @@ abstract interface class BrokerLeadsRemoteDataSource {
   Future<List<BrokerLeadDto>> list(BrokerLeadsQuery query);
   Future<BrokerLeadDetailDto> getOne(String id);
   Future<BrokerLeadDto> create(NewBrokerLead input);
+  Future<BrokerLeadCounts> counts();
 }
 
 class BrokerLeadsRemoteDataSourceImpl implements BrokerLeadsRemoteDataSource {
@@ -22,6 +23,7 @@ class BrokerLeadsRemoteDataSourceImpl implements BrokerLeadsRemoteDataSource {
         'page': 1,
         'pageSize': 50,
         'brokerApprovalStatus': ?query.approvalStatus,
+        'stage': ?query.stage,
         'q': ?(query.search?.isNotEmpty == true ? query.search : null),
       },
     );
@@ -49,5 +51,19 @@ class BrokerLeadsRemoteDataSourceImpl implements BrokerLeadsRemoteDataSource {
       },
     );
     return BrokerLeadDto.fromJson(res.data ?? const {});
+  }
+
+  @override
+  Future<BrokerLeadCounts> counts() async {
+    Future<int> count([String? status]) async {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/portal/leads',
+        queryParameters: {'page': 1, 'pageSize': 1, 'brokerApprovalStatus': ?status},
+      );
+      return ((res.data?['meta'] as Map?)?['total'] as num?)?.toInt() ?? 0;
+    }
+
+    final r = await Future.wait([count(), count('PENDING'), count('APPROVED'), count('REJECTED')]);
+    return BrokerLeadCounts(total: r[0], pending: r[1], approved: r[2], rejected: r[3]);
   }
 }

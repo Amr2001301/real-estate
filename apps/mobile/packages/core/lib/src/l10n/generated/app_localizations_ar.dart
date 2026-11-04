@@ -6263,4 +6263,73 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ldWonByBooking => 'تكتمل مرحلة «تم البيع» بتحويل الحجز إلى عقد.';
+
+  @override
+  String blApprovedN(int n) {
+    return '$n مقبول';
+  }
+
+  @override
+  String get blWaitingCompany => 'بانتظار الشركة';
+
+  @override
+  String get blNoneRejected => 'لا يوجد';
+
+  @override
+  String get blSeeReason => 'اطّلع على السبب';
+
+  @override
+  String get blStage => 'المرحلة';
+
+  @override
+  String get blAnyUnit => 'أي وحدة';
+
+  @override
+  String blRep(String name) {
+    return 'المستشار: $name';
+  }
+
+  @override
+  String blSent(String date) {
+    return 'أُرسل $date';
+  }
+
+  @override
+  String get blRejectionReason => 'سبب الرفض';
+
+  @override
+  String get blInterest => 'الاهتمام';
+
+  @override
+  String get blTrack => 'مسار الطلب';
+
+  @override
+  String get blStepSent => 'أُرسل للشركة';
+
+  @override
+  String get blStepReview => 'قيد المراجعة';
+
+  @override
+  String get blStepApproved => 'قبلته الشركة';
+
+  @override
+  String get blStepRejected => 'رفضته الشركة';
+
+  @override
+  String get blStepDuplicate => 'مسجَّل لدى الشركة من قبل';
+
+  @override
+  String get blStepExpired => 'انتهت صلاحية الطلب';
+
+  @override
+  String get blVisits => 'الزيارات';
+
+  @override
+  String get blNoVisits => 'لا توجد زيارات بعد.';
+
+  @override
+  String get blRepFollows => 'المستشار المتابع';
+
+  @override
+  String get blNoRep => 'لم يُسنَد بعد';
 }

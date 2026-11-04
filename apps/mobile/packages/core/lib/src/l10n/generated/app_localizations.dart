@@ -11371,6 +11371,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A lead is won when its booking becomes a contract.'**
   String get ldWonByBooking;
+
+  /// No description provided for @blApprovedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} approved'**
+  String blApprovedN(int n);
+
+  /// No description provided for @blWaitingCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the company'**
+  String get blWaitingCompany;
+
+  /// No description provided for @blNoneRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get blNoneRejected;
+
+  /// No description provided for @blSeeReason.
+  ///
+  /// In en, this message translates to:
+  /// **'See why'**
+  String get blSeeReason;
+
+  /// No description provided for @blStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get blStage;
+
+  /// No description provided for @blAnyUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Any unit'**
+  String get blAnyUnit;
+
+  /// No description provided for @blRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Rep: {name}'**
+  String blRep(String name);
+
+  /// No description provided for @blSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {date}'**
+  String blSent(String date);
+
+  /// No description provided for @blRejectionReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why it was rejected'**
+  String get blRejectionReason;
+
+  /// No description provided for @blInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest'**
+  String get blInterest;
+
+  /// No description provided for @blTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Request status'**
+  String get blTrack;
+
+  /// No description provided for @blStepSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the company'**
+  String get blStepSent;
+
+  /// No description provided for @blStepReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get blStepReview;
+
+  /// No description provided for @blStepApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by the company'**
+  String get blStepApproved;
+
+  /// No description provided for @blStepRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by the company'**
+  String get blStepRejected;
+
+  /// No description provided for @blStepDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Already registered with the company'**
+  String get blStepDuplicate;
+
+  /// No description provided for @blStepExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The request expired'**
+  String get blStepExpired;
+
+  /// No description provided for @blVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get blVisits;
+
+  /// No description provided for @blNoVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'No visits yet.'**
+  String get blNoVisits;
+
+  /// No description provided for @blRepFollows.
+  ///
+  /// In en, this message translates to:
+  /// **'Following rep'**
+  String get blRepFollows;
+
+  /// No description provided for @blNoRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned yet'**
+  String get blNoRep;
 }
 
 class _AppLocalizationsDelegate
