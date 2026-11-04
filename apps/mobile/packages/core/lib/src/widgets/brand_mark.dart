@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../branding/brand_tokens.dart';
 import '../branding/branding_cubit.dart';
-import '../design/tokens/app_colors.dart';
 
 /// The company this app shows: its name and logo, from [BrandingCubit] when
 /// the app provides one (the customer app does; the staff app does not).
@@ -39,11 +38,13 @@ String brandInitials(String name) {
   return words.take(2).map((w) => String.fromCharCode(w.runes.first)).join().toUpperCase();
 }
 
-/// The company's logo as a small rounded badge.
+/// The company's logo on a white tile.
 ///
-/// The logo comes from [logoUrl] or, when that is null, from the company's
-/// branding. Without a logo (none uploaded, or it fails to load) the badge
-/// shows the company's initials; without a name either, a neutral building
+/// Logos are drawn for a light ground, so the tile is white with room around
+/// the logo, and the logo is fitted whole (never cropped). The logo comes
+/// from [logoUrl] or, when that is null, from the company's branding. Without
+/// a logo (none uploaded, or it fails to load) the tile shows the company's
+/// initials in its brand colour; without a name either, a neutral building
 /// mark. It never shows another company's logo.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 34, this.logoUrl});
@@ -55,31 +56,29 @@ class BrandMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final brand = companyBrandOf(context);
     final url = (logoUrl != null && logoUrl!.isNotEmpty) ? logoUrl : brand.logoUrl;
-    final fallback = _Initials(name: brand.name, size: size);
+    final ink = Theme.of(context).colorScheme.secondary;
+    final fallback = _Initials(name: brand.name, size: size, color: ink);
     return Container(
       width: size,
       height: size,
+      padding: EdgeInsets.all(size * 0.12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        border: Border.all(
-          color: AppPalette.gold400.withValues(alpha: 0.35),
-          width: 1,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * 0.26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: size * 0.3,
+            offset: Offset(0, size * 0.06),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
       child: url != null
           ? CachedNetworkImage(
               imageUrl: url,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               fadeInDuration: const Duration(milliseconds: 200),
-              placeholder: (_, _) => const ColoredBox(color: AppPalette.navy),
+              placeholder: (_, _) => const SizedBox.shrink(),
               errorWidget: (_, _, _) => fallback,
             )
           : fallback,
@@ -88,37 +87,29 @@ class BrandMark extends StatelessWidget {
 }
 
 class _Initials extends StatelessWidget {
-  const _Initials({required this.name, required this.size});
+  const _Initials({required this.name, required this.size, required this.color});
 
   final String? name;
   final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final letters = name == null ? '' : brandInitials(name!);
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: AlignmentDirectional.topStart,
-          end: AlignmentDirectional.bottomEnd,
-          colors: [AppPalette.navy, Color(0xFF1E2C4A)],
-        ),
-      ),
-      child: Center(
-        child: letters.isEmpty
-            ? Icon(Icons.apartment_rounded, size: size * 0.52, color: AppPalette.gold300)
-            : Text(
-                letters,
-                maxLines: 1,
-                textScaler: TextScaler.noScaling,
-                style: TextStyle(
-                  color: AppPalette.gold300,
-                  fontSize: size * (letters.length > 1 ? 0.36 : 0.44),
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
+    return Center(
+      child: letters.isEmpty
+          ? Icon(Icons.apartment_rounded, size: size * 0.5, color: color)
+          : Text(
+              letters,
+              maxLines: 1,
+              textScaler: TextScaler.noScaling,
+              style: TextStyle(
+                color: color,
+                fontSize: size * (letters.length > 1 ? 0.34 : 0.44),
+                fontWeight: FontWeight.w800,
+                height: 1,
               ),
-      ),
+            ),
     );
   }
 }

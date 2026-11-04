@@ -121,7 +121,7 @@ class AuthHeader extends StatelessWidget {
                     const SizedBox(height: AppSpacing.lg),
                   const SizedBox(height: AppSpacing.lg),
                   // Brand mark
-                  const BrandMark(size: 54),
+                  const BrandMark(size: 72),
                   const SizedBox(height: AppSpacing.xs),
                   // Eyebrow label
                   CompanyNameText(

@@ -259,7 +259,7 @@ void main() {
       expect(cubit.state.otpPhone, '+201000000000');
     });
 
-    // ── logout / changeCompany (Sections 3 & 4) ──────────────────────────────
+    // ── logout (Sections 3 & 4) ──────────────────────────────
 
     test('normal logout signs out but preserves the selected company slug', () async {
       final repo = _FakeAuthRepository(
@@ -275,31 +275,16 @@ void main() {
       expect(session.state.isAuthenticated, isFalse);
     });
 
-    test('changeCompany clears selected company and signs out', () async {
-      final repo = _FakeAuthRepository(
-        session: const Session(userId: '1', role: AppRole.customer),
-      );
-      final session = SessionCubit(TokenStorage());
-      final cubit = build(repo, session);
-
-      await cubit.changeCompany();
-
-      // Company cleared — router guard redirects to /select-company.
-      expect(tenantStorage.selectedCompanySlug, isNull);
-      expect(session.state.isAuthenticated, isFalse);
-    });
-
-    test('changeCompany local cleanup runs even when backend logout returns error', () async {
+    test('logout signs out even when backend logout returns error', () async {
       // Simulates network failure during server-side token revocation.
-      // Local cleanup (clear company + sign out) must still complete.
+      // Local sign-out must still complete; the company stays.
       final repo = _BackendLogoutFailRepo();
       final session = SessionCubit(TokenStorage());
       final cubit = build(repo, session);
 
-      await cubit.changeCompany();
+      await cubit.logout();
 
-      expect(tenantStorage.selectedCompanySlug, isNull,
-          reason: 'company must be cleared despite backend error');
+      expect(tenantStorage.selectedCompanySlug, 'test-company');
       expect(session.state.isAuthenticated, isFalse,
           reason: 'session must be signed out despite backend error');
     });

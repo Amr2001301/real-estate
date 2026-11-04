@@ -1698,5 +1698,7 @@
   "pageNotFoundMessage": "The link is wrong or this page is no longer available.",
   "pageNotFoundHome": "Back to home",
   "pageNoAccessTitle": "This page is not available to your account",
-  "pageNoAccessMessage": "Ask your company's administrator for access to it."
+  "pageNoAccessMessage": "Ask your company's administrator for access to it.",
+  "companyUnavailableTitle": "The app is not available right now",
+  "companyUnavailableMessage": "The service is paused for now. Try again later or contact the company."
 }

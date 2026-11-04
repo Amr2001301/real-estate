@@ -90,7 +90,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: AuthHeader(
-                  title: l10n.staffAppTitle,
+                  title: l10n.authWelcomeBack,
                   subtitle: l10n.staffLoginSubtitle,
                 ),
               ),

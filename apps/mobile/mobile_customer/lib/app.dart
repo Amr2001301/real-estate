@@ -413,8 +413,8 @@ class _CustomerRootState extends State<_CustomerRoot> {
   ///   2. Clear the stored company (selection is inconsistent)
   ///   3. Sign out (router redirect picks up the unsigned state)
   ///
-  /// The router guard then sends the user to /select-company because no
-  /// company is selected. Ordinary 403s (CAPABILITY_NOT_ENABLED, etc.) do
+  /// The router then shows the sign-in screen (a company's own app keeps its
+  /// company). Ordinary 403s (CAPABILITY_NOT_ENABLED, etc.) do
   /// NOT reach this handler — TenantSlugInterceptor only calls it for the
   /// exact TENANT_CONTEXT_MISMATCH error code.
   void _wireMismatchHandler() {

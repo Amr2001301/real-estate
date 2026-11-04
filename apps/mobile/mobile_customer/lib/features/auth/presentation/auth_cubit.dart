@@ -112,15 +112,6 @@ class AuthCubit extends Cubit<AuthState> {
     _session.adoptSignedOut();
   }
 
-  /// Change-company logout: revokes tokens, clears the selected company, and
-  /// signs out. The router redirect then sends the user to /select-company.
-  Future<void> changeCompany() async {
-    await _runBeforeLogout();
-    await _logoutUser(const NoParams());
-    await _tenantStorage.clearSelectedCompany();
-    _session.adoptSignedOut();
-  }
-
   void _completeSignIn(Result<Session> result) {
     result.when(
       ok: (session) {

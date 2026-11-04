@@ -39,9 +39,10 @@ Managed as a Melos pub-workspace (`apps/mobile/pubspec.yaml` has
 # from apps/mobile/
 flutter pub get
 
-# Customer — dev flavor against a NestJS API on the host machine
+# Customer — dev flavor against a NestJS API on the host machine. Every
+# customer build is one company's (no company picker): pass the seed's.
 cd mobile_customer
-flutter run -t lib/main_dev.dart
+flutter run -t lib/main_dev.dart --dart-define=COMPANY_SLUG=default
 
 # Staff — dev
 cd ../mobile_staff

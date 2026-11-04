@@ -119,11 +119,6 @@ import '../features/info_request/domain/repositories/info_request_repository.dar
 import '../features/info_request/domain/usecases/submit_info_request.dart';
 import '../features/info_request/presentation/cubit/info_request_cubit.dart';
 import '../features/info_request/presentation/screens/info_request_screen.dart';
-import '../features/company_discovery/domain/repositories/company_discovery_repository.dart';
-import '../features/company_discovery/domain/usecases/search_companies.dart';
-import '../features/company_discovery/domain/usecases/resolve_company.dart';
-import '../features/company_discovery/presentation/cubit/company_discovery_cubit.dart';
-import '../features/company_discovery/presentation/screens/company_selector_screen.dart';
 import '../feature_flags.dart';
 import '../storage/customer_tenant_storage.dart';
 import '../features/notifications/data/notification_preferences_api.dart';
@@ -144,11 +139,6 @@ GoRouter createCustomerRouter(
   ValueNotifier<TenantStartupOutcome>? startupOutcome,
   GlobalKey<NavigatorState>? navigatorKey,
 }) {
-  // Tracks whether the one-time "unavailable" banner has been shown on the
-  // initial /select-company navigation caused by a startup-unavailable result.
-  // Later navigations (changeCompany, etc.) see the plain selector.
-  var unavailableShown = false;
-
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
@@ -173,33 +163,22 @@ GoRouter createCustomerRouter(
       final authed = session.isAuthenticated;
       final isCustomer = authed && session.role.isCustomerSide;
 
-      // K2: startup blocked by network failure — hold until retry succeeds.
-      // This guard runs after splash so the brand animation still plays.
+      // K2: startup blocked — the company could not be reached (network) or
+      // is not available (switched off). Hold on the retry screen until a
+      // retry succeeds. This guard runs after splash so the brand animation
+      // still plays. Every customer app is one company's, so there is no
+      // picker to fall back to.
+      final outcome = startupOutcome?.value;
       if (kEnableCustomerTenantSelection &&
-          startupOutcome?.value == TenantStartupOutcome.networkError) {
+          (outcome == TenantStartupOutcome.networkError ||
+              outcome == TenantStartupOutcome.unavailable ||
+              !tenantStorage.hasSelectedCompany)) {
         return loc == '/startup-retry' ? null : '/startup-retry';
       }
       // If retry succeeded (outcome no longer networkError) leave the retry screen.
       if (loc == '/startup-retry') return '/home';
 
       if (loc == '/splash') return '/home';
-
-      // K2: when tenant selection is active, unauthenticated users must have a
-      // company selected before reaching any other screen (including /login).
-      // CustomerTenantStorage is in refreshListenable, so this guard re-fires
-      // whenever the selection is saved or cleared.
-      if (kEnableCustomerTenantSelection &&
-          !authed &&
-          !tenantStorage.hasSelectedCompany &&
-          loc != '/select-company') {
-        // Show the unavailable banner only on the first navigation caused by a
-        // startup-unavailable result. changeCompany and later navigations use
-        // the plain selector.
-        final showUnavailable = !unavailableShown &&
-            startupOutcome?.value == TenantStartupOutcome.unavailable;
-        if (showUnavailable) unavailableShown = true;
-        return showUnavailable ? '/select-company?unavailable=true' : '/select-company';
-      }
 
       if (_authRoutes.contains(loc)) return authed ? '/account' : null;
       if (loc.startsWith('/account')) {
@@ -208,10 +187,6 @@ GoRouter createCustomerRouter(
           return '/home'; // staff roles can't enter customer account
         }
         return null;
-      }
-      if (loc == '/select-company') {
-        // A company's own app has no picker: it is that company's.
-        return kEnableCustomerTenantSelection && !tenantStorage.isLocked ? null : '/home';
       }
       // The guest hub offers sign-in; a signed-in customer has «حسابي».
       if (loc == '/more' && isCustomer) return '/account';
@@ -737,31 +712,6 @@ GoRouter createCustomerRouter(
       GoRoute(
         path: '/gallery',
         builder: (_, _) => const ComponentGalleryScreen(),
-      ),
-
-      // ── K1 Company selector (guarded by kEnableCustomerTenantSelection) ───
-      // Redirect in redirect() above ensures this is unreachable while the
-      // flag is false. K2 flips the flag and wires auth tenant context.
-      GoRoute(
-        path: '/select-company',
-        builder: (context, state) {
-          final mode = state.uri.queryParameters['mode'];
-          final isChanging = mode == 'change';
-          final isUnavailable = state.uri.queryParameters['unavailable'] == 'true';
-          return BlocProvider(
-            create: (ctx) {
-              final repo = ctx.read<CompanyDiscoveryRepository>();
-              return CompanyDiscoveryCubit(
-                searchCompanies: SearchCompanies(repo),
-                resolveCompany: ResolveCompany(repo),
-              );
-            },
-            child: CompanySelectorScreen(
-              isChanging: isChanging,
-              isUnavailable: isUnavailable,
-            ),
-          );
-        },
       ),
     ],
   );

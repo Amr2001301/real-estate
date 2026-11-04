@@ -9211,6 +9211,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ask your company\'s administrator for access to it.'**
   String get pageNoAccessMessage;
+
+  /// No description provided for @companyUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app is not available right now'**
+  String get companyUnavailableTitle;
+
+  /// No description provided for @companyUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is paused for now. Try again later or contact the company.'**
+  String get companyUnavailableMessage;
 }
 
 class _AppLocalizationsDelegate

@@ -5,13 +5,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bootstrap.dart' show customerStartupOutcome;
 import 'customer_startup_service.dart';
 
-/// Shown when the app cold-starts with a persisted company slug but the startup
-/// tenant resolve fails due to a network/timeout error.
+/// Shown when the app's company cannot be used at start: the resolve failed
+/// on the network ("no connection") or the company is not available (switched
+/// off: "the app is not available right now"). Every customer app is one
+/// company's, so there is nothing else to open.
 ///
-/// The router redirects here (via the [TenantStartupOutcome.networkError] guard)
+/// The router redirects here while the outcome is networkError or unavailable
 /// and stays until:
 ///   - Retry succeeds ([TenantStartupOutcome.valid])   → session restored → /home
-///   - Retry finds company unavailable                 → tokens cleared  → /select-company
+///   - Retry finds the company unavailable              → tokens cleared, stays here
 ///   - Retry fails again ([TenantStartupOutcome.networkError]) → stays here
 ///
 /// Security invariant: no authenticated API request is issued while this
@@ -51,9 +53,8 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
         // Router re-evaluates: outcome=valid + session authenticated → /home.
 
       case TenantStartupOutcome.unavailable:
-        // checkEligibility already cleared the slug. Clear stale auth tokens.
+        // Clear stale auth tokens; the screen now says the app is unavailable.
         await tokenStorage.clear();
-        // Router re-evaluates: !authed + !hasCompany → /select-company.
 
       case TenantStartupOutcome.networkError:
         // Still offline — stay on this screen; router keeps showing /startup-retry.
@@ -61,8 +62,7 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
         return;
 
       case TenantStartupOutcome.noSlug:
-        // Shouldn't reach here (retry screen only shown when a slug was saved).
-        // Clear stale tokens defensively; router: !hasCompany → /select-company.
+        // A build always has its company; clear stale tokens defensively.
         await tokenStorage.clear();
     }
 
@@ -71,6 +71,8 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final unavailable = customerStartupOutcome.value != TenantStartupOutcome.networkError;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -80,19 +82,19 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.wifi_off_rounded,
+                  unavailable ? Icons.storefront_outlined : Icons.wifi_off_rounded,
                   size: 64,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  context.l10n.stateNoConnection,
+                  unavailable ? l10n.companyUnavailableTitle : l10n.stateNoConnection,
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  context.l10n.errorNoConnection,
+                  unavailable ? l10n.companyUnavailableMessage : l10n.errorNoConnection,
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -102,7 +104,7 @@ class _StartupRetryScreenState extends State<StartupRetryScreen> {
                 else
                   FilledButton(
                     onPressed: _retry,
-                    child: Text(context.l10n.actionRetry),
+                    child: Text(l10n.actionRetry),
                   ),
               ],
             ),

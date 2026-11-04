@@ -198,7 +198,7 @@ class _MoreHero extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const BrandMark(size: 46),
+                    const BrandMark(size: 52),
                     const SizedBox(width: AppSpacing.sm),
                     Flexible(
                       child: CompanyNameText(

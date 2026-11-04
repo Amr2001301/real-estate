@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 
-import '../feature_flags.dart';
 import '../features/company_discovery/domain/repositories/company_discovery_repository.dart';
 import '../features/company_discovery/domain/usecases/resolve_company.dart';
 import '../storage/customer_tenant_storage.dart';
@@ -28,9 +26,6 @@ enum TenantStartupOutcome {
 
 /// K1/K2 — Startup revalidation for the persisted customer tenant selection.
 ///
-/// [validateTenantSelection] / [validateWithFlagBypassed] are called from
-/// the post-frame callback in _CustomerRootState (legacy K1 path, UI-only).
-///
 /// [checkEligibility] is the K2 path: called from [bootstrap.dart] BEFORE
 /// [buildAppRoot] and from [StartupRetryScreen] on retry. It returns a
 /// structured [TenantStartupOutcome] that the bootstrap uses to gate
@@ -40,37 +35,6 @@ class CustomerStartupService {
 
   final CustomerTenantStorage _storage;
   final CompanyDiscoveryRepository _repo;
-
-  // ── Legacy K1 route-redirect API ───────────────────────────────────────────
-
-  /// Returns a navigation route string if action is needed, null otherwise.
-  /// Used by the post-frame UI redirect (K1 path; security gate is in K2).
-  Future<String?> validateTenantSelection() async {
-    if (!kEnableCustomerTenantSelection) return null;
-    return _doValidate();
-  }
-
-  @visibleForTesting
-  Future<String?> validateWithFlagBypassed() => _doValidate();
-
-  Future<String?> _doValidate() async {
-    if (!_storage.hasSelectedCompany) return null;
-
-    final slug = _storage.selectedCompanySlug!;
-    final result = await ResolveCompany(_repo)(slug);
-
-    if (result.isErr) return null; // network error — preserve, don't block
-
-    final company = result.dataOrNull;
-    if (company == null) {
-      await _storage.clearSelectedCompany();
-      return '/select-company?unavailable=true';
-    }
-
-    return null;
-  }
-
-  // ── K2 eligibility API ─────────────────────────────────────────────────────
 
   /// Exact-resolves the persisted company slug against the backend and returns
   /// a structured [TenantStartupOutcome].

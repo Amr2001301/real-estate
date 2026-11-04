@@ -566,7 +566,7 @@ class _HeroSectionState extends State<_HeroSection> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // START (right in RTL): logo mark + brand name.
-                    const BrandMark(size: 30),
+                    const BrandMark(size: 34),
                     const SizedBox(width: AppSpacing.xs),
                     Flexible(
                       child: CompanyNameText(

@@ -13,10 +13,6 @@ class _FakeRepo implements CompanyDiscoveryRepository {
   final Result<DiscoveredCompany?> resolveResult;
 
   @override
-  Future<Result<List<DiscoveredCompany>>> search(String query) async =>
-      Result.ok([]);
-
-  @override
   Future<Result<DiscoveredCompany?>> resolveBySlug(String slug) async =>
       resolveResult;
 }
@@ -26,9 +22,6 @@ AppFailure _networkFailure() => AppFailure(type: FailureType.network);
 class _CallCountRepo implements CompanyDiscoveryRepository {
   _CallCountRepo({required this.onResolve});
   final Result<DiscoveredCompany?> Function(String slug) onResolve;
-
-  @override
-  Future<Result<List<DiscoveredCompany>>> search(String query) async => Result.ok([]);
 
   @override
   Future<Result<DiscoveredCompany?>> resolveBySlug(String slug) async => onResolve(slug);
@@ -150,109 +143,6 @@ void main() {
       final second = await svc.checkEligibility();
       expect(second, TenantStartupOutcome.valid);
       expect(storage.selectedCompanySlug, 'alpha'); // still preserved
-    });
-  });
-
-  // ── Feature flag OFF (kEnableCustomerTenantSelection = false, production default) ──
-
-  group('validateTenantSelection — flag OFF (production default)', () {
-    test('returns null immediately even when a slug is persisted', () async {
-      // Flag is a compile-time const false — the whole method short-circuits.
-      final storage = await _makeStorage(slug: 'alpha', name: 'Alpha');
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(_alpha)),
-      );
-
-      final result = await svc.validateTenantSelection();
-
-      expect(result, isNull);
-      expect(storage.selectedCompanySlug, 'alpha'); // untouched
-    });
-
-    test('returns null when no slug is persisted', () async {
-      final storage = await _makeStorage();
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(null)),
-      );
-      expect(await svc.validateTenantSelection(), isNull);
-    });
-  });
-
-  // ── Core revalidation logic (via validateWithFlagBypassed) ────────────────
-  //
-  // These tests prove the behavior that will run when kEnableCustomerTenantSelection
-  // is flipped to true in K2. They call validateWithFlagBypassed() which skips
-  // the const-false guard and exercises the resolve+clear path directly.
-
-  group('validateWithFlagBypassed — revalidation logic', () {
-    test('§R1: no slug persisted → null return, no resolve call', () async {
-      final storage = await _makeStorage();
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(_alpha)),
-      );
-      expect(await svc.validateWithFlagBypassed(), isNull);
-      expect(storage.hasSelectedCompany, isFalse);
-    });
-
-    test('§R2: slug present + resolve succeeds → keep selection, null return', () async {
-      final storage = await _makeStorage(slug: 'alpha', name: 'Alpha');
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(_alpha)),
-      );
-
-      final result = await svc.validateWithFlagBypassed();
-
-      expect(result, isNull);
-      expect(storage.selectedCompanySlug, 'alpha');
-      expect(storage.selectedCompanyName, 'Alpha');
-      expect(storage.hasSelectedCompany, isTrue);
-    });
-
-    test('§R3: slug present + resolve returns null (404) → clear storage + return selector route', () async {
-      final storage = await _makeStorage(slug: 'alpha', name: 'Alpha');
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(null)),
-      );
-
-      final result = await svc.validateWithFlagBypassed();
-
-      expect(result, '/select-company?unavailable=true');
-      expect(storage.selectedCompanySlug, isNull);
-      expect(storage.selectedCompanyName, isNull);
-      expect(storage.hasSelectedCompany, isFalse);
-    });
-
-    test('§R4: network error → preserve selection, null return (no clear)', () async {
-      final storage = await _makeStorage(slug: 'alpha', name: 'Alpha');
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.err(_networkFailure())),
-      );
-
-      final result = await svc.validateWithFlagBypassed();
-
-      expect(result, isNull);
-      expect(storage.selectedCompanySlug, 'alpha');
-      expect(storage.hasSelectedCompany, isTrue);
-    });
-
-    test('§R5: after unavailable clear, both keys are null (no residue)', () async {
-      final storage = await _makeStorage(slug: 'ghost', name: 'Ghost Co');
-      final svc = CustomerStartupService(
-        storage,
-        _FakeRepo(resolveResult: Result.ok(null)),
-      );
-
-      await svc.validateWithFlagBypassed();
-
-      expect(storage.selectedCompanySlug, isNull);
-      expect(storage.selectedCompanyName, isNull);
-      expect(storage.hasSelectedCompany, isFalse);
     });
   });
 }

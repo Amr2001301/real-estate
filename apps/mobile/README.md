@@ -149,11 +149,13 @@ Each app has three flavor entrypoints (environment selected in code, no native
 flavor setup required yet):
 
 ```bash
-# Customer app
+# Customer app — every build is one company's app (there is no company
+# picker), so it needs that company: the seed's is `default`. A build without
+# COMPANY_SLUG refuses to start.
 cd apps/mobile/mobile_customer
-flutter run -t lib/main_dev.dart        # dev      (API http://localhost:4000/v1)
-flutter run -t lib/main_staging.dart    # staging
-flutter run -t lib/main_prod.dart       # prod
+flutter run -t lib/main_dev.dart --dart-define=COMPANY_SLUG=default      # dev (API http://localhost:4000/v1)
+flutter run -t lib/main_staging.dart --dart-define=COMPANY_SLUG=<slug>   # staging
+# prod: a company's store build — see docs/mobile-release-guide.md
 
 # Staff app
 cd apps/mobile/mobile_staff
