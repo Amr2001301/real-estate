@@ -5445,4 +5445,225 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mhNoTeam => 'لا يوجد مستشارون في فريقك بعد.';
+
+  @override
+  String get ahContractValue => 'قيمة العقود';
+
+  @override
+  String ahContractsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عقدًا',
+      few: '$n عقود',
+      two: 'عقدان',
+      one: 'عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahCollectionRate => 'نسبة التحصيل';
+
+  @override
+  String get ahNothingDue => 'لا شيء مستحق';
+
+  @override
+  String get ahCollected => 'المحصَّل';
+
+  @override
+  String get ahOverdue => 'متأخر';
+
+  @override
+  String get ahActPayment => 'تسجيل دفعة';
+
+  @override
+  String get ahActReview => 'مراجعة الإيصالات';
+
+  @override
+  String get ahCompanyMonth => 'الشركة هذا الشهر';
+
+  @override
+  String get ahCollectedMonth => 'محصَّل هذا الشهر';
+
+  @override
+  String ahCollectedMonthUnit(String unit) {
+    return 'محصَّل هذا الشهر ($unit)';
+  }
+
+  @override
+  String get ahSignedMonth => 'عقود موقَّعة';
+
+  @override
+  String get ahNewLeads => 'عملاء جدد';
+
+  @override
+  String ahLastMonth(String v) {
+    return 'الشهر الماضي $v';
+  }
+
+  @override
+  String get ahAvailableUnits => 'الوحدات المتاحة';
+
+  @override
+  String ahOfN(int n) {
+    return 'من $n';
+  }
+
+  @override
+  String ahSoldReserved(int sold, int reserved) {
+    return '$sold مبيعة · $reserved محجوزة';
+  }
+
+  @override
+  String get ahBrokerDue => 'عمولات الوسطاء';
+
+  @override
+  String get ahExpected30 => 'تحصيل متوقع';
+
+  @override
+  String get ahNeedsAction => 'تحتاج إجراء';
+
+  @override
+  String get ahAttSign => 'عقود تنتظر التوقيع';
+
+  @override
+  String get ahAttVisits => 'زيارات تنتظر التأكيد';
+
+  @override
+  String get ahAttMaintenance => 'طلبات صيانة مفتوحة';
+
+  @override
+  String get ahAttInquiries => 'استفسارات لم يُرَدّ عليها';
+
+  @override
+  String get ahAttProofs => 'إيصالات تنتظر المراجعة';
+
+  @override
+  String get ahAttFollowUps => 'متابعات متأخرة';
+
+  @override
+  String get ahFunnel => 'مسار التحويل';
+
+  @override
+  String get ahFunnelLeads => 'العملاء';
+
+  @override
+  String get ahFunnelVisits => 'الزيارات';
+
+  @override
+  String get ahFunnelReservations => 'الحجوزات';
+
+  @override
+  String get ahFunnelContracts => 'العقود';
+
+  @override
+  String get ahTrend => 'الحجوزات في آخر 6 أشهر';
+
+  @override
+  String get ahTopSales => 'أفضل المستشارين';
+
+  @override
+  String ahTopSalesSub(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عقدًا هذا الشهر',
+      few: '$n عقود هذا الشهر',
+      two: 'عقدان هذا الشهر',
+      one: 'عقد واحد هذا الشهر',
+      zero: 'لا عقود هذا الشهر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahNoSales => 'لا مبيعات هذا الشهر بعد.';
+
+  @override
+  String get ahTopBrokers => 'أفضل الوسطاء';
+
+  @override
+  String ahCommission(String v) {
+    return 'عمولة $v';
+  }
+
+  @override
+  String get ahNoBrokers => 'لا مبيعات للوسطاء بعد.';
+
+  @override
+  String get ahActivity => 'آخر النشاط';
+
+  @override
+  String get ahNoActivity => 'لا يوجد نشاط بعد.';
+
+  @override
+  String get ahEvLead => 'عميل محتمل جديد';
+
+  @override
+  String get ahEvReservation => 'حجز جديد';
+
+  @override
+  String get ahEvContract => 'عقد جديد';
+
+  @override
+  String get ahEvVisit => 'طلب زيارة';
+
+  @override
+  String get ahEvMaintenance => 'طلب صيانة';
+
+  @override
+  String get ahEvDeposit => 'دفعة جديدة';
+
+  @override
+  String get ahEvInquiry => 'استفسار جديد';
+
+  @override
+  String get ahAgoNow => 'الآن';
+
+  @override
+  String ahAgoMinutes(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'منذ $n دقيقة',
+      few: 'منذ $n دقائق',
+      two: 'منذ دقيقتين',
+      one: 'منذ دقيقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ahAgoHours(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'منذ $n ساعة',
+      few: 'منذ $n ساعات',
+      two: 'منذ ساعتين',
+      one: 'منذ ساعة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ahAgoDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'منذ $n يومًا',
+      few: 'منذ $n أيام',
+      two: 'منذ يومين',
+      one: 'منذ يوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahBrokerDueSub => 'مستحقة الصرف';
+
+  @override
+  String get ahExpected30Sub => 'خلال 30 يومًا';
 }

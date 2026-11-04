@@ -5478,4 +5478,215 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mhNoTeam => 'No reps in your team yet.';
+
+  @override
+  String get ahContractValue => 'Contracts value';
+
+  @override
+  String ahContractsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n contracts',
+      one: '1 contract',
+      zero: 'no contracts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahCollectionRate => 'Collection rate';
+
+  @override
+  String get ahNothingDue => 'Nothing due';
+
+  @override
+  String get ahCollected => 'Collected';
+
+  @override
+  String get ahOverdue => 'Overdue';
+
+  @override
+  String get ahActPayment => 'Record payment';
+
+  @override
+  String get ahActReview => 'Review receipts';
+
+  @override
+  String get ahCompanyMonth => 'The company this month';
+
+  @override
+  String get ahCollectedMonth => 'Collected this month';
+
+  @override
+  String ahCollectedMonthUnit(String unit) {
+    return 'Collected this month ($unit)';
+  }
+
+  @override
+  String get ahSignedMonth => 'Contracts signed';
+
+  @override
+  String get ahNewLeads => 'New leads';
+
+  @override
+  String ahLastMonth(String v) {
+    return 'Last month $v';
+  }
+
+  @override
+  String get ahAvailableUnits => 'Available units';
+
+  @override
+  String ahOfN(int n) {
+    return 'of $n';
+  }
+
+  @override
+  String ahSoldReserved(int sold, int reserved) {
+    return '$sold sold · $reserved reserved';
+  }
+
+  @override
+  String get ahBrokerDue => 'Broker commissions';
+
+  @override
+  String get ahExpected30 => 'Expected collection';
+
+  @override
+  String get ahNeedsAction => 'Needs action';
+
+  @override
+  String get ahAttSign => 'Contracts awaiting signature';
+
+  @override
+  String get ahAttVisits => 'Visits awaiting confirmation';
+
+  @override
+  String get ahAttMaintenance => 'Open maintenance requests';
+
+  @override
+  String get ahAttInquiries => 'Unanswered inquiries';
+
+  @override
+  String get ahAttProofs => 'Receipts awaiting review';
+
+  @override
+  String get ahAttFollowUps => 'Overdue follow-ups';
+
+  @override
+  String get ahFunnel => 'Conversion funnel';
+
+  @override
+  String get ahFunnelLeads => 'Leads';
+
+  @override
+  String get ahFunnelVisits => 'Visits';
+
+  @override
+  String get ahFunnelReservations => 'Bookings';
+
+  @override
+  String get ahFunnelContracts => 'Contracts';
+
+  @override
+  String get ahTrend => 'Bookings in the last 6 months';
+
+  @override
+  String get ahTopSales => 'Top sales reps';
+
+  @override
+  String ahTopSalesSub(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n contracts this month',
+      one: '1 contract this month',
+      zero: 'no contracts this month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahNoSales => 'No sales this month yet.';
+
+  @override
+  String get ahTopBrokers => 'Top brokers';
+
+  @override
+  String ahCommission(String v) {
+    return 'commission $v';
+  }
+
+  @override
+  String get ahNoBrokers => 'No broker sales yet.';
+
+  @override
+  String get ahActivity => 'Latest activity';
+
+  @override
+  String get ahNoActivity => 'No activity yet.';
+
+  @override
+  String get ahEvLead => 'New lead';
+
+  @override
+  String get ahEvReservation => 'New booking';
+
+  @override
+  String get ahEvContract => 'New contract';
+
+  @override
+  String get ahEvVisit => 'Visit request';
+
+  @override
+  String get ahEvMaintenance => 'Maintenance request';
+
+  @override
+  String get ahEvDeposit => 'New payment';
+
+  @override
+  String get ahEvInquiry => 'New inquiry';
+
+  @override
+  String get ahAgoNow => 'just now';
+
+  @override
+  String ahAgoMinutes(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n min ago',
+      one: '1 min ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ahAgoHours(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hours ago',
+      one: '1 hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ahAgoDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ahBrokerDueSub => 'due to be paid';
+
+  @override
+  String get ahExpected30Sub => 'in the next 30 days';
 }

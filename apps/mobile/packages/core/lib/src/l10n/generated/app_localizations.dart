@@ -10081,6 +10081,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No reps in your team yet.'**
   String get mhNoTeam;
+
+  /// No description provided for @ahContractValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts value'**
+  String get ahContractValue;
+
+  /// No description provided for @ahContractsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no contracts} =1{1 contract} other{{n} contracts}}'**
+  String ahContractsN(int n);
+
+  /// No description provided for @ahCollectionRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection rate'**
+  String get ahCollectionRate;
+
+  /// No description provided for @ahNothingDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due'**
+  String get ahNothingDue;
+
+  /// No description provided for @ahCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get ahCollected;
+
+  /// No description provided for @ahOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ahOverdue;
+
+  /// No description provided for @ahActPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Record payment'**
+  String get ahActPayment;
+
+  /// No description provided for @ahActReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review receipts'**
+  String get ahActReview;
+
+  /// No description provided for @ahCompanyMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'The company this month'**
+  String get ahCompanyMonth;
+
+  /// No description provided for @ahCollectedMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected this month'**
+  String get ahCollectedMonth;
+
+  /// No description provided for @ahCollectedMonthUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected this month ({unit})'**
+  String ahCollectedMonthUnit(String unit);
+
+  /// No description provided for @ahSignedMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts signed'**
+  String get ahSignedMonth;
+
+  /// No description provided for @ahNewLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'New leads'**
+  String get ahNewLeads;
+
+  /// No description provided for @ahLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month {v}'**
+  String ahLastMonth(String v);
+
+  /// No description provided for @ahAvailableUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get ahAvailableUnits;
+
+  /// No description provided for @ahOfN.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n}'**
+  String ahOfN(int n);
+
+  /// No description provided for @ahSoldReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'{sold} sold · {reserved} reserved'**
+  String ahSoldReserved(int sold, int reserved);
+
+  /// No description provided for @ahBrokerDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker commissions'**
+  String get ahBrokerDue;
+
+  /// No description provided for @ahExpected30.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected collection'**
+  String get ahExpected30;
+
+  /// No description provided for @ahNeedsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs action'**
+  String get ahNeedsAction;
+
+  /// No description provided for @ahAttSign.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts awaiting signature'**
+  String get ahAttSign;
+
+  /// No description provided for @ahAttVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits awaiting confirmation'**
+  String get ahAttVisits;
+
+  /// No description provided for @ahAttMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Open maintenance requests'**
+  String get ahAttMaintenance;
+
+  /// No description provided for @ahAttInquiries.
+  ///
+  /// In en, this message translates to:
+  /// **'Unanswered inquiries'**
+  String get ahAttInquiries;
+
+  /// No description provided for @ahAttProofs.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipts awaiting review'**
+  String get ahAttProofs;
+
+  /// No description provided for @ahAttFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue follow-ups'**
+  String get ahAttFollowUps;
+
+  /// No description provided for @ahFunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion funnel'**
+  String get ahFunnel;
+
+  /// No description provided for @ahFunnelLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get ahFunnelLeads;
+
+  /// No description provided for @ahFunnelVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get ahFunnelVisits;
+
+  /// No description provided for @ahFunnelReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get ahFunnelReservations;
+
+  /// No description provided for @ahFunnelContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get ahFunnelContracts;
+
+  /// No description provided for @ahTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings in the last 6 months'**
+  String get ahTrend;
+
+  /// No description provided for @ahTopSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Top sales reps'**
+  String get ahTopSales;
+
+  /// No description provided for @ahTopSalesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no contracts this month} =1{1 contract this month} other{{n} contracts this month}}'**
+  String ahTopSalesSub(int n);
+
+  /// No description provided for @ahNoSales.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales this month yet.'**
+  String get ahNoSales;
+
+  /// No description provided for @ahTopBrokers.
+  ///
+  /// In en, this message translates to:
+  /// **'Top brokers'**
+  String get ahTopBrokers;
+
+  /// No description provided for @ahCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'commission {v}'**
+  String ahCommission(String v);
+
+  /// No description provided for @ahNoBrokers.
+  ///
+  /// In en, this message translates to:
+  /// **'No broker sales yet.'**
+  String get ahNoBrokers;
+
+  /// No description provided for @ahActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest activity'**
+  String get ahActivity;
+
+  /// No description provided for @ahNoActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet.'**
+  String get ahNoActivity;
+
+  /// No description provided for @ahEvLead.
+  ///
+  /// In en, this message translates to:
+  /// **'New lead'**
+  String get ahEvLead;
+
+  /// No description provided for @ahEvReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'New booking'**
+  String get ahEvReservation;
+
+  /// No description provided for @ahEvContract.
+  ///
+  /// In en, this message translates to:
+  /// **'New contract'**
+  String get ahEvContract;
+
+  /// No description provided for @ahEvVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit request'**
+  String get ahEvVisit;
+
+  /// No description provided for @ahEvMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance request'**
+  String get ahEvMaintenance;
+
+  /// No description provided for @ahEvDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'New payment'**
+  String get ahEvDeposit;
+
+  /// No description provided for @ahEvInquiry.
+  ///
+  /// In en, this message translates to:
+  /// **'New inquiry'**
+  String get ahEvInquiry;
+
+  /// No description provided for @ahAgoNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get ahAgoNow;
+
+  /// No description provided for @ahAgoMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 min ago} other{{n} min ago}}'**
+  String ahAgoMinutes(int n);
+
+  /// No description provided for @ahAgoHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 hour ago} other{{n} hours ago}}'**
+  String ahAgoHours(int n);
+
+  /// No description provided for @ahAgoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 day ago} other{{n} days ago}}'**
+  String ahAgoDays(int n);
+
+  /// No description provided for @ahBrokerDueSub.
+  ///
+  /// In en, this message translates to:
+  /// **'due to be paid'**
+  String get ahBrokerDueSub;
+
+  /// No description provided for @ahExpected30Sub.
+  ///
+  /// In en, this message translates to:
+  /// **'in the next 30 days'**
+  String get ahExpected30Sub;
 }
 
 class _AppLocalizationsDelegate
