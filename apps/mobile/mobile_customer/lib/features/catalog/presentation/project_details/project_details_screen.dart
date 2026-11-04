@@ -222,7 +222,7 @@ class _DetailPageState extends State<_DetailPage> {
 void _requestVisit(BuildContext context, ProjectDetail project) {
   final authed = context.read<SessionCubit>().state.isAuthenticated;
   if (authed) {
-    context.push('/visit-request', extra: {'projectId': project.id});
+    context.push('/visit-request', extra: _requestSubject(context, project));
   } else {
     _showVisitPrompt(context, project);
   }
@@ -231,10 +231,21 @@ void _requestVisit(BuildContext context, ProjectDetail project) {
 void _requestInfo(BuildContext context, ProjectDetail project) {
   final authed = context.read<SessionCubit>().state.isAuthenticated;
   if (authed) {
-    context.push('/info-request', extra: {'projectId': project.id});
+    context.push('/info-request', extra: _requestSubject(context, project));
   } else {
     _showVisitPrompt(context, project);
   }
+}
+
+/// What a request screen shows it is about: the project's name, city and cover.
+Map<String, dynamic> _requestSubject(BuildContext context, ProjectDetail project) {
+  final lang = Localizations.localeOf(context).languageCode;
+  return {
+    'projectId': project.id,
+    'title': project.name.resolve(lang),
+    'subtitle': project.city,
+    'imageUrl': project.coverImage,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

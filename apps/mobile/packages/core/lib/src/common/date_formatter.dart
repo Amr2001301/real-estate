@@ -18,6 +18,14 @@ abstract final class DateFormatter {
   static String monthYear(DateTime date, {required String languageCode}) =>
       _western(DateFormat.yMMMM(_locale(languageCode))).format(date);
 
+  /// Short weekday ("السبت", "Sat").
+  static String weekdayShort(DateTime date, {required String languageCode}) =>
+      _western(languageCode == 'ar' ? DateFormat('EEEE', 'ar') : DateFormat('EEE', 'en')).format(date);
+
+  /// Short month ("نوفمبر", "Nov").
+  static String monthShort(DateTime date, {required String languageCode}) =>
+      _western(languageCode == 'ar' ? DateFormat('MMMM', 'ar') : DateFormat('MMM', 'en')).format(date);
+
   static String _locale(String languageCode) => languageCode == 'ar' ? 'ar' : 'en';
 
   static DateFormat _western(DateFormat f) => f..useNativeDigits = false;

@@ -9523,6 +9523,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Card'**
   String get paymentMethodCard;
+
+  /// No description provided for @requestReplyNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Our team will get back to you within one working day.'**
+  String get requestReplyNote;
+
+  /// No description provided for @requestAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request is about'**
+  String get requestAbout;
+
+  /// No description provided for @requestContactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We will reach you on'**
+  String get requestContactTitle;
+
+  /// No description provided for @requestContactEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit your details'**
+  String get requestContactEdit;
+
+  /// No description provided for @visitPickDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a day'**
+  String get visitPickDay;
+
+  /// No description provided for @visitPickTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a time'**
+  String get visitPickTime;
+
+  /// No description provided for @visitNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. I\'d like to see the units with a garden'**
+  String get visitNotesHint;
+
+  /// No description provided for @visitSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Your visit on {day} at {time}'**
+  String visitSummary(String day, String time);
+
+  /// No description provided for @visitDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your visit request is in'**
+  String get visitDoneTitle;
+
+  /// No description provided for @visitDoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll confirm the time with you shortly; you\'ll find the request in «My requests».'**
+  String get visitDoneMessage;
+
+  /// No description provided for @infoTopicsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to know?'**
+  String get infoTopicsTitle;
+
+  /// No description provided for @infoTopicPrices.
+  ///
+  /// In en, this message translates to:
+  /// **'Prices and payment plans'**
+  String get infoTopicPrices;
+
+  /// No description provided for @infoTopicAreas.
+  ///
+  /// In en, this message translates to:
+  /// **'Available sizes'**
+  String get infoTopicAreas;
+
+  /// No description provided for @infoTopicDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover date'**
+  String get infoTopicDelivery;
+
+  /// No description provided for @infoTopicFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing and specs'**
+  String get infoTopicFinishing;
+
+  /// No description provided for @infoTopicLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location and services'**
+  String get infoTopicLocation;
+
+  /// No description provided for @infoMessageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'More details (optional)'**
+  String get infoMessageOptional;
+
+  /// No description provided for @infoTopicsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a topic or write your question.'**
+  String get infoTopicsRequired;
+
+  /// No description provided for @infoTopicsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics: {topics}'**
+  String infoTopicsLine(String topics);
+
+  /// No description provided for @infoDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your question is sent'**
+  String get infoDoneTitle;
+
+  /// No description provided for @infoDoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'A sales advisor will reply soon; you\'ll find the request in «My requests».'**
+  String get infoDoneMessage;
+
+  /// No description provided for @requestGoToRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'My requests'**
+  String get requestGoToRequests;
+
+  /// No description provided for @requestBrowseProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse projects'**
+  String get requestBrowseProjects;
+
+  /// No description provided for @maintenanceDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your maintenance request is in'**
+  String get maintenanceDoneTitle;
+
+  /// No description provided for @maintenanceDoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The maintenance team will contact you to book a visit; follow the request from «Maintenance».'**
+  String get maintenanceDoneMessage;
+
+  /// No description provided for @maintenanceDoneBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance requests'**
+  String get maintenanceDoneBack;
+
+  /// No description provided for @maintenanceDoneHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to home'**
+  String get maintenanceDoneHome;
 }
 
 class _AppLocalizationsDelegate

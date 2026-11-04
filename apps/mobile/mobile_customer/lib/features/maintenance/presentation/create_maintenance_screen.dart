@@ -38,15 +38,8 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
             a.submitFailure != b.submitFailure ||
             a.pickNonce != b.pickNonce,
         listener: (context, state) {
-          if (state.submitted) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(content: Text(l10n.maintenanceSubmitted)),
-              );
-            context.pop(true);
-            return;
-          }
+          // Sent: the builder shows the confirmation in place.
+          if (state.submitted) return;
           if (state.submitFailure != null) {
             showFailureSnackBar(context, state.submitFailure!);
           }
@@ -61,6 +54,8 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
         },
         builder: (context, state) {
           final cubit = context.read<CreateMaintenanceCubit>();
+          if (state.submitted) return _Done(l10n: l10n);
+          final step = _StepCounter();
           return Column(
             children: [
               _Header(l10n: l10n),
@@ -75,7 +70,7 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                   children: [
                     // ── Unit picker ──────────────────────────────────────
                     if (!state.fixedUnit) ...[
-                      _SectionLabel(label: l10n.maintenanceUnitLabel),
+                      _SectionLabel(label: l10n.maintenanceUnitLabel, step: step.next()),
                       const SizedBox(height: AppSpacing.sm),
                       _Units(state: state),
                       if (state.showValidation && !state.hasUnit) ...[
@@ -86,7 +81,7 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                     ],
 
                     // ── Categories ───────────────────────────────────────
-                    _SectionLabel(label: l10n.maintenanceCategoryLabel),
+                    _SectionLabel(label: l10n.maintenanceCategoryLabel, step: step.next()),
                     const SizedBox(height: AppSpacing.sm),
                     _Categories(state: state),
                     if (state.showValidation && !state.hasCategory) ...[
@@ -96,7 +91,7 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                     const SizedBox(height: AppSpacing.lg),
 
                     // ── Description ──────────────────────────────────────
-                    _SectionLabel(label: l10n.maintenanceDescriptionLabel),
+                    _SectionLabel(label: l10n.maintenanceDescriptionLabel, step: step.next()),
                     const SizedBox(height: AppSpacing.sm),
                     _DescriptionField(
                       hint: l10n.maintenanceDescriptionHint,
@@ -109,7 +104,7 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                     const SizedBox(height: AppSpacing.lg),
 
                     // ── Photos ───────────────────────────────────────────
-                    _PhotosSection(state: state),
+                    _PhotosSection(state: state, step: step.next()),
                     const SizedBox(height: AppSpacing.xl),
 
                     // ── Submit ───────────────────────────────────────────
@@ -154,9 +149,19 @@ class _Header extends StatelessWidget {
 
 // ── Section label ─────────────────────────────────────────────────────────────
 
+/// Numbers the form's sections in the order they show (the unit step is
+/// left out when the unit is already chosen).
+class _StepCounter {
+  int _n = 0;
+  int next() => ++_n;
+}
+
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label});
+  const _SectionLabel({required this.label, this.step});
   final String label;
+
+  /// The step's number, in a navy circle.
+  final int? step;
 
   @override
   Widget build(BuildContext context) {
@@ -164,18 +169,37 @@ class _SectionLabel extends StatelessWidget {
     final colors = context.appColors;
     return Row(
       children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppPalette.gold400, AppPalette.gold300],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+        if (step != null)
+          Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_navyLight, _navyDeep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
             ),
-            borderRadius: BorderRadius.circular(2),
+            child: Text(
+              '$step',
+              style: const TextStyle(color: AppPalette.gold300, fontSize: 13, fontWeight: FontWeight.w800),
+            ),
+          )
+        else
+          Container(
+            width: 3,
+            height: 16,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppPalette.gold400, AppPalette.gold300],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ),
         const SizedBox(width: 8),
         Text(
           label,
@@ -321,8 +345,9 @@ class _SubmitArea extends StatelessWidget {
 // ── Photos section ────────────────────────────────────────────────────────────
 
 class _PhotosSection extends StatelessWidget {
-  const _PhotosSection({required this.state});
+  const _PhotosSection({required this.state, this.step});
   final CreateMaintenanceState state;
+  final int? step;
 
   @override
   Widget build(BuildContext context) {
@@ -334,33 +359,10 @@ class _PhotosSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 3,
-              height: 16,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppPalette.gold400, AppPalette.gold300],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              l10n.maintenancePhotosLabel,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
-              ),
-            ),
-          ],
-        ),
+        _SectionLabel(label: l10n.maintenancePhotosLabel, step: step),
         const SizedBox(height: 4),
         Padding(
-          padding: const EdgeInsetsDirectional.only(start: 11),
+          padding: const EdgeInsetsDirectional.only(start: 34),
           child: Text(
             l10n.maintenancePhotosHint(kMaxPhotos, maxMb),
             style: TextStyle(color: colors.inkMuted, fontSize: 12),
@@ -928,84 +930,175 @@ class _Categories extends StatelessWidget {
           message: l10n.maintenanceNoCategoriesMessage,
         );
       case DataStatus.success:
-        return Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
+        return GridView.count(
+          key: const Key('maintenance-categories'),
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
+          childAspectRatio: 1.05,
           children: [
-            for (final cat in state.categories) ...[
-              GestureDetector(
-                onTap: state.requestId == null
-                    ? () => cubit.toggleCategory(cat.id)
-                    : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: state.selectedCategoryIds.contains(cat.id)
-                        ? const LinearGradient(
-                            colors: [_navyLight, _navyDeep],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    color: state.selectedCategoryIds.contains(cat.id)
-                        ? null
-                        : colors.surface,
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(
-                      color: state.selectedCategoryIds.contains(cat.id)
-                          ? Colors.transparent
-                          : colors.hairline.withValues(alpha: 0.6),
-                      width: 1.5,
-                    ),
-                    boxShadow: state.selectedCategoryIds.contains(cat.id)
-                        ? [
-                            BoxShadow(
-                              color: _navyDeep.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ]
-                        : [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (state.selectedCategoryIds.contains(cat.id)) ...[
-                        const Icon(
-                          Icons.check_rounded,
-                          size: 14,
-                          color: AppPalette.gold300,
-                        ),
-                        const SizedBox(width: 5),
-                      ],
-                      Text(
-                        cat.name.resolve(lang),
-                        style: TextStyle(
-                          color: state.selectedCategoryIds.contains(cat.id)
-                              ? Colors.white
-                              : colors.inkStrong,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            for (final cat in state.categories)
+              _CategoryTile(
+                label: cat.name.resolve(lang),
+                icon: maintenanceCategoryIcon('${cat.name.ar} ${cat.name.en}'),
+                selected: state.selectedCategoryIds.contains(cat.id),
+                onTap: state.requestId == null ? () => cubit.toggleCategory(cat.id) : null,
+                colors: colors,
               ),
-            ],
           ],
         );
     }
+  }
+}
+
+/// An icon for a maintenance category, from its name (the company names them).
+IconData maintenanceCategoryIcon(String name) {
+  final n = name.toLowerCase();
+  bool has(List<String> w) => w.any(n.contains);
+  if (has(['سباك', 'plumb', 'مياه', 'water'])) return Icons.plumbing_rounded;
+  if (has(['كهرب', 'electric'])) return Icons.electrical_services_rounded;
+  if (has(['تكييف', 'تبريد', 'air', 'ac', 'hvac'])) return Icons.ac_unit_rounded;
+  if (has(['نجار', 'carpent', 'wood', 'أبواب', 'door'])) return Icons.carpenter_rounded;
+  if (has(['دهان', 'نقاش', 'paint'])) return Icons.format_paint_rounded;
+  if (has(['مصعد', 'أسانسير', 'elevator', 'lift'])) return Icons.elevator_rounded;
+  if (has(['حديقة', 'زراعة', 'garden', 'landscape'])) return Icons.yard_rounded;
+  if (has(['أمن', 'حراسة', 'security'])) return Icons.security_rounded;
+  if (has(['نظافة', 'clean'])) return Icons.cleaning_services_rounded;
+  return Icons.handyman_rounded;
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.label, required this.icon, required this.selected, required this.onTap, required this.colors});
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          gradient: selected
+              ? const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight)
+              : null,
+          color: selected ? null : colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? AppPalette.gold400 : colors.hairline.withValues(alpha: 0.7), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: selected ? _navyDeep.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
+              blurRadius: selected ? 12 : 4,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: selected ? Colors.white.withValues(alpha: 0.1) : AppPalette.gold400.withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 22, color: selected ? AppPalette.gold300 : AppPalette.gold500),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? Colors.white : colors.inkStrong,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const PositionedDirectional(
+                top: 0,
+                end: 0,
+                child: Icon(Icons.check_circle_rounded, size: 18, color: AppPalette.gold300),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown once the request is sent: what happens next, and the way back to
+/// the requests (which reload) or home.
+class _Done extends StatelessWidget {
+  const _Done({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        _Header(l10n: l10n),
+        Expanded(
+          child: Center(
+            key: const Key('maintenance-done'),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(color: colors.success.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    child: Icon(Icons.check_circle_rounded, size: 52, color: colors.success),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(l10n.maintenanceDoneTitle,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(l10n.maintenanceDoneMessage,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted, height: 1.6)),
+                  const SizedBox(height: AppSpacing.xl),
+                  AppButton(
+                    label: l10n.maintenanceDoneBack,
+                    icon: Icons.build_rounded,
+                    expand: true,
+                    onPressed: () => context.canPop() ? context.pop(true) : context.go('/account/maintenance'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppButton(
+                    label: l10n.maintenanceDoneHome,
+                    icon: Icons.home_rounded,
+                    variant: AppButtonVariant.outline,
+                    expand: true,
+                    onPressed: () => context.go('/home'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

@@ -5097,4 +5097,92 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get paymentMethodCard => 'بطاقة';
+
+  @override
+  String get requestReplyNote => 'سيتواصل معك فريقنا خلال يوم عمل.';
+
+  @override
+  String get requestAbout => 'طلبك عن';
+
+  @override
+  String get requestContactTitle => 'سنتواصل معك على';
+
+  @override
+  String get requestContactEdit => 'تعديل بياناتك';
+
+  @override
+  String get visitPickDay => 'اختر اليوم';
+
+  @override
+  String get visitPickTime => 'اختر الوقت';
+
+  @override
+  String get visitNotesHint => 'مثلاً: أرغب في معاينة الوحدات ذات الحديقة';
+
+  @override
+  String visitSummary(String day, String time) {
+    return 'زيارتك يوم $day الساعة $time';
+  }
+
+  @override
+  String get visitDoneTitle => 'تم استلام طلب الزيارة';
+
+  @override
+  String get visitDoneMessage =>
+      'سنؤكد معك الموعد قريبًا، وستجد الطلب في «طلباتي».';
+
+  @override
+  String get infoTopicsTitle => 'ماذا تريد أن تعرف؟';
+
+  @override
+  String get infoTopicPrices => 'الأسعار وخطط السداد';
+
+  @override
+  String get infoTopicAreas => 'المساحات المتاحة';
+
+  @override
+  String get infoTopicDelivery => 'موعد التسليم';
+
+  @override
+  String get infoTopicFinishing => 'التشطيب والمواصفات';
+
+  @override
+  String get infoTopicLocation => 'الموقع والخدمات';
+
+  @override
+  String get infoMessageOptional => 'تفاصيل إضافية (اختياري)';
+
+  @override
+  String get infoTopicsRequired => 'اختر موضوعًا أو اكتب سؤالك.';
+
+  @override
+  String infoTopicsLine(String topics) {
+    return 'المواضيع: $topics';
+  }
+
+  @override
+  String get infoDoneTitle => 'تم إرسال سؤالك';
+
+  @override
+  String get infoDoneMessage =>
+      'سيرد عليك مستشار المبيعات قريبًا، وستجد الطلب في «طلباتي».';
+
+  @override
+  String get requestGoToRequests => 'طلباتي';
+
+  @override
+  String get requestBrowseProjects => 'تصفّح المشاريع';
+
+  @override
+  String get maintenanceDoneTitle => 'تم إرسال طلب الصيانة';
+
+  @override
+  String get maintenanceDoneMessage =>
+      'سيتواصل معك فريق الصيانة لتحديد موعد المعاينة، ويمكنك متابعة الطلب من صفحة «الصيانة».';
+
+  @override
+  String get maintenanceDoneBack => 'طلبات الصيانة';
+
+  @override
+  String get maintenanceDoneHome => 'العودة إلى الرئيسية';
 }
