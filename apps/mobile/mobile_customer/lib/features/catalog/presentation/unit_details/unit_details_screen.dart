@@ -781,9 +781,13 @@ void requestUnitVisit(BuildContext context, Unit unit) {
   final authed = context.read<SessionCubit>().state.isAuthenticated;
   final projectId = unit.project?.id;
   if (authed && projectId != null) {
+    final lang = Localizations.localeOf(context).languageCode;
     context.push('/visit-request', extra: {
       'projectId': projectId,
       'unitId': unit.id,
+      'title': '${unitTypeLabel(unit.type, languageCode: lang, name: unit.typeName)} · ${unit.code}',
+      'subtitle': unit.project?.name.resolve(lang),
+      'imageUrl': unit.coverImage,
     });
   } else {
     _showVisitPrompt(context, unit);

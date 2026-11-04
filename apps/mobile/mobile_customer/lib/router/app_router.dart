@@ -633,6 +633,9 @@ GoRouter createCustomerRouter(
             child: VisitRequestScreen(
               projectId: args['projectId'] as String? ?? '',
               unitId: args['unitId'] as String?,
+              title: args['title'] as String?,
+              subtitle: args['subtitle'] as String?,
+              imageUrl: args['imageUrl'] as String?,
             ),
           );
         },
@@ -649,6 +652,9 @@ GoRouter createCustomerRouter(
             child: InfoRequestScreen(
               projectId: args['projectId'] as String?,
               unitId: args['unitId'] as String?,
+              title: args['title'] as String?,
+              subtitle: args['subtitle'] as String?,
+              imageUrl: args['imageUrl'] as String?,
             ),
           );
         },

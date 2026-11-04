@@ -5141,4 +5141,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paymentMethodCard => 'Card';
+
+  @override
+  String get requestReplyNote =>
+      'Our team will get back to you within one working day.';
+
+  @override
+  String get requestAbout => 'Your request is about';
+
+  @override
+  String get requestContactTitle => 'We will reach you on';
+
+  @override
+  String get requestContactEdit => 'Edit your details';
+
+  @override
+  String get visitPickDay => 'Pick a day';
+
+  @override
+  String get visitPickTime => 'Pick a time';
+
+  @override
+  String get visitNotesHint => 'e.g. I\'d like to see the units with a garden';
+
+  @override
+  String visitSummary(String day, String time) {
+    return 'Your visit on $day at $time';
+  }
+
+  @override
+  String get visitDoneTitle => 'Your visit request is in';
+
+  @override
+  String get visitDoneMessage =>
+      'We\'ll confirm the time with you shortly; you\'ll find the request in «My requests».';
+
+  @override
+  String get infoTopicsTitle => 'What would you like to know?';
+
+  @override
+  String get infoTopicPrices => 'Prices and payment plans';
+
+  @override
+  String get infoTopicAreas => 'Available sizes';
+
+  @override
+  String get infoTopicDelivery => 'Handover date';
+
+  @override
+  String get infoTopicFinishing => 'Finishing and specs';
+
+  @override
+  String get infoTopicLocation => 'Location and services';
+
+  @override
+  String get infoMessageOptional => 'More details (optional)';
+
+  @override
+  String get infoTopicsRequired => 'Pick a topic or write your question.';
+
+  @override
+  String infoTopicsLine(String topics) {
+    return 'Topics: $topics';
+  }
+
+  @override
+  String get infoDoneTitle => 'Your question is sent';
+
+  @override
+  String get infoDoneMessage =>
+      'A sales advisor will reply soon; you\'ll find the request in «My requests».';
+
+  @override
+  String get requestGoToRequests => 'My requests';
+
+  @override
+  String get requestBrowseProjects => 'Browse projects';
+
+  @override
+  String get maintenanceDoneTitle => 'Your maintenance request is in';
+
+  @override
+  String get maintenanceDoneMessage =>
+      'The maintenance team will contact you to book a visit; follow the request from «Maintenance».';
+
+  @override
+  String get maintenanceDoneBack => 'Maintenance requests';
+
+  @override
+  String get maintenanceDoneHome => 'Back to home';
 }
