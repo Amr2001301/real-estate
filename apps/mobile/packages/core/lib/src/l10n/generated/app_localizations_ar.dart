@@ -4971,4 +4971,130 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get contentContactWhatsApp => 'واتساب';
+
+  @override
+  String get contractMoneyTitle => 'ملخص السداد';
+
+  @override
+  String contractPaidShare(String percent) {
+    return 'تم سداد $percent من قيمة العقد';
+  }
+
+  @override
+  String get contractRemaining => 'المتبقي';
+
+  @override
+  String get contractNextInstallment => 'القسط القادم';
+
+  @override
+  String contractNextDue(String date) {
+    return 'مستحق يوم $date';
+  }
+
+  @override
+  String contractNextOverdue(String date) {
+    return 'متأخر منذ $date';
+  }
+
+  @override
+  String get contractNoUpcoming => 'لا توجد أقساط مستحقة عليك حاليًا.';
+
+  @override
+  String get contractViewInstallments => 'كل الأقساط';
+
+  @override
+  String get contractPlanTitle => 'خطة السداد';
+
+  @override
+  String get contractPlanEach => 'قيمة القسط';
+
+  @override
+  String get contractPlanDuration => 'مدة التقسيط';
+
+  @override
+  String get contractPlanStart => 'بداية الأقساط';
+
+  @override
+  String get contractPlanFrequency => 'كل';
+
+  @override
+  String get contractPlanCash => 'سداد كامل بدون أقساط';
+
+  @override
+  String get freqMonthly => 'شهر';
+
+  @override
+  String get freqQuarterly => '3 شهور';
+
+  @override
+  String get freqSemiAnnual => '6 شهور';
+
+  @override
+  String get freqAnnual => 'سنة';
+
+  @override
+  String get contractUnitTitle => 'الوحدة';
+
+  @override
+  String get statementCharge => 'مستحق';
+
+  @override
+  String get statementPayment => 'مدفوع';
+
+  @override
+  String get depositStatusTitle => 'حالة الدفعة';
+
+  @override
+  String get depositDetailsTitle => 'تفاصيل الدفعة';
+
+  @override
+  String get depositStateCollected => 'تم التأكيد';
+
+  @override
+  String get depositStatePendingReview => 'قيد المراجعة';
+
+  @override
+  String get depositStateChequePending => 'شيك لم يُصرف بعد';
+
+  @override
+  String get depositStateRejected => 'مرفوضة';
+
+  @override
+  String get depositStateReversed => 'ألغتها الشركة';
+
+  @override
+  String get depositStateBounced => 'شيك مرتجع';
+
+  @override
+  String get depositStepSent => 'أرسلت إثبات الدفع';
+
+  @override
+  String get depositStepRecorded => 'سجّلتها الشركة';
+
+  @override
+  String get depositStepReview => 'مراجعة الشركة';
+
+  @override
+  String get depositStepConfirmed => 'تم تأكيد الدفعة';
+
+  @override
+  String get depositStepRejected => 'تم رفض الإثبات';
+
+  @override
+  String get depositStepWaiting => 'في الانتظار';
+
+  @override
+  String get depositMethod => 'طريقة الدفع';
+
+  @override
+  String get depositForInstallment => 'عن قسط مستحق يوم';
+
+  @override
+  String get depositBookingNumber => 'رقم الحجز';
+
+  @override
+  String get depositRejectedReason => 'سبب الرفض';
+
+  @override
+  String get paymentMethodCard => 'بطاقة';
 }

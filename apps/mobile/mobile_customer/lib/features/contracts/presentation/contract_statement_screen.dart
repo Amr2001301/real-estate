@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../domain/entities/contract_statement.dart';
 import '../domain/repositories/contracts_repository.dart';
+import 'contract_money.dart';
 
 /// «كشف الحساب» — every charge and payment on one of the customer's own
 /// contracts, with the balance after each, and what is late, due today and
@@ -73,15 +74,18 @@ class _StatementBody extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final s = statement;
     String money(double v) => PriceFormatter.format(v, languageCode: lang);
-
-    final figures = <(IconData, Color, String, double)>[
-      (Icons.check_circle_rounded, colors.success, l10n.statementPaid, s.paid),
+    final chips = <(IconData, Color, String, double)>[
       if (s.overdue > 0) (Icons.warning_rounded, colors.error, l10n.installmentStatusOverdue, s.overdue),
       if (s.dueToday > 0) (Icons.today_rounded, colors.warning, l10n.statementDueToday, s.dueToday),
-      if (s.upcoming > 0) (Icons.schedule_rounded, colors.inkMuted, l10n.statementUpcoming, s.upcoming),
-      if (s.awaiting > 0) (Icons.hourglass_top_rounded, AppPalette.gold400, l10n.statementAwaiting, s.awaiting),
+      if (s.upcoming > 0) (Icons.schedule_rounded, colors.info, l10n.statementUpcoming, s.upcoming),
+      if (s.awaiting > 0) (Icons.hourglass_top_rounded, AppPalette.gold500, l10n.statementAwaiting, s.awaiting),
     ];
-
+    // Movements by month, newest month first, each month in date order.
+    final months = <DateTime, List<StatementLine>>{};
+    for (final line in s.lines) {
+      months.putIfAbsent(DateTime(line.date.year, line.date.month), () => []).add(line);
+    }
+    final keys = months.keys.toList()..sort((a, b) => b.compareTo(a));
     return ListView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -90,79 +94,71 @@ class _StatementBody extends StatelessWidget {
         AppSpacing.xl + MediaQuery.of(context).padding.bottom,
       ),
       children: [
-        // ── Balance
-        Container(
-          key: const Key('statement-balance'),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF243F62), Color(0xFF0B1726)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ContractMoneyCard(statement: s, showAsOf: true),
+        if (chips.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
-              Text(
-                l10n.statementBalance,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  money(s.balance),
-                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1),
+              for (final (icon, tone, label, value) in chips)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: tone.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 16, color: tone),
+                      const SizedBox(width: 6),
+                      Text(label, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+                      const SizedBox(width: 8),
+                      Text(money(value), style: theme.textTheme.bodyMedium?.copyWith(color: tone, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.statementAsOf(DateFormatter.mediumDate(s.asOf, languageCode: lang)),
-                style: const TextStyle(color: AppPalette.gold300, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-
-        // ── Figures
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.sm,
-          crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 2.4,
-          children: [
-            for (final f in figures) AppKpiTile(icon: f.$1, iconColor: f.$2, label: f.$3, value: money(f.$4)),
-          ],
-        ),
+        ],
         const SizedBox(height: AppSpacing.lg),
-
-        // ── Movements
-        AppSectionHeader(title: l10n.statementMovements),
-        const SizedBox(height: AppSpacing.sm),
-        for (final line in s.lines) ...[
-          _LineCard(line: line),
-          const SizedBox(height: AppSpacing.sm),
+        SectionTitle(l10n.statementMovements),
+        for (final m in keys) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            DateFormatter.monthYear(m, languageCode: lang),
+            style: theme.textTheme.labelLarge?.copyWith(color: colors.inkMuted, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+            ),
+            child: Column(
+              children: [
+                for (var k = 0; k < months[m]!.length; k++) ...[
+                  if (k > 0) Divider(height: 1, indent: AppSpacing.md, endIndent: AppSpacing.md, color: colors.hairline),
+                  _LineRow(line: months[m]![k]),
+                ],
+              ],
+            ),
+          ),
         ],
         if (s.awaitingCount > 0) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            l10n.statementAwaitingNote,
-            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(l10n.statementAwaitingNote, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
         ],
       ],
     );
   }
 }
 
-class _LineCard extends StatelessWidget {
-  const _LineCard({required this.line});
+class _LineRow extends StatelessWidget {
+  const _LineRow({required this.line});
   final StatementLine line;
 
   @override
@@ -175,29 +171,33 @@ class _LineCard extends StatelessWidget {
 
     final isCredit = line.credit > 0;
     final amount = isCredit ? line.credit : line.debit;
-    final tone = switch (line.kind) {
-      'PAYMENT' => colors.success,
-      'REVERSAL' => colors.error,
-      'WAIVER' => colors.inkMuted,
-      _ => colors.inkStrong,
+    final (IconData icon, Color tone) = switch (line.kind) {
+      'PAYMENT' => (Icons.south_west_rounded, colors.success),
+      'REVERSAL' => (Icons.undo_rounded, colors.error),
+      'WAIVER' => (Icons.money_off_rounded, colors.inkMuted),
+      'FEE' => (Icons.receipt_long_rounded, colors.warning),
+      _ => (Icons.description_outlined, AppPalette.gold500),
     };
     final note = [
+      DateFormatter.mediumDate(line.date, languageCode: lang),
       if (line.rowDueDate != null && line.kind != 'CONTRACT')
         l10n.statementDueOn(DateFormatter.mediumDate(line.rowDueDate!, languageCode: lang)),
       if (line.unrecorded) l10n.statementMarkedPaid,
       if (line.reason != null && line.reason!.isNotEmpty) l10n.statementReason(line.reason!),
     ].join(' · ');
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: tone.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
+            child: Icon(icon, size: 19, color: tone),
+          ),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,14 +207,7 @@ class _LineCard extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  DateFormatter.mediumDate(line.date, languageCode: lang),
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-                ),
-                if (note.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(note, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
-                ],
+                Text(note, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
               ],
             ),
           ),
@@ -224,7 +217,7 @@ class _LineCard extends StatelessWidget {
             children: [
               Text(
                 money(amount),
-                style: theme.textTheme.bodyMedium?.copyWith(color: tone, fontWeight: FontWeight.w800),
+                style: theme.textTheme.bodyMedium?.copyWith(color: isCredit ? colors.success : colors.inkStrong, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 2),
               Text(

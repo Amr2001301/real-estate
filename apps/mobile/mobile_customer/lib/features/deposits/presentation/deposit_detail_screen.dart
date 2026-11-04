@@ -46,6 +46,8 @@ class DepositDetailScreen extends StatelessWidget {
                     l10n: l10n,
                     lang: lang,
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  _StatusTimeline(deposit: deposit),
                   const SizedBox(height: AppSpacing.lg),
                   _ReceiptsSection(l10n: l10n),
                 ],
@@ -95,9 +97,18 @@ class _DepositSummaryCard extends StatelessWidget {
     final gradient = _typeGradient(deposit.type);
     final accent = _typeAccent(deposit.type);
 
-    final hasBody = deposit.paidAt != null ||
-        deposit.contractNumber != null ||
-        deposit.unitCode != null;
+    String date(DateTime d) => DateFormatter.mediumDate(d, languageCode: lang);
+    final method = paymentMethodLabel(l10n, deposit.paymentMethod);
+    final rows = <(IconData, String, String)>[
+      if (deposit.paidAt != null) (AppIcons.calendar, l10n.depositPaidOn, date(deposit.paidAt!)),
+      if (method != null) (Icons.payments_outlined, l10n.depositMethod, method),
+      if (deposit.installmentDueDate != null)
+        (Icons.event_note_rounded, l10n.depositForInstallment, date(deposit.installmentDueDate!)),
+      if (deposit.contractNumber != null) (AppIcons.contract, l10n.myPropertyContractNumber, ltr(deposit.contractNumber!)),
+      if (deposit.reservationNumber != null)
+        (Icons.bookmark_added_outlined, l10n.depositBookingNumber, ltr(deposit.reservationNumber!)),
+      if (deposit.unitCode != null) (Icons.home_work_rounded, l10n.contractUnit, ltr(deposit.unitCode!)),
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -182,7 +193,7 @@ class _DepositSummaryCard extends StatelessWidget {
                         ),
                       ),
                       // Status badge
-                      _StatusBadge(verified: deposit.collected, l10n: l10n, accent: accent),
+                      _StatusBadge(verified: deposit.collected, label: depositStateLabel(l10n, deposit), accent: accent),
                     ],
                   ),
                 ),
@@ -191,44 +202,14 @@ class _DepositSummaryCard extends StatelessWidget {
           ),
 
           // ── White info body ────────────────────────────────────────────
-          if (hasBody)
+          if (rows.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 children: [
-                  if (deposit.paidAt != null) ...[
-                    _InfoRow(
-                      icon: AppIcons.calendar,
-                      label: l10n.depositPaidOn,
-                      value: DateFormatter.mediumDate(
-                        deposit.paidAt!,
-                        languageCode: lang,
-                      ),
-                      colors: colors,
-                      theme: theme,
-                    ),
-                  ],
-                  if (deposit.contractNumber != null) ...[
-                    if (deposit.paidAt != null)
-                      Divider(height: AppSpacing.lg, color: colors.hairline),
-                    _InfoRow(
-                      icon: AppIcons.contract,
-                      label: l10n.myPropertyContractNumber,
-                      value: deposit.contractNumber!,
-                      colors: colors,
-                      theme: theme,
-                    ),
-                  ],
-                  if (deposit.unitCode != null) ...[
-                    if (deposit.paidAt != null || deposit.contractNumber != null)
-                      Divider(height: AppSpacing.lg, color: colors.hairline),
-                    _InfoRow(
-                      icon: Icons.home_work_rounded,
-                      label: l10n.contractUnit,
-                      value: deposit.unitCode!,
-                      colors: colors,
-                      theme: theme,
-                    ),
+                  for (var k = 0; k < rows.length; k++) ...[
+                    if (k > 0) Divider(height: AppSpacing.lg, color: colors.hairline),
+                    _InfoRow(icon: rows[k].$1, label: rows[k].$2, value: rows[k].$3, colors: colors, theme: theme),
                   ],
                 ],
               ),
@@ -242,11 +223,11 @@ class _DepositSummaryCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({
     required this.verified,
-    required this.l10n,
+    required this.label,
     required this.accent,
   });
   final bool verified;
-  final AppLocalizations l10n;
+  final String label;
   final Color accent;
 
   @override
@@ -270,7 +251,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 5),
           Text(
-            verified ? l10n.depositVerified : l10n.depositPending,
+            label,
             style: TextStyle(
               color: accent,
               fontSize: 11,
@@ -448,4 +429,135 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter _) => false;
+}
+
+/// «حالة الدفعة» — the steps the payment went through: sent by the customer
+/// (or recorded by the company), the company's review, then confirmed or
+/// rejected (with the reason), each with its date when known.
+class _StatusTimeline extends StatelessWidget {
+  const _StatusTimeline({required this.deposit});
+  final Deposit deposit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+    String? date(DateTime? d) => d == null ? null : DateFormatter.mediumDate(d, languageCode: lang);
+    final d = deposit;
+    // A payment the customer sent a proof for goes through the company's
+    // review; one the company recorded itself does not.
+    final sentByCustomer = d.hasProof;
+    final rejected = d.state == 'REJECTED' || d.reviewStatus == 'REJECTED';
+    final done = d.collected;
+    final failed = rejected || d.state == 'REVERSED' || d.state == 'BOUNCED';
+    final steps = <(String, String?, _Step)>[
+      (sentByCustomer ? l10n.depositStepSent : l10n.depositStepRecorded, date(d.createdAt ?? d.paidAt), _Step.done),
+      if (sentByCustomer)
+        (l10n.depositStepReview, done || failed ? date(d.reviewedAt) : l10n.depositStepWaiting, done || failed ? _Step.done : _Step.current),
+      if (failed)
+        (depositStateLabel(l10n, d), date(d.reviewedAt), _Step.failed)
+      else
+        (l10n.depositStepConfirmed, done ? date(d.reviewedAt ?? d.paidAt) : null, done ? _Step.done : _Step.todo),
+    ];
+    return Container(
+      key: const Key('deposit-timeline'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.depositStatusTitle,
+              style: theme.textTheme.titleMedium?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w800)),
+          const SizedBox(height: AppSpacing.md),
+          for (var k = 0; k < steps.length; k++)
+            _StepRow(
+              label: steps[k].$1,
+              note: steps[k].$2,
+              step: steps[k].$3,
+              last: k == steps.length - 1,
+            ),
+          if (rejected && (d.rejectionReason ?? '').isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: colors.error.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text('${l10n.depositRejectedReason}: ${d.rejectionReason}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colors.error, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+enum _Step { done, current, todo, failed }
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.label, required this.note, required this.step, required this.last});
+  final String label;
+  final String? note;
+  final _Step step;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final (Color tone, IconData icon) = switch (step) {
+      _Step.done => (colors.success, Icons.check_rounded),
+      _Step.current => (AppPalette.gold500, Icons.more_horiz_rounded),
+      _Step.failed => (colors.error, Icons.close_rounded),
+      _Step.todo => (colors.hairline, Icons.circle_outlined),
+    };
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: step == _Step.todo ? colors.surface : tone,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: tone, width: 2),
+                ),
+                child: Icon(icon, size: 15, color: step == _Step.todo ? tone : Colors.white),
+              ),
+              if (!last) Expanded(child: Container(width: 2, color: colors.hairline)),
+            ],
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(top: 3, bottom: last ? 0 : AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          color: step == _Step.todo ? colors.inkMuted : colors.inkStrong, fontWeight: FontWeight.w700)),
+                  if (note != null)
+                    Text(note!, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

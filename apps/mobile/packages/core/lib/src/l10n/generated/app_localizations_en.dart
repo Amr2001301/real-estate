@@ -5015,4 +5015,130 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contentContactWhatsApp => 'WhatsApp';
+
+  @override
+  String get contractMoneyTitle => 'Payment summary';
+
+  @override
+  String contractPaidShare(String percent) {
+    return '$percent of the contract paid';
+  }
+
+  @override
+  String get contractRemaining => 'Remaining';
+
+  @override
+  String get contractNextInstallment => 'Next installment';
+
+  @override
+  String contractNextDue(String date) {
+    return 'Due on $date';
+  }
+
+  @override
+  String contractNextOverdue(String date) {
+    return 'Overdue since $date';
+  }
+
+  @override
+  String get contractNoUpcoming => 'Nothing is due from you right now.';
+
+  @override
+  String get contractViewInstallments => 'All installments';
+
+  @override
+  String get contractPlanTitle => 'Payment plan';
+
+  @override
+  String get contractPlanEach => 'Each installment';
+
+  @override
+  String get contractPlanDuration => 'Duration';
+
+  @override
+  String get contractPlanStart => 'First installment';
+
+  @override
+  String get contractPlanFrequency => 'Every';
+
+  @override
+  String get contractPlanCash => 'Paid in full, no installments';
+
+  @override
+  String get freqMonthly => 'month';
+
+  @override
+  String get freqQuarterly => '3 months';
+
+  @override
+  String get freqSemiAnnual => '6 months';
+
+  @override
+  String get freqAnnual => 'year';
+
+  @override
+  String get contractUnitTitle => 'The unit';
+
+  @override
+  String get statementCharge => 'Charge';
+
+  @override
+  String get statementPayment => 'Paid';
+
+  @override
+  String get depositStatusTitle => 'Payment status';
+
+  @override
+  String get depositDetailsTitle => 'Payment details';
+
+  @override
+  String get depositStateCollected => 'Confirmed';
+
+  @override
+  String get depositStatePendingReview => 'Under review';
+
+  @override
+  String get depositStateChequePending => 'Cheque not cleared yet';
+
+  @override
+  String get depositStateRejected => 'Rejected';
+
+  @override
+  String get depositStateReversed => 'Reversed by the company';
+
+  @override
+  String get depositStateBounced => 'Cheque returned';
+
+  @override
+  String get depositStepSent => 'You sent the proof';
+
+  @override
+  String get depositStepRecorded => 'Recorded by the company';
+
+  @override
+  String get depositStepReview => 'Company review';
+
+  @override
+  String get depositStepConfirmed => 'Payment confirmed';
+
+  @override
+  String get depositStepRejected => 'Proof rejected';
+
+  @override
+  String get depositStepWaiting => 'Waiting';
+
+  @override
+  String get depositMethod => 'Payment method';
+
+  @override
+  String get depositForInstallment => 'For the installment due on';
+
+  @override
+  String get depositBookingNumber => 'Booking number';
+
+  @override
+  String get depositRejectedReason => 'Why it was rejected';
+
+  @override
+  String get paymentMethodCard => 'Card';
 }

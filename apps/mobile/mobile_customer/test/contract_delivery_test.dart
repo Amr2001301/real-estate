@@ -5,11 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_customer/features/contracts/data/dtos/contract_dto.dart';
 import 'package:mobile_customer/features/contracts/data/mappers/contract_mapper.dart';
 import 'package:mobile_customer/features/contracts/domain/entities/contract.dart';
+import 'package:mobile_customer/features/contracts/domain/entities/contract_statement.dart';
+import 'package:mobile_customer/features/contracts/domain/repositories/contracts_repository.dart';
 import 'package:mobile_customer/features/contracts/presentation/contract_detail_screen.dart';
 import 'package:mobile_customer/features/documents/domain/entities/customer_document.dart';
 import 'package:mobile_customer/features/documents/domain/repositories/documents_repository.dart';
 import 'package:mobile_customer/features/documents/domain/usecases/get_customer_documents.dart';
 import 'package:mobile_customer/features/documents/presentation/documents_list_cubit.dart';
+import 'package:mobile_customer/features/installments/domain/entities/installment.dart';
+import 'package:mobile_customer/features/installments/domain/repositories/installments_repository.dart';
 import 'package:mobile_customer/features/notifications/presentation/notification_route.dart';
 
 /// F10 in the customer app — the handover date the contract promised and,
@@ -19,6 +23,23 @@ class _NoDocs implements DocumentsRepository {
   @override
   Future<Result<List<CustomerDocument>>> listForOwner(DocumentOwnerType ownerType, String ownerId) async =>
       const Ok([]);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// The money sections load on their own; here they find nothing.
+class _NoStatement implements ContractsRepository {
+  @override
+  Future<Result<ContractStatement>> getStatement(String contractId) async => Err(AppFailure(type: FailureType.notFound));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+class _NoInstallments implements InstallmentsRepository {
+  @override
+  Future<Result<List<Installment>>> getMyInstallments() async => const Ok([]);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
@@ -38,13 +59,19 @@ Future<void> _pump(WidgetTester tester, Contract contract) async {
     locale: const Locale('ar'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: BlocProvider(
-      create: (_) => DocumentsListCubit(
-        GetCustomerDocuments(_NoDocs()),
-        ownerType: DocumentOwnerType.contract,
-        ownerId: contract.id,
+    home: MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<ContractsRepository>.value(value: _NoStatement()),
+        RepositoryProvider<InstallmentsRepository>.value(value: _NoInstallments()),
+      ],
+      child: BlocProvider(
+        create: (_) => DocumentsListCubit(
+          GetCustomerDocuments(_NoDocs()),
+          ownerType: DocumentOwnerType.contract,
+          ownerId: contract.id,
+        ),
+        child: ContractDetailScreen(contract: contract),
       ),
-      child: ContractDetailScreen(contract: contract),
     ),
   ));
   await tester.pump();
