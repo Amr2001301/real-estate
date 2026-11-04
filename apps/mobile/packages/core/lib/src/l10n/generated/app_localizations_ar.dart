@@ -7157,4 +7157,171 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cuBedrooms => 'غرف النوم';
+
+  @override
+  String get cvTitle => 'تحويل إلى عقد';
+
+  @override
+  String cvReservationN(String n) {
+    return 'الحجز $n';
+  }
+
+  @override
+  String get cvClient => 'العميل';
+
+  @override
+  String get cvUnit => 'الوحدة';
+
+  @override
+  String get cvProject => 'المشروع';
+
+  @override
+  String get cvSales => 'المستشار';
+
+  @override
+  String get cvBooking => 'العربون';
+
+  @override
+  String get cvApproved => 'معتمد';
+
+  @override
+  String get cvUnpaidWarn =>
+      'العربون لم يُسجَّل دفعه بعد. سجّل دفعة العربون أولًا، ثم حوّل الحجز إلى عقد.';
+
+  @override
+  String get cvSnapshotMissing =>
+      'هذا الحجز لا يحتوي على مدة تقسيط محفوظة، فلا يمكن تحويله. اختر مدة التقسيط أولًا.';
+
+  @override
+  String get cvPlan => 'خطة السداد من الحجز';
+
+  @override
+  String get cvDown => 'المقدم';
+
+  @override
+  String get cvTerm => 'المدة';
+
+  @override
+  String cvMonthsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n شهرًا',
+      few: '$n أشهر',
+      two: 'شهران',
+      one: 'شهر واحد',
+      zero: 'دفعة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cvMonthly => 'القسط الشهري';
+
+  @override
+  String get cvTotal => 'الإجمالي';
+
+  @override
+  String get cvData => 'بيانات العقد';
+
+  @override
+  String get cvStarts => 'بداية الأقساط';
+
+  @override
+  String get cvSignedAt => 'تاريخ التوقيع (اختياري)';
+
+  @override
+  String get cvNotSigned => 'لم يُوقَّع بعد';
+
+  @override
+  String get cvDocument => 'مستند العقد (اختياري)';
+
+  @override
+  String get cvAttach => 'إرفاق ملف PDF';
+
+  @override
+  String get cvCancel => 'إلغاء';
+
+  @override
+  String get cvConfirm => 'تأكيد التحويل إلى عقد';
+
+  @override
+  String get cvSignFailed =>
+      'أُنشئ العقد لكن تعذّر تسجيل التوقيع. وقّعه من الموقع.';
+
+  @override
+  String get cvConvertSub => 'ينشئ عقدًا بخطة السداد المحفوظة في الحجز';
+
+  @override
+  String get cvUploadFailed => 'تعذّر رفع المستند. حاول مرة أخرى.';
+
+  @override
+  String get cvRemoveFile => 'إزالة الملف';
+
+  @override
+  String get mcTitle => 'عقد يدوي';
+
+  @override
+  String get mcSub => 'عقد جديد بدون حجز';
+
+  @override
+  String get mcParties => 'العميل والوحدة';
+
+  @override
+  String get mcPickClient => 'اختر العميل';
+
+  @override
+  String get mcSearchClient => 'ابحث بالاسم أو الهاتف';
+
+  @override
+  String get mcPickUnit => 'اختر وحدة متاحة';
+
+  @override
+  String get mcSearchUnit => 'ابحث بكود الوحدة';
+
+  @override
+  String get mcUnitHint => 'تظهر الوحدات المتاحة فقط';
+
+  @override
+  String get mcAmounts => 'المبالغ';
+
+  @override
+  String get mcTotal => 'قيمة العقد';
+
+  @override
+  String get mcDown => 'المقدم (اختياري)';
+
+  @override
+  String get mcPreSystem => 'عقد مُبرم قبل النظام';
+
+  @override
+  String get mcPreSystemHint =>
+      'يُسجَّل بتاريخ توقيعه الفعلي دون إشعارات ودون عمولة وسيط أو بونص مبيعات.';
+
+  @override
+  String get mcSignedAtRequired => 'تاريخ التوقيع';
+
+  @override
+  String get mcNumber => 'رقم العقد (اختياري)';
+
+  @override
+  String get mcNumberHint => 'اتركه فارغًا ليُرقَّم تلقائيًا';
+
+  @override
+  String get mcCreate => 'إنشاء العقد';
+
+  @override
+  String get mcNoResults => 'لا توجد نتائج';
+
+  @override
+  String get mcRequired => 'مطلوب';
+
+  @override
+  String get mcSignedRequired => 'تاريخ التوقيع مطلوب للعقد المُبرم قبل النظام';
+
+  @override
+  String get mcDownTooBig => 'المقدم أكبر من قيمة العقد';
+
+  @override
+  String get mcPlanLater => 'بعد الإنشاء أضف خطة الأقساط من الموقع.';
 }

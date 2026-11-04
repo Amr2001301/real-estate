@@ -7142,4 +7142,171 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cuBedrooms => 'Bedrooms';
+
+  @override
+  String get cvTitle => 'Convert to contract';
+
+  @override
+  String cvReservationN(String n) {
+    return 'Booking $n';
+  }
+
+  @override
+  String get cvClient => 'Client';
+
+  @override
+  String get cvUnit => 'Unit';
+
+  @override
+  String get cvProject => 'Project';
+
+  @override
+  String get cvSales => 'Consultant';
+
+  @override
+  String get cvBooking => 'Booking';
+
+  @override
+  String get cvApproved => 'Approved';
+
+  @override
+  String get cvUnpaidWarn =>
+      'The booking amount is not recorded as paid yet. Record it first, then convert the booking.';
+
+  @override
+  String get cvSnapshotMissing =>
+      'This booking has no saved instalment term, so it cannot be converted. Choose the term first.';
+
+  @override
+  String get cvPlan => 'Plan from the booking';
+
+  @override
+  String get cvDown => 'Down payment';
+
+  @override
+  String get cvTerm => 'Term';
+
+  @override
+  String cvMonthsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n months',
+      one: '1 month',
+      zero: 'One payment',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cvMonthly => 'Monthly';
+
+  @override
+  String get cvTotal => 'Total';
+
+  @override
+  String get cvData => 'Contract details';
+
+  @override
+  String get cvStarts => 'Instalments start';
+
+  @override
+  String get cvSignedAt => 'Signing date (optional)';
+
+  @override
+  String get cvNotSigned => 'Not signed yet';
+
+  @override
+  String get cvDocument => 'Contract document (optional)';
+
+  @override
+  String get cvAttach => 'Attach a PDF';
+
+  @override
+  String get cvCancel => 'Cancel';
+
+  @override
+  String get cvConfirm => 'Confirm conversion';
+
+  @override
+  String get cvSignFailed =>
+      'The contract was created but signing failed. Sign it from the website.';
+
+  @override
+  String get cvConvertSub => 'Creates a contract with the booking’s saved plan';
+
+  @override
+  String get cvUploadFailed => 'The document could not be uploaded. Try again.';
+
+  @override
+  String get cvRemoveFile => 'Remove file';
+
+  @override
+  String get mcTitle => 'Manual contract';
+
+  @override
+  String get mcSub => 'A new contract without a booking';
+
+  @override
+  String get mcParties => 'Client and unit';
+
+  @override
+  String get mcPickClient => 'Choose the client';
+
+  @override
+  String get mcSearchClient => 'Search by name or phone';
+
+  @override
+  String get mcPickUnit => 'Choose an available unit';
+
+  @override
+  String get mcSearchUnit => 'Search by unit code';
+
+  @override
+  String get mcUnitHint => 'Only available units are shown';
+
+  @override
+  String get mcAmounts => 'Amounts';
+
+  @override
+  String get mcTotal => 'Contract value';
+
+  @override
+  String get mcDown => 'Down payment (optional)';
+
+  @override
+  String get mcPreSystem => 'Signed before the system';
+
+  @override
+  String get mcPreSystemHint =>
+      'Recorded with its real signing date, with no notifications, broker commission or sales bonus.';
+
+  @override
+  String get mcSignedAtRequired => 'Signing date';
+
+  @override
+  String get mcNumber => 'Contract number (optional)';
+
+  @override
+  String get mcNumberHint => 'Leave empty to number it automatically';
+
+  @override
+  String get mcCreate => 'Create contract';
+
+  @override
+  String get mcNoResults => 'No results';
+
+  @override
+  String get mcRequired => 'Required';
+
+  @override
+  String get mcSignedRequired =>
+      'A signing date is required for a contract signed before the system';
+
+  @override
+  String get mcDownTooBig => 'The down payment is more than the contract value';
+
+  @override
+  String get mcPlanLater =>
+      'After creating it, add the instalment plan from the website.';
 }

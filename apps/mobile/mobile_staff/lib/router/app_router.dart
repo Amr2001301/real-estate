@@ -44,6 +44,9 @@ import '../features/bonus/presentation/screens/bonus_screen.dart';
 import '../features/broker/catalog/domain/repositories/broker_catalog_repository.dart';
 import '../features/broker/catalog/domain/usecases/broker_catalog_use_cases.dart';
 import '../features/broker/catalog/portal/portal_catalog_data.dart';
+import '../features/contracts/create/contract_create_data.dart';
+import '../features/contracts/create/convert_reservation_screen.dart';
+import '../features/contracts/create/manual_contract_screen.dart';
 import '../features/contracts/view/contract_page_screen.dart';
 import '../features/contracts/view/contracts_data.dart';
 import '../features/contracts/view/contracts_list_screen.dart';
@@ -686,6 +689,14 @@ GoRouter createStaffRouter(
         },
       ),
       GoRoute(
+        path: '/reservations/:id/convert',
+        builder: (context, state) => ConvertReservationScreen(
+          key: ValueKey('convert-${state.pathParameters['id']}'),
+          reservationId: state.pathParameters['id']!,
+          repository: ContractCreateRepository(context.read<Dio>()),
+        ),
+      ),
+      GoRoute(
         path: '/reservations/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
@@ -715,8 +726,13 @@ GoRouter createStaffRouter(
         ),
       ),
       GoRoute(
+        path: '/contracts/new',
+        builder: (context, _) => ManualContractScreen(repository: ContractCreateRepository(context.read<Dio>())),
+      ),
+      GoRoute(
         path: '/contracts/:id',
         builder: (context, state) => BlocProvider(
+          key: ValueKey('contract-${state.pathParameters['id']}'),
           create: (ctx) => ContractPageCubit(ContractsViewRepository(ctx.read<Dio>()), contractId: state.pathParameters['id']!),
           child: const ContractPageScreen(),
         ),

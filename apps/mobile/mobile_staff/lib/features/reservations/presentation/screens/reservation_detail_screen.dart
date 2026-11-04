@@ -261,6 +261,15 @@ class _SuccessBody extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
             ],
 
+            // ── Convert to a contract (the admin, an approved booking) ──────
+            if (r.status == 'APPROVED' && context.read<SessionCubit>().state.role == AppRole.admin) ...[
+              _ConvertCard(onTap: () async {
+                await context.push('/reservations/${r.id}/convert');
+                if (context.mounted) context.read<ReservationDetailCubit>().load();
+              }),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
             // ── Customer signature (P5): send the booking form to sign ──────
             SignatureSection(
               reservationId: r.id,
@@ -1089,6 +1098,48 @@ class _SkeletonTimelineItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// The way into the convert page, as the website's convert section.
+class _ConvertCard extends StatelessWidget {
+  const _ConvertCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    return Material(
+      color: AppPalette.gold50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.lg), side: const BorderSide(color: AppPalette.gold200)),
+      child: InkWell(
+        key: const Key('reservation-convert'),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(color: AppPalette.gold400, shape: BoxShape.circle),
+              child: const Icon(Icons.swap_horiz_rounded, color: AppPalette.navy),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l10n.cvTitle, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                Text(l10n.cvConvertSub, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              ]),
+            ),
+            // chevron_right mirrors to ‹ in Arabic: "more", outward.
+            Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
+          ]),
+        ),
       ),
     );
   }

@@ -12709,6 +12709,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bedrooms'**
   String get cuBedrooms;
+
+  /// No description provided for @cvTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to contract'**
+  String get cvTitle;
+
+  /// No description provided for @cvReservationN.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking {n}'**
+  String cvReservationN(String n);
+
+  /// No description provided for @cvClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get cvClient;
+
+  /// No description provided for @cvUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get cvUnit;
+
+  /// No description provided for @cvProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get cvProject;
+
+  /// No description provided for @cvSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get cvSales;
+
+  /// No description provided for @cvBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get cvBooking;
+
+  /// No description provided for @cvApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get cvApproved;
+
+  /// No description provided for @cvUnpaidWarn.
+  ///
+  /// In en, this message translates to:
+  /// **'The booking amount is not recorded as paid yet. Record it first, then convert the booking.'**
+  String get cvUnpaidWarn;
+
+  /// No description provided for @cvSnapshotMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This booking has no saved instalment term, so it cannot be converted. Choose the term first.'**
+  String get cvSnapshotMissing;
+
+  /// No description provided for @cvPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan from the booking'**
+  String get cvPlan;
+
+  /// No description provided for @cvDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get cvDown;
+
+  /// No description provided for @cvTerm.
+  ///
+  /// In en, this message translates to:
+  /// **'Term'**
+  String get cvTerm;
+
+  /// No description provided for @cvMonthsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{One payment} =1{1 month} other{{n} months}}'**
+  String cvMonthsN(int n);
+
+  /// No description provided for @cvMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get cvMonthly;
+
+  /// No description provided for @cvTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get cvTotal;
+
+  /// No description provided for @cvData.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract details'**
+  String get cvData;
+
+  /// No description provided for @cvStarts.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments start'**
+  String get cvStarts;
+
+  /// No description provided for @cvSignedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing date (optional)'**
+  String get cvSignedAt;
+
+  /// No description provided for @cvNotSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed yet'**
+  String get cvNotSigned;
+
+  /// No description provided for @cvDocument.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract document (optional)'**
+  String get cvDocument;
+
+  /// No description provided for @cvAttach.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a PDF'**
+  String get cvAttach;
+
+  /// No description provided for @cvCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cvCancel;
+
+  /// No description provided for @cvConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm conversion'**
+  String get cvConfirm;
+
+  /// No description provided for @cvSignFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The contract was created but signing failed. Sign it from the website.'**
+  String get cvSignFailed;
+
+  /// No description provided for @cvConvertSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates a contract with the booking’s saved plan'**
+  String get cvConvertSub;
+
+  /// No description provided for @cvUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The document could not be uploaded. Try again.'**
+  String get cvUploadFailed;
+
+  /// No description provided for @cvRemoveFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove file'**
+  String get cvRemoveFile;
+
+  /// No description provided for @mcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual contract'**
+  String get mcTitle;
+
+  /// No description provided for @mcSub.
+  ///
+  /// In en, this message translates to:
+  /// **'A new contract without a booking'**
+  String get mcSub;
+
+  /// No description provided for @mcParties.
+  ///
+  /// In en, this message translates to:
+  /// **'Client and unit'**
+  String get mcParties;
+
+  /// No description provided for @mcPickClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client'**
+  String get mcPickClient;
+
+  /// No description provided for @mcSearchClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get mcSearchClient;
+
+  /// No description provided for @mcPickUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an available unit'**
+  String get mcPickUnit;
+
+  /// No description provided for @mcSearchUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by unit code'**
+  String get mcSearchUnit;
+
+  /// No description provided for @mcUnitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only available units are shown'**
+  String get mcUnitHint;
+
+  /// No description provided for @mcAmounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Amounts'**
+  String get mcAmounts;
+
+  /// No description provided for @mcTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get mcTotal;
+
+  /// No description provided for @mcDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment (optional)'**
+  String get mcDown;
+
+  /// No description provided for @mcPreSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed before the system'**
+  String get mcPreSystem;
+
+  /// No description provided for @mcPreSystemHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded with its real signing date, with no notifications, broker commission or sales bonus.'**
+  String get mcPreSystemHint;
+
+  /// No description provided for @mcSignedAtRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing date'**
+  String get mcSignedAtRequired;
+
+  /// No description provided for @mcNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract number (optional)'**
+  String get mcNumber;
+
+  /// No description provided for @mcNumberHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty to number it automatically'**
+  String get mcNumberHint;
+
+  /// No description provided for @mcCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create contract'**
+  String get mcCreate;
+
+  /// No description provided for @mcNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get mcNoResults;
+
+  /// No description provided for @mcRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get mcRequired;
+
+  /// No description provided for @mcSignedRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A signing date is required for a contract signed before the system'**
+  String get mcSignedRequired;
+
+  /// No description provided for @mcDownTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'The down payment is more than the contract value'**
+  String get mcDownTooBig;
+
+  /// No description provided for @mcPlanLater.
+  ///
+  /// In en, this message translates to:
+  /// **'After creating it, add the instalment plan from the website.'**
+  String get mcPlanLater;
 }
 
 class _AppLocalizationsDelegate

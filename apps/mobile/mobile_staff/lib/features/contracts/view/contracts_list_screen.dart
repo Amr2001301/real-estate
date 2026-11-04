@@ -76,6 +76,18 @@ class _ContractsListScreenState extends State<ContractsListScreen> {
                       subtitle: c == null ? null : l10n.kcCountN(c.all),
                       back: Navigator.of(context).canPop(),
                       actions: [
+                        if (context.read<SessionCubit>().state.role == AppRole.admin) ...[
+                          HomeHeroButton(
+                            key: const Key('contracts-new'),
+                            icon: Icons.note_add_rounded,
+                            tooltip: l10n.mcTitle,
+                            onTap: () async {
+                              await context.push('/contracts/new');
+                              if (context.mounted) await cubit.load();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         HomeHeroButton(
                           key: const Key('contracts-filters'),
                           icon: Icons.tune_rounded,
