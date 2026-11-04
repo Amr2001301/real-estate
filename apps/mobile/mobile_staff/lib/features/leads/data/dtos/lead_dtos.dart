@@ -181,15 +181,17 @@ class FollowUpSummaryDto {
 }
 
 class LeadActivityDto {
-  const LeadActivityDto({required this.id, required this.type, this.createdAt});
+  const LeadActivityDto({required this.id, required this.type, this.createdAt, this.payload = const {}});
   final String id;
   final String type;
   final String? createdAt;
+  final Map<String, dynamic> payload;
 
   factory LeadActivityDto.fromJson(Map<String, dynamic> json) => LeadActivityDto(
         id: json['id'] as String,
         type: json['type'] as String? ?? 'activity',
         createdAt: json['createdAt'] as String?,
+        payload: (json['payload'] as Map?)?.cast<String, dynamic>() ?? const {},
       );
 }
 
@@ -201,6 +203,14 @@ class LeadDetailDto {
     this.unitInterest,
     this.lostReason,
     this.lostNote,
+    this.lostAt,
+    this.unitType,
+    this.clientId,
+    this.clientRole,
+    this.assignedSalesId,
+    this.brokerAgentName,
+    this.campaignId,
+    this.utm = const {},
   });
 
   final LeadRowDto lead;
@@ -211,6 +221,14 @@ class LeadDetailDto {
   /// LR1 — why a lost lead was lost.
   final Translatable? lostReason;
   final String? lostNote;
+  final String? lostAt;
+  final String? unitType;
+  final String? clientId;
+  final String? clientRole;
+  final String? assignedSalesId;
+  final String? brokerAgentName;
+  final String? campaignId;
+  final Map<String, String> utm;
 
   factory LeadDetailDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unitInterest'] as Map<String, dynamic>?;
@@ -220,6 +238,17 @@ class LeadDetailDto {
       unitInterest: unit?['code'] as String?,
       lostReason: lost == null ? null : Translatable.fromJson(lost['name']),
       lostNote: json['lostNote'] as String?,
+      lostAt: json['lostAt'] as String?,
+      unitType: unit?['type'] as String?,
+      clientId: (json['client'] as Map?)?['id'] as String?,
+      clientRole: (json['client'] as Map?)?['role'] as String?,
+      assignedSalesId: (json['assignedSales'] as Map?)?['id'] as String? ?? json['assignedSalesId'] as String?,
+      brokerAgentName: (json['brokerAgent'] as Map?)?['fullName'] as String?,
+      campaignId: (json['campaign'] as Map?)?['id'] as String?,
+      utm: {
+        for (final k in const ['utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'fbclid'])
+          if ((json[k] as String?)?.trim().isNotEmpty == true) k: (json[k] as String).trim(),
+      },
       notes: ((json['notes'] as List?) ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(LeadNoteDto.fromJson)

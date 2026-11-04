@@ -24,6 +24,8 @@ abstract interface class LeadsRemoteDataSource {
   Future<int> countUnassigned();
   Future<List<StaffOption>> salesStaff();
   Future<String> openContact(String id, String kind);
+  Future<LeadLinks> links(String id);
+  Future<void> assign(String id, String salesId);
 }
 
 class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
@@ -176,5 +178,59 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
   Future<String> openContact(String id, String kind) async {
     final res = await _dio.post<Map<String, dynamic>>('/leads/$id/contact', data: {'kind': kind});
     return res.data?['phone'] as String? ?? '';
+  }
+
+  @override
+  Future<LeadLinks> links(String id) async {
+    Future<List<Map<String, dynamic>>> rows(String path) async {
+      try {
+        final res = await _dio.get<Map<String, dynamic>>(path, queryParameters: {'leadId': id, 'pageSize': 10});
+        return (res.data?['data'] as List? ?? const []).whereType<Map<String, dynamic>>().toList();
+      } on DioException {
+        return const []; // best-effort: the page shows without them
+      }
+    }
+
+    DateTime? at(Object? v) => DateTime.tryParse(v as String? ?? '')?.toLocal();
+    final results = await Future.wait([rows('/visits/requests'), rows('/visits/appointments'), rows('/reservations')]);
+    return LeadLinks(
+      requests: [
+        for (final r in results[0])
+          LeadLinkRow(
+            id: r['id'] as String? ?? '',
+            number: r['requestNumber'] as String?,
+            at: at(r['preferredDate']),
+            status: (r['requestStatus'] ?? r['status']) as String? ?? '',
+          ),
+      ],
+      appointments: [
+        for (final r in results[1])
+          LeadLinkRow(
+            id: r['id'] as String? ?? '',
+            number: r['visitNumber'] as String?,
+            at: at(r['scheduledAt']),
+            status: r['status'] as String? ?? '',
+          ),
+      ],
+      reservations: [
+        for (final r in results[2])
+          LeadLinkRow(
+            id: r['id'] as String? ?? '',
+            number: r['reservationNumber'] as String?,
+            at: at(r['expiresAt']),
+            status: r['status'] as String? ?? '',
+            project: () {
+              final n = ((((r['unit'] as Map?)?['building'] as Map?)?['phase'] as Map?)?['project'] as Map?)?['name'];
+              return n == null ? null : Translatable.fromJson(n);
+            }(),
+            unitCode: (r['unit'] as Map?)?['code'] as String?,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> assign(String id, String salesId) async {
+    await _dio.patch<Map<String, dynamic>>('/leads/$id/assign', data: {'assignedSalesId': salesId});
   }
 }

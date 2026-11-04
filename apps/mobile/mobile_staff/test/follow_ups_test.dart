@@ -22,6 +22,11 @@ FollowUp _fu(String id) => FollowUp(lead: Lead(id: id, fullName: 'Lead $id', sta
 
 class _Repo implements LeadsRepository {
   @override
+  Future<Result<LeadLinks>> getLeadLinks(String id) async => const Ok(LeadLinks());
+  @override
+  Future<Result<void>> assignLead(String id, String salesId) async => const Ok(null);
+
+  @override
   Future<Result<Map<String, int>>> getPipeline() async => const Ok({});
   @override
   Future<Result<int>> countUnassigned() async => const Ok(0);

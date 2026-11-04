@@ -539,6 +539,7 @@ GoRouter createStaffRouter(
                 AddLeadNote(repo),
                 leadId: id,
                 getLostReasons: GetLostReasons(repo),
+                repo: repo,
               );
             },
             child: LeadDetailScreen(leadId: id, fallbackName: lead?.fullName),

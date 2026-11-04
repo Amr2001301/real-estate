@@ -6024,4 +6024,243 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get lvNoPhone => 'لا يوجد رقم هاتف لهذا العميل.';
+
+  @override
+  String get ldCall => 'اتصال';
+
+  @override
+  String get ldWhatsApp => 'واتساب';
+
+  @override
+  String get ldEmail => 'إيميل';
+
+  @override
+  String get ldStateOverdue => 'متأخرة';
+
+  @override
+  String get ldStateToday => 'اليوم';
+
+  @override
+  String get ldStateUpcoming => 'قادمة';
+
+  @override
+  String get ldFollowLog => 'سجل المتابعة';
+
+  @override
+  String get ldNoNotes => 'لم يُسجَّل تواصل بعد.';
+
+  @override
+  String get ldVisitsBookings => 'الزيارات والحجوزات';
+
+  @override
+  String get ldVisitRequest => 'طلب زيارة';
+
+  @override
+  String get ldAppointment => 'زيارة';
+
+  @override
+  String get ldReservation => 'حجز';
+
+  @override
+  String ldExpires(String date) {
+    return 'ينتهي $date';
+  }
+
+  @override
+  String get ldActivityLog => 'سجل النشاط';
+
+  @override
+  String get ldAssignment => 'الإسناد';
+
+  @override
+  String get ldReassign => 'تغيير المستشار';
+
+  @override
+  String get ldAssign => 'إسناد';
+
+  @override
+  String get ldAssignTo => 'إسناد الفرصة إلى';
+
+  @override
+  String get ldClient => 'العميل';
+
+  @override
+  String get ldOwner => 'مالك وحدة';
+
+  @override
+  String get ldBrowser => 'عميل متصفح';
+
+  @override
+  String get ldClientProfile => 'ملف العميل';
+
+  @override
+  String get ldOpportunity => 'بيانات الفرصة';
+
+  @override
+  String get ldProject => 'المشروع';
+
+  @override
+  String get ldUnit => 'الوحدة';
+
+  @override
+  String get ldSource => 'المصدر';
+
+  @override
+  String get ldBrokerLbl => 'الوسيط';
+
+  @override
+  String get ldBrokerAgent => 'مندوب الوسيط';
+
+  @override
+  String get ldCampaign => 'الحملة';
+
+  @override
+  String get ldCreated => 'تاريخ الإضافة';
+
+  @override
+  String get ldLeadId => 'رقم الفرصة';
+
+  @override
+  String get ldAds => 'بيانات الإعلان';
+
+  @override
+  String ldLostOn(String date) {
+    return 'خُسرت في $date';
+  }
+
+  @override
+  String get ldNoReason => 'بدون سبب محدد';
+
+  @override
+  String get ldActCreated => 'تم إنشاء الفرصة';
+
+  @override
+  String get ldActAssigned => 'تم إسناد الفرصة';
+
+  @override
+  String ldActStage(String from, String to) {
+    return 'انتقلت من «$from» إلى «$to»';
+  }
+
+  @override
+  String get ldActConverted => 'تم تحويل الحجز إلى عقد';
+
+  @override
+  String get ldActResCreated => 'تم إنشاء حجز';
+
+  @override
+  String get ldActResApproved => 'تمت الموافقة على الحجز';
+
+  @override
+  String get ldActResRejected => 'تم رفض الحجز';
+
+  @override
+  String get ldActResCancelled => 'تم إلغاء الحجز';
+
+  @override
+  String get ldActResExpired => 'انتهت صلاحية الحجز';
+
+  @override
+  String get ldActResOther => 'تحديث على الحجز';
+
+  @override
+  String get ldActVisitScheduled => 'تمت جدولة زيارة';
+
+  @override
+  String get ldActVisitConfirmed => 'تم تأكيد الزيارة';
+
+  @override
+  String get ldActVisitPending => 'طلب العميل تغيير موعد الزيارة';
+
+  @override
+  String get ldActVisitRescheduled => 'أعيدت جدولة الزيارة';
+
+  @override
+  String get ldActVisitCompleted => 'تمت الزيارة';
+
+  @override
+  String get ldActVisitCancelled => 'ألغيت الزيارة';
+
+  @override
+  String get ldActVisitNoShow => 'لم يحضر العميل الزيارة';
+
+  @override
+  String get ldActVisitOther => 'تحديث على زيارة';
+
+  @override
+  String get ldActNote => 'تم إضافة ملاحظة';
+
+  @override
+  String get ldActBrokerSubmitted => 'تم إرسال الفرصة من وسيط';
+
+  @override
+  String get ldActBrokerApproved => 'وافقت الشركة على فرصة الوسيط';
+
+  @override
+  String get ldActBrokerRejected => 'رُفضت فرصة الوسيط';
+
+  @override
+  String get ldActBrokerDuplicate => 'اعتُبرت فرصة الوسيط مكررة';
+
+  @override
+  String get ldActBrokerNote => 'ملاحظة من الوسيط';
+
+  @override
+  String get ldActBrokerReservation => 'حجز من الوسيط';
+
+  @override
+  String get ldActBrokerContract => 'عقد من فرصة الوسيط';
+
+  @override
+  String get ldActBrokerCommission => 'استحق الوسيط عمولة';
+
+  @override
+  String get ldActBrokerVisit => 'طلب الوسيط زيارة';
+
+  @override
+  String get ldActReturned => 'رجع العميل من جديد (إعلان / نموذج)';
+
+  @override
+  String get ldActRelinked => 'تم ربط الفرصة بسجل آخر';
+
+  @override
+  String get ldActCall => 'اتصال بالعميل';
+
+  @override
+  String get ldActWhatsApp => 'فتح محادثة واتساب';
+
+  @override
+  String ldActMerged(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'دُمجت فيها $n فرص مكررة',
+      one: 'دُمجت فيها فرصة مكررة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ldActOther => 'تحديث على الفرصة';
+
+  @override
+  String get ldNoActivity => 'لا يوجد نشاط بعد.';
+
+  @override
+  String get ldReqNew => 'جديد';
+
+  @override
+  String get ldReqReview => 'قيد المراجعة';
+
+  @override
+  String get ldReqConverted => 'تحوّل لزيارة';
+
+  @override
+  String get ldReqRejected => 'مرفوض';
+
+  @override
+  String get ldReqCancelled => 'ملغى';
+
+  @override
+  String get ldWonByBooking => 'تكتمل مرحلة «تم البيع» بتحويل الحجز إلى عقد.';
 }

@@ -113,6 +113,7 @@ void main() {
     expect(find.textContaining('62'), findsWidgets); // the pipeline total, not the loaded page
     expect(find.byKey(const Key('home-fig-overdue')), findsOneWidget);
     expect(find.byKey(const Key('home-pill-unassigned')), findsNothing);
+    expect(find.byKey(const Key('leads-duplicates')), findsNothing);
     expect(find.textContaining('متابعة متأخرة'), findsOneWidget);
     expect(find.textContaining('A-101'), findsOneWidget);
     expect(find.text('موقع الويب'), findsOneWidget);
@@ -126,6 +127,7 @@ void main() {
   testWidgets('a manager sees the unassigned queue and the rep on each card', (t) async {
     final repo = await _pump(t, AppRole.salesManager, [_lead('l1'), _lead('l2', rep: null)]);
     expect(find.byKey(const Key('home-fig-unassigned')), findsOneWidget);
+    expect(find.byKey(const Key('leads-duplicates')), findsOneWidget);
     expect(find.text('محمود البنا'), findsOneWidget);
     expect(find.text('غير مُسنَد'), findsWidgets);
 

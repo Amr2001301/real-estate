@@ -10921,6 +10921,456 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This lead has no phone number.'**
   String get lvNoPhone;
+
+  /// No description provided for @ldCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get ldCall;
+
+  /// No description provided for @ldWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get ldWhatsApp;
+
+  /// No description provided for @ldEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get ldEmail;
+
+  /// No description provided for @ldStateOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ldStateOverdue;
+
+  /// No description provided for @ldStateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get ldStateToday;
+
+  /// No description provided for @ldStateUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get ldStateUpcoming;
+
+  /// No description provided for @ldFollowLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up log'**
+  String get ldFollowLog;
+
+  /// No description provided for @ldNoNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'No contact logged yet.'**
+  String get ldNoNotes;
+
+  /// No description provided for @ldVisitsBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits and bookings'**
+  String get ldVisitsBookings;
+
+  /// No description provided for @ldVisitRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit request'**
+  String get ldVisitRequest;
+
+  /// No description provided for @ldAppointment.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get ldAppointment;
+
+  /// No description provided for @ldReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get ldReservation;
+
+  /// No description provided for @ldExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires {date}'**
+  String ldExpires(String date);
+
+  /// No description provided for @ldActivityLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get ldActivityLog;
+
+  /// No description provided for @ldAssignment.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignment'**
+  String get ldAssignment;
+
+  /// No description provided for @ldReassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Change rep'**
+  String get ldReassign;
+
+  /// No description provided for @ldAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign'**
+  String get ldAssign;
+
+  /// No description provided for @ldAssignTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign the lead to'**
+  String get ldAssignTo;
+
+  /// No description provided for @ldClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get ldClient;
+
+  /// No description provided for @ldOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit owner'**
+  String get ldOwner;
+
+  /// No description provided for @ldBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing client'**
+  String get ldBrowser;
+
+  /// No description provided for @ldClientProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Client profile'**
+  String get ldClientProfile;
+
+  /// No description provided for @ldOpportunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead details'**
+  String get ldOpportunity;
+
+  /// No description provided for @ldProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get ldProject;
+
+  /// No description provided for @ldUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get ldUnit;
+
+  /// No description provided for @ldSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get ldSource;
+
+  /// No description provided for @ldBrokerLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker'**
+  String get ldBrokerLbl;
+
+  /// No description provided for @ldBrokerAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker agent'**
+  String get ldBrokerAgent;
+
+  /// No description provided for @ldCampaign.
+  ///
+  /// In en, this message translates to:
+  /// **'Campaign'**
+  String get ldCampaign;
+
+  /// No description provided for @ldCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added on'**
+  String get ldCreated;
+
+  /// No description provided for @ldLeadId.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead ID'**
+  String get ldLeadId;
+
+  /// No description provided for @ldAds.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad attribution'**
+  String get ldAds;
+
+  /// No description provided for @ldLostOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost on {date}'**
+  String ldLostOn(String date);
+
+  /// No description provided for @ldNoReason.
+  ///
+  /// In en, this message translates to:
+  /// **'No reason given'**
+  String get ldNoReason;
+
+  /// No description provided for @ldActCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead created'**
+  String get ldActCreated;
+
+  /// No description provided for @ldActAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead assigned'**
+  String get ldActAssigned;
+
+  /// No description provided for @ldActStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved from \"{from}\" to \"{to}\"'**
+  String ldActStage(String from, String to);
+
+  /// No description provided for @ldActConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation converted to a contract'**
+  String get ldActConverted;
+
+  /// No description provided for @ldActResCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking created'**
+  String get ldActResCreated;
+
+  /// No description provided for @ldActResApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking approved'**
+  String get ldActResApproved;
+
+  /// No description provided for @ldActResRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking rejected'**
+  String get ldActResRejected;
+
+  /// No description provided for @ldActResCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking cancelled'**
+  String get ldActResCancelled;
+
+  /// No description provided for @ldActResExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking expired'**
+  String get ldActResExpired;
+
+  /// No description provided for @ldActResOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking updated'**
+  String get ldActResOther;
+
+  /// No description provided for @ldActVisitScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit scheduled'**
+  String get ldActVisitScheduled;
+
+  /// No description provided for @ldActVisitConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit confirmed'**
+  String get ldActVisitConfirmed;
+
+  /// No description provided for @ldActVisitPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer asked to reschedule'**
+  String get ldActVisitPending;
+
+  /// No description provided for @ldActVisitRescheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit rescheduled'**
+  String get ldActVisitRescheduled;
+
+  /// No description provided for @ldActVisitCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit done'**
+  String get ldActVisitCompleted;
+
+  /// No description provided for @ldActVisitCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit cancelled'**
+  String get ldActVisitCancelled;
+
+  /// No description provided for @ldActVisitNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer did not show up'**
+  String get ldActVisitNoShow;
+
+  /// No description provided for @ldActVisitOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit updated'**
+  String get ldActVisitOther;
+
+  /// No description provided for @ldActNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get ldActNote;
+
+  /// No description provided for @ldActBrokerSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead submitted by broker'**
+  String get ldActBrokerSubmitted;
+
+  /// No description provided for @ldActBrokerApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker lead approved'**
+  String get ldActBrokerApproved;
+
+  /// No description provided for @ldActBrokerRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker lead rejected'**
+  String get ldActBrokerRejected;
+
+  /// No description provided for @ldActBrokerDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker lead marked duplicate'**
+  String get ldActBrokerDuplicate;
+
+  /// No description provided for @ldActBrokerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note from the broker'**
+  String get ldActBrokerNote;
+
+  /// No description provided for @ldActBrokerReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking by the broker'**
+  String get ldActBrokerReservation;
+
+  /// No description provided for @ldActBrokerContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract from the broker\'s lead'**
+  String get ldActBrokerContract;
+
+  /// No description provided for @ldActBrokerCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker commission earned'**
+  String get ldActBrokerCommission;
+
+  /// No description provided for @ldActBrokerVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker requested a visit'**
+  String get ldActBrokerVisit;
+
+  /// No description provided for @ldActReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'The customer came in again (ad / form)'**
+  String get ldActReturned;
+
+  /// No description provided for @ldActRelinked.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked to another record'**
+  String get ldActRelinked;
+
+  /// No description provided for @ldActCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer called'**
+  String get ldActCall;
+
+  /// No description provided for @ldActWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp chat opened'**
+  String get ldActWhatsApp;
+
+  /// No description provided for @ldActMerged.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{A duplicate lead was merged into this one} other{{n} duplicate leads were merged into this one}}'**
+  String ldActMerged(int n);
+
+  /// No description provided for @ldActOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead updated'**
+  String get ldActOther;
+
+  /// No description provided for @ldNoActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet.'**
+  String get ldNoActivity;
+
+  /// No description provided for @ldReqNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get ldReqNew;
+
+  /// No description provided for @ldReqReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get ldReqReview;
+
+  /// No description provided for @ldReqConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Became a visit'**
+  String get ldReqConverted;
+
+  /// No description provided for @ldReqRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get ldReqRejected;
+
+  /// No description provided for @ldReqCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get ldReqCancelled;
+
+  /// No description provided for @ldWonByBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'A lead is won when its booking becomes a contract.'**
+  String get ldWonByBooking;
 }
 
 class _AppLocalizationsDelegate

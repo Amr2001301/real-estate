@@ -90,11 +90,16 @@ class LeadTimelineEntry extends Equatable {
     this.callResult,
     this.nextActionAt,
     this.replies = const [],
+    this.payload = const {},
   });
 
   final String id;
   final String body;
   final bool isNote;
+
+  /// System activities: what the website reads from it (from/to stages,
+  /// reservation, contract and visit numbers, who did it).
+  final Map<String, dynamic> payload;
   final String? authorName;
   final DateTime? createdAt;
 
@@ -119,11 +124,42 @@ class LeadDetail extends Equatable {
     this.unitInterest,
     this.lostReason,
     this.lostNote,
+    this.lostAt,
+    this.unitType,
+    this.clientId,
+    this.clientRole,
+    this.assignedSalesId,
+    this.brokerAgentName,
+    this.campaignId,
+    this.utm = const {},
   });
 
   final Lead lead;
   final List<LeadTimelineEntry> timeline;
   final String? unitInterest;
+
+  /// When it was lost.
+  final DateTime? lostAt;
+  final String? unitType;
+
+  /// The client record behind the lead, and whether it owns a unit
+  /// (CUSTOMER) or only browses (CLIENT).
+  final String? clientId;
+  final String? clientRole;
+  final String? assignedSalesId;
+
+  /// The broker's agent who sent it (broker leads).
+  final String? brokerAgentName;
+  final String? campaignId;
+
+  /// Ad attribution: utmSource, utmMedium, utmCampaign, utmContent, fbclid.
+  final Map<String, String> utm;
+
+  /// The logged activities (the website's follow-up log), newest first.
+  List<LeadTimelineEntry> get notes => timeline.where((e) => e.isNote).toList();
+
+  /// The system's activities (the website's activity log), newest first.
+  List<LeadTimelineEntry> get activities => timeline.where((e) => !e.isNote).toList();
 
   /// LR1 — why a lost lead was lost (null otherwise, or before reasons existed).
   final Translatable? lostReason;
@@ -239,4 +275,32 @@ class LeadNoteInput extends Equatable {
   @override
   List<Object?> get props =>
       [body, kind, callResult, parentId, nextChange, nextActionAt, nextActionType, nextActionNote];
+}
+
+/// The lead's visits and bookings, as on the website's lead page.
+class LeadLinks extends Equatable {
+  const LeadLinks({this.requests = const [], this.appointments = const [], this.reservations = const []});
+  final List<LeadLinkRow> requests;
+  final List<LeadLinkRow> appointments;
+  final List<LeadLinkRow> reservations;
+
+  bool get isEmpty => requests.isEmpty && appointments.isEmpty && reservations.isEmpty;
+
+  @override
+  List<Object?> get props => [requests, appointments, reservations];
+}
+
+/// One visit request, appointment or booking: its number, when, status,
+/// and (bookings) the project and unit.
+class LeadLinkRow extends Equatable {
+  const LeadLinkRow({required this.id, required this.status, this.number, this.at, this.project, this.unitCode});
+  final String id;
+  final String status;
+  final String? number;
+  final DateTime? at;
+  final Translatable? project;
+  final String? unitCode;
+
+  @override
+  List<Object?> get props => [id, status, number, at, project, unitCode];
 }
