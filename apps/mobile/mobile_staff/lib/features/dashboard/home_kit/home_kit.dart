@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../notifications/presentation/widgets/notifications_bell.dart';
@@ -1321,3 +1322,56 @@ class HomeActivityList extends StatelessWidget {
 /// The signed-in person's name, for the hero.
 String homeSessionName(BuildContext context) =>
     (context.read<SessionCubit>().state.sessionOrNull?.displayName ?? '').trim();
+
+/// [bottom] laid over the last [overlap] pixels of [top] (a card over a
+/// hero's edge). Unlike a `Transform.translate`, the card is really there:
+/// it takes taps where it is drawn and leaves no gap under it.
+class HomeOverlap extends MultiChildRenderObjectWidget {
+  HomeOverlap({super.key, required Widget top, required Widget bottom, required this.overlap}) : super(children: [top, bottom]);
+
+  final double overlap;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => RenderHomeOverlap(overlap);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderHomeOverlap renderObject) => renderObject.overlap = overlap;
+}
+
+class _HomeOverlapData extends ContainerBoxParentData<RenderBox> {}
+
+class RenderHomeOverlap extends RenderBox
+    with ContainerRenderObjectMixin<RenderBox, _HomeOverlapData>, RenderBoxContainerDefaultsMixin<RenderBox, _HomeOverlapData> {
+  RenderHomeOverlap(this._overlap);
+
+  double _overlap;
+  set overlap(double v) {
+    if (v == _overlap) return;
+    _overlap = v;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _HomeOverlapData) child.parentData = _HomeOverlapData();
+  }
+
+  @override
+  void performLayout() {
+    final c = BoxConstraints.tightFor(width: constraints.maxWidth);
+    final top = firstChild!;
+    final bottom = childAfter(top)!;
+    top.layout(c, parentUsesSize: true);
+    bottom.layout(c, parentUsesSize: true);
+    (top.parentData! as _HomeOverlapData).offset = Offset.zero;
+    final y = math.max(0.0, top.size.height - _overlap);
+    (bottom.parentData! as _HomeOverlapData).offset = Offset(0, y);
+    size = constraints.constrain(Size(constraints.maxWidth, math.max(top.size.height, y + bottom.size.height)));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) => defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) => defaultHitTestChildren(result, position: position);
+}

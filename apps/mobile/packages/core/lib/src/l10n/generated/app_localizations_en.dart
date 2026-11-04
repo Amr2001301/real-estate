@@ -6785,4 +6785,287 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bcUnitsEmptyMessage =>
       'Try other filters, or ask the company to widen your access.';
+
+  @override
+  String kcCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n contracts',
+      one: '1 contract',
+      zero: 'No contracts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcSearchHint => 'Search by client or contract number';
+
+  @override
+  String get kcContracts => 'Contracts';
+
+  @override
+  String get kcSigned => 'Signed';
+
+  @override
+  String get kcSignedOne => 'Signed';
+
+  @override
+  String get kcUnsigned => 'Awaiting signature';
+
+  @override
+  String get kcDelayed => 'Delivery late';
+
+  @override
+  String kcSignedPct(String pct) {
+    return '$pct of them';
+  }
+
+  @override
+  String get kcNeedsFollow => 'Need follow-up';
+
+  @override
+  String get kcAllSigned => 'All signed';
+
+  @override
+  String get kcFromReservations => 'Booked + manual';
+
+  @override
+  String kcFromReservation(String n) {
+    return 'From booking $n';
+  }
+
+  @override
+  String get kcManual => 'Manual contract';
+
+  @override
+  String get kcCancelled => 'Cancelled';
+
+  @override
+  String get kcValue => 'Contract value';
+
+  @override
+  String get kcPlan => 'Payment plan';
+
+  @override
+  String kcPlanLine(int months, String monthly) {
+    return '$months months · $monthly';
+  }
+
+  @override
+  String get kcNoPlan => 'No instalment plan';
+
+  @override
+  String kcDown(String amount) {
+    return 'Down $amount';
+  }
+
+  @override
+  String get kcSource => 'Source';
+
+  @override
+  String get kcSourceAll => 'All sources';
+
+  @override
+  String get kcFilters => 'Filter contracts';
+
+  @override
+  String get kcEmpty => 'No contracts';
+
+  @override
+  String get kcEmptyMessage =>
+      'Contracts show here once bookings are converted.';
+
+  @override
+  String get kcNoMatch => 'No contracts match this choice';
+
+  @override
+  String kcSignedOn(String date) {
+    return 'Signed · $date';
+  }
+
+  @override
+  String kcCollected(String amount, String pct) {
+    return 'Collected $amount · $pct';
+  }
+
+  @override
+  String get kcRemaining => 'Remaining';
+
+  @override
+  String get kcOverdue => 'Overdue';
+
+  @override
+  String get kcNoOverdue => 'None';
+
+  @override
+  String kcOverdueN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n instalments late',
+      one: '1 instalment late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String kcPlusFees(String amount) {
+    return '+ fees $amount';
+  }
+
+  @override
+  String get kcTabOverview => 'Overview';
+
+  @override
+  String get kcTabInstallments => 'Instalments';
+
+  @override
+  String get kcTabStatement => 'Statement';
+
+  @override
+  String get kcTabPayments => 'Payments';
+
+  @override
+  String get kcData => 'Contract details';
+
+  @override
+  String get kcSignedAt => 'Signed on';
+
+  @override
+  String get kcNotSigned => 'Not signed yet';
+
+  @override
+  String get kcDelivery => 'Expected delivery';
+
+  @override
+  String kcDelayDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days late',
+      one: '1 day late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcInstallment => 'Instalment';
+
+  @override
+  String get kcStarts => 'Starts';
+
+  @override
+  String kcPlanMonthlyN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n instalments',
+      one: '1 instalment',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcParties => 'Parties';
+
+  @override
+  String get kcClient => 'Client';
+
+  @override
+  String get kcSales => 'Consultant';
+
+  @override
+  String get kcBroker => 'Broker';
+
+  @override
+  String get kcNextInstallments => 'Next instalments';
+
+  @override
+  String kcAllInstallmentsN(int n) {
+    return 'All instalments · $n';
+  }
+
+  @override
+  String get kcDownPayment => 'Down payment';
+
+  @override
+  String kcInstallmentNOf(int i, int n) {
+    return 'Instalment $i of $n';
+  }
+
+  @override
+  String get kcPaid => 'Paid';
+
+  @override
+  String get kcDue => 'Due';
+
+  @override
+  String get kcLate => 'Late';
+
+  @override
+  String get kcUpcoming => 'Upcoming';
+
+  @override
+  String get kcAwaiting => 'Awaiting review';
+
+  @override
+  String get kcStatement => 'Statement';
+
+  @override
+  String get kcFullStatement => 'Full statement';
+
+  @override
+  String get kcStPaid => 'Paid';
+
+  @override
+  String get kcStBalance => 'Balance';
+
+  @override
+  String get kcStOverdue => 'Overdue';
+
+  @override
+  String get kcStUpcoming => 'Upcoming';
+
+  @override
+  String get kcStFees => 'Fees';
+
+  @override
+  String get kcLineContract => 'Contract value';
+
+  @override
+  String get kcLinePayment => 'Payment';
+
+  @override
+  String get kcLineBooking => 'Booking payment';
+
+  @override
+  String get kcLineFee => 'Fee';
+
+  @override
+  String get kcLineRefund => 'Refund';
+
+  @override
+  String get kcPayments => 'Payments';
+
+  @override
+  String get kcNoPayments => 'No payments recorded yet.';
+
+  @override
+  String get kcDocuments => 'Documents';
+
+  @override
+  String get kcContractPdf => 'Sale contract';
+
+  @override
+  String get kcAllDocuments => 'All contract documents';
+
+  @override
+  String get kcRecordPayment => 'Record a payment';
+
+  @override
+  String get kcNoInstallments => 'No instalments for this contract.';
+
+  @override
+  String get kcFromReservationShort => 'From a reservation';
 }

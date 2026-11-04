@@ -91,9 +91,6 @@ import 'features/reservations/domain/repositories/reservations_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
-import 'features/contracts/data/datasources/contracts_remote_data_source.dart';
-import 'features/contracts/data/repositories/contracts_repository_impl.dart';
-import 'features/contracts/domain/repositories/contracts_repository.dart';
 import 'features/deposits/data/datasources/deposits_remote_data_source.dart';
 import 'features/deposits/data/repositories/deposits_repository_impl.dart';
 import 'features/deposits/domain/repositories/deposits_repository.dart';
@@ -182,10 +179,6 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<VisitsRepository>(
           create: (ctx) => VisitsRepositoryImpl(VisitsRemoteDataSourceImpl(ctx.read<Dio>())),
-        ),
-        RepositoryProvider<StaffContractsRepository>(
-          create: (ctx) =>
-              StaffContractsRepositoryImpl(StaffContractsRemoteDataSourceImpl(ctx.read<Dio>())),
         ),
         RepositoryProvider<StaffDepositsRepository>(
           create: (ctx) =>
