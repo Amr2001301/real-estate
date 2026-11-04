@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-04, after #277)
+# Handoff — where the work stands (2026-11-04, after #278)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -87,19 +87,19 @@
   - **#261:** طلب زيارة (يوم وساعة)، طلب معلومات (مواضيع جاهزة)، وطلب صيانة بخطوات ومربعات بأيقونات، وصفحة تأكيد بعد كل طلب.
 - **الجاي:** المالك هيبعت باقي الشاشات اللي مش عاجباه من صفحة الصور؛ بعدها النشر على السيرفر (بموافقته ونسخة احتياطية).
 
-**بعد كده (4 نوفمبر، #263–#277):** القسم **2k** تحت. باختصار، تطبيق الموظفين اتعمل من جديد بشكل «الرئيسيات» وبنفس بيانات الموقع:
+**بعد كده (4 نوفمبر، #263–#278):** القسم **2k** تحت. باختصار، تطبيق الموظفين اتعمل من جديد بشكل «الرئيسيات» وبنفس بيانات الموقع:
 - **الصفحات الرئيسية (#263–#267):** رئيسية جديدة للسيلز ومدير المبيعات والأدمن والبروكر، والرئيسية القديمة للبروكر اتشالت.
 - **العملاء (#268، #269، #271):** قائمة العملاء المحتملين وصفحة العميل، وعملاء البروكر بنفس الشكل.
 - **المشاريع والوحدات (#271–#273):** قائمة المشاريع، وقائمة الوحدات (جديدة)، وصفحة المشروع، وصفحة الوحدة — للموظفين وللبروكر. الوحدة اللي زميل حاجزها بتظهر «محجوزة حتى …».
 - **العقود (#274–#276):** قائمة العقود وصفحة العقد (للسيلز ومدير المبيعات والأدمن)، وفلتر موحّد بيقول عدد النتائج قبل ما تطبّق، وتحويل الحجز المعتمد لعقد والعقد اليدوي (للأدمن بس)، وعقود البروكر بعمولته.
-- **#277:** الكارت الأبيض فوق الجزء الكحلي بقى بياخد اللمس في مكانه في كل الصفحات (كان الجزء اللي فوق الكحلي مش بيستجيب)، والملف ده.
+- **#278:** الكارت الأبيض فوق الجزء الكحلي بقى بياخد اللمس في مكانه في كل الصفحات (كان الجزء اللي فوق الكحلي مش بيستجيب)، والملف ده.
 - **الجاي:** شاشة 42، الحاسبة (73)، الأمان (76)؛ والنشر على السيرفر لما توافق.
 
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #277 مدموج. **ابدأ بالقسم 2k** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #278 مدموج. **ابدأ بالقسم 2k** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -497,7 +497,7 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 
 **QA harness changes since 2i:** the customer web build must pass `--dart-define=COMPANY_SLUG=default --dart-define=COMPANY_NAME=<name>`; a sample logo for screenshots can be served from the web build folder and set as the company's `logoUrl` (use a new file name per change — the browser caches by URL).
 
-### 2k. #263–#277 (2026-11-04) — the staff app in the homes' look, with the website's data
+### 2k. #263–#278 (2026-11-04) — the staff app in the homes' look, with the website's data
 
 Every page below follows an owner-approved mockup (made from real data and approved before any code) and shows the same figures as its website page. Each PR has before/after screenshots from a real web build.
 
@@ -513,7 +513,7 @@ Every page below follows an owner-approved mockup (made from real data and appro
 | #274 | Contracts K1 | `/contracts` list (count, search, band, all/signed/unsigned/delayed pills, source filter, paged cards) and `/contracts/:id` (value, collected bar, remaining, overdue; overview / instalments / statement / payments tabs; admin «تسجيل دفعة»). One filter sheet for contracts and units (`home_kit/filter_kit.dart`): tiles with counts, segmented tracks, a radio list, a price range; the gold button says how many results the choice gives (`count()` on the repositories). `HomeOverlap` puts a card over a hero with real layout. Old contracts data/domain/presentation removed. |
 | #275 | Contracts K2 | Admin only. Convert an approved booking (`/reservations/:id/convert`, card on the booking): blocked while the booking amount is unpaid or the saved term is missing; convert, then `POST /contracts/:id/sign` when a signing date is given (as the website). Manual contract (`/contracts/new`): client and available unit searched on the server, value prefilled from the unit price, «عقد مُبرم قبل النظام» needs its date. Document upload: `/documents/presign` + PUT on an interceptor-free client. `file_picker` added to the staff app. |
 | #276 | Contracts K3 | Broker `/broker/contracts` (from حسابي) and `/broker/contracts/:id`: value, commission rate/amount/status/net, client call/WhatsApp, unit and project, plan. The portal nulls commission for agents who may not see money, so the app shows none then. The list is read whole and searched on the phone (the portal has no text search). Broker contract notifications open the contract. |
-| #277 | Tap fix + docs | The card over the hero on the homes, project page, unit page and broker catalog used `Transform.translate`, which moves the paint but not the hit area: taps on the part over the hero missed. Now `HomeOverlap` (same pixels — checked against screenshots of the old build). This file. |
+| #278 | Tap fix + docs | The card over the hero on the homes, project page, unit page and broker catalog used `Transform.translate`, which moves the paint but not the hit area: taps on the part over the hero missed. Now `HomeOverlap` (same pixels — checked against screenshots of the old build). This file. |
 
 **Owner decisions (2026-11-04):** «more» chevrons point outward «‹» (`Icons.chevron_right`, mirrored in RTL), back buttons are `Icons.arrow_back_rounded`; the project hero stays calm (facts go to «about»); the unit page has one bottom button; the units list shows filter chips only once a filter is on; the filter sheet is the one approved in #274 (not the earlier chip sheet).
 
