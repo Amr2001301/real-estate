@@ -571,7 +571,7 @@ Routes defined in `apps/mobile/mobile_staff/lib/router/app_router.dart`.
 | `/calculator` | CalculatorScreen | DONE |
 | `/gallery` | ComponentGalleryScreen | DONE |
 | `/notifications` | NotificationsScreen | DONE |
-| `/broker/home` | BrokerDashboardScreen | DONE |
+| `/broker/home` | BrokerHomeScreen | DONE |
 | `/broker/projects/:id` | BrokerProjectDetailScreen | DONE |
 | `/broker/units/:id` | BrokerUnitDetailScreen | DONE |
 | `/broker/leads/new` | CreateBrokerLeadScreen | DONE |
