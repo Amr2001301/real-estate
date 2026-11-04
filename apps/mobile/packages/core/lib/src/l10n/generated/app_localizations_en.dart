@@ -4978,4 +4978,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pageNoAccessMessage =>
       'Ask your company\'s administrator for access to it.';
+
+  @override
+  String get companyUnavailableTitle => 'The app is not available right now';
+
+  @override
+  String get companyUnavailableMessage =>
+      'The service is paused for now. Try again later or contact the company.';
 }

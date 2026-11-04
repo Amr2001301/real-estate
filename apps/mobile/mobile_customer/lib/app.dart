@@ -83,6 +83,7 @@ import 'bootstrap.dart' show customerNavigatorKey, customerStartupOutcome, flutt
 import 'feature_flags.dart';
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
+import 'company_lock.dart';
 
 /// Root of the Customer App. Provides feature repositories (data→domain
 /// contracts) + app-wide cubits, then wires the 401→refresh handler and
@@ -217,7 +218,11 @@ class CustomerApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider<BrandingCubit>(
-            create: (ctx) => BrandingCubit(ctx.read<BrandingRepository>()),
+            create: (ctx) => BrandingCubit(
+              ctx.read<BrandingRepository>(),
+              // A company's own app shows its name before branding loads.
+              fallbackName: kLockedCompanyName.isEmpty ? null : kLockedCompanyName,
+            ),
           ),
           BlocProvider(create: (_) => CompareCubit()),
           BlocProvider<FavoritesCubit>(
@@ -408,8 +413,8 @@ class _CustomerRootState extends State<_CustomerRoot> {
   ///   2. Clear the stored company (selection is inconsistent)
   ///   3. Sign out (router redirect picks up the unsigned state)
   ///
-  /// The router guard then sends the user to /select-company because no
-  /// company is selected. Ordinary 403s (CAPABILITY_NOT_ENABLED, etc.) do
+  /// The router then shows the sign-in screen (a company's own app keeps its
+  /// company). Ordinary 403s (CAPABILITY_NOT_ENABLED, etc.) do
   /// NOT reach this handler — TenantSlugInterceptor only calls it for the
   /// exact TENANT_CONTEXT_MISMATCH error code.
   void _wireMismatchHandler() {
@@ -476,7 +481,9 @@ class _CustomerRootState extends State<_CustomerRoot> {
         }
       },
       child: MaterialApp.router(
-        onGenerateTitle: (ctx) => ctx.l10n.customerAppTitle,
+        onGenerateTitle: (ctx) =>
+            brandTokens?.displayName ??
+            (kLockedCompanyName.isEmpty ? ctx.l10n.customerAppTitle : kLockedCompanyName),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(isArabic: isArabic, tokens: brandTokens),
         darkTheme: AppTheme.dark(isArabic: isArabic, tokens: brandTokens),

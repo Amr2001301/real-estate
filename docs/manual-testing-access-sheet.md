@@ -107,12 +107,13 @@ override the API URL at run-time via `--dart-define=API_BASE_URL=...`).
 ```bash
 cd apps/mobile && flutter pub get   # once per checkout
 
-# Customer App — dev (default points at http://localhost:4000/v1)
+# Customer App — dev (default points at http://localhost:4000/v1). Every
+# customer build is one company's: pass its slug (the seed's is `default`).
 cd apps/mobile/mobile_customer
-flutter run -t lib/main_dev.dart
+flutter run -t lib/main_dev.dart --dart-define=COMPANY_SLUG=default
 
 # Customer App — staging (constants point at https://staging-api.example.com/v1)
-flutter run -t lib/main_staging.dart
+flutter run -t lib/main_staging.dart --dart-define=COMPANY_SLUG=<slug>
 
 # Staff App — dev
 cd apps/mobile/mobile_staff

@@ -4,7 +4,6 @@ import '../design/tokens/app_colors.dart';
 import '../design/tokens/app_radii.dart';
 import '../design/tokens/app_spacing.dart';
 import '../design/theme/app_theme_ext.dart';
-import '../l10n/l10n.dart';
 import 'brand_mark.dart';
 
 // Navy depth constants — shared Devora design language.
@@ -34,7 +33,6 @@ class AuthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final theme = Theme.of(context);
 
     return ClipRRect(
@@ -123,11 +121,10 @@ class AuthHeader extends StatelessWidget {
                     const SizedBox(height: AppSpacing.lg),
                   const SizedBox(height: AppSpacing.lg),
                   // Brand mark
-                  const BrandMark(size: 54),
+                  const BrandMark(size: 72),
                   const SizedBox(height: AppSpacing.xs),
                   // Eyebrow label
-                  Text(
-                    l10n.authEyebrow,
+                  CompanyNameText(
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: AppPalette.gold300,
                       fontWeight: FontWeight.w700,

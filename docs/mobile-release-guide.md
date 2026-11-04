@@ -39,9 +39,10 @@ Managed as a Melos pub-workspace (`apps/mobile/pubspec.yaml` has
 # from apps/mobile/
 flutter pub get
 
-# Customer — dev flavor against a NestJS API on the host machine
+# Customer — dev flavor against a NestJS API on the host machine. Every
+# customer build is one company's (no company picker): pass the seed's.
 cd mobile_customer
-flutter run -t lib/main_dev.dart
+flutter run -t lib/main_dev.dart --dart-define=COMPANY_SLUG=default
 
 # Staff — dev
 cd ../mobile_staff
@@ -74,9 +75,14 @@ flutter run -t lib/main_staging.dart \
 
 ### Android (App Bundle for Play)
 
+Every customer app is one company's own app. A production customer build
+needs that company's defines (§ the company app steps below) and refuses to
+start without them, so the company picker never reaches the store:
+
 ```bash
-# from apps/mobile/mobile_customer
-flutter build appbundle --release -t lib/main_prod.dart
+# from apps/mobile/mobile_customer, after tool/prepare_company_app.py
+flutter build appbundle --release -t lib/main_prod.dart \
+  --dart-define-from-file=build/company/dart_defines.json
 
 # Output: build/app/outputs/bundle/release/app-release.aab
 ```
@@ -98,7 +104,8 @@ sanity build runs from CLI:
 
 ```bash
 # from apps/mobile/mobile_customer
-flutter build ios --release -t lib/main_prod.dart --no-codesign
+flutter build ios --release -t lib/main_prod.dart --no-codesign \
+  --dart-define-from-file=build/company/dart_defines.json
 
 # Then open ios/Runner.xcworkspace in Xcode → Product → Archive
 ```
@@ -340,7 +347,8 @@ delivery, see §5 / §9.4 below.
 # upload key without any further config change:
 
 cd apps/mobile/mobile_customer
-flutter build appbundle --release -t lib/main_prod.dart
+flutter build appbundle --release -t lib/main_prod.dart \
+  --dart-define-from-file=build/company/dart_defines.json
 # → build/app/outputs/bundle/release/app-release.aab (signed with upload key)
 ```
 

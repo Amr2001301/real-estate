@@ -1690,5 +1690,7 @@
   "pageNotFoundMessage": "الرابط غير صحيح أو لم تعد هذه الصفحة متاحة.",
   "pageNotFoundHome": "العودة إلى الرئيسية",
   "pageNoAccessTitle": "هذه الصفحة غير متاحة لحسابك",
-  "pageNoAccessMessage": "اطلب من مدير النظام في شركتك صلاحية الوصول إليها."
+  "pageNoAccessMessage": "اطلب من مدير النظام في شركتك صلاحية الوصول إليها.",
+  "companyUnavailableTitle": "التطبيق غير متاح حاليًا",
+  "companyUnavailableMessage": "الخدمة متوقفة مؤقتًا. حاول مرة أخرى لاحقًا أو تواصل مع الشركة."
 }

@@ -11,7 +11,6 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'company_lock.dart';
@@ -20,7 +19,6 @@ import 'feature_flags.dart';
 import 'firebase_options.dart';
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'startup/customer_startup_service.dart';
-import 'storage/customer_tenant_storage.dart';
 
 /// Root navigator key — gives access to the root [Overlay] from contexts
 /// that are ancestors of [MaterialApp] (e.g. FCM foreground listeners).
@@ -57,6 +55,16 @@ Future<void> _fcmBackgroundHandler(RemoteMessage message) async {
 /// Shared startup used by every flavor entrypoint (main_dev/staging/prod).
 Future<void> bootstrap(EnvConfig env) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Every customer app is one company's (there is no company picker): a
+  // build without its company would have nothing to open.
+  if (!kIsCompanyLocked) {
+    throw StateError(
+      'This build has no company. Build it with '
+      '--dart-define-from-file=build/company/dart_defines.json (store builds, '
+      'see tool/prepare_company_app.py) or --dart-define=COMPANY_SLUG=default '
+      '(local dev against the seed).',
+    );
+  }
   final config = EnvConfig.initialize(env);
 
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
@@ -71,33 +79,15 @@ Future<void> bootstrap(EnvConfig env) async {
     onTimeout: () => debugPrint('[Firebase] init timed out — FCM disabled'),
   );
 
-  // Pre-fetch SharedPreferences so we can build the K2 slug reader and session
-  // restore predicate before buildAppRoot initialises the widget tree.
-  // SharedPreferences is a singleton — the same instance is returned inside
-  // buildAppRoot and exposed via RepositoryProvider<SharedPreferences>.
-  final prefs = await SharedPreferences.getInstance();
-
   // K2: Exact-resolve the persisted tenant BEFORE buildAppRoot so that
   // SessionCubit.restore() cannot emit authenticated for an ineligible tenant.
   // This is the authoritative security gate — no authenticated request may
   // reach an ineligible tenant's backend.
   if (kEnableCustomerTenantSelection) {
-    // A company's own app is locked to its company; the shared app reads the
-    // customer's pick.
-    final slug = kIsCompanyLocked ? kLockedCompanySlug : prefs.getString(CustomerTenantStorage.kSlugKey);
-    if (slug == null || slug.isEmpty) {
-      customerStartupOutcome.value = TenantStartupOutcome.noSlug;
-      debugPrint('[Startup] K2: no persisted slug → noSlug');
-    } else {
-      customerStartupOutcome.value = await _bootstrapResolve(config, slug);
-      debugPrint('[Startup] K2: slug=$slug outcome=${customerStartupOutcome.value}');
-      if (customerStartupOutcome.value == TenantStartupOutcome.unavailable) {
-        // Clear slug+name now (before the widget tree reads SharedPreferences).
-        // Tokens are cleared by SessionCubit.restore when additionalCheck→false.
-        await prefs.remove(CustomerTenantStorage.kSlugKey);
-        await prefs.remove(CustomerTenantStorage.kNameKey);
-      }
-    }
+    // The app's company comes from its build.
+    const slug = kLockedCompanySlug;
+    customerStartupOutcome.value = await _bootstrapResolve(config, slug);
+    debugPrint('[Startup] K2: slug=$slug outcome=${customerStartupOutcome.value}');
   }
 
   runApp(await buildAppRoot(
@@ -119,7 +109,7 @@ Future<void> bootstrap(EnvConfig env) async {
     // Reads the live storage value at request time so the interceptor always
     // sees the current selection (not a stale value captured at startup).
     readTenantSlug: kEnableCustomerTenantSelection
-        ? () async => kIsCompanyLocked ? kLockedCompanySlug : prefs.getString(CustomerTenantStorage.kSlugKey)
+        ? () async => kLockedCompanySlug
         : null,
   ));
 }

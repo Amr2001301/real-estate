@@ -4,11 +4,11 @@
 ///   flutter build appbundle --dart-define-from-file=build/company/dart_defines.json
 ///
 /// (`tool/prepare_company_app.py` writes that file, with the app's name, icon
-/// and package id.) Empty in the shared app, where the customer picks a
-/// company on first launch.
+/// and package id.) Every customer app is one company's: a local build passes
+/// `--dart-define=COMPANY_SLUG=default` (the dev seed's company), and the app
+/// refuses to start without one — there is no company picker.
 const String kLockedCompanySlug = String.fromEnvironment('COMPANY_SLUG');
 const String kLockedCompanyName = String.fromEnvironment('COMPANY_NAME');
 
-/// True in a company's own app: the company picker never shows and the
-/// selection cannot be cleared.
+/// True in every runnable build; [bootstrap] refuses to start otherwise.
 const bool kIsCompanyLocked = kLockedCompanySlug != '';

@@ -7,22 +7,14 @@ import 'package:mobile_customer/features/company_discovery/data/repositories/com
 import 'package:mobile_customer/features/company_discovery/domain/entities/discovered_company.dart';
 import 'package:mobile_customer/features/company_discovery/domain/repositories/company_discovery_repository.dart';
 import 'package:mobile_customer/features/company_discovery/domain/usecases/resolve_company.dart';
-import 'package:mobile_customer/features/company_discovery/domain/usecases/search_companies.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
 
 class _FakeDataSource implements CompanyDiscoveryRemoteDataSource {
-  _FakeDataSource({this.searchRows = const [], this.resolveRow, this.error});
+  _FakeDataSource({this.resolveRow, this.error});
 
-  final List<DiscoveredCompanyDto> searchRows;
   final DiscoveredCompanyDto? resolveRow;
   final DioException? error;
-
-  @override
-  Future<List<DiscoveredCompanyDto>> search(String query) async {
-    if (error != null) throw error!;
-    return searchRows;
-  }
 
   @override
   Future<DiscoveredCompanyDto?> resolveBySlug(String slug) async {
@@ -32,12 +24,8 @@ class _FakeDataSource implements CompanyDiscoveryRemoteDataSource {
 }
 
 class _FakeRepo implements CompanyDiscoveryRepository {
-  _FakeRepo({required this.searchResult, required this.resolveResult});
-  final Result<List<DiscoveredCompany>> searchResult;
+  _FakeRepo({required this.resolveResult});
   final Result<DiscoveredCompany?> resolveResult;
-
-  @override
-  Future<Result<List<DiscoveredCompany>>> search(String query) async => searchResult;
 
   @override
   Future<Result<DiscoveredCompany?>> resolveBySlug(String slug) async => resolveResult;
@@ -51,8 +39,6 @@ DioException _dio500() => DioException(
       ),
       type: DioExceptionType.badResponse,
     );
-
-AppFailure _networkFailure() => AppFailure(type: FailureType.network);
 
 // ── DTO tests ─────────────────────────────────────────────────────────────────
 
@@ -78,31 +64,6 @@ void main() {
   });
 
   // ── Repository ───────────────────────────────────────────────────────────
-
-  group('CompanyDiscoveryRepositoryImpl.search', () {
-    test('maps DTOs to domain entities', () async {
-      final ds = _FakeDataSource(searchRows: [
-        DiscoveredCompanyDto.fromJson({'slug': 'alpha', 'name': 'Alpha'}),
-        DiscoveredCompanyDto.fromJson({'slug': 'beta', 'name': 'Beta'}),
-      ]);
-      final result = await CompanyDiscoveryRepositoryImpl(ds).search('al');
-      expect(result.isOk, isTrue);
-      final companies = result.dataOrNull!;
-      expect(companies.length, 2);
-      expect(companies.first.slug, 'alpha');
-    });
-
-    test('returns empty list when no results', () async {
-      final result = await CompanyDiscoveryRepositoryImpl(_FakeDataSource()).search('xyz');
-      expect(result.dataOrNull, isEmpty);
-    });
-
-    test('propagates network error as Err', () async {
-      final result =
-          await CompanyDiscoveryRepositoryImpl(_FakeDataSource(error: _dio500())).search('alpha');
-      expect(result.isErr, isTrue);
-    });
-  });
 
   group('CompanyDiscoveryRepositoryImpl.resolveBySlug', () {
     test('returns entity when found', () async {
@@ -130,35 +91,18 @@ void main() {
 
   // ── Use cases ─────────────────────────────────────────────────────────────
 
-  group('SearchCompanies use case', () {
-    test('returns companies from repository', () async {
-      const companies = [DiscoveredCompany(slug: 'a', name: 'A')];
-      final result = await SearchCompanies(
-        _FakeRepo(searchResult: Result.ok(companies), resolveResult: Result.ok(null)),
-      )('alpha');
-      expect(result.dataOrNull, companies);
-    });
-
-    test('propagates Err from repository', () async {
-      final result = await SearchCompanies(
-        _FakeRepo(searchResult: Result.err(_networkFailure()), resolveResult: Result.ok(null)),
-      )('alpha');
-      expect(result.isErr, isTrue);
-    });
-  });
-
   group('ResolveCompany use case', () {
     test('returns company when found', () async {
       const company = DiscoveredCompany(slug: 'acme', name: 'Acme');
       final result = await ResolveCompany(
-        _FakeRepo(searchResult: Result.ok([]), resolveResult: Result.ok(company)),
+        _FakeRepo(resolveResult: Result.ok(company)),
       )('acme');
       expect(result.dataOrNull, company);
     });
 
     test('returns null when not found', () async {
       final result = await ResolveCompany(
-        _FakeRepo(searchResult: Result.ok([]), resolveResult: Result.ok(null)),
+        _FakeRepo(resolveResult: Result.ok(null)),
       )('ghost');
       expect(result.isOk, isTrue);
       expect(result.dataOrNull, isNull);

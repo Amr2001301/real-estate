@@ -4934,4 +4934,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get pageNoAccessMessage =>
       'اطلب من مدير النظام في شركتك صلاحية الوصول إليها.';
+
+  @override
+  String get companyUnavailableTitle => 'التطبيق غير متاح حاليًا';
+
+  @override
+  String get companyUnavailableMessage =>
+      'الخدمة متوقفة مؤقتًا. حاول مرة أخرى لاحقًا أو تواصل مع الشركة.';
 }

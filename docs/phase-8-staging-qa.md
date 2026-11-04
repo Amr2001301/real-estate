@@ -266,7 +266,7 @@ flutter build ios --release -t lib/main_staging.dart \
 reachable API):
 
 ```bash
-cd apps/mobile/mobile_customer && flutter build apk --debug -t lib/main_dev.dart
+cd apps/mobile/mobile_customer && flutter build apk --debug -t lib/main_dev.dart --dart-define=COMPANY_SLUG=<slug>
 cd ../mobile_staff             && flutter build apk --debug -t lib/main_dev.dart
 # Output: build/app/outputs/flutter-apk/app-debug.apk per app
 ```
@@ -274,7 +274,7 @@ cd ../mobile_staff             && flutter build apk --debug -t lib/main_dev.dart
 **iOS smoke (no codesigning required)** — also works today:
 
 ```bash
-cd apps/mobile/mobile_customer && flutter build ios --release -t lib/main_dev.dart --no-codesign
+cd apps/mobile/mobile_customer && flutter build ios --release -t lib/main_dev.dart --no-codesign --dart-define=COMPANY_SLUG=<slug>
 cd ../mobile_staff             && flutter build ios --release -t lib/main_dev.dart --no-codesign
 ```
 
