@@ -57,18 +57,21 @@ class SalesHomeState extends Equatable {
 /// Loads the rep's home and the follow-ups shown on it (overdue first when
 /// there are any, else today's).
 class SalesHomeCubit extends Cubit<SalesHomeState> {
-  SalesHomeCubit(this._repo, this._leads, {required this.userId}) : super(const SalesHomeState());
+  SalesHomeCubit(this._repo, this._leads, {required this.userId, this.team = false}) : super(const SalesHomeState());
 
   final SalesHomeRepository _repo;
   final LeadsRepository _leads;
   final String userId;
+
+  /// The sales manager's home: the whole team's figures and agenda.
+  final bool team;
 
   static const followUpsShown = 3;
 
   Future<void> load() async {
     if (state.data == null) emit(state.copyWith(status: DataStatus.loading));
     final results = await Future.wait([
-      _repo.load(userId: userId),
+      _repo.load(userId: userId, team: team),
       _leads.getFollowUpSummary(),
     ]);
     if (isClosed) return;

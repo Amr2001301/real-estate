@@ -49,7 +49,7 @@ class _Repo implements SalesHomeRepository {
   _Repo(this.home);
   final SalesHome home;
   @override
-  Future<Result<SalesHome>> load({required String userId, DateTime? now}) async => Ok(home);
+  Future<Result<SalesHome>> load({required String userId, DateTime? now, bool team = false}) async => Ok(home);
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
@@ -151,13 +151,13 @@ void main() {
     expect(find.text('شركة ديمو'), findsOneWidget);
     expect(find.textContaining('54%'), findsOneWidget);
     expect(find.textContaining('4.32'), findsWidgets);
-    expect(find.byKey(const Key('sales-home-fig-open-leads')), findsOneWidget);
+    expect(find.byKey(const Key('home-fig-open-leads')), findsOneWidget);
     expect(find.text('2 بلا متابعة'), findsOneWidget);
-    expect(find.byKey(const Key('sales-home-att-stale')), findsOneWidget);
+    expect(find.byKey(const Key('home-att-stale')), findsOneWidget);
     expect(find.text('أمل شاكر'), findsOneWidget);
     expect(find.text('عادل السيد'), findsOneWidget);
     expect(find.byKey(const Key('sales-home-stage-NEGOTIATION')), findsOneWidget);
-    expect(find.byKey(const Key('sales-home-add-lead')), findsOneWidget);
+    expect(find.byKey(const Key('home-action-add-lead')), findsOneWidget);
   });
 
   testWidgets('a day without appointments says so', (t) async {

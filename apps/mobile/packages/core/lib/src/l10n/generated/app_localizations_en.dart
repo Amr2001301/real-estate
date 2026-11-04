@@ -5312,7 +5312,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shUnitsSoldN(int n) {
-    return '$n units sold';
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units sold',
+      one: '1 unit sold',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -5387,4 +5393,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shThousand => 'K';
+
+  @override
+  String shWithRep(String name) {
+    return 'With $name';
+  }
+
+  @override
+  String get mhTeamGoal => 'The team\'s target this month';
+
+  @override
+  String get mhUnitsSold => 'Units sold';
+
+  @override
+  String mhUnitsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mhActTargets => 'Team targets';
+
+  @override
+  String get mhActBonus => 'My earnings';
+
+  @override
+  String get mhFigures => 'Your team this month';
+
+  @override
+  String get mhActiveTeam => 'Active team';
+
+  @override
+  String get mhAllActive => 'Everyone is active';
+
+  @override
+  String mhInactiveN(int n) {
+    return '$n inactive';
+  }
+
+  @override
+  String get mhDecide => 'Needs your decision';
+
+  @override
+  String get mhPending => 'Bookings waiting for your approval';
+
+  @override
+  String get mhInactiveReps => 'Reps with no activity this month';
+
+  @override
+  String get mhLeaderboard => 'Team ranking';
+
+  @override
+  String get mhPerformance => 'Performance';
+
+  @override
+  String mhRankSub(int contracts, String pct) {
+    String _temp0 = intl.Intl.pluralLogic(
+      contracts,
+      locale: localeName,
+      other: '$contracts contracts',
+      one: '1 contract',
+    );
+    return '$_temp0 · $pct of target';
+  }
+
+  @override
+  String mhRankNoTarget(int contracts) {
+    String _temp0 = intl.Intl.pluralLogic(
+      contracts,
+      locale: localeName,
+      other: '$contracts contracts',
+      one: '1 contract',
+    );
+    return '$_temp0 · no target';
+  }
+
+  @override
+  String get mhTeamAgenda => 'The team\'s week';
+
+  @override
+  String get mhNoTeam => 'No reps in your team yet.';
 }

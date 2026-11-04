@@ -14,6 +14,8 @@ class SalesHome {
     required this.visits,
     required this.unconfirmedVisits,
     required this.performance,
+    this.team = const [],
+    this.pendingReservations = 0,
     this.companyName,
     this.companyLogoUrl,
   });
@@ -32,6 +34,12 @@ class SalesHome {
   /// Visits still SCHEDULED (not confirmed by the customer) from now on.
   final int unconfirmedVisits;
   final SalesPerformanceRow? performance;
+
+  /// The manager's team, highest sales first (`/sales-targets/performance`).
+  final List<TeamRow> team;
+
+  /// Reservations waiting for the manager's approval.
+  final int pendingReservations;
   final String? companyName;
   final String? companyLogoUrl;
 
@@ -55,6 +63,7 @@ class AgendaEvent {
     this.project,
     this.unitCode,
     this.place,
+    this.who,
     this.confirmed = false,
   });
 
@@ -68,7 +77,36 @@ class AgendaEvent {
   /// The lapsing reservation's unit.
   final String? unitCode;
   final String? place;
+
+  /// The rep a visit is with (the manager's team agenda).
+  final String? who;
   final bool confirmed;
+}
+
+/// One rep on the manager's home, as the website's team list.
+class TeamRow {
+  const TeamRow({
+    required this.salesId,
+    required this.name,
+    required this.performance,
+    required this.active,
+  });
+  final String salesId;
+  final String name;
+  final SalesPerformanceRow performance;
+
+  /// Did anything this month (a lead, a visit, a booking or a contract).
+  final bool active;
+
+  factory TeamRow.fromJson(Map<String, dynamic> j) {
+    int n(String k) => (j[k] as num?)?.toInt() ?? 0;
+    return TeamRow(
+      salesId: j['salesId'] as String? ?? '',
+      name: j['salesName'] as String? ?? '',
+      performance: SalesPerformanceRow.fromJson(j),
+      active: n('leadsCount') + n('visitsCount') + n('reservationsCount') + n('signedContractsCount') > 0,
+    );
+  }
 }
 
 /// `GET /sales-targets/performance`, the rep's own row.
@@ -110,7 +148,9 @@ class SalesHomeRepository {
   final Dio _dio;
   final TokenStorage _storage;
 
-  Future<Result<SalesHome>> load({required String userId, DateTime? now}) => guardApiCall(() async {
+  /// [team]: the manager's view — every visit of the team (with its rep), the
+  /// team's rows and the bookings waiting for approval, as on the website.
+  Future<Result<SalesHome>> load({required String userId, DateTime? now, bool team = false}) => guardApiCall(() async {
         final at = (now ?? DateTime.now()).toUtc();
         String iso(DateTime d) => d.toUtc().toIso8601String();
         final stale = at.subtract(const Duration(days: kStaleAfterDays));
@@ -135,14 +175,14 @@ class SalesHomeRepository {
             'pageSize': 100,
           }),
           get('/visits/appointments', {
-            'assignedSalesId': userId,
+            if (!team) 'assignedSalesId': userId,
             'scheduledFrom': iso(from),
             'scheduledTo': iso(to),
             'open': true,
             'pageSize': 100,
           }),
           get('/visits/appointments', {
-            'assignedSalesId': userId,
+            if (!team) 'assignedSalesId': userId,
             'status': 'SCHEDULED',
             'scheduledFrom': iso(at),
             'pageSize': 1,
@@ -160,6 +200,10 @@ class SalesHomeRepository {
         final perfRows = (results[6]! as List).whereType<Map<String, dynamic>>().toList();
         final mine = perfRows.where((r) => r['salesId'] == userId).firstOrNull ?? perfRows.firstOrNull;
         final brand = results[7] as BrandTokens?;
+        final rows = team
+            ? (perfRows.map(TeamRow.fromJson).toList()
+              ..sort((a, b) => b.performance.realizedValue.compareTo(a.performance.realizedValue)))
+            : const <TeamRow>[];
 
         return SalesHome(
           openLeads: total - (stages['WON'] ?? 0) - (stages['LOST'] ?? 0),
@@ -170,11 +214,32 @@ class SalesHomeRepository {
           visits: _rows(results[4]! as Map<String, dynamic>).map(_visit).whereType<AgendaEvent>().toList()
             ..sort((a, b) => a.at.compareTo(b.at)),
           unconfirmedVisits: _total(results[5]! as Map<String, dynamic>),
-          performance: mine == null ? null : SalesPerformanceRow.fromJson(mine),
+          performance: team
+              ? _teamTotal(rows)
+              : (mine == null ? null : SalesPerformanceRow.fromJson(mine)),
+          team: rows,
+          pendingReservations: resv['PENDING'] ?? 0,
           companyName: brand?.displayName,
           companyLogoUrl: brand?.logoUrl,
         );
       });
+
+  /// The team's month: only the sales of reps who have a target count toward
+  /// it (as on the website — a rep with none pushed the team past 100%).
+  static SalesPerformanceRow _teamTotal(List<TeamRow> rows) {
+    double sum(double Function(SalesPerformanceRow p) f) => rows.fold(0, (a, r) => a + f(r.performance));
+    final target = sum((p) => p.targetAmount ?? 0);
+    final onTarget = sum((p) => p.hasTarget ? p.achievedAmount : 0);
+    return SalesPerformanceRow(
+      achievedAmount: onTarget,
+      achievedUnits: rows.fold(0, (a, r) => a + r.performance.achievedUnits),
+      signedContracts: rows.fold(0, (a, r) => a + r.performance.signedContracts),
+      realizedValue: sum((p) => p.realizedValue),
+      targetAmount: target > 0 ? target : null,
+      targetUnits: rows.fold<int>(0, (a, r) => a + (r.performance.targetUnits ?? 0)),
+      targetPercent: target > 0 ? (onTarget / target * 100).round() : null,
+    );
+  }
 
   // Best-effort: the page shows without the company's name and logo.
   Future<BrandTokens?> _branding() async {
@@ -209,6 +274,7 @@ class SalesHomeRepository {
           '',
       project: (v['project'] as Map?) == null ? null : Translatable.fromJson((v['project'] as Map)['name']),
       place: v['location'] as String?,
+      who: _name(v['assignedSales']),
       confirmed: v['status'] == 'CONFIRMED',
     );
   }

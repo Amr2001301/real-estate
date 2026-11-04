@@ -13,6 +13,7 @@ import '../../dashboard/domain/repositories/dashboard_repository.dart';
 import '../../dashboard/domain/usecases/get_sales_dashboard.dart';
 import '../../dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../dashboard/manager_home/manager_home_screen.dart';
 import '../../dashboard/sales_home/sales_home_cubit.dart';
 import '../../dashboard/sales_home/sales_home_data.dart';
 import '../../dashboard/sales_home/sales_home_screen.dart';
@@ -44,7 +45,8 @@ class _StaffShellState extends State<StaffShell> {
 
   /// The sales rep has their own home (owner-approved design, 2026-11-04);
   /// the other roles keep theirs until theirs is redesigned.
-  late final bool _salesHome = context.read<SessionCubit>().state.role == AppRole.sales;
+  late final AppRole _role = context.read<SessionCubit>().state.role;
+  late final bool _salesHome = _role == AppRole.sales || _role == AppRole.salesManager;
 
   late final List<Widget> _tabs = [
     // 0 — Dashboard
@@ -54,8 +56,11 @@ class _StaffShellState extends State<StaffShell> {
           SalesHomeRepository(ctx.read<Dio>(), ctx.read<TokenStorage>()),
           ctx.read<LeadsRepository>(),
           userId: ctx.read<SessionCubit>().state.sessionOrNull?.userId ?? '',
+          team: _role == AppRole.salesManager,
         ),
-        child: SalesHomeScreen(onSwitchTab: _switchTab),
+        child: _role == AppRole.salesManager
+            ? ManagerHomeScreen(onSwitchTab: _switchTab)
+            : SalesHomeScreen(onSwitchTab: _switchTab),
       )
     else
     MultiBlocProvider(
