@@ -552,7 +552,7 @@ class _Section extends StatelessWidget {
                     onTap: onAction,
                     child: Row(children: [
                       Text(action!, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
-                      const Icon(Icons.chevron_left_rounded, size: 18, color: AppPalette.gold600),
+                      const Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
                     ]),
                   ),
               ],
@@ -723,7 +723,7 @@ class _Attention extends StatelessWidget {
                       child: Icon(icon, size: 18, color: hot ? Colors.white : fg),
                     ),
                     const Spacer(),
-                    Icon(Icons.chevron_left_rounded, size: 18, color: context.appColors.inkMuted.withValues(alpha: 0.6)),
+                    Icon(Icons.chevron_right_rounded, size: 18, color: context.appColors.inkMuted.withValues(alpha: 0.6)),
                   ],
                 ),
                 const SizedBox(height: 8),
