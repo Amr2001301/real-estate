@@ -559,7 +559,9 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
         body: Column(children: [
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
-              CatalogPageHero(
+              HomeOverlap(
+                overlap: 30,
+                top: CatalogPageHero(
                 height: 270,
                 photos: [?p.coverUrl],
                 badges: [
@@ -571,9 +573,7 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
                 title: p.name.resolve(lang),
                 place: p.city ?? '',
               ),
-              Transform.translate(
-                offset: const Offset(0, -30),
-                child: Container(
+                bottom: Container(
                   margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -618,6 +618,7 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
                   ]),
                 ),
               ),
+              const SizedBox(height: 30),
               HomeSection(
                 icon: Icons.info_rounded,
                 title: l10n.projectAbout,
@@ -754,7 +755,9 @@ class _PortalUnitPageState extends State<PortalUnitPage> {
         body: Column(children: [
           Expanded(
             child: ListView(padding: EdgeInsets.zero, children: [
-              CatalogPageHero(
+              HomeOverlap(
+                overlap: 30,
+                top: CatalogPageHero(
                 height: 260,
                 photos: u.photos,
                 badges: [
@@ -764,10 +767,9 @@ class _PortalUnitPageState extends State<PortalUnitPage> {
                 title: l10n.unitTitle(ltr(r.code)),
                 place: where,
               ),
-              Transform.translate(
-                offset: const Offset(0, -30),
-                child: UnitPriceCard(price: r.price, handover: u.specs.deliveryDate, offers: _offers, onCalculate: _calculate),
+                bottom: UnitPriceCard(price: r.price, handover: u.specs.deliveryDate, offers: _offers, onCalculate: _calculate),
               ),
+              const SizedBox(height: 30),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: UnitFacts(area: r.area, bedrooms: r.bedrooms, bathrooms: r.bathrooms, floor: r.floor),

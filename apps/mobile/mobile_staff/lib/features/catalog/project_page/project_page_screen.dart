@@ -75,7 +75,9 @@ class _ProjectPageScreenState extends State<ProjectPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ProjectPageCubit>().load,
                   child: ListView(padding: EdgeInsets.zero, children: [
-                    CatalogPageHero(
+                    HomeOverlap(
+                      overlap: 30,
+                      top: CatalogPageHero(
                       photos: p.photos,
                       badges: [
                         CatalogBadge.status(
@@ -91,7 +93,9 @@ class _ProjectPageScreenState extends State<ProjectPageScreen> {
                       onShare: () => StaffShare.project(
                           projectId: p.id, projectName: p.name.resolve(Localizations.localeOf(context).languageCode), l10n: l10n),
                     ),
-                    Transform.translate(offset: const Offset(0, -30), child: _Occupancy(page: p)),
+                      bottom: _Occupancy(page: p),
+                    ),
+                    const SizedBox(height: 30),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       child: HomeBand(figures: [
