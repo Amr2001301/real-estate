@@ -102,17 +102,16 @@ class HomePage extends StatelessWidget {
           padding: EdgeInsets.only(bottom: bottom + 110),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            hero,
+            // The card sits over the hero's last 78px with real layout, so
+            // it (and the sections under it) take taps where they are drawn.
+            if (!loading && overlap != null) HomeOverlap(overlap: 78, top: hero, bottom: overlap!) else hero,
             if (failure != null && loading == false && overlap == null && children.isEmpty)
               Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: ErrorState(failure: failure, onRetry: onRetry))
             else if (loading)
               const Padding(padding: EdgeInsets.only(top: 120), child: Center(child: CircularProgressIndicator()))
             else ...[
-              if (overlap != null) Transform.translate(offset: const Offset(0, -78), child: overlap),
-              Transform.translate(
-                offset: Offset(0, overlap != null ? -60 : 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-              ),
+              if (overlap != null) const SizedBox(height: 18), // as the old -78 card over -60 sections
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
             ],
           ],
         ),

@@ -108,7 +108,9 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<UnitPageCubit>().load,
                   child: ListView(padding: EdgeInsets.zero, children: [
-                    CatalogPageHero(
+                    HomeOverlap(
+                      overlap: 30,
+                      top: CatalogPageHero(
                       height: 270,
                       photos: photos,
                       badges: [
@@ -120,9 +122,7 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
                       shareKey: const Key('unit-share'),
                       onShare: () => _share(u),
                     ),
-                    Transform.translate(
-                      offset: const Offset(0, -30),
-                      child: UnitPriceCard(
+                      bottom: UnitPriceCard(
                         price: double.tryParse(u.price ?? ''),
                         handover: u.specs.deliveryDate,
                         pricePerMeter: page.pricePerMeter,
@@ -130,6 +130,7 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
                         onCalculate: () => _calculate(u),
                       ),
                     ),
+                    const SizedBox(height: 30),
                     Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: UnitFacts(area: double.tryParse(u.area ?? ''), bedrooms: u.bedrooms, bathrooms: u.bathrooms, floor: u.floor)),
                     HomeSection(icon: Icons.list_alt_rounded, title: l10n.upSpecs, child: UnitSpecTable(code: u.code, typeName: page.typeName, specs: u.specs)),
                     HomeSection(
