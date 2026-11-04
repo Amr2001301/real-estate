@@ -94,6 +94,24 @@ void main() {
     expect(bannerTarget('javascript:alert(1)'), isNull);
   });
 
+  test('a page body reads as headings, lists and paragraphs', () {
+    final blocks = blocksOf('## رؤيتنا\nنبني مجتمعات.\n\n- مساكن\n- مدارس\n\nخدماتنا:\n\nسطر\nثاني');
+    expect(blocks.map((b) => b.runtimeType.toString()), ['PageHeading', 'PageParagraph', 'PageBullets', 'PageHeading', 'PageParagraph']);
+    expect((blocks[0] as PageHeading).text, 'رؤيتنا');
+    expect((blocks[2] as PageBullets).items, ['مساكن', 'مدارس']);
+    expect((blocks[3] as PageHeading).text, 'خدماتنا');
+    expect((blocks[4] as PageParagraph).text, 'سطر ثاني');
+  });
+
+  test('each page gets its kind from its slug or title', () {
+    PageKind k(String slug, String ar) => pageKindOf(ContentPage(slug: slug, title: Translatable(ar: ar, en: '')));
+    expect(k('demo-about', 'من نحن'), PageKind.about);
+    expect(k('p1', 'سياسة الخصوصية'), PageKind.privacy);
+    expect(k('terms', 'الشروط والأحكام'), PageKind.terms);
+    expect(k('x', 'أنظمة السداد'), PageKind.payment);
+    expect(k('x', 'عروضنا'), PageKind.other);
+  });
+
   test('a page body splits into paragraphs at blank lines', () {
     expect(paragraphsOf('one\r\n\r\ntwo\nstill two\n\n\n three '), ['one', 'two\nstill two', 'three']);
     expect(paragraphsOf('  '), isEmpty);

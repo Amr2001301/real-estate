@@ -1700,5 +1700,15 @@
   "pageNoAccessTitle": "This page is not available to your account",
   "pageNoAccessMessage": "Ask your company's administrator for access to it.",
   "companyUnavailableTitle": "The app is not available right now",
-  "companyUnavailableMessage": "The service is paused for now. Try again later or contact the company."
+  "companyUnavailableMessage": "The service is paused for now. Try again later or contact the company.",
+  "pageKindAboutSub": "Get to know the company and its projects",
+  "pageKindPrivacySub": "How we look after your data",
+  "pageKindTermsSub": "The terms of using the service",
+  "pageKindPaymentSub": "The payment plans and methods on offer",
+  "pageKindFaqSub": "Answers to the most common questions",
+  "pageKindContactSub": "Ways to reach the company",
+  "contentContactTitle": "Contact us",
+  "contentContactSub": "Our team is ready to answer your questions.",
+  "contentContactCall": "Call",
+  "contentContactWhatsApp": "WhatsApp"
 }

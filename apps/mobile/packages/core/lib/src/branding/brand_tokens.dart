@@ -12,6 +12,9 @@ class BrandTokens {
     this.logoUrl,
     this.displayName,
     this.currency,
+    this.contactPhone,
+    this.contactWhatsApp,
+    this.contactEmail,
   });
 
   /// Overrides the brand navy (`AppPalette.navy`). Used as the primary dark
@@ -32,6 +35,11 @@ class BrandTokens {
   /// Company currency (ISO 4217, e.g. `EGP`) — every price in the app uses it.
   final String? currency;
 
+  /// The company's contact details, as its website shows them.
+  final String? contactPhone;
+  final String? contactWhatsApp;
+  final String? contactEmail;
+
   factory BrandTokens.fromJson(Map<String, dynamic> json) {
     return BrandTokens(
       primaryColor: _parseHex(json['primaryColor'] as String?),
@@ -39,6 +47,9 @@ class BrandTokens {
       logoUrl: json['logoUrl'] as String?,
       displayName: (json['displayName'] ?? json['name']) as String?,
       currency: json['currency'] as String?,
+      contactPhone: json['contactPhone'] as String?,
+      contactWhatsApp: json['contactWhatsApp'] as String?,
+      contactEmail: json['contactEmail'] as String?,
     );
   }
 

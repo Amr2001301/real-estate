@@ -63,6 +63,83 @@ List<String> paragraphsOf(String body) => body
     .where((p) => p.isNotEmpty)
     .toList();
 
+/// One piece of a page body: a heading, a bullet list or a paragraph.
+sealed class PageBlock {
+  const PageBlock();
+}
+
+class PageHeading extends PageBlock {
+  const PageHeading(this.text);
+  final String text;
+}
+
+class PageBullets extends PageBlock {
+  const PageBullets(this.items);
+  final List<String> items;
+}
+
+class PageParagraph extends PageBlock {
+  const PageParagraph(this.text);
+  final String text;
+}
+
+final _bullet = RegExp(r'^\s*(?:[-•*●▪]|\d+[.)])\s+');
+final _heading = RegExp(r'^\s*#{1,3}\s+');
+
+/// The body as blocks. Plain text from the dashboard: a blank line between
+/// paragraphs, "# " starts a heading, and lines starting with "-", "•" or
+/// "1." make a list. A one-line block ending with ":" reads as a heading too.
+List<PageBlock> blocksOf(String body) {
+  final blocks = <PageBlock>[];
+  for (final chunk in paragraphsOf(body)) {
+    final lines = chunk.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final para = <String>[];
+    final bullets = <String>[];
+    void flushPara() {
+      if (para.isNotEmpty) blocks.add(PageParagraph(para.join(' ')));
+      para.clear();
+    }
+    void flushBullets() {
+      if (bullets.isNotEmpty) blocks.add(PageBullets(List.of(bullets)));
+      bullets.clear();
+    }
+    for (final line in lines) {
+      if (_heading.hasMatch(line)) {
+        flushPara();
+        flushBullets();
+        blocks.add(PageHeading(line.replaceFirst(_heading, '')));
+      } else if (_bullet.hasMatch(line)) {
+        flushPara();
+        bullets.add(line.replaceFirst(_bullet, ''));
+      } else if (lines.length == 1 && line.endsWith(':') && line.length <= 60) {
+        blocks.add(PageHeading(line.substring(0, line.length - 1).trim()));
+      } else {
+        flushBullets();
+        para.add(line);
+      }
+    }
+    flushPara();
+    flushBullets();
+  }
+  return blocks;
+}
+
+/// What a page is about, from its slug and title, so the app can give it its
+/// own icon and a line under its name.
+enum PageKind { about, privacy, terms, payment, faq, contact, other }
+
+PageKind pageKindOf(ContentPage page) {
+  final t = '${page.slug} ${page.title.ar} ${page.title.en}'.toLowerCase();
+  bool has(List<String> words) => words.any(t.contains);
+  if (has(['privacy', 'خصوصي'])) return PageKind.privacy;
+  if (has(['terms', 'condition', 'شروط', 'أحكام', 'احكام'])) return PageKind.terms;
+  if (has(['payment', 'installment', 'سداد', 'تقسيط', 'دفع'])) return PageKind.payment;
+  if (has(['faq', 'question', 'أسئلة', 'اسئلة'])) return PageKind.faq;
+  if (has(['contact', 'تواصل', 'اتصل'])) return PageKind.contact;
+  if (has(['about', 'من نحن', 'عن الشركة', 'نبذة'])) return PageKind.about;
+  return PageKind.other;
+}
+
 class ContentPage extends Equatable {
   const ContentPage({required this.slug, required this.title, this.body = const Translatable(ar: '', en: '')});
 

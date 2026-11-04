@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -73,13 +72,15 @@ class BrandMark extends StatelessWidget {
           ),
         ],
       ),
+      // Image.network (the framework's image cache), not CachedNetworkImage:
+      // the logo shows on several screens at once, and on the web the cached
+      // image drew black or failed on its second use.
       child: url != null
-          ? CachedNetworkImage(
-              imageUrl: url,
+          ? Image.network(
+              url,
               fit: BoxFit.contain,
-              fadeInDuration: const Duration(milliseconds: 200),
-              placeholder: (_, _) => const SizedBox.shrink(),
-              errorWidget: (_, _, _) => fallback,
+              excludeFromSemantics: true,
+              errorBuilder: (_, _, _) => fallback,
             )
           : fallback,
     );

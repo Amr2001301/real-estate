@@ -9223,6 +9223,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The service is paused for now. Try again later or contact the company.'**
   String get companyUnavailableMessage;
+
+  /// No description provided for @pageKindAboutSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Get to know the company and its projects'**
+  String get pageKindAboutSub;
+
+  /// No description provided for @pageKindPrivacySub.
+  ///
+  /// In en, this message translates to:
+  /// **'How we look after your data'**
+  String get pageKindPrivacySub;
+
+  /// No description provided for @pageKindTermsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The terms of using the service'**
+  String get pageKindTermsSub;
+
+  /// No description provided for @pageKindPaymentSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The payment plans and methods on offer'**
+  String get pageKindPaymentSub;
+
+  /// No description provided for @pageKindFaqSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers to the most common questions'**
+  String get pageKindFaqSub;
+
+  /// No description provided for @pageKindContactSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Ways to reach the company'**
+  String get pageKindContactSub;
+
+  /// No description provided for @contentContactTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us'**
+  String get contentContactTitle;
+
+  /// No description provided for @contentContactSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Our team is ready to answer your questions.'**
+  String get contentContactSub;
+
+  /// No description provided for @contentContactCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get contentContactCall;
+
+  /// No description provided for @contentContactWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get contentContactWhatsApp;
 }
 
 class _AppLocalizationsDelegate
