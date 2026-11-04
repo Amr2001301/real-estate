@@ -7309,4 +7309,60 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mcPlanLater =>
       'After creating it, add the instalment plan from the website.';
+
+  @override
+  String get kbFromClients => 'From your clients';
+
+  @override
+  String get kbValueM => 'Value (million)';
+
+  @override
+  String get kbYourCommission => 'Your commission';
+
+  @override
+  String kbYourCommissionPct(String pct) {
+    return 'Your commission $pct';
+  }
+
+  @override
+  String get kbCommissionStatus => 'Status';
+
+  @override
+  String get kbNet => 'Net';
+
+  @override
+  String get kbClient => 'Client';
+
+  @override
+  String get kbUnitProject => 'Unit and project';
+
+  @override
+  String get kbType => 'Type';
+
+  @override
+  String get kbArea => 'Area';
+
+  @override
+  String kbAreaM(String n) {
+    return '$n m²';
+  }
+
+  @override
+  String get kbBuilding => 'Building';
+
+  @override
+  String get kbDelivery => 'Handover';
+
+  @override
+  String get kbPlan => 'Payment plan';
+
+  @override
+  String get kbPayments => 'Recorded payments';
+
+  @override
+  String get kbEmpty => 'No contracts yet';
+
+  @override
+  String get kbEmptyMessage =>
+      'Contracts of the clients you brought appear here once their bookings are converted.';
 }

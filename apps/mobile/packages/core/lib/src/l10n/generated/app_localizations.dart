@@ -13009,6 +13009,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'After creating it, add the instalment plan from the website.'**
   String get mcPlanLater;
+
+  /// No description provided for @kbFromClients.
+  ///
+  /// In en, this message translates to:
+  /// **'From your clients'**
+  String get kbFromClients;
+
+  /// No description provided for @kbValueM.
+  ///
+  /// In en, this message translates to:
+  /// **'Value (million)'**
+  String get kbValueM;
+
+  /// No description provided for @kbYourCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get kbYourCommission;
+
+  /// No description provided for @kbYourCommissionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission {pct}'**
+  String kbYourCommissionPct(String pct);
+
+  /// No description provided for @kbCommissionStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get kbCommissionStatus;
+
+  /// No description provided for @kbNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get kbNet;
+
+  /// No description provided for @kbClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get kbClient;
+
+  /// No description provided for @kbUnitProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit and project'**
+  String get kbUnitProject;
+
+  /// No description provided for @kbType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get kbType;
+
+  /// No description provided for @kbArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get kbArea;
+
+  /// No description provided for @kbAreaM.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} m²'**
+  String kbAreaM(String n);
+
+  /// No description provided for @kbBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Building'**
+  String get kbBuilding;
+
+  /// No description provided for @kbDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover'**
+  String get kbDelivery;
+
+  /// No description provided for @kbPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plan'**
+  String get kbPlan;
+
+  /// No description provided for @kbPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded payments'**
+  String get kbPayments;
+
+  /// No description provided for @kbEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No contracts yet'**
+  String get kbEmpty;
+
+  /// No description provided for @kbEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts of the clients you brought appear here once their bookings are converted.'**
+  String get kbEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

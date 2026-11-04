@@ -77,6 +77,15 @@ class BrokerProfileScreen extends StatelessWidget {
                   _GroupCard(
                     children: [
                       // Commission tile (conditional)
+                      _SettingRow(
+                        key: const Key('broker-profile-contracts'),
+                        icon: Icons.description_rounded,
+                        iconColor: AppPalette.navy,
+                        iconBg: AppPalette.navy.withValues(alpha: 0.10),
+                        label: l10n.navContracts,
+                        onTap: () => context.push('/broker/contracts'),
+                      ),
+                      _Divider(),
                       BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
                         buildWhen: (a, b) =>
                             a.data?.canViewCommissions !=
@@ -409,6 +418,7 @@ class _Divider extends StatelessWidget {
 
 class _SettingRow extends StatefulWidget {
   const _SettingRow({
+    super.key,
     required this.icon,
     required this.iconColor,
     required this.iconBg,

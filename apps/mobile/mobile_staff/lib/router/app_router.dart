@@ -44,6 +44,8 @@ import '../features/bonus/presentation/screens/bonus_screen.dart';
 import '../features/broker/catalog/domain/repositories/broker_catalog_repository.dart';
 import '../features/broker/catalog/domain/usecases/broker_catalog_use_cases.dart';
 import '../features/broker/catalog/portal/portal_catalog_data.dart';
+import '../features/broker/contracts/broker_contracts_data.dart';
+import '../features/broker/contracts/broker_contracts_screens.dart';
 import '../features/contracts/create/contract_create_data.dart';
 import '../features/contracts/create/convert_reservation_screen.dart';
 import '../features/contracts/create/manual_contract_screen.dart';
@@ -341,6 +343,21 @@ GoRouter createStaffRouter(
             child: BrokerReservationDetailScreen(fallback: reservation),
           );
         },
+      ),
+      GoRoute(
+        path: '/broker/contracts',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => BrokerContractsCubit(BrokerContractsRepository(ctx.read<Dio>())),
+          child: const BrokerContractsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/broker/contracts/:id',
+        builder: (context, state) => BlocProvider(
+          key: ValueKey('broker-contract-${state.pathParameters['id']}'),
+          create: (ctx) => BrokerContractCubit(BrokerContractsRepository(ctx.read<Dio>()), contractId: state.pathParameters['id']!),
+          child: const BrokerContractScreen(),
+        ),
       ),
       GoRoute(
         path: '/broker/commissions',
