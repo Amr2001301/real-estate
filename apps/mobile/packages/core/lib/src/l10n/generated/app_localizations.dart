@@ -12631,6 +12631,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'From a reservation'**
   String get kcFromReservationShort;
+
+  /// No description provided for @kcStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get kcStatus;
+
+  /// No description provided for @fsActiveN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No filters} =1{1 filter on} other{{n} filters on}}'**
+  String fsActiveN(int n);
+
+  /// No description provided for @fsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get fsClear;
+
+  /// No description provided for @fsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get fsNone;
+
+  /// No description provided for @fsAvailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in each'**
+  String get fsAvailableHint;
+
+  /// No description provided for @fsPriceUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under {amount}'**
+  String fsPriceUnder(String amount);
+
+  /// No description provided for @fsPriceBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}'**
+  String fsPriceBetween(String from, String to);
+
+  /// No description provided for @fsPriceOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Over {amount}'**
+  String fsPriceOver(String amount);
+
+  /// No description provided for @fsMillion.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}M'**
+  String fsMillion(String n);
+
+  /// No description provided for @fsNoLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get fsNoLimit;
+
+  /// No description provided for @kcShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No contracts} =1{Show 1 contract} other{Show {n} contracts}}'**
+  String kcShowN(int n);
+
+  /// No description provided for @cuShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{Show 1 unit} other{Show {n} units}}'**
+  String cuShowN(int n);
+
+  /// No description provided for @cuBedrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedrooms'**
+  String get cuBedrooms;
 }
 
 class _AppLocalizationsDelegate

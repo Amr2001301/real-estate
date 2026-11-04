@@ -7077,4 +7077,84 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get kcFromReservationShort => 'من حجز';
+
+  @override
+  String get kcStatus => 'الحالة';
+
+  @override
+  String fsActiveN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n فلترًا مفعّلًا',
+      few: '$n فلاتر مفعّلة',
+      two: 'فلتران مفعّلان',
+      one: 'فلتر واحد مفعّل',
+      zero: 'بدون فلاتر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fsClear => 'مسح';
+
+  @override
+  String get fsNone => 'لا يوجد';
+
+  @override
+  String get fsAvailableHint => 'المتاح من كل مشروع';
+
+  @override
+  String fsPriceUnder(String amount) {
+    return 'أقل من $amount';
+  }
+
+  @override
+  String fsPriceBetween(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String fsPriceOver(String amount) {
+    return 'أكثر من $amount';
+  }
+
+  @override
+  String fsMillion(String n) {
+    return '$n مليون';
+  }
+
+  @override
+  String get fsNoLimit => 'بلا حد';
+
+  @override
+  String kcShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n عقدًا',
+      few: 'عرض $n عقود',
+      two: 'عرض عقدين',
+      one: 'عرض عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n وحدة',
+      few: 'عرض $n وحدات',
+      two: 'عرض وحدتين',
+      one: 'عرض وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuBedrooms => 'غرف النوم';
 }

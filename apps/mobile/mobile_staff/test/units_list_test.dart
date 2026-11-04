@@ -51,6 +51,9 @@ class _Repo implements UnitsListRepository {
   Future<Result<List<(String, String)>>> projects() async => const Ok([('p1', 'نايل جاردنز ريزيدنس')]);
 
   @override
+  Future<int?> count(UnitsQuery q) async => q.projectId == null ? 21 : 8;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
@@ -99,8 +102,10 @@ void main() {
 
     await t.tap(find.byKey(const Key('units-filters')));
     await t.pumpAndSettle();
+    expect(find.text('8 متاحة'), findsOneWidget); // what is free in the project
     await t.tap(find.byKey(const Key('units-project-p1')));
     await t.pumpAndSettle();
+    expect(find.text('عرض 8 وحدات'), findsOneWidget); // the choice counted before it is applied
     await t.tap(find.byKey(const Key('units-apply')));
     await t.pumpAndSettle();
     expect(repo.queries.last.projectId, 'p1');

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../common/staff_list_skeleton.dart';
 import '../../catalog/kit/catalog_kit.dart';
 import '../../catalog/units_list/units_list_screen.dart';
+import '../../dashboard/home_kit/filter_kit.dart';
 import '../../dashboard/home_kit/home_kit.dart';
 import 'contracts_data.dart';
 
@@ -42,30 +43,11 @@ class _ContractsListScreenState extends State<ContractsListScreen> {
     super.dispose();
   }
 
-  void _sourceSheet() {
-    final l10n = context.l10n;
+  void _filters() {
     final cubit = context.read<ContractsListCubit>();
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(l10n.kcSource, style: homeDisplay(18, ctx.appColors.inkStrong)),
-          ),
-          for (final (id, label) in [(null, l10n.kcSourceAll), ('RESERVATION', l10n.kcFromReservationShort), ('MANUAL', l10n.kcManual)])
-            ListTile(
-              key: Key('contracts-source-${id ?? 'all'}'),
-              title: Text(label),
-              trailing: cubit.state.query.source == id ? const Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
-              onTap: () {
-                Navigator.of(ctx).pop();
-                cubit.setSource(id);
-              },
-            ),
-        ]),
-      ),
+    showFilterSheet(
+      context,
+      (_) => ContractsFilterSheet(query: cubit.state.query, counts: cubit.state.counts, onApply: cubit.apply, count: cubit.count),
     );
   }
 
@@ -97,9 +79,9 @@ class _ContractsListScreenState extends State<ContractsListScreen> {
                         HomeHeroButton(
                           key: const Key('contracts-filters'),
                           icon: Icons.tune_rounded,
-                          dot: q.source != null,
+                          dot: q.source != null || q.filter != null,
                           tooltip: l10n.kcFilters,
-                          onTap: _sourceSheet,
+                          onTap: _filters,
                         ),
                       ],
                       bottom: HomeSearchField(
@@ -342,6 +324,102 @@ class ContractCardView extends StatelessWidget {
           ]),
         ),
       ),
+    );
+  }
+}
+
+
+/// The status (with each one's count) and the source, as the website's
+/// contracts filters, in the filter sheet's look.
+class ContractsFilterSheet extends StatefulWidget {
+  const ContractsFilterSheet({super.key, required this.query, required this.onApply, required this.count, this.counts});
+  final ContractsQuery query;
+  final ContractsCounts? counts;
+  final Future<void> Function(ContractsQuery) onApply;
+
+  /// How many contracts a choice gives.
+  final Future<int?> Function(ContractsQuery) count;
+
+  @override
+  State<ContractsFilterSheet> createState() => _ContractsFilterSheetState();
+}
+
+class _ContractsFilterSheetState extends State<ContractsFilterSheet> with FilterCounting {
+  late String? _filter = widget.query.filter;
+  late String? _source = widget.query.source;
+  final _bySource = <String, int?>{};
+
+  ContractsQuery get _draft => ContractsQuery(filter: _filter, source: _source, search: widget.query.search);
+
+  @override
+  Future<int?> countDraft() => widget.count(_draft);
+
+  @override
+  void initState() {
+    super.initState();
+    recount();
+    for (final s in ['RESERVATION', 'MANUAL']) {
+      widget.count(ContractsQuery(source: s)).then((n) {
+        if (mounted) setState(() => _bySource[s] = n);
+      });
+    }
+  }
+
+  void _set(VoidCallback f) {
+    setState(f);
+    recount();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final c = widget.counts;
+    String? n(int? v) => v == null ? null : (v == 0 ? l10n.fsNone : l10n.kcCountN(v));
+    String? short(int? v) => v == null ? null : ltr('$v');
+    return FilterSheet(
+      title: l10n.kcFilters,
+      active: [_filter, _source].where((v) => v != null).length,
+      applyKey: const Key('contracts-apply'),
+      applyLabel: shown == null ? l10n.cuApply : l10n.kcShowN(shown!),
+      onClear: () => _set(() {
+        _filter = null;
+        _source = null;
+      }),
+      onApply: () {
+        Navigator.of(context).pop();
+        widget.onApply(_draft);
+      },
+      sections: [
+        FilterSection(
+          icon: Icons.verified_rounded,
+          title: l10n.kcStatus,
+          child: FilterTiles<String?>(
+            keyPrefix: 'contracts-filter',
+            selected: _filter,
+            onSelect: (v) => _set(() => _filter = v),
+            options: [
+              FilterOption(null, l10n.lvAll, sub: n(c?.all), icon: Icons.description_rounded, color: AppPalette.navy),
+              FilterOption('SIGNED', l10n.kcSigned, sub: n(c?.signed), icon: Icons.verified_rounded, color: catalogAvailable, empty: c?.signed == 0),
+              FilterOption('UNSIGNED', l10n.kcUnsigned, sub: n(c?.unsigned), icon: Icons.draw_rounded, color: catalogReserved, empty: c?.unsigned == 0),
+              FilterOption('DELAYED', l10n.kcDelayed, sub: n(c?.delayed), icon: Icons.schedule_rounded, color: context.appColors.error, empty: c?.delayed == 0),
+            ],
+          ),
+        ),
+        FilterSection(
+          icon: Icons.alt_route_rounded,
+          title: l10n.kcSource,
+          child: FilterSegments<String?>(
+            keyPrefix: 'contracts-source',
+            selected: _source,
+            onSelect: (v) => _set(() => _source = v),
+            options: [
+              FilterOption(null, l10n.cuAny, sub: short(c?.all)),
+              FilterOption('RESERVATION', l10n.kcFromReservationShort, sub: short(_bySource['RESERVATION'])),
+              FilterOption('MANUAL', l10n.kcManual, sub: short(_bySource['MANUAL'])),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

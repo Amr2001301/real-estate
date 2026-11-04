@@ -309,6 +309,9 @@ class ContractsViewRepository {
 
   /// Over every contract the user may see (the server scopes a rep to their
   /// own, a manager to the team's), as the website's strip.
+  /// How many contracts a choice gives, for the filter's apply label.
+  Future<int?> count(ContractsQuery q) => _count(q.params(1, 1));
+
   Future<ContractsCounts> counts() async {
     final c = await Future.wait([
       _count(const {}),
@@ -425,6 +428,8 @@ class ContractsListCubit extends Cubit<ContractsListState> {
     emit(state.copyWith(query: q));
     await load();
   }
+
+  Future<int?> count(ContractsQuery q) => _repo.count(q);
 
   Future<void> setFilter(String? f) => apply(state.query.copyWith(filter: () => state.query.filter == f ? null : f));
   Future<void> setSource(String? s) => apply(state.query.copyWith(source: () => s));

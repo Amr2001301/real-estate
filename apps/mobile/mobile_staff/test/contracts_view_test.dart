@@ -60,6 +60,9 @@ class _Repo extends ContractsViewRepository {
   ContractsQuery? lastQuery;
 
   @override
+  Future<int?> count(ContractsQuery q) async => q.source == 'MANUAL' ? (q.filter == 'SIGNED' ? 3 : 4) : 22;
+
+  @override
   Future<ContractsCounts> counts() async => const ContractsCounts(all: 2, signed: 1, unsigned: 1, delayed: 0);
 
   @override
@@ -119,6 +122,17 @@ void main() {
     await t.pumpAndSettle();
     expect(repo.lastQuery?.filter, 'SIGNED');
     expect(find.byType(ContractCardView), findsOneWidget);
+
+    await t.tap(find.byKey(const Key('contracts-filters')));
+    await t.pumpAndSettle();
+    expect(find.text('فلتر واحد مفعّل'), findsOneWidget); // signed, from the pill
+    await t.tap(find.byKey(const Key('contracts-source-MANUAL')));
+    await t.pumpAndSettle();
+    expect(find.text('فلتران مفعّلان'), findsOneWidget);
+    expect(find.text('عرض 3 عقود'), findsOneWidget);
+    await t.tap(find.byKey(const Key('contracts-apply')));
+    await t.pumpAndSettle();
+    expect(repo.lastQuery, const ContractsQuery(filter: 'SIGNED', source: 'MANUAL'));
   });
 
   testWidgets('a contract: value, collected, late, the tabs and the admin\'s record button', (t) async {

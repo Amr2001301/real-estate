@@ -7068,4 +7068,78 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kcFromReservationShort => 'From a reservation';
+
+  @override
+  String get kcStatus => 'Status';
+
+  @override
+  String fsActiveN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n filters on',
+      one: '1 filter on',
+      zero: 'No filters',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fsClear => 'Clear';
+
+  @override
+  String get fsNone => 'None';
+
+  @override
+  String get fsAvailableHint => 'Available in each';
+
+  @override
+  String fsPriceUnder(String amount) {
+    return 'Under $amount';
+  }
+
+  @override
+  String fsPriceBetween(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String fsPriceOver(String amount) {
+    return 'Over $amount';
+  }
+
+  @override
+  String fsMillion(String n) {
+    return '${n}M';
+  }
+
+  @override
+  String get fsNoLimit => 'No limit';
+
+  @override
+  String kcShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $n contracts',
+      one: 'Show 1 contract',
+      zero: 'No contracts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $n units',
+      one: 'Show 1 unit',
+      zero: 'No units',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuBedrooms => 'Bedrooms';
 }
