@@ -5230,4 +5230,161 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maintenanceDoneHome => 'Back to home';
+
+  @override
+  String get shGreetMorning => 'Good morning,';
+
+  @override
+  String get shGreetEvening => 'Good evening,';
+
+  @override
+  String get shGoalTitle => 'This month\'s target';
+
+  @override
+  String shOfTarget(String target) {
+    return 'of $target';
+  }
+
+  @override
+  String get shOfGoal => 'of target';
+
+  @override
+  String get shGoalUnits => 'Units';
+
+  @override
+  String get shDaysLeftLabel => 'Left this month';
+
+  @override
+  String shDaysLeft(int n) {
+    return '$n days';
+  }
+
+  @override
+  String get shNoTarget => 'No target set for you this month yet.';
+
+  @override
+  String get shActLead => 'New lead';
+
+  @override
+  String get shActVisit => 'Schedule visit';
+
+  @override
+  String get shActReservation => 'New booking';
+
+  @override
+  String get shActCalculator => 'Calculator';
+
+  @override
+  String get shFigures => 'Your month in numbers';
+
+  @override
+  String get shOpenLeads => 'Open leads';
+
+  @override
+  String shStaleN(int n) {
+    return '$n need follow-up';
+  }
+
+  @override
+  String get shAllFollowed => 'All followed up';
+
+  @override
+  String get shUpcomingVisits => 'Upcoming visits';
+
+  @override
+  String shTodayN(int n) {
+    return '$n today';
+  }
+
+  @override
+  String get shActiveReservations => 'Active bookings';
+
+  @override
+  String shExpiringN(int n) {
+    return '$n expiring soon';
+  }
+
+  @override
+  String get shNoneExpiring => 'None expiring soon';
+
+  @override
+  String get shContractsMonth => 'Contracts this month';
+
+  @override
+  String shUnitsSoldN(int n) {
+    return '$n units sold';
+  }
+
+  @override
+  String get shRealized => 'Sales value';
+
+  @override
+  String get shAvgDeal => 'Average deal';
+
+  @override
+  String get shAttention => 'Needs your attention';
+
+  @override
+  String shAttStale(int n) {
+    return 'Leads with no follow-up for $n days';
+  }
+
+  @override
+  String get shAttLapsing => 'Bookings ending this week';
+
+  @override
+  String get shAttUnconfirmed => 'Visits not confirmed yet';
+
+  @override
+  String get shFollowUps => 'Follow-ups';
+
+  @override
+  String get shAll => 'All';
+
+  @override
+  String get shOverdue => 'Overdue';
+
+  @override
+  String get shToday => 'Today';
+
+  @override
+  String get shUpcoming => 'Upcoming';
+
+  @override
+  String get shNoFollowUps => 'No follow-ups in this list.';
+
+  @override
+  String get shAgenda => 'This week';
+
+  @override
+  String get shAllAppointments => 'All appointments';
+
+  @override
+  String get shTagVisit => 'Visit';
+
+  @override
+  String get shTagExpiry => 'Booking ends';
+
+  @override
+  String get shConfirmed => 'Confirmed';
+
+  @override
+  String get shDayEmpty => 'Nothing on this day.';
+
+  @override
+  String shNextUp(String when) {
+    return 'Next: $when';
+  }
+
+  @override
+  String get shPipeline => 'Sales pipeline';
+
+  @override
+  String get shLeadsLink => 'Leads';
+
+  @override
+  String get shMillion => 'M';
+
+  @override
+  String get shThousand => 'K';
 }
