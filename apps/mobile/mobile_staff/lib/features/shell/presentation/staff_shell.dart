@@ -13,6 +13,8 @@ import '../../dashboard/domain/repositories/dashboard_repository.dart';
 import '../../dashboard/domain/usecases/get_sales_dashboard.dart';
 import '../../dashboard/presentation/cubit/dashboard_cubit.dart';
 import '../../dashboard/presentation/screens/dashboard_screen.dart';
+import '../../dashboard/admin_home/admin_home_data.dart';
+import '../../dashboard/admin_home/admin_home_screen.dart';
 import '../../dashboard/manager_home/manager_home_screen.dart';
 import '../../dashboard/sales_home/sales_home_cubit.dart';
 import '../../dashboard/sales_home/sales_home_data.dart';
@@ -43,14 +45,24 @@ class _StaffShellState extends State<StaffShell> {
 
   void _switchTab(int index) => setState(() => _index = index);
 
-  /// The sales rep has their own home (owner-approved design, 2026-11-04);
-  /// the other roles keep theirs until theirs is redesigned.
+  /// The sales rep, the sales manager and the admin have their own homes
+  /// (owner-approved designs, 2026-11-04); the other roles keep theirs until
+  /// theirs is redesigned.
   late final AppRole _role = context.read<SessionCubit>().state.role;
+  late final bool _adminHome = _role == AppRole.admin;
   late final bool _salesHome = _role == AppRole.sales || _role == AppRole.salesManager;
+  late final bool _newHome = _salesHome || _adminHome;
 
   late final List<Widget> _tabs = [
     // 0 — Dashboard
-    if (_salesHome)
+    if (_adminHome)
+      BlocProvider(
+        create: (ctx) => AdminHomeCubit(
+          AdminHomeRepository(ctx.read<Dio>(), ctx.read<TokenStorage>(), ctx.read<LeadsRepository>()),
+        ),
+        child: AdminHomeScreen(onSwitchTab: _switchTab),
+      )
+    else if (_salesHome)
       BlocProvider(
         create: (ctx) => SalesHomeCubit(
           SalesHomeRepository(ctx.read<Dio>(), ctx.read<TokenStorage>()),
@@ -134,7 +146,7 @@ class _StaffShellState extends State<StaffShell> {
             label: l10n.navProfile,
           ),
     ];
-    if (_salesHome) {
+    if (_newHome) {
       // The approved design: a navy bar floating over the page.
       return Scaffold(
         extendBody: true,
