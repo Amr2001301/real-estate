@@ -260,8 +260,8 @@ class HomeListHero extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
               Row(children: [
                 if (back) ...[
-                  HomeHeroButton(icon: Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
-                      onTap: () => Navigator.of(context).maybePop()),
+                  // arrow_back mirrors itself to → in Arabic.
+                  HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: () => Navigator.of(context).maybePop()),
                   const SizedBox(width: 10),
                 ],
                 Expanded(

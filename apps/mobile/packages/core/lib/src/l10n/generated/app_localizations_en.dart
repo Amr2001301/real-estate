@@ -6525,4 +6525,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cuProfileDesc => 'Every unit, with its status and price';
+
+  @override
+  String get ppOccupancy => 'Occupancy';
+
+  @override
+  String ppTakenOf(int taken, int total) {
+    return '$taken of $total units reserved or sold';
+  }
+
+  @override
+  String get ppUnits => 'Units';
+
+  @override
+  String ppAvailableN(int n) {
+    return '$n available';
+  }
+
+  @override
+  String ppSoldN(int n) {
+    return '$n sold';
+  }
+
+  @override
+  String get ppPhases => 'Phases';
+
+  @override
+  String ppDeliveryYear(String year) {
+    return 'Delivery $year';
+  }
+
+  @override
+  String get ppNoDelivery => 'No delivery date';
+
+  @override
+  String get ppBuildings => 'Buildings';
+
+  @override
+  String ppFloorsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n floors',
+      one: '1 floor',
+      zero: 'No floors',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ppBuildingsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n buildings',
+      one: '1 building',
+      zero: 'No buildings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ppType => 'Type';
+
+  @override
+  String get ppTotalArea => 'Total area';
+
+  @override
+  String get ppLicense => 'License number';
+
+  @override
+  String get ppPhasesBuildings => 'Phases and buildings';
+
+  @override
+  String ppDelivery(String date) {
+    return 'Delivery $date';
+  }
+
+  @override
+  String get ppFreeUnits => 'Available units';
+
+  @override
+  String get ppNoFree => 'No units are available now.';
+
+  @override
+  String get ppNoDescription => 'No description for this project yet.';
+
+  @override
+  String get ppNoPhases => 'No phases have been added to this project yet.';
+
+  @override
+  String ppPhotoOf(int i, int n) {
+    return '$i / $n';
+  }
 }

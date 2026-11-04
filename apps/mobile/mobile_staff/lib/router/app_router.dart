@@ -83,12 +83,11 @@ import '../features/performance/presentation/cubit/team_targets_cubit.dart';
 import '../features/performance/presentation/screens/targets_screen.dart';
 import '../features/performance/presentation/screens/team_performance_screen.dart';
 import '../features/performance/presentation/screens/team_targets_screen.dart';
-import '../features/catalog/domain/entities/staff_project.dart';
 import '../features/catalog/domain/repositories/staff_catalog_repository.dart';
 import '../features/catalog/domain/usecases/staff_catalog_use_cases.dart';
-import '../features/catalog/presentation/cubit/staff_project_detail_cubit.dart';
 import '../features/catalog/presentation/cubit/staff_unit_detail_cubit.dart';
-import '../features/catalog/presentation/screens/staff_project_detail_screen.dart';
+import '../features/catalog/project_page/project_page_data.dart';
+import '../features/catalog/project_page/project_page_screen.dart';
 import '../features/catalog/projects_list/projects_list_data.dart';
 import '../features/catalog/projects_list/projects_list_screen.dart';
 import '../features/catalog/units_list/units_list_data.dart';
@@ -585,21 +584,13 @@ GoRouter createStaffRouter(
         ),
       ),
 
-      // ── Project detail (+ units) ─────────────────────────────────────────
+      // ── Project page ─────────────────────────────────────────────────────
       GoRoute(
         path: '/projects/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          final project = state.extra as StaffProject?;
-          return BlocProvider(
-            create: (ctx) => StaffProjectDetailCubit(
-              GetStaffProjectDetail(ctx.read<StaffCatalogRepository>()),
-              ctx.read<StaffCatalogRepository>(),
-              projectId: id,
-            ),
-            child: StaffProjectDetailScreen(fallback: project),
-          );
-        },
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => ProjectPageCubit(ProjectPageRepository(ctx.read<Dio>()), projectId: state.pathParameters['id']!),
+          child: const ProjectPageScreen(),
+        ),
       ),
       // ── Units list (?projectId= narrows it to a project) ─────────────────
       GoRoute(

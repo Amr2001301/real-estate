@@ -11761,6 +11761,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every unit, with its status and price'**
   String get cuProfileDesc;
+
+  /// No description provided for @ppOccupancy.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupancy'**
+  String get ppOccupancy;
+
+  /// No description provided for @ppTakenOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{taken} of {total} units reserved or sold'**
+  String ppTakenOf(int taken, int total);
+
+  /// No description provided for @ppUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get ppUnits;
+
+  /// No description provided for @ppAvailableN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} available'**
+  String ppAvailableN(int n);
+
+  /// No description provided for @ppSoldN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} sold'**
+  String ppSoldN(int n);
+
+  /// No description provided for @ppPhases.
+  ///
+  /// In en, this message translates to:
+  /// **'Phases'**
+  String get ppPhases;
+
+  /// No description provided for @ppDeliveryYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery {year}'**
+  String ppDeliveryYear(String year);
+
+  /// No description provided for @ppNoDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery date'**
+  String get ppNoDelivery;
+
+  /// No description provided for @ppBuildings.
+  ///
+  /// In en, this message translates to:
+  /// **'Buildings'**
+  String get ppBuildings;
+
+  /// No description provided for @ppFloorsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No floors} =1{1 floor} other{{n} floors}}'**
+  String ppFloorsN(int n);
+
+  /// No description provided for @ppBuildingsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No buildings} =1{1 building} other{{n} buildings}}'**
+  String ppBuildingsN(int n);
+
+  /// No description provided for @ppType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get ppType;
+
+  /// No description provided for @ppTotalArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Total area'**
+  String get ppTotalArea;
+
+  /// No description provided for @ppLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'License number'**
+  String get ppLicense;
+
+  /// No description provided for @ppPhasesBuildings.
+  ///
+  /// In en, this message translates to:
+  /// **'Phases and buildings'**
+  String get ppPhasesBuildings;
+
+  /// No description provided for @ppDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery {date}'**
+  String ppDelivery(String date);
+
+  /// No description provided for @ppFreeUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get ppFreeUnits;
+
+  /// No description provided for @ppNoFree.
+  ///
+  /// In en, this message translates to:
+  /// **'No units are available now.'**
+  String get ppNoFree;
+
+  /// No description provided for @ppNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description for this project yet.'**
+  String get ppNoDescription;
+
+  /// No description provided for @ppNoPhases.
+  ///
+  /// In en, this message translates to:
+  /// **'No phases have been added to this project yet.'**
+  String get ppNoPhases;
+
+  /// No description provided for @ppPhotoOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{i} / {n}'**
+  String ppPhotoOf(int i, int n);
 }
 
 class _AppLocalizationsDelegate

@@ -6522,4 +6522,101 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cuProfileDesc => 'كل وحدات الشركة بحالتها وسعرها';
+
+  @override
+  String get ppOccupancy => 'إشغال';
+
+  @override
+  String ppTakenOf(int taken, int total) {
+    return '$taken من $total وحدة محجوزة أو مباعة';
+  }
+
+  @override
+  String get ppUnits => 'الوحدات';
+
+  @override
+  String ppAvailableN(int n) {
+    return '$n متاحة';
+  }
+
+  @override
+  String ppSoldN(int n) {
+    return '$n مباعة';
+  }
+
+  @override
+  String get ppPhases => 'المراحل';
+
+  @override
+  String ppDeliveryYear(String year) {
+    return 'تسليم $year';
+  }
+
+  @override
+  String get ppNoDelivery => 'بلا موعد تسليم';
+
+  @override
+  String get ppBuildings => 'المباني';
+
+  @override
+  String ppFloorsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n دورًا',
+      few: '$n أدوار',
+      two: 'دوران',
+      one: 'دور واحد',
+      zero: 'بلا أدوار',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ppBuildingsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n مبنى',
+      few: '$n مبانٍ',
+      two: 'مبنيان',
+      one: 'مبنى واحد',
+      zero: 'بلا مبانٍ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ppType => 'النوع';
+
+  @override
+  String get ppTotalArea => 'المساحة الكلية';
+
+  @override
+  String get ppLicense => 'رقم الترخيص';
+
+  @override
+  String get ppPhasesBuildings => 'المراحل والمباني';
+
+  @override
+  String ppDelivery(String date) {
+    return 'التسليم $date';
+  }
+
+  @override
+  String get ppFreeUnits => 'الوحدات المتاحة';
+
+  @override
+  String get ppNoFree => 'لا توجد وحدات متاحة الآن.';
+
+  @override
+  String get ppNoDescription => 'لا يوجد وصف لهذا المشروع بعد.';
+
+  @override
+  String get ppNoPhases => 'لم تُضَف مراحل لهذا المشروع بعد.';
+
+  @override
+  String ppPhotoOf(int i, int n) {
+    return '$i / $n';
+  }
 }
