@@ -568,8 +568,8 @@ class _HeroSectionState extends State<_HeroSection> {
                     // START (right in RTL): logo mark + brand name.
                     const BrandMark(size: 30),
                     const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      l10n.customerAppTitle,
+                    Flexible(
+                      child: CompanyNameText(
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -578,6 +578,7 @@ class _HeroSectionState extends State<_HeroSection> {
                           Shadow(color: Color(0x66000000), blurRadius: 10),
                         ],
                       ),
+                    ),
                     ),
                     const Spacer(),
                     // END (left in RTL): frosted glass bell.

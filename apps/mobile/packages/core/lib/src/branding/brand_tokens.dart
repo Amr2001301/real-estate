@@ -22,8 +22,8 @@ class BrandTokens {
   /// interactive highlight color.
   final Color? accentColor;
 
-  /// Remote URL for the tenant's logo image. Loaded by [BrandMark] with a
-  /// neutral local asset fallback.
+  /// Remote URL for the tenant's logo image. Loaded by [BrandMark], which shows
+  /// the company's initials without it.
   final String? logoUrl;
 
   /// Tenant display name (prefers `displayName`, falls back to `name`).

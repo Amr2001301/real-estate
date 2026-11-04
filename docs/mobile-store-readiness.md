@@ -246,7 +246,7 @@ Copy this block into the release ticket; tick when verified.
 
 - [ ] `flutter analyze` clean on core + customer + staff
 - [ ] `flutter test` green on core + customer + staff
-- [ ] Both APKs build clean (`flutter build apk --release -t lib/main_prod.dart`)
+- [ ] Both APKs build clean (`flutter build apk --release -t lib/main_prod.dart`; the customer app also needs `--dart-define-from-file=build/company/dart_defines.json`)
 - [ ] Both AABs build clean and are signed with the **upload key**, not debug
 - [ ] iOS archives signed by Distribution cert + valid provisioning profile
 - [ ] Manual QA passed on iOS + Android, ar + en (release guide §6)

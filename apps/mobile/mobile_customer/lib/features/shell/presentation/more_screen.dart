@@ -200,12 +200,13 @@ class _MoreHero extends StatelessWidget {
                   children: [
                     const BrandMark(size: 46),
                     const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      l10n.authEyebrow,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: AppPalette.gold300,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
+                    Flexible(
+                      child: CompanyNameText(
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppPalette.gold300,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ],
@@ -529,8 +530,7 @@ class _MoreFooter extends StatelessWidget {
       children: [
         const BrandMark(size: 32),
         const SizedBox(height: AppSpacing.xs),
-        Text(
-          context.l10n.authEyebrow,
+        CompanyNameText(
           style: const TextStyle(
             color: AppPalette.gold300,
             fontSize: 12,

@@ -12,9 +12,13 @@ import 'branding_repository.dart';
 /// Also applies the company currency to [PriceFormatter] (EGP when unknown),
 /// so every price in the app follows the tenant.
 class BrandingCubit extends Cubit<BrandTokens?> {
-  BrandingCubit(this._repository) : super(null);
+  BrandingCubit(this._repository, {this.fallbackName}) : super(null);
 
   final BrandingRepository _repository;
+
+  /// The company's name before (or without) its branding — a company's own
+  /// app knows it from its build; the shared app does not.
+  final String? fallbackName;
 
   Future<void> load(String slug) async {
     final tokens = await _repository.fetchBranding(slug);
