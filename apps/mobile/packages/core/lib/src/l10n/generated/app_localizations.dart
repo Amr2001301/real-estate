@@ -9827,7 +9827,7 @@ abstract class AppLocalizations {
   /// No description provided for @shUnitsSoldN.
   ///
   /// In en, this message translates to:
-  /// **'{n} units sold'**
+  /// **'{n, plural, =1{1 unit sold} other{{n} units sold}}'**
   String shUnitsSoldN(int n);
 
   /// No description provided for @shRealized.
@@ -9967,6 +9967,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'K'**
   String get shThousand;
+
+  /// No description provided for @shWithRep.
+  ///
+  /// In en, this message translates to:
+  /// **'With {name}'**
+  String shWithRep(String name);
+
+  /// No description provided for @mhTeamGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'The team\'s target this month'**
+  String get mhTeamGoal;
+
+  /// No description provided for @mhUnitsSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Units sold'**
+  String get mhUnitsSold;
+
+  /// No description provided for @mhUnitsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 unit} other{{n} units}}'**
+  String mhUnitsN(int n);
+
+  /// No description provided for @mhActTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Team targets'**
+  String get mhActTargets;
+
+  /// No description provided for @mhActBonus.
+  ///
+  /// In en, this message translates to:
+  /// **'My earnings'**
+  String get mhActBonus;
+
+  /// No description provided for @mhFigures.
+  ///
+  /// In en, this message translates to:
+  /// **'Your team this month'**
+  String get mhFigures;
+
+  /// No description provided for @mhActiveTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Active team'**
+  String get mhActiveTeam;
+
+  /// No description provided for @mhAllActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone is active'**
+  String get mhAllActive;
+
+  /// No description provided for @mhInactiveN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} inactive'**
+  String mhInactiveN(int n);
+
+  /// No description provided for @mhDecide.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your decision'**
+  String get mhDecide;
+
+  /// No description provided for @mhPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings waiting for your approval'**
+  String get mhPending;
+
+  /// No description provided for @mhInactiveReps.
+  ///
+  /// In en, this message translates to:
+  /// **'Reps with no activity this month'**
+  String get mhInactiveReps;
+
+  /// No description provided for @mhLeaderboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Team ranking'**
+  String get mhLeaderboard;
+
+  /// No description provided for @mhPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get mhPerformance;
+
+  /// No description provided for @mhRankSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{contracts, plural, =1{1 contract} other{{contracts} contracts}} · {pct} of target'**
+  String mhRankSub(int contracts, String pct);
+
+  /// No description provided for @mhRankNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'{contracts, plural, =1{1 contract} other{{contracts} contracts}} · no target'**
+  String mhRankNoTarget(int contracts);
+
+  /// No description provided for @mhTeamAgenda.
+  ///
+  /// In en, this message translates to:
+  /// **'The team\'s week'**
+  String get mhTeamAgenda;
+
+  /// No description provided for @mhNoTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'No reps in your team yet.'**
+  String get mhNoTeam;
 }
 
 class _AppLocalizationsDelegate

@@ -5267,7 +5267,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String shUnitsSoldN(int n) {
-    return '$n وحدة مبيعة';
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة مبيعة',
+      few: '$n وحدات مبيعة',
+      two: 'وحدتان مبيعتان',
+      one: 'وحدة واحدة مبيعة',
+      zero: 'لا وحدات مبيعة',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -5342,4 +5351,98 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shThousand => 'ألف';
+
+  @override
+  String shWithRep(String name) {
+    return 'مع $name';
+  }
+
+  @override
+  String get mhTeamGoal => 'هدف الفريق هذا الشهر';
+
+  @override
+  String get mhUnitsSold => 'الوحدات المبيعة';
+
+  @override
+  String mhUnitsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة',
+      few: '$n وحدات',
+      two: 'وحدتان',
+      one: 'وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mhActTargets => 'أهداف الفريق';
+
+  @override
+  String get mhActBonus => 'مستحقاتي';
+
+  @override
+  String get mhFigures => 'أرقام فريقك هذا الشهر';
+
+  @override
+  String get mhActiveTeam => 'الفريق النشط';
+
+  @override
+  String get mhAllActive => 'كل المستشارين يعملون';
+
+  @override
+  String mhInactiveN(int n) {
+    return '$n بلا نشاط';
+  }
+
+  @override
+  String get mhDecide => 'تحتاج قرارك';
+
+  @override
+  String get mhPending => 'حجوزات تنتظر موافقتك';
+
+  @override
+  String get mhInactiveReps => 'مستشارون بلا نشاط هذا الشهر';
+
+  @override
+  String get mhLeaderboard => 'ترتيب الفريق';
+
+  @override
+  String get mhPerformance => 'الأداء';
+
+  @override
+  String mhRankSub(int contracts, String pct) {
+    String _temp0 = intl.Intl.pluralLogic(
+      contracts,
+      locale: localeName,
+      other: '$contracts عقدًا',
+      few: '$contracts عقود',
+      two: 'عقدان',
+      one: 'عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0 · $pct من الهدف';
+  }
+
+  @override
+  String mhRankNoTarget(int contracts) {
+    String _temp0 = intl.Intl.pluralLogic(
+      contracts,
+      locale: localeName,
+      other: '$contracts عقدًا',
+      few: '$contracts عقود',
+      two: 'عقدان',
+      one: 'عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0 · بلا هدف';
+  }
+
+  @override
+  String get mhTeamAgenda => 'أجندة الفريق';
+
+  @override
+  String get mhNoTeam => 'لا يوجد مستشارون في فريقك بعد.';
 }
