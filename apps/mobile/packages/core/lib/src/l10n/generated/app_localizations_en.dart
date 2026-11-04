@@ -6342,4 +6342,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get blNoRep => 'Not assigned yet';
+
+  @override
+  String cpCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n projects',
+      one: '1 project',
+      zero: 'No projects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpSearchHint => 'Search projects';
+
+  @override
+  String get cpProjects => 'Projects';
+
+  @override
+  String cpPublishedN(int n) {
+    return '$n published';
+  }
+
+  @override
+  String get cpAvailableUnits => 'Available units';
+
+  @override
+  String cpOfUnitsN(int n) {
+    return 'of $n units';
+  }
+
+  @override
+  String cpInventoryIn(String unit) {
+    return 'Inventory value ($unit)';
+  }
+
+  @override
+  String get cpInventory => 'Inventory value';
+
+  @override
+  String cpSoldReserved(int sold, int reserved) {
+    return '$sold sold · $reserved reserved';
+  }
+
+  @override
+  String get cpFeatured => 'Featured';
+
+  @override
+  String get cpFrom => 'From';
+
+  @override
+  String cpContractValueN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Contract value · $n contracts',
+      one: 'Contract value · 1 contract',
+      zero: 'Contract value',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpNoUnits => 'No units yet';
+
+  @override
+  String get cpEmpty => 'No projects';
+
+  @override
+  String get cpEmptyMessage =>
+      'No projects have been added for this company yet.';
+
+  @override
+  String get cpNoMatch => 'No projects match this choice';
+
+  @override
+  String get cpTypeResidential => 'Residential compound';
+
+  @override
+  String get cpTypeCoastal => 'Coastal';
+
+  @override
+  String get cpTypeAdministrative => 'Administrative';
+
+  @override
+  String get cpTypeCommercial => 'Commercial';
+
+  @override
+  String get cpTypeMedical => 'Medical';
+
+  @override
+  String get cpTypeMixedUse => 'Mixed use';
 }

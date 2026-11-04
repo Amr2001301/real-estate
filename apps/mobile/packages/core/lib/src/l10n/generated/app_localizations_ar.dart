@@ -6332,4 +6332,100 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get blNoRep => 'لم يُسنَد بعد';
+
+  @override
+  String cpCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n مشروعًا',
+      few: '$n مشاريع',
+      two: 'مشروعان',
+      one: 'مشروع واحد',
+      zero: 'لا مشاريع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpSearchHint => 'ابحث عن مشروع';
+
+  @override
+  String get cpProjects => 'المشاريع';
+
+  @override
+  String cpPublishedN(int n) {
+    return '$n منشورة';
+  }
+
+  @override
+  String get cpAvailableUnits => 'وحدات متاحة';
+
+  @override
+  String cpOfUnitsN(int n) {
+    return 'من $n وحدة';
+  }
+
+  @override
+  String cpInventoryIn(String unit) {
+    return 'قيمة المخزون ($unit)';
+  }
+
+  @override
+  String get cpInventory => 'قيمة المخزون';
+
+  @override
+  String cpSoldReserved(int sold, int reserved) {
+    return '$sold مباعة · $reserved محجوزة';
+  }
+
+  @override
+  String get cpFeatured => 'مميز';
+
+  @override
+  String get cpFrom => 'يبدأ من';
+
+  @override
+  String cpContractValueN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'قيمة العقود · $n عقدًا',
+      few: 'قيمة العقود · $n عقود',
+      two: 'قيمة العقود · عقدان',
+      one: 'قيمة العقود · عقد واحد',
+      zero: 'قيمة العقود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpNoUnits => 'لا توجد وحدات بعد';
+
+  @override
+  String get cpEmpty => 'لا توجد مشاريع';
+
+  @override
+  String get cpEmptyMessage => 'لم تُضَف مشاريع لهذه الشركة بعد.';
+
+  @override
+  String get cpNoMatch => 'لا توجد مشاريع بهذا الاختيار';
+
+  @override
+  String get cpTypeResidential => 'كمبوند سكني';
+
+  @override
+  String get cpTypeCoastal => 'ساحلي';
+
+  @override
+  String get cpTypeAdministrative => 'إداري';
+
+  @override
+  String get cpTypeCommercial => 'تجاري';
+
+  @override
+  String get cpTypeMedical => 'طبي';
+
+  @override
+  String get cpTypeMixedUse => 'متعدد الاستخدامات';
 }

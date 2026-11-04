@@ -11497,6 +11497,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not assigned yet'**
   String get blNoRep;
+
+  /// No description provided for @cpCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No projects} =1{1 project} other{{n} projects}}'**
+  String cpCountN(int n);
+
+  /// No description provided for @cpSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search projects'**
+  String get cpSearchHint;
+
+  /// No description provided for @cpProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get cpProjects;
+
+  /// No description provided for @cpPublishedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} published'**
+  String cpPublishedN(int n);
+
+  /// No description provided for @cpAvailableUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get cpAvailableUnits;
+
+  /// No description provided for @cpOfUnitsN.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n} units'**
+  String cpOfUnitsN(int n);
+
+  /// No description provided for @cpInventoryIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory value ({unit})'**
+  String cpInventoryIn(String unit);
+
+  /// No description provided for @cpInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory value'**
+  String get cpInventory;
+
+  /// No description provided for @cpSoldReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'{sold} sold · {reserved} reserved'**
+  String cpSoldReserved(int sold, int reserved);
+
+  /// No description provided for @cpFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get cpFeatured;
+
+  /// No description provided for @cpFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get cpFrom;
+
+  /// No description provided for @cpContractValueN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Contract value} =1{Contract value · 1 contract} other{Contract value · {n} contracts}}'**
+  String cpContractValueN(int n);
+
+  /// No description provided for @cpNoUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'No units yet'**
+  String get cpNoUnits;
+
+  /// No description provided for @cpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects'**
+  String get cpEmpty;
+
+  /// No description provided for @cpEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects have been added for this company yet.'**
+  String get cpEmptyMessage;
+
+  /// No description provided for @cpNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match this choice'**
+  String get cpNoMatch;
+
+  /// No description provided for @cpTypeResidential.
+  ///
+  /// In en, this message translates to:
+  /// **'Residential compound'**
+  String get cpTypeResidential;
+
+  /// No description provided for @cpTypeCoastal.
+  ///
+  /// In en, this message translates to:
+  /// **'Coastal'**
+  String get cpTypeCoastal;
+
+  /// No description provided for @cpTypeAdministrative.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrative'**
+  String get cpTypeAdministrative;
+
+  /// No description provided for @cpTypeCommercial.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial'**
+  String get cpTypeCommercial;
+
+  /// No description provided for @cpTypeMedical.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical'**
+  String get cpTypeMedical;
+
+  /// No description provided for @cpTypeMixedUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed use'**
+  String get cpTypeMixedUse;
 }
 
 class _AppLocalizationsDelegate
