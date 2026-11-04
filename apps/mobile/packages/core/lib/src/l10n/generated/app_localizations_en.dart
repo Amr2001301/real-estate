@@ -6273,4 +6273,421 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ldWonByBooking =>
       'A lead is won when its booking becomes a contract.';
+
+  @override
+  String blApprovedN(int n) {
+    return '$n approved';
+  }
+
+  @override
+  String get blWaitingCompany => 'Waiting for the company';
+
+  @override
+  String get blNoneRejected => 'None';
+
+  @override
+  String get blSeeReason => 'See why';
+
+  @override
+  String get blStage => 'Stage';
+
+  @override
+  String get blAnyUnit => 'Any unit';
+
+  @override
+  String blRep(String name) {
+    return 'Rep: $name';
+  }
+
+  @override
+  String blSent(String date) {
+    return 'Sent $date';
+  }
+
+  @override
+  String get blRejectionReason => 'Why it was rejected';
+
+  @override
+  String get blInterest => 'Interest';
+
+  @override
+  String get blTrack => 'Request status';
+
+  @override
+  String get blStepSent => 'Sent to the company';
+
+  @override
+  String get blStepReview => 'Under review';
+
+  @override
+  String get blStepApproved => 'Approved by the company';
+
+  @override
+  String get blStepRejected => 'Rejected by the company';
+
+  @override
+  String get blStepDuplicate => 'Already registered with the company';
+
+  @override
+  String get blStepExpired => 'The request expired';
+
+  @override
+  String get blVisits => 'Visits';
+
+  @override
+  String get blNoVisits => 'No visits yet.';
+
+  @override
+  String get blRepFollows => 'Following rep';
+
+  @override
+  String get blNoRep => 'Not assigned yet';
+
+  @override
+  String cpCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n projects',
+      one: '1 project',
+      zero: 'No projects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpSearchHint => 'Search projects';
+
+  @override
+  String get cpProjects => 'Projects';
+
+  @override
+  String cpPublishedN(int n) {
+    return '$n published';
+  }
+
+  @override
+  String get cpAvailableUnits => 'Available units';
+
+  @override
+  String cpOfUnitsN(int n) {
+    return 'of $n units';
+  }
+
+  @override
+  String cpInventoryIn(String unit) {
+    return 'Inventory value ($unit)';
+  }
+
+  @override
+  String get cpInventory => 'Inventory value';
+
+  @override
+  String cpSoldReserved(int sold, int reserved) {
+    return '$sold sold · $reserved reserved';
+  }
+
+  @override
+  String get cpFeatured => 'Featured';
+
+  @override
+  String get cpFrom => 'From';
+
+  @override
+  String cpContractValueN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Contract value · $n contracts',
+      one: 'Contract value · 1 contract',
+      zero: 'Contract value',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cpNoUnits => 'No units yet';
+
+  @override
+  String get cpEmpty => 'No projects';
+
+  @override
+  String get cpEmptyMessage =>
+      'No projects have been added for this company yet.';
+
+  @override
+  String get cpNoMatch => 'No projects match this choice';
+
+  @override
+  String get cpTypeResidential => 'Residential compound';
+
+  @override
+  String get cpTypeCoastal => 'Coastal';
+
+  @override
+  String get cpTypeAdministrative => 'Administrative';
+
+  @override
+  String get cpTypeCommercial => 'Commercial';
+
+  @override
+  String get cpTypeMedical => 'Medical';
+
+  @override
+  String get cpTypeMixedUse => 'Mixed use';
+
+  @override
+  String cuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+      zero: 'No units',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuSearchHint => 'Search by unit code';
+
+  @override
+  String cuReservedN(int n) {
+    return '$n reserved';
+  }
+
+  @override
+  String get cuAllProjects => 'All projects';
+
+  @override
+  String get cuRooms => 'Rooms';
+
+  @override
+  String get cuPrice => 'Price';
+
+  @override
+  String cuRoomsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n rooms',
+      one: '1 room',
+      zero: 'No rooms',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuFloorN(String n) {
+    return 'Floor $n';
+  }
+
+  @override
+  String get cuGroundFloor => 'Ground floor';
+
+  @override
+  String cuReservedUntil(String date) {
+    return 'Reserved until $date';
+  }
+
+  @override
+  String get cuEmpty => 'No units';
+
+  @override
+  String get cuEmptyMessage => 'No units have been added for this company yet.';
+
+  @override
+  String get cuNoMatch => 'No units match this choice';
+
+  @override
+  String get cuFilters => 'Filter units';
+
+  @override
+  String get cuProject => 'Project';
+
+  @override
+  String get cuPriceFrom => 'From';
+
+  @override
+  String get cuPriceTo => 'To';
+
+  @override
+  String get cuApply => 'Apply';
+
+  @override
+  String get cuClear => 'Clear all';
+
+  @override
+  String get cuAny => 'All';
+
+  @override
+  String get cuAllUnits => 'All units';
+
+  @override
+  String get cuProfileDesc => 'Every unit, with its status and price';
+
+  @override
+  String get ppOccupancy => 'Occupancy';
+
+  @override
+  String ppTakenOf(int taken, int total) {
+    return '$taken of $total units reserved or sold';
+  }
+
+  @override
+  String get ppUnits => 'Units';
+
+  @override
+  String ppAvailableN(int n) {
+    return '$n available';
+  }
+
+  @override
+  String ppSoldN(int n) {
+    return '$n sold';
+  }
+
+  @override
+  String get ppPhases => 'Phases';
+
+  @override
+  String ppDeliveryYear(String year) {
+    return 'Delivery $year';
+  }
+
+  @override
+  String get ppNoDelivery => 'No delivery date';
+
+  @override
+  String get ppBuildings => 'Buildings';
+
+  @override
+  String ppFloorsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n floors',
+      one: '1 floor',
+      zero: 'No floors',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ppBuildingsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n buildings',
+      one: '1 building',
+      zero: 'No buildings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ppType => 'Type';
+
+  @override
+  String get ppTotalArea => 'Total area';
+
+  @override
+  String get ppLicense => 'License number';
+
+  @override
+  String get ppPhasesBuildings => 'Phases and buildings';
+
+  @override
+  String ppDelivery(String date) {
+    return 'Delivery $date';
+  }
+
+  @override
+  String get ppFreeUnits => 'Available units';
+
+  @override
+  String get ppNoFree => 'No units are available now.';
+
+  @override
+  String get ppNoDescription => 'No description for this project yet.';
+
+  @override
+  String get ppNoPhases => 'No phases have been added to this project yet.';
+
+  @override
+  String ppPhotoOf(int i, int n) {
+    return '$i / $n';
+  }
+
+  @override
+  String get upSpecs => 'Specifications';
+
+  @override
+  String get upCode => 'Code';
+
+  @override
+  String get upReservation => 'Reservation';
+
+  @override
+  String get upActiveReservation => 'Active reservation';
+
+  @override
+  String get upClient => 'Client';
+
+  @override
+  String get upSales => 'Consultant';
+
+  @override
+  String get upExpires => 'Expires';
+
+  @override
+  String get upNoReservation =>
+      'The unit is available with no reservation on it.';
+
+  @override
+  String get upNoActive => 'No active reservation on the unit.';
+
+  @override
+  String upPastN(int n) {
+    return 'Past reservations · $n';
+  }
+
+  @override
+  String get upAllReservations => 'All reservations';
+
+  @override
+  String get upProject => 'Project';
+
+  @override
+  String get upPhase => 'Phase';
+
+  @override
+  String get upBuilding => 'Building';
+
+  @override
+  String get upUpdated => 'Last updated';
+
+  @override
+  String get upHistory => 'Status history';
+
+  @override
+  String upHistoryLine(String from, String to) {
+    return 'From $from → $to';
+  }
+
+  @override
+  String upBy(String name) {
+    return 'By $name';
+  }
+
+  @override
+  String get upMaintenance => 'Maintenance and warranty';
+
+  @override
+  String upWarrantyUntil(String date) {
+    return 'Warranty until $date';
+  }
+
+  @override
+  String get upPerMeter => 'Price per m²';
 }

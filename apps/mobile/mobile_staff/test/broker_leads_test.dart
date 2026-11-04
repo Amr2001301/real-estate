@@ -15,6 +15,8 @@ import 'package:mobile_staff/features/broker/leads/presentation/cubit/create_bro
 import 'package:mobile_staff/features/broker/leads/presentation/screens/create_broker_lead_screen.dart';
 
 class _FakeRemote implements BrokerLeadsRemoteDataSource {
+  @override
+  Future<BrokerLeadCounts> counts() async => const BrokerLeadCounts();
   _FakeRemote({this.rows = const [], this.error});
   final List<BrokerLeadDto> rows;
   final DioException? error;
@@ -37,6 +39,8 @@ class _FakeRemote implements BrokerLeadsRemoteDataSource {
 }
 
 class _FakeRepo implements BrokerLeadsRepository {
+  @override
+  Future<Result<BrokerLeadCounts>> getCounts() async => const Ok(BrokerLeadCounts());
   _FakeRepo({this.leads, this.createResult});
   final Result<List<BrokerLead>>? leads;
   final Result<BrokerLead>? createResult;

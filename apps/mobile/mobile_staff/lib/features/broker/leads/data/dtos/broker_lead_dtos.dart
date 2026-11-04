@@ -10,6 +10,7 @@ class BrokerLeadDto {
     this.email,
     this.projectName,
     this.createdAt,
+    this.json = const {},
   });
 
   final String id;
@@ -20,6 +21,9 @@ class BrokerLeadDto {
   final String? email;
   final String? projectName;
   final String? createdAt;
+
+  /// The row as sent, for the fields read by the mapper.
+  final Map<String, dynamic> json;
 
   factory BrokerLeadDto.fromJson(Map<String, dynamic> json) {
     final client = json['client'] as Map<String, dynamic>?;
@@ -34,6 +38,7 @@ class BrokerLeadDto {
       approvalStatus: json['brokerApprovalStatus'] as String? ?? 'PENDING',
       projectName: name is Map ? ((name['ar'] as String?) ?? (name['en'] as String?)) : name as String?,
       createdAt: json['createdAt'] as String?,
+      json: json,
     );
   }
 }
@@ -72,12 +77,14 @@ class BrokerLeadDetailDto {
     required this.notes,
     required this.activities,
     this.unitCode,
+    this.appointments = const [],
   });
 
   final BrokerLeadDto lead;
   final List<BrokerLeadNoteDto> notes;
   final List<BrokerLeadActivityDto> activities;
   final String? unitCode;
+  final List<Map<String, dynamic>> appointments;
 
   factory BrokerLeadDetailDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unitInterest'] as Map<String, dynamic>?;
@@ -92,6 +99,7 @@ class BrokerLeadDetailDto {
           .whereType<Map<String, dynamic>>()
           .map(BrokerLeadActivityDto.fromJson)
           .toList(),
+      appointments: ((json['appointments'] as List?) ?? const []).whereType<Map<String, dynamic>>().toList(),
     );
   }
 }

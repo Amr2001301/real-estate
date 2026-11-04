@@ -26,4 +26,7 @@ class BrokerLeadsRepositoryImpl implements BrokerLeadsRepository {
   Future<Result<BrokerLead>> createLead(NewBrokerLead input) {
     return guardApiCall(() async => (await _remote.create(input)).toEntity());
   }
+
+  @override
+  Future<Result<BrokerLeadCounts>> getCounts() => guardApiCall(_remote.counts);
 }

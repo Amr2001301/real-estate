@@ -11371,6 +11371,648 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A lead is won when its booking becomes a contract.'**
   String get ldWonByBooking;
+
+  /// No description provided for @blApprovedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} approved'**
+  String blApprovedN(int n);
+
+  /// No description provided for @blWaitingCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the company'**
+  String get blWaitingCompany;
+
+  /// No description provided for @blNoneRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get blNoneRejected;
+
+  /// No description provided for @blSeeReason.
+  ///
+  /// In en, this message translates to:
+  /// **'See why'**
+  String get blSeeReason;
+
+  /// No description provided for @blStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get blStage;
+
+  /// No description provided for @blAnyUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Any unit'**
+  String get blAnyUnit;
+
+  /// No description provided for @blRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Rep: {name}'**
+  String blRep(String name);
+
+  /// No description provided for @blSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {date}'**
+  String blSent(String date);
+
+  /// No description provided for @blRejectionReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why it was rejected'**
+  String get blRejectionReason;
+
+  /// No description provided for @blInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest'**
+  String get blInterest;
+
+  /// No description provided for @blTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Request status'**
+  String get blTrack;
+
+  /// No description provided for @blStepSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the company'**
+  String get blStepSent;
+
+  /// No description provided for @blStepReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get blStepReview;
+
+  /// No description provided for @blStepApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by the company'**
+  String get blStepApproved;
+
+  /// No description provided for @blStepRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by the company'**
+  String get blStepRejected;
+
+  /// No description provided for @blStepDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Already registered with the company'**
+  String get blStepDuplicate;
+
+  /// No description provided for @blStepExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The request expired'**
+  String get blStepExpired;
+
+  /// No description provided for @blVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get blVisits;
+
+  /// No description provided for @blNoVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'No visits yet.'**
+  String get blNoVisits;
+
+  /// No description provided for @blRepFollows.
+  ///
+  /// In en, this message translates to:
+  /// **'Following rep'**
+  String get blRepFollows;
+
+  /// No description provided for @blNoRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned yet'**
+  String get blNoRep;
+
+  /// No description provided for @cpCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No projects} =1{1 project} other{{n} projects}}'**
+  String cpCountN(int n);
+
+  /// No description provided for @cpSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search projects'**
+  String get cpSearchHint;
+
+  /// No description provided for @cpProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get cpProjects;
+
+  /// No description provided for @cpPublishedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} published'**
+  String cpPublishedN(int n);
+
+  /// No description provided for @cpAvailableUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get cpAvailableUnits;
+
+  /// No description provided for @cpOfUnitsN.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n} units'**
+  String cpOfUnitsN(int n);
+
+  /// No description provided for @cpInventoryIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory value ({unit})'**
+  String cpInventoryIn(String unit);
+
+  /// No description provided for @cpInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory value'**
+  String get cpInventory;
+
+  /// No description provided for @cpSoldReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'{sold} sold · {reserved} reserved'**
+  String cpSoldReserved(int sold, int reserved);
+
+  /// No description provided for @cpFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get cpFeatured;
+
+  /// No description provided for @cpFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get cpFrom;
+
+  /// No description provided for @cpContractValueN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Contract value} =1{Contract value · 1 contract} other{Contract value · {n} contracts}}'**
+  String cpContractValueN(int n);
+
+  /// No description provided for @cpNoUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'No units yet'**
+  String get cpNoUnits;
+
+  /// No description provided for @cpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects'**
+  String get cpEmpty;
+
+  /// No description provided for @cpEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects have been added for this company yet.'**
+  String get cpEmptyMessage;
+
+  /// No description provided for @cpNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match this choice'**
+  String get cpNoMatch;
+
+  /// No description provided for @cpTypeResidential.
+  ///
+  /// In en, this message translates to:
+  /// **'Residential compound'**
+  String get cpTypeResidential;
+
+  /// No description provided for @cpTypeCoastal.
+  ///
+  /// In en, this message translates to:
+  /// **'Coastal'**
+  String get cpTypeCoastal;
+
+  /// No description provided for @cpTypeAdministrative.
+  ///
+  /// In en, this message translates to:
+  /// **'Administrative'**
+  String get cpTypeAdministrative;
+
+  /// No description provided for @cpTypeCommercial.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial'**
+  String get cpTypeCommercial;
+
+  /// No description provided for @cpTypeMedical.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical'**
+  String get cpTypeMedical;
+
+  /// No description provided for @cpTypeMixedUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed use'**
+  String get cpTypeMixedUse;
+
+  /// No description provided for @cuCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{1 unit} other{{n} units}}'**
+  String cuCountN(int n);
+
+  /// No description provided for @cuSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by unit code'**
+  String get cuSearchHint;
+
+  /// No description provided for @cuReservedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} reserved'**
+  String cuReservedN(int n);
+
+  /// No description provided for @cuAllProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'All projects'**
+  String get cuAllProjects;
+
+  /// No description provided for @cuRooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms'**
+  String get cuRooms;
+
+  /// No description provided for @cuPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get cuPrice;
+
+  /// No description provided for @cuRoomsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No rooms} =1{1 room} other{{n} rooms}}'**
+  String cuRoomsN(int n);
+
+  /// No description provided for @cuFloorN.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor {n}'**
+  String cuFloorN(String n);
+
+  /// No description provided for @cuGroundFloor.
+  ///
+  /// In en, this message translates to:
+  /// **'Ground floor'**
+  String get cuGroundFloor;
+
+  /// No description provided for @cuReservedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved until {date}'**
+  String cuReservedUntil(String date);
+
+  /// No description provided for @cuEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No units'**
+  String get cuEmpty;
+
+  /// No description provided for @cuEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No units have been added for this company yet.'**
+  String get cuEmptyMessage;
+
+  /// No description provided for @cuNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No units match this choice'**
+  String get cuNoMatch;
+
+  /// No description provided for @cuFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter units'**
+  String get cuFilters;
+
+  /// No description provided for @cuProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get cuProject;
+
+  /// No description provided for @cuPriceFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get cuPriceFrom;
+
+  /// No description provided for @cuPriceTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get cuPriceTo;
+
+  /// No description provided for @cuApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get cuApply;
+
+  /// No description provided for @cuClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get cuClear;
+
+  /// No description provided for @cuAny.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get cuAny;
+
+  /// No description provided for @cuAllUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'All units'**
+  String get cuAllUnits;
+
+  /// No description provided for @cuProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Every unit, with its status and price'**
+  String get cuProfileDesc;
+
+  /// No description provided for @ppOccupancy.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupancy'**
+  String get ppOccupancy;
+
+  /// No description provided for @ppTakenOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{taken} of {total} units reserved or sold'**
+  String ppTakenOf(int taken, int total);
+
+  /// No description provided for @ppUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get ppUnits;
+
+  /// No description provided for @ppAvailableN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} available'**
+  String ppAvailableN(int n);
+
+  /// No description provided for @ppSoldN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} sold'**
+  String ppSoldN(int n);
+
+  /// No description provided for @ppPhases.
+  ///
+  /// In en, this message translates to:
+  /// **'Phases'**
+  String get ppPhases;
+
+  /// No description provided for @ppDeliveryYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery {year}'**
+  String ppDeliveryYear(String year);
+
+  /// No description provided for @ppNoDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery date'**
+  String get ppNoDelivery;
+
+  /// No description provided for @ppBuildings.
+  ///
+  /// In en, this message translates to:
+  /// **'Buildings'**
+  String get ppBuildings;
+
+  /// No description provided for @ppFloorsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No floors} =1{1 floor} other{{n} floors}}'**
+  String ppFloorsN(int n);
+
+  /// No description provided for @ppBuildingsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No buildings} =1{1 building} other{{n} buildings}}'**
+  String ppBuildingsN(int n);
+
+  /// No description provided for @ppType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get ppType;
+
+  /// No description provided for @ppTotalArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Total area'**
+  String get ppTotalArea;
+
+  /// No description provided for @ppLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'License number'**
+  String get ppLicense;
+
+  /// No description provided for @ppPhasesBuildings.
+  ///
+  /// In en, this message translates to:
+  /// **'Phases and buildings'**
+  String get ppPhasesBuildings;
+
+  /// No description provided for @ppDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery {date}'**
+  String ppDelivery(String date);
+
+  /// No description provided for @ppFreeUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get ppFreeUnits;
+
+  /// No description provided for @ppNoFree.
+  ///
+  /// In en, this message translates to:
+  /// **'No units are available now.'**
+  String get ppNoFree;
+
+  /// No description provided for @ppNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description for this project yet.'**
+  String get ppNoDescription;
+
+  /// No description provided for @ppNoPhases.
+  ///
+  /// In en, this message translates to:
+  /// **'No phases have been added to this project yet.'**
+  String get ppNoPhases;
+
+  /// No description provided for @ppPhotoOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{i} / {n}'**
+  String ppPhotoOf(int i, int n);
+
+  /// No description provided for @upSpecs.
+  ///
+  /// In en, this message translates to:
+  /// **'Specifications'**
+  String get upSpecs;
+
+  /// No description provided for @upCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get upCode;
+
+  /// No description provided for @upReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation'**
+  String get upReservation;
+
+  /// No description provided for @upActiveReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Active reservation'**
+  String get upActiveReservation;
+
+  /// No description provided for @upClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get upClient;
+
+  /// No description provided for @upSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get upSales;
+
+  /// No description provided for @upExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires'**
+  String get upExpires;
+
+  /// No description provided for @upNoReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit is available with no reservation on it.'**
+  String get upNoReservation;
+
+  /// No description provided for @upNoActive.
+  ///
+  /// In en, this message translates to:
+  /// **'No active reservation on the unit.'**
+  String get upNoActive;
+
+  /// No description provided for @upPastN.
+  ///
+  /// In en, this message translates to:
+  /// **'Past reservations · {n}'**
+  String upPastN(int n);
+
+  /// No description provided for @upAllReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'All reservations'**
+  String get upAllReservations;
+
+  /// No description provided for @upProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get upProject;
+
+  /// No description provided for @upPhase.
+  ///
+  /// In en, this message translates to:
+  /// **'Phase'**
+  String get upPhase;
+
+  /// No description provided for @upBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Building'**
+  String get upBuilding;
+
+  /// No description provided for @upUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get upUpdated;
+
+  /// No description provided for @upHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Status history'**
+  String get upHistory;
+
+  /// No description provided for @upHistoryLine.
+  ///
+  /// In en, this message translates to:
+  /// **'From {from} → {to}'**
+  String upHistoryLine(String from, String to);
+
+  /// No description provided for @upBy.
+  ///
+  /// In en, this message translates to:
+  /// **'By {name}'**
+  String upBy(String name);
+
+  /// No description provided for @upMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance and warranty'**
+  String get upMaintenance;
+
+  /// No description provided for @upWarrantyUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty until {date}'**
+  String upWarrantyUntil(String date);
+
+  /// No description provided for @upPerMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per m²'**
+  String get upPerMeter;
 }
 
 class _AppLocalizationsDelegate
