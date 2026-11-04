@@ -85,14 +85,14 @@ import '../features/performance/presentation/screens/team_performance_screen.dar
 import '../features/performance/presentation/screens/team_targets_screen.dart';
 import '../features/catalog/domain/repositories/staff_catalog_repository.dart';
 import '../features/catalog/domain/usecases/staff_catalog_use_cases.dart';
-import '../features/catalog/presentation/cubit/staff_unit_detail_cubit.dart';
 import '../features/catalog/project_page/project_page_data.dart';
 import '../features/catalog/project_page/project_page_screen.dart';
 import '../features/catalog/projects_list/projects_list_data.dart';
 import '../features/catalog/projects_list/projects_list_screen.dart';
 import '../features/catalog/units_list/units_list_data.dart';
 import '../features/catalog/units_list/units_list_screen.dart';
-import '../features/catalog/presentation/screens/staff_unit_detail_screen.dart';
+import '../features/catalog/unit_page/unit_page_data.dart';
+import '../features/catalog/unit_page/unit_page_screen.dart';
 import '../features/clients/domain/entities/staff_client.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
 import '../features/clients/domain/usecases/client_use_cases.dart';
@@ -608,11 +608,8 @@ GoRouter createStaffRouter(
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return BlocProvider(
-            create: (ctx) => StaffUnitDetailCubit(
-              GetStaffUnitDetail(ctx.read<StaffCatalogRepository>()),
-              unitId: id,
-            ),
-            child: const StaffUnitDetailScreen(),
+            create: (ctx) => UnitPageCubit(UnitPageRepository(ctx.read<Dio>()), unitId: id),
+            child: const UnitPageScreen(),
           );
         },
       ),

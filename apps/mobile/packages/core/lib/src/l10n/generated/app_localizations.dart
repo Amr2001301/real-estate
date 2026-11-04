@@ -11887,6 +11887,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{i} / {n}'**
   String ppPhotoOf(int i, int n);
+
+  /// No description provided for @upSpecs.
+  ///
+  /// In en, this message translates to:
+  /// **'Specifications'**
+  String get upSpecs;
+
+  /// No description provided for @upCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get upCode;
+
+  /// No description provided for @upReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation'**
+  String get upReservation;
+
+  /// No description provided for @upActiveReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Active reservation'**
+  String get upActiveReservation;
+
+  /// No description provided for @upClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get upClient;
+
+  /// No description provided for @upSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get upSales;
+
+  /// No description provided for @upExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires'**
+  String get upExpires;
+
+  /// No description provided for @upNoReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit is available with no reservation on it.'**
+  String get upNoReservation;
+
+  /// No description provided for @upNoActive.
+  ///
+  /// In en, this message translates to:
+  /// **'No active reservation on the unit.'**
+  String get upNoActive;
+
+  /// No description provided for @upPastN.
+  ///
+  /// In en, this message translates to:
+  /// **'Past reservations · {n}'**
+  String upPastN(int n);
+
+  /// No description provided for @upAllReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'All reservations'**
+  String get upAllReservations;
+
+  /// No description provided for @upProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get upProject;
+
+  /// No description provided for @upPhase.
+  ///
+  /// In en, this message translates to:
+  /// **'Phase'**
+  String get upPhase;
+
+  /// No description provided for @upBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Building'**
+  String get upBuilding;
+
+  /// No description provided for @upUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Last updated'**
+  String get upUpdated;
+
+  /// No description provided for @upHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Status history'**
+  String get upHistory;
+
+  /// No description provided for @upHistoryLine.
+  ///
+  /// In en, this message translates to:
+  /// **'From {from} → {to}'**
+  String upHistoryLine(String from, String to);
+
+  /// No description provided for @upBy.
+  ///
+  /// In en, this message translates to:
+  /// **'By {name}'**
+  String upBy(String name);
+
+  /// No description provided for @upMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance and warranty'**
+  String get upMaintenance;
+
+  /// No description provided for @upWarrantyUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranty until {date}'**
+  String upWarrantyUntil(String date);
+
+  /// No description provided for @upPerMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per m²'**
+  String get upPerMeter;
 }
 
 class _AppLocalizationsDelegate

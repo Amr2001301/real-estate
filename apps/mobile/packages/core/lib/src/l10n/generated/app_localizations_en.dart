@@ -6618,4 +6618,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String ppPhotoOf(int i, int n) {
     return '$i / $n';
   }
+
+  @override
+  String get upSpecs => 'Specifications';
+
+  @override
+  String get upCode => 'Code';
+
+  @override
+  String get upReservation => 'Reservation';
+
+  @override
+  String get upActiveReservation => 'Active reservation';
+
+  @override
+  String get upClient => 'Client';
+
+  @override
+  String get upSales => 'Consultant';
+
+  @override
+  String get upExpires => 'Expires';
+
+  @override
+  String get upNoReservation =>
+      'The unit is available with no reservation on it.';
+
+  @override
+  String get upNoActive => 'No active reservation on the unit.';
+
+  @override
+  String upPastN(int n) {
+    return 'Past reservations · $n';
+  }
+
+  @override
+  String get upAllReservations => 'All reservations';
+
+  @override
+  String get upProject => 'Project';
+
+  @override
+  String get upPhase => 'Phase';
+
+  @override
+  String get upBuilding => 'Building';
+
+  @override
+  String get upUpdated => 'Last updated';
+
+  @override
+  String get upHistory => 'Status history';
+
+  @override
+  String upHistoryLine(String from, String to) {
+    return 'From $from → $to';
+  }
+
+  @override
+  String upBy(String name) {
+    return 'By $name';
+  }
+
+  @override
+  String get upMaintenance => 'Maintenance and warranty';
+
+  @override
+  String upWarrantyUntil(String date) {
+    return 'Warranty until $date';
+  }
+
+  @override
+  String get upPerMeter => 'Price per m²';
 }

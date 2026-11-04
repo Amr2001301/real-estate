@@ -75,7 +75,22 @@ class _ProjectPageScreenState extends State<ProjectPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ProjectPageCubit>().load,
                   child: ListView(padding: EdgeInsets.zero, children: [
-                    _Hero(page: p),
+                    CatalogPageHero(
+                      photos: p.photos,
+                      badges: [
+                        CatalogBadge.status(
+                          projectStatusLabel(l10n, p.status),
+                          p.status == 'PUBLISHED' ? catalogAvailable : const Color(0xFF6B6256),
+                          icon: p.status == 'PUBLISHED' ? Icons.public_rounded : null,
+                        ),
+                        if (p.featured) CatalogBadge.gold(l10n.cpFeatured, icon: Icons.star_rounded),
+                      ],
+                      title: p.name.resolve(Localizations.localeOf(context).languageCode),
+                      place: p.place(),
+                      shareKey: const Key('project-share'),
+                      onShare: () => StaffShare.project(
+                          projectId: p.id, projectName: p.name.resolve(Localizations.localeOf(context).languageCode), l10n: l10n),
+                    ),
                     Transform.translate(offset: const Offset(0, -30), child: _Occupancy(page: p)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -128,104 +143,6 @@ class _ProjectPageScreenState extends State<ProjectPageScreen> {
             ]);
           },
         ),
-      ),
-    );
-  }
-}
-
-/// The cover: back and share, the status and "featured", the name and the
-/// place — nothing else (the owner asked for a calm top).
-class _Hero extends StatefulWidget {
-  const _Hero({required this.page});
-  final ProjectPage page;
-
-  @override
-  State<_Hero> createState() => _HeroState();
-}
-
-class _HeroState extends State<_Hero> {
-  int _i = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final p = widget.page;
-    final lang = Localizations.localeOf(context).languageCode;
-    final top = MediaQuery.paddingOf(context).top;
-    final statusColor = p.status == 'PUBLISHED' ? catalogAvailable : const Color(0xFF6B6256);
-    final place = p.place();
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-      child: SizedBox(
-        height: 290 + top,
-        child: Stack(fit: StackFit.expand, children: [
-          if (p.photos.length > 1)
-            PageView(
-              onPageChanged: (i) => setState(() => _i = i),
-              children: [for (final u in p.photos) CatalogCover(url: u, height: 290 + top)],
-            )
-          else
-            CatalogCover(url: p.photos.firstOrNull, height: 290 + top),
-          const IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.center,
-                  colors: [Color(0x660B1727), Colors.transparent],
-                ),
-              ),
-            ),
-          ),
-          PositionedDirectional(
-            top: top + 10,
-            start: 14,
-            end: 14,
-            child: Row(children: [
-              HomeHeroButton(
-                icon: Icons.arrow_back_rounded, // mirrors to → in Arabic
-                onTap: () => Navigator.of(context).maybePop(),
-              ),
-              const Spacer(),
-              if (p.photos.length > 1)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(color: AppPalette.navy.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(99)),
-                  child: Text(l10n.ppPhotoOf(_i + 1, p.photos.length), style: const TextStyle(fontSize: 11, color: Colors.white)),
-                ),
-              const SizedBox(width: 8),
-              HomeHeroButton(
-                key: const Key('project-share'),
-                icon: Icons.ios_share_rounded,
-                onTap: () => StaffShare.project(projectId: p.id, projectName: p.name.resolve(lang), l10n: l10n),
-              ),
-            ]),
-          ),
-          PositionedDirectional(
-            start: 16,
-            end: 16,
-            bottom: 46,
-            child: IgnorePointer(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Wrap(spacing: 6, children: [
-                  CatalogBadge.status(projectStatusLabel(l10n, p.status), statusColor,
-                      icon: p.status == 'PUBLISHED' ? Icons.public_rounded : null),
-                  if (p.featured) CatalogBadge.gold(l10n.cpFeatured, icon: Icons.star_rounded),
-                ]),
-                const SizedBox(height: 8),
-                Text(p.name.resolve(lang), maxLines: 2, overflow: TextOverflow.ellipsis, style: homeDisplay(25, Colors.white)),
-                if (place.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.location_on_rounded, size: 15, color: AppPalette.gold300),
-                    const SizedBox(width: 4),
-                    Expanded(child: Text(place, style: const TextStyle(fontSize: 12.5, color: Color(0xFFDCE3EC)))),
-                  ]),
-                ],
-              ]),
-            ),
-          ),
-        ]),
       ),
     );
   }

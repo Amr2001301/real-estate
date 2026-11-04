@@ -211,3 +211,108 @@ class CatalogUnitsMix extends StatelessWidget {
     ]);
   }
 }
+
+/// A page's cover (owner-approved, calm): back and share on top; the
+/// badges, the title and the place at the bottom; the photos swipe when
+/// there are several.
+class CatalogPageHero extends StatefulWidget {
+  const CatalogPageHero({
+    super.key,
+    required this.photos,
+    required this.badges,
+    required this.title,
+    this.place = '',
+    this.onShare,
+    this.shareKey,
+    this.height = 290,
+  });
+
+  final List<String> photos;
+  final List<Widget> badges;
+  final String title;
+  final String place;
+  final VoidCallback? onShare;
+  final Key? shareKey;
+  final double height;
+
+  @override
+  State<CatalogPageHero> createState() => _CatalogPageHeroState();
+}
+
+class _CatalogPageHeroState extends State<CatalogPageHero> {
+  int _i = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final top = MediaQuery.paddingOf(context).top;
+    final h = widget.height + top;
+    final photos = widget.photos;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+      child: SizedBox(
+        height: h,
+        child: Stack(fit: StackFit.expand, children: [
+          if (photos.length > 1)
+            PageView(
+              onPageChanged: (i) => setState(() => _i = i),
+              children: [for (final u in photos) CatalogCover(url: u, height: h)],
+            )
+          else
+            CatalogCover(url: photos.firstOrNull, height: h),
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.center,
+                  colors: [Color(0x660B1727), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            top: top + 10,
+            start: 14,
+            end: 14,
+            child: Row(children: [
+              // arrow_back mirrors itself to → in Arabic.
+              HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: () => Navigator.of(context).maybePop()),
+              const Spacer(),
+              if (photos.length > 1)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(color: AppPalette.navy.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(99)),
+                  child: Text(l10n.ppPhotoOf(_i + 1, photos.length), style: const TextStyle(fontSize: 11, color: Colors.white)),
+                ),
+              if (widget.onShare != null) ...[
+                const SizedBox(width: 8),
+                HomeHeroButton(key: widget.shareKey, icon: Icons.ios_share_rounded, tooltip: l10n.staffShareWithClient, onTap: widget.onShare!),
+              ],
+            ]),
+          ),
+          PositionedDirectional(
+            start: 16,
+            end: 16,
+            bottom: 46,
+            child: IgnorePointer(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Wrap(spacing: 6, children: widget.badges),
+                const SizedBox(height: 8),
+                Text(widget.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: homeDisplay(25, Colors.white)),
+                if (widget.place.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    const Icon(Icons.location_on_rounded, size: 15, color: AppPalette.gold300),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(widget.place, style: const TextStyle(fontSize: 12.5, color: Color(0xFFDCE3EC)))),
+                  ]),
+                ],
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}

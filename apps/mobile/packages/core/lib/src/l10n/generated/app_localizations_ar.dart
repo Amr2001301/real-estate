@@ -6619,4 +6619,75 @@ class AppLocalizationsAr extends AppLocalizations {
   String ppPhotoOf(int i, int n) {
     return '$i / $n';
   }
+
+  @override
+  String get upSpecs => 'المواصفات';
+
+  @override
+  String get upCode => 'الكود';
+
+  @override
+  String get upReservation => 'الحجز';
+
+  @override
+  String get upActiveReservation => 'حجز نشط';
+
+  @override
+  String get upClient => 'العميل';
+
+  @override
+  String get upSales => 'المستشار';
+
+  @override
+  String get upExpires => 'ينتهي';
+
+  @override
+  String get upNoReservation => 'الوحدة متاحة ولا يوجد عليها حجز.';
+
+  @override
+  String get upNoActive => 'لا يوجد حجز نشط على الوحدة.';
+
+  @override
+  String upPastN(int n) {
+    return 'حجوزات سابقة · $n';
+  }
+
+  @override
+  String get upAllReservations => 'كل الحجوزات';
+
+  @override
+  String get upProject => 'المشروع';
+
+  @override
+  String get upPhase => 'المرحلة';
+
+  @override
+  String get upBuilding => 'المبنى';
+
+  @override
+  String get upUpdated => 'آخر تحديث';
+
+  @override
+  String get upHistory => 'سجل الحالة';
+
+  @override
+  String upHistoryLine(String from, String to) {
+    return 'من $from ← $to';
+  }
+
+  @override
+  String upBy(String name) {
+    return 'بواسطة $name';
+  }
+
+  @override
+  String get upMaintenance => 'الصيانة والضمان';
+
+  @override
+  String upWarrantyUntil(String date) {
+    return 'الضمان حتى $date';
+  }
+
+  @override
+  String get upPerMeter => 'سعر المتر';
 }
