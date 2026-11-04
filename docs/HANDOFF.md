@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-03, after #251)
+# Handoff — where the work stands (2026-11-04, after #261)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -76,11 +76,22 @@
 - **#251:** تنبيه للموظفين (المندوب ومديره والأدمن) بالعقود اللي ماتمضتش وعليها دفعات مستحقة، مرة وبعدين كل أسبوع. العميل مايوصلهوش حاجة.
 - **الجاي:** خطط السداد في صفحات الوسيط، والنشر على السيرفر (بموافقتك ونسخة احتياطية).
 
+**بعد كده (3 → 4 نوفمبر، #252–#261):** القسم **2j** تحت. باختصار:
+- **خطط السداد للوسيط (#253، #254) والاختيار الجماعي (#255):** الوسيط بيشوف ويحجز بس بالخطط اللي الشركة معلّماها «تظهر للعملاء أيضًا»، والشركة تقدر تعلّم كذا خطة مرة واحدة من صفحة الخطط.
+- **اختبار التطبيقين يدوي تاني (#256، #257):** صفحات كانت بتفتح رمادي من اللينك، صفحة «الصفحة غير موجودة» بالعربي، أسماء الخطط بالأكواد بتظهر صح، وصفحات ممنوعة للمبيعات بتقول «غير متاحة لحسابك».
+- **صفحة صور كل الشاشات:** https://claude.ai/artifact/NPHeWzRQT4ys9sHXNhFvNp — 109 شاشة بأرقام (قبل التعديلات اللي بعدها). المالك بيبعت أرقام الشاشات اللي مش عاجباه.
+- **مراجعة المالك للشاشات — 4 أجزاء، كلها مدموجة:**
+  - **#258:** تطبيق العميل لشركة واحدة؛ شاشة «اختيار المطوّر» اتشالت خالص؛ لوجو الشركة واسمها بدل ديفورا (مربع أبيض واللوجو كامل)؛ تطبيق الموظفين من غير اسم ديفورا.
+  - **#259:** صفحة «من نحن» بلوجو الشركة وعناوين ونقط وكارت تواصل؛ قسم «عن الشركة» بأيقونة لكل صفحة.
+  - **#260:** تفاصيل العقد (ملخص السداد، القسط القادم، خطة السداد)، كشف الحساب بالشهور، وتفاصيل الدفعة بمراحلها.
+  - **#261:** طلب زيارة (يوم وساعة)، طلب معلومات (مواضيع جاهزة)، وطلب صيانة بخطوات ومربعات بأيقونات، وصفحة تأكيد بعد كل طلب.
+- **الجاي:** المالك هيبعت باقي الشاشات اللي مش عاجباه من صفحة الصور؛ بعدها النشر على السيرفر (بموافقته ونسخة احتياطية).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #251 مدموج. **ابدأ بالقسم 2i** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #261 مدموج. **ابدأ بالقسم 2j** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -449,6 +460,34 @@ Items 1 and 2 of 2h are done (#234, #235); the two small items at the end of 2h 
 **Mobile checks before every push:** `flutter analyze` and `flutter test` in `packages/core`, `mobile_customer`, `mobile_staff` (flutter at `/opt/flutter-sdk/flutter/bin`). Afterwards `git checkout` `apps/mobile/pubspec.lock` and the three `analysis_options.yaml` files — local tooling rewrites them. Known analyzer warning: customer `image_picker_photo_picker.dart:41`.
 
 **How the apps were hand-tested (QA harness, not in the repo):** a copy of `apps/mobile` with web platforms added (`flutter create --platforms web .` in each app), built with `flutter build web --profile -t lib/main_dev.dart --no-web-resources-cdn`, served with `python3 -m http.server` (customer :8081, staff :8082), against a local API in dev mode on a DB filled by the full demo seed. Playwright drives the apps through Flutter's semantics tree (enable it by clicking `flt-semantics-placeholder`, then find nodes by `aria-label`/text). Logins: `*@demo-full.devora` / `DemoFull@2026!` (mahmoud.sales, hala.manager, sayed.maintenance, karim.broker), `admin@example.com` / `ChangeMe123!` (company code `default`), customer by OTP (code printed in the API log). Screens were checked in light and dark, Arabic and English.
+
+### 2j. #252–#261 (2026-11-03 → 2026-11-04) — broker plans, second hand-test, the owner's screen review
+
+| PR | Slice | Main points |
+|---|---|---|
+| #252 | Docs | Handoff after #251. |
+| #253 | API + broker app BP1 | `GET /portal/units/:id/payment-plans`, `/portal/projects/:id/payment-plans`: the plans customers see (ACTIVE + PUBLIC), on a granted unit/project only (else 404). `PlanTemplatesService.customerPlansForUnit/ForProject` exported. Broker pages show «أو من … شهريًا», the plan table, the calculator. |
+| #254 | API BP2 | Broker booking (`/portal/reservations/plan-options`, `POST /portal/reservations`) takes only those plans; a sales-only plan → 400 «غير متاحة للوسطاء». **After the deploy the company must mark plans «تظهر للعملاء أيضًا», or brokers cannot book.** |
+| #255 | API + dashboard PP2 | `POST /installment-plan-templates/visibility` (several plans at once), `?visibility=` filter on the list, a bulk bar on the plans page (`_components/bulk-visibility.tsx`). |
+| #256 | Mobile QA-2 | Second hand-test of both apps, every role. Direct links no longer open a grey screen (customer submit-proof and property detail, broker project/unit, staff deposits/record, documents-view; `LoadById` in both apps); unknown routes show core `AppNotFoundPage`; `ltrRuns()` keeps codes like «DF-NG-B02-502» in order inside Arabic plan names; old AppBars on visit/info request and profile replaced; two overflow fixes. |
+| #257 | Mobile QA-3 | Staff `StaffAccessGate` on cheques / ledger / campaigns / payments review (a link from an account without access shows «هذه الصفحة غير متاحة لحسابك»); signed-in customer on `/more` → `/account`; a clear on/off `switchTheme`. |
+| #258 | Customer app BR1 | Every customer build is one company's: `COMPANY_SLUG` required in every flavor (`--dart-define=COMPANY_SLUG=default` for local dev; bootstrap throws without it). The company picker, company search, `/select-company` and `changeCompany` are gone; a switched-off company shows «التطبيق غير متاح حاليًا» on the startup screen. `BrandMark` = the company's logo (from branding) whole on a white tile, or its initials, never the bundled Devora logo; `CompanyNameText` replaces «ديفورا العقارية»; staff sign-in title «مرحبًا بعودتك». |
+| #259 | Customer app CP2 | «عن الشركة»: each page with its own icon and a line (`pageKindOf`: about, privacy, terms, payment, FAQ, contact). A page opens on the company's header; the body reads `# ` headings, `-`/`•`/`1.` lists, paragraphs (`blocksOf`); a contact card (call / WhatsApp) from the company's branding (`BrandTokens.contactPhone/contactWhatsApp/contactEmail`). `BrandMark` uses `Image.network` (CachedNetworkImage drew the logo black on the web on its second use). |
+| #260 | Customer app MN3 | Contract detail as on the website: `ContractMoneyCard` (value, share paid, paid/remaining from the statement), next installment (with «إرسال إثبات الدفع»), `ContractPlanCard` (price, down payment, each installment / frequency, duration, start; cash says so). The customer `Contract` carries `totalAmount`, `downPayment`, `plan`. Statement: the same card, chips, movements by month. Payment detail: method, the installment it paid, contract/booking number, unit, and a «حالة الدفعة» timeline (sent or recorded, review, confirmed / rejected with reason / reversed / returned). `Deposit` carries those fields from `/me/deposits`. |
+| #261 | Customer app RQ4 | Visit request: subject card (unit/project with its picture, passed by the page that opens it), a day of the next two weeks + an hour, note, «سنتواصل معك على» (session name/phone/e-mail), confirmation page. Info request: quick topics that can be sent alone (`infoRequestMessage`), optional message. New maintenance request: numbered steps, category tiles with icons (`maintenanceCategoryIcon`), confirmation page (pops `true` so the list reloads). Shared `common/request_kit.dart`. Priority stays per category (the customer API takes none). |
+
+**Owner decisions (2026-11-04):** every customer app is one company's — the company picker must not exist at all; no Devora logo or name anywhere (staff sign-in shows no app name); logos look bad cropped in a framed box → whole logo on a white tile; app screens must show the same data as the website (contract, statement, payment, requests); all new copy in فصحى.
+
+**The screens gallery (for the owner's review):** https://claude.ai/artifact/NPHeWzRQT4ys9sHXNhFvNp — 109 numbered screens of both apps, every role, taken before #258–#261. The owner reviews it and sends screen numbers with what to change; numbers 1–37 and the new maintenance request are done (#258–#261). Built by `qa/tours4.sh` + `qa/gallery.py` + `qa/gallery_html.py` in the QA harness (below); re-run them to refresh it.
+
+**Demo data note:** the e2e customer (`customer@example.com`) carries test data in English («Customer1 maintenance request — leaky [e2e] faucet», «Customer1 contract PDF [e2e]»). For screenshots use a `*@demo-full.devora` customer instead. Locally the duplicate «من نحن» / «سياسة الخصوصية» pages (`demo-about`, `demo-privacy`) were unpublished and the about page got headings and a list — local DB only, not in the seed.
+
+**Next (owner picks; one PR each, owner approves each merge):**
+1. **More screens from the gallery** — the owner sends the numbers of the screens he does not like (38 onward, staff app included).
+2. **Production deploy** of everything since 2026-09-18 — explicit owner approval and a backup first (section 5, "Deferred by the owner"). Customer app builds now need `COMPANY_SLUG` (the company-app workflow already passes it). After the deploy, companies must mark plans «تظهر للعملاء أيضًا» (customers' plans and broker bookings depend on it), and set their logo and contact phone / WhatsApp in branding (the apps show them).
+3. Postponed: e-signing the contract itself (lawyer first).
+
+**QA harness changes since 2i:** the customer web build must pass `--dart-define=COMPANY_SLUG=default --dart-define=COMPANY_NAME=<name>`; a sample logo for screenshots can be served from the web build folder and set as the company's `logoUrl` (use a new file name per change — the browser caches by URL).
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
