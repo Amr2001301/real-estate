@@ -48,7 +48,7 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _FilterSheet(state: cubit.state, onApply: cubit.apply),
+      builder: (_) => UnitsFilterSheet(query: cubit.state.query, projects: cubit.state.projects, onApply: cubit.apply),
     );
   }
 
@@ -120,20 +120,20 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
                         padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 0),
                         child: Wrap(spacing: 8, runSpacing: 8, children: [
                           if (q.projectId != null)
-                            _ActiveChip(
+                            UnitsActiveChip(
                               key: const Key('units-chip-project'),
                               icon: Icons.apartment_rounded,
                               label: state.projectName(q.projectId) ?? l10n.cuProject,
                               onRemove: () => cubit.apply(q.without(project: true)),
                             ),
                           if (q.bedrooms != null)
-                            _ActiveChip(
+                            UnitsActiveChip(
                               icon: Icons.bed_rounded,
                               label: l10n.cuRoomsN(q.bedrooms!),
                               onRemove: () => cubit.apply(q.without(bedrooms: true)),
                             ),
                           if (q.priceMin != null || q.priceMax != null)
-                            _ActiveChip(
+                            UnitsActiveChip(
                               icon: Icons.payments_rounded,
                               label: [
                                 if (q.priceMin != null) '${l10n.cuPriceFrom} ${homeCompactText(q.priceMin!, l10n)}',
@@ -215,8 +215,8 @@ class _Figures extends StatelessWidget {
   }
 }
 
-class _ActiveChip extends StatelessWidget {
-  const _ActiveChip({super.key, required this.icon, required this.label, required this.onRemove});
+class UnitsActiveChip extends StatelessWidget {
+  const UnitsActiveChip({super.key, required this.icon, required this.label, required this.onRemove});
   final IconData icon;
   final String label;
   final VoidCallback onRemove;
@@ -238,8 +238,16 @@ class _ActiveChip extends StatelessWidget {
 /// area, rooms, bathrooms and floor; when a reservation lapses; and the
 /// price with the calculator and sharing.
 class UnitCard extends StatelessWidget {
-  const UnitCard({super.key, required this.row});
+  const UnitCard({super.key, required this.row, this.onTap, this.actions, this.tag});
   final CatalogUnitRow row;
+
+  /// The broker's pages open their own unit page and offer their own
+  /// buttons; the staff ones default to theirs.
+  final VoidCallback? onTap;
+  final List<Widget>? actions;
+
+  /// One more chip after the specs (the broker's access).
+  final (IconData, String)? tag;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +262,7 @@ class UnitCard extends StatelessWidget {
       if (row.bedrooms != null) (Icons.bed_rounded, l10n.cuRoomsN(row.bedrooms!)),
       if (row.bathrooms != null) (Icons.bathtub_rounded, ltr('${row.bathrooms}')),
       if (row.floor != null) (Icons.stairs_rounded, row.floor == 0 ? l10n.cuGroundFloor : l10n.cuFloorN(ltr('${row.floor}'))),
+      ?tag,
     ];
     return Material(
       color: colors.surface,
@@ -261,7 +270,7 @@ class UnitCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: Key('unit-card-${row.id}'),
-        onTap: () => context.push('/units/${row.id}'),
+        onTap: onTap ?? () => context.push('/units/${row.id}'),
         child: DecoratedBox(
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -361,16 +370,19 @@ class UnitCard extends StatelessWidget {
                       Text(l10n.priceOnRequest, style: TextStyle(fontSize: 13, color: colors.inkMuted)),
                   ]),
                 ),
-                _RoundAction(
-                  key: Key('unit-calc-${row.id}'),
-                  icon: Icons.calculate_rounded,
-                  onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
-                ),
-                const SizedBox(width: 6),
-                _RoundAction(
-                  icon: Icons.ios_share_rounded,
-                  onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
-                ),
+                ...?actions,
+                if (actions == null) ...[
+                  UnitRoundAction(
+                    key: Key('unit-calc-${row.id}'),
+                    icon: Icons.calculate_rounded,
+                    onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
+                  ),
+                  const SizedBox(width: 6),
+                  UnitRoundAction(
+                    icon: Icons.ios_share_rounded,
+                    onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
+                  ),
+                ],
               ]),
             ),
           ]),
@@ -380,8 +392,8 @@ class UnitCard extends StatelessWidget {
   }
 }
 
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({super.key, required this.icon, required this.onTap});
+class UnitRoundAction extends StatelessWidget {
+  const UnitRoundAction({super.key, required this.icon, required this.onTap});
   final IconData icon;
   final VoidCallback onTap;
 
@@ -398,20 +410,21 @@ class _RoundAction extends StatelessWidget {
 }
 
 /// The project, the rooms and the price range, as the website's filters.
-class _FilterSheet extends StatefulWidget {
-  const _FilterSheet({required this.state, required this.onApply});
-  final UnitsListState state;
+class UnitsFilterSheet extends StatefulWidget {
+  const UnitsFilterSheet({super.key, required this.query, required this.projects, required this.onApply});
+  final UnitsQuery query;
+  final List<(String, String)> projects;
   final Future<void> Function(UnitsQuery) onApply;
 
   @override
-  State<_FilterSheet> createState() => _FilterSheetState();
+  State<UnitsFilterSheet> createState() => _UnitsFilterSheetState();
 }
 
-class _FilterSheetState extends State<_FilterSheet> {
-  late String? _project = widget.state.query.projectId;
-  late int? _rooms = widget.state.query.bedrooms;
-  late final _min = TextEditingController(text: widget.state.query.priceMin?.toString() ?? '');
-  late final _max = TextEditingController(text: widget.state.query.priceMax?.toString() ?? '');
+class _UnitsFilterSheetState extends State<UnitsFilterSheet> {
+  late String? _project = widget.query.projectId;
+  late int? _rooms = widget.query.bedrooms;
+  late final _min = TextEditingController(text: widget.query.priceMin?.toString() ?? '');
+  late final _max = TextEditingController(text: widget.query.priceMax?.toString() ?? '');
 
   @override
   void dispose() {
@@ -433,7 +446,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final q = widget.state.query;
+    final q = widget.query;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
@@ -444,7 +457,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           const SizedBox(height: 8),
           Wrap(spacing: 8, runSpacing: 8, children: [
             _choice(l10n.cuAllProjects, _project == null, () => _project = null),
-            for (final (id, name) in widget.state.projects)
+            for (final (id, name) in widget.projects)
               _choice(name, _project == id, () => _project = id, key: Key('units-project-$id')),
           ]),
           const SizedBox(height: 16),

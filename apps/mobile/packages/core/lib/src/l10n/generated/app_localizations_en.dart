@@ -6701,4 +6701,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upSoldNote => 'The unit is sold.';
+
+  @override
+  String get bcSearchHint => 'Search by project or city';
+
+  @override
+  String get bcReady => 'Ready to market';
+
+  @override
+  String get bcReadyOne => 'Ready to market';
+
+  @override
+  String get bcPaused => 'Paused';
+
+  @override
+  String get bcAllActive => 'All active';
+
+  @override
+  String bcPausedN(int n) {
+    return '$n paused';
+  }
+
+  @override
+  String get bcAvailableForYou => 'Units open to you';
+
+  @override
+  String get bcAvailableShort => 'Open to you';
+
+  @override
+  String bcInProjectsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'in $n projects',
+      one: 'in 1 project',
+      zero: 'in no project',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bcCommission => 'Your commission';
+
+  @override
+  String get bcDefault => 'default';
+
+  @override
+  String get bcBrowseUnits => 'Browse units';
+
+  @override
+  String get bcAccessProject => 'Project access';
+
+  @override
+  String get bcAccessUnit => 'Unit access';
+
+  @override
+  String get bcYourAccess => 'Your access';
+
+  @override
+  String get bcNoEnd => 'No end date';
+
+  @override
+  String bcUntil(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get bcReserve => 'Book';
+
+  @override
+  String get bcFreeForYou => 'Units open to you';
+
+  @override
+  String get bcNotBookable => 'Not bookable now';
+
+  @override
+  String get bcEmpty => 'No projects yet';
+
+  @override
+  String get bcEmptyMessage =>
+      'Once you are given access to a project, it shows here.';
+
+  @override
+  String get bcUnitsEmptyMessage =>
+      'Try other filters, or ask the company to widen your access.';
 }

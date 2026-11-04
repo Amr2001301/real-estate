@@ -1,6 +1,5 @@
 import '../features/permissions/staff_access_gate.dart';
 import '../features/permissions/staff_permissions.dart';
-import 'load_by_id.dart';
 import 'dart:async';
 
 import 'package:core/core.dart';
@@ -42,12 +41,10 @@ import '../features/bonus/domain/repositories/bonus_repository.dart';
 import '../features/bonus/domain/usecases/get_bonus_entries.dart';
 import '../features/bonus/presentation/cubit/bonus_cubit.dart';
 import '../features/bonus/presentation/screens/bonus_screen.dart';
-import '../features/broker/catalog/domain/entities/broker_project.dart';
 import '../features/broker/catalog/domain/repositories/broker_catalog_repository.dart';
 import '../features/broker/catalog/domain/usecases/broker_catalog_use_cases.dart';
-import '../features/broker/catalog/presentation/cubit/broker_units_cubit.dart';
-import '../features/broker/catalog/presentation/screens/broker_project_detail_screen.dart';
-import '../features/broker/catalog/presentation/screens/broker_unit_detail_screen.dart';
+import '../features/broker/catalog/portal/portal_catalog_data.dart';
+import '../features/broker/catalog/portal/portal_catalog_screens.dart';
 import '../features/broker/commissions/domain/repositories/broker_commissions_repository.dart';
 import '../features/broker/commissions/domain/usecases/get_broker_commissions.dart';
 import '../features/broker/commissions/presentation/cubit/broker_commissions_cubit.dart';
@@ -260,38 +257,30 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/broker/projects/:id',
         builder: (context, state) {
-          Widget screen(BrokerProject project) => BlocProvider(
-                create: (ctx) => BrokerUnitsCubit(
-                  GetBrokerProjectUnits(ctx.read<BrokerCatalogRepository>()),
-                  projectId: project.id,
-                ),
-                child: BrokerProjectDetailScreen(project: project),
-              );
-          final project = state.extra as BrokerProject?;
-          if (project != null) return screen(project);
-          // Opened from a link or a reload: find it among the broker's projects.
-          final id = state.pathParameters['id']!;
-          return LoadById<BrokerProject>(
-            load: () => context.read<BrokerCatalogRepository>().getProjects(),
-            matches: (p) => p.id == id,
-            builder: screen,
-            fallbackPath: '/broker/home',
-          );
+          final extra = state.extra;
+          if (extra is (PortalProjectRow, double?)) return PortalProjectPage(project: extra.$1, defaultPct: extra.$2);
+          // From the home, a link or a reload: find it among the broker's projects.
+          return PortalProjectLoader(projectId: state.pathParameters['id']!);
         },
+      ),
+      // ── The broker's units (?projectId= narrows it to a project) ─────────
+      GoRoute(
+        path: '/broker/units',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => PortalUnitsCubit(
+            PortalCatalogRepository(ctx.read<Dio>()),
+            projectId: state.uri.queryParameters['projectId'],
+          ),
+          child: const PortalUnitsScreen(),
+        ),
       ),
       GoRoute(
         path: '/broker/units/:id',
-        // The unit comes from the project it was opened from; a link or a
+        // The unit comes from the list it was opened from; a link or a
         // reload without it goes back to the broker's home.
         redirect: (context, state) =>
-            (state.extra as Map<String, dynamic>?)?['unit'] is BrokerUnit ? null : '/broker/home',
-        builder: (context, state) {
-          final args = (state.extra as Map<String, dynamic>?) ?? const {};
-          return BrokerUnitDetailScreen(
-            unit: args['unit'] as BrokerUnit,
-            projectId: args['projectId'] as String?,
-          );
-        },
+            (state.extra as Map<String, dynamic>?)?['portalUnit'] is PortalUnit ? null : '/broker/home',
+        builder: (context, state) => PortalUnitPage(unit: (state.extra! as Map<String, dynamic>)['portalUnit'] as PortalUnit),
       ),
       GoRoute(
         path: '/broker/leads/new',
@@ -332,6 +321,8 @@ GoRouter createStaffRouter(
                 GetBrokerProjectUnits(catalog),
                 CreateBrokerReservation(ctx.read<BrokerReservationsRepository>()),
                 leadId: args['leadId'] as String?,
+                projectId: args['projectId'] as String?,
+                unitId: args['unitId'] as String?,
               )..init();
             },
             child: const CreateBrokerReservationScreen(),
