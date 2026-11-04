@@ -6787,4 +6787,374 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get bcUnitsEmptyMessage =>
       'جرّب تعديل الفلاتر، أو تواصل مع الشركة لتوسيع صلاحيتك.';
+
+  @override
+  String kcCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عقدًا',
+      few: '$n عقود',
+      two: 'عقدان',
+      one: 'عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcSearchHint => 'ابحث باسم العميل أو رقم العقد';
+
+  @override
+  String get kcContracts => 'العقود';
+
+  @override
+  String get kcSigned => 'موقّعة';
+
+  @override
+  String get kcSignedOne => 'موقّع';
+
+  @override
+  String get kcUnsigned => 'بانتظار التوقيع';
+
+  @override
+  String get kcDelayed => 'تسليم متأخر';
+
+  @override
+  String kcSignedPct(String pct) {
+    return '$pct منها';
+  }
+
+  @override
+  String get kcNeedsFollow => 'تحتاج متابعة';
+
+  @override
+  String get kcAllSigned => 'كلها موقّعة';
+
+  @override
+  String get kcFromReservations => 'حجوزات ويدوية';
+
+  @override
+  String kcFromReservation(String n) {
+    return 'من الحجز $n';
+  }
+
+  @override
+  String get kcManual => 'عقد يدوي';
+
+  @override
+  String get kcCancelled => 'ملغي';
+
+  @override
+  String get kcValue => 'قيمة العقد';
+
+  @override
+  String get kcPlan => 'خطة السداد';
+
+  @override
+  String kcPlanLine(int months, String monthly) {
+    return '$months شهرًا · $monthly';
+  }
+
+  @override
+  String get kcNoPlan => 'بدون خطة تقسيط';
+
+  @override
+  String kcDown(String amount) {
+    return 'المقدم $amount';
+  }
+
+  @override
+  String get kcSource => 'المصدر';
+
+  @override
+  String get kcSourceAll => 'كل المصادر';
+
+  @override
+  String get kcFilters => 'تصفية العقود';
+
+  @override
+  String get kcEmpty => 'لا توجد عقود';
+
+  @override
+  String get kcEmptyMessage => 'تظهر هنا العقود بعد تحويل الحجوزات إليها.';
+
+  @override
+  String get kcNoMatch => 'لا توجد عقود بهذا الاختيار';
+
+  @override
+  String kcSignedOn(String date) {
+    return 'موقّع · $date';
+  }
+
+  @override
+  String kcCollected(String amount, String pct) {
+    return 'محصَّل $amount · $pct';
+  }
+
+  @override
+  String get kcRemaining => 'المتبقي';
+
+  @override
+  String get kcOverdue => 'المتأخر';
+
+  @override
+  String get kcNoOverdue => 'لا يوجد';
+
+  @override
+  String kcOverdueN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n قسطًا متأخرًا',
+      few: '$n أقساط متأخرة',
+      two: 'قسطان متأخران',
+      one: 'قسط متأخر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String kcPlusFees(String amount) {
+    return '+ رسوم وغرامات $amount';
+  }
+
+  @override
+  String get kcTabOverview => 'نظرة عامة';
+
+  @override
+  String get kcTabInstallments => 'الأقساط';
+
+  @override
+  String get kcTabStatement => 'كشف الحساب';
+
+  @override
+  String get kcTabPayments => 'الدفعات';
+
+  @override
+  String get kcData => 'بيانات العقد';
+
+  @override
+  String get kcSignedAt => 'تاريخ التوقيع';
+
+  @override
+  String get kcNotSigned => 'لم يُوقَّع بعد';
+
+  @override
+  String get kcDelivery => 'التسليم المتوقع';
+
+  @override
+  String kcDelayDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'متأخر $n يومًا',
+      few: 'متأخر $n أيام',
+      two: 'متأخر يومين',
+      one: 'متأخر يومًا',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcInstallment => 'القسط';
+
+  @override
+  String get kcStarts => 'يبدأ';
+
+  @override
+  String kcPlanMonthlyN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n قسطًا',
+      few: '$n أقساط',
+      two: 'قسطان',
+      one: 'قسط واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get kcParties => 'الأطراف';
+
+  @override
+  String get kcClient => 'العميل';
+
+  @override
+  String get kcSales => 'المستشار';
+
+  @override
+  String get kcBroker => 'الوسيط';
+
+  @override
+  String get kcNextInstallments => 'الأقساط القادمة';
+
+  @override
+  String kcAllInstallmentsN(int n) {
+    return 'كل الأقساط · $n';
+  }
+
+  @override
+  String get kcDownPayment => 'المقدم';
+
+  @override
+  String kcInstallmentNOf(int i, int n) {
+    return 'القسط $i من $n';
+  }
+
+  @override
+  String get kcPaid => 'مدفوع';
+
+  @override
+  String get kcDue => 'مستحق';
+
+  @override
+  String get kcLate => 'متأخر';
+
+  @override
+  String get kcUpcoming => 'قادم';
+
+  @override
+  String get kcAwaiting => 'بانتظار المراجعة';
+
+  @override
+  String get kcStatement => 'كشف الحساب';
+
+  @override
+  String get kcFullStatement => 'الكشف كاملًا';
+
+  @override
+  String get kcStPaid => 'المدفوع';
+
+  @override
+  String get kcStBalance => 'الرصيد';
+
+  @override
+  String get kcStOverdue => 'متأخر';
+
+  @override
+  String get kcStUpcoming => 'قادم';
+
+  @override
+  String get kcStFees => 'رسوم وغرامات';
+
+  @override
+  String get kcLineContract => 'قيمة العقد';
+
+  @override
+  String get kcLinePayment => 'دفعة';
+
+  @override
+  String get kcLineBooking => 'دفعة العربون';
+
+  @override
+  String get kcLineFee => 'رسوم';
+
+  @override
+  String get kcLineRefund => 'مرتجع';
+
+  @override
+  String get kcPayments => 'الدفعات';
+
+  @override
+  String get kcNoPayments => 'لا توجد دفعات مسجلة بعد.';
+
+  @override
+  String get kcDocuments => 'المستندات';
+
+  @override
+  String get kcContractPdf => 'عقد البيع';
+
+  @override
+  String get kcAllDocuments => 'كل مستندات العقد';
+
+  @override
+  String get kcRecordPayment => 'تسجيل دفعة';
+
+  @override
+  String get kcNoInstallments => 'لا توجد أقساط لهذا العقد.';
+
+  @override
+  String get kcFromReservationShort => 'من حجز';
+
+  @override
+  String get kcStatus => 'الحالة';
+
+  @override
+  String fsActiveN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n فلترًا مفعّلًا',
+      few: '$n فلاتر مفعّلة',
+      two: 'فلتران مفعّلان',
+      one: 'فلتر واحد مفعّل',
+      zero: 'بدون فلاتر',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fsClear => 'مسح';
+
+  @override
+  String get fsNone => 'لا يوجد';
+
+  @override
+  String get fsAvailableHint => 'المتاح من كل مشروع';
+
+  @override
+  String fsPriceUnder(String amount) {
+    return 'أقل من $amount';
+  }
+
+  @override
+  String fsPriceBetween(String from, String to) {
+    return '$from – $to';
+  }
+
+  @override
+  String fsPriceOver(String amount) {
+    return 'أكثر من $amount';
+  }
+
+  @override
+  String fsMillion(String n) {
+    return '$n مليون';
+  }
+
+  @override
+  String get fsNoLimit => 'بلا حد';
+
+  @override
+  String kcShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n عقدًا',
+      few: 'عرض $n عقود',
+      two: 'عرض عقدين',
+      one: 'عرض عقد واحد',
+      zero: 'لا عقود',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cuShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n وحدة',
+      few: 'عرض $n وحدات',
+      two: 'عرض وحدتين',
+      one: 'عرض وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cuBedrooms => 'غرف النوم';
 }

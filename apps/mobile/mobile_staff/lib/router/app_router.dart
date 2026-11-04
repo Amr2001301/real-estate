@@ -44,6 +44,9 @@ import '../features/bonus/presentation/screens/bonus_screen.dart';
 import '../features/broker/catalog/domain/repositories/broker_catalog_repository.dart';
 import '../features/broker/catalog/domain/usecases/broker_catalog_use_cases.dart';
 import '../features/broker/catalog/portal/portal_catalog_data.dart';
+import '../features/contracts/view/contract_page_screen.dart';
+import '../features/contracts/view/contracts_data.dart';
+import '../features/contracts/view/contracts_list_screen.dart';
 import '../features/broker/catalog/portal/portal_catalog_screens.dart';
 import '../features/broker/commissions/domain/repositories/broker_commissions_repository.dart';
 import '../features/broker/commissions/domain/usecases/get_broker_commissions.dart';
@@ -127,13 +130,6 @@ import '../features/reservations/presentation/cubit/reservations_cubit.dart';
 import '../features/reservations/presentation/screens/create_reservation_screen.dart';
 import '../features/reservations/presentation/screens/reservation_detail_screen.dart';
 import '../features/reservations/presentation/screens/reservations_screen.dart';
-import '../features/contracts/domain/entities/staff_contract.dart';
-import '../features/contracts/domain/repositories/contracts_repository.dart';
-import '../features/contracts/domain/usecases/contract_use_cases.dart';
-import '../features/contracts/presentation/cubit/contract_detail_cubit.dart';
-import '../features/contracts/presentation/cubit/contracts_cubit.dart';
-import '../features/contracts/presentation/screens/contract_detail_screen.dart';
-import '../features/contracts/presentation/screens/contracts_screen.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
 import '../features/deposits/presentation/cubit/deposits_cubit.dart';
@@ -714,24 +710,16 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/contracts',
         builder: (context, _) => BlocProvider(
-          create: (ctx) =>
-              ContractsCubit(ListContracts(ctx.read<StaffContractsRepository>())),
-          child: const ContractsScreen(),
+          create: (ctx) => ContractsListCubit(ContractsViewRepository(ctx.read<Dio>())),
+          child: const ContractsListScreen(),
         ),
       ),
       GoRoute(
         path: '/contracts/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          final contract = state.extra as StaffContract?;
-          return BlocProvider(
-            create: (ctx) => ContractDetailCubit(
-              GetContractDetail(ctx.read<StaffContractsRepository>()),
-              contractId: id,
-            ),
-            child: ContractDetailScreen(fallback: contract),
-          );
-        },
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => ContractPageCubit(ContractsViewRepository(ctx.read<Dio>()), contractId: state.pathParameters['id']!),
+          child: const ContractPageScreen(),
+        ),
       ),
 
       // ── Deposits (list + record) ─────────────────────────────────────────

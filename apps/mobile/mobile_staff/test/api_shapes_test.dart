@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile_staff/features/contracts/data/dtos/contract_dtos.dart';
 import 'package:mobile_staff/features/deposits/data/dtos/staff_deposit_dto.dart';
+import 'package:mobile_staff/features/contracts/view/contracts_data.dart';
 import 'package:mobile_staff/features/reservations/data/dtos/reservation_dtos.dart';
 
 /// Responses in the API's real shape: money and other decimals arrive as
@@ -40,7 +40,7 @@ void main() {
   });
 
   test('a contract whose plan amounts are decimal strings', () {
-    final dto = StaffContractDetailDto.fromJson({
+    final page = ContractPage.parse({
       'id': 'c1',
       'contractNumber': 'CON-2026-0026',
       'totalAmount': '6880000',
@@ -64,9 +64,10 @@ void main() {
         ],
       },
     });
-    expect(dto.installmentPlanMonths, 36);
-    expect(dto.installmentPlanMonthlyAmount, 169222.22);
-    expect(dto.installments, hasLength(1));
+    expect(page.row.planMonths, 36);
+    expect(page.row.planMonthly, 169222.22);
+    expect(page.row.total, 6880000);
+    expect(page.installments.single.amount, 688000);
   });
 
   test('a payment whose amount is a decimal string', () {

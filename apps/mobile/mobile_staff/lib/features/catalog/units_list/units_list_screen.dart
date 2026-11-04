@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
 import '../../../common/staff_share.dart';
+import '../../dashboard/home_kit/filter_kit.dart';
 import '../../dashboard/home_kit/home_kit.dart';
 import '../kit/catalog_kit.dart';
 import 'units_list_data.dart';
@@ -44,11 +45,9 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
 
   void _filters() {
     final cubit = context.read<UnitsListCubit>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => UnitsFilterSheet(query: cubit.state.query, projects: cubit.state.projects, onApply: cubit.apply),
+    showFilterSheet(
+      context,
+      (_) => UnitsFilterSheet(query: cubit.state.query, projects: cubit.state.projects, onApply: cubit.apply, count: cubit.count),
     );
   }
 
@@ -409,104 +408,116 @@ class UnitRoundAction extends StatelessWidget {
       );
 }
 
-/// The project, the rooms and the price range, as the website's filters.
+/// The project (with what is free in each), the bedrooms and the price
+/// range, as the website's filters, in the filter sheet's look.
 class UnitsFilterSheet extends StatefulWidget {
-  const UnitsFilterSheet({super.key, required this.query, required this.projects, required this.onApply});
+  const UnitsFilterSheet({super.key, required this.query, required this.projects, required this.onApply, required this.count});
   final UnitsQuery query;
   final List<(String, String)> projects;
   final Future<void> Function(UnitsQuery) onApply;
+
+  /// How many units a choice gives.
+  final Future<int?> Function(UnitsQuery) count;
 
   @override
   State<UnitsFilterSheet> createState() => _UnitsFilterSheetState();
 }
 
-class _UnitsFilterSheetState extends State<UnitsFilterSheet> {
+class _UnitsFilterSheetState extends State<UnitsFilterSheet> with FilterCounting {
   late String? _project = widget.query.projectId;
   late int? _rooms = widget.query.bedrooms;
-  late final _min = TextEditingController(text: widget.query.priceMin?.toString() ?? '');
-  late final _max = TextEditingController(text: widget.query.priceMax?.toString() ?? '');
+  late num? _min = widget.query.priceMin;
+  late num? _max = widget.query.priceMax;
+  final _free = <String?, int?>{};
+
+  UnitsQuery get _draft => UnitsQuery(
+        status: widget.query.status,
+        search: widget.query.search,
+        projectId: _project,
+        bedrooms: _rooms,
+        priceMin: _min,
+        priceMax: _max,
+      );
 
   @override
-  void dispose() {
-    _min.dispose();
-    _max.dispose();
-    super.dispose();
+  Future<int?> countDraft() => widget.count(_draft);
+
+  @override
+  void initState() {
+    super.initState();
+    recount();
+    for (final id in [null, ...widget.projects.map((p) => p.$1)]) {
+      widget.count(UnitsQuery(status: 'AVAILABLE', projectId: id)).then((n) {
+        if (mounted) setState(() => _free[id] = n);
+      });
+    }
   }
 
-  Widget _choice(String label, bool on, VoidCallback onTap, {Key? key}) => ChoiceChip(
-        key: key,
-        label: Text(label),
-        selected: on,
-        onSelected: (_) => setState(onTap),
-        selectedColor: AppPalette.navy,
-        labelStyle: TextStyle(color: on ? Colors.white : context.appColors.inkStrong, fontWeight: FontWeight.w600),
-        showCheckmark: false,
-      );
+  void _set(VoidCallback f) {
+    setState(f);
+    recount();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final q = widget.query;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
-      child: SingleChildScrollView(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(l10n.cuFilters, style: homeDisplay(18, context.appColors.inkStrong)),
-          const SizedBox(height: 14),
-          Text(l10n.cuProject, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            _choice(l10n.cuAllProjects, _project == null, () => _project = null),
-            for (final (id, name) in widget.projects)
-              _choice(name, _project == id, () => _project = id, key: Key('units-project-$id')),
-          ]),
-          const SizedBox(height: 16),
-          Text(l10n.cuRooms, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Wrap(spacing: 8, children: [
-            _choice(l10n.cuAny, _rooms == null, () => _rooms = null),
-            for (final n in [1, 2, 3, 4, 5]) _choice(ltr('$n'), _rooms == n, () => _rooms = n),
-          ]),
-          const SizedBox(height: 16),
-          Text(l10n.cuPrice, style: const TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: TextField(controller: _min, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.cuPriceFrom)),
+    final active = [_project, _rooms, if (_min != null || _max != null) true].where((v) => v != null).length;
+    String? free(String? id) => _free[id] == null ? null : l10n.ppAvailableN(_free[id]!);
+    return FilterSheet(
+      title: l10n.cuFilters,
+      active: active,
+      applyKey: const Key('units-apply'),
+      applyLabel: shown == null ? l10n.cuApply : l10n.cuShowN(shown!),
+      onClear: () => _set(() {
+        _project = null;
+        _rooms = null;
+        _min = null;
+        _max = null;
+      }),
+      onApply: () {
+        Navigator.of(context).pop();
+        widget.onApply(_draft);
+      },
+      sections: [
+        if (widget.projects.isNotEmpty)
+          FilterSection(
+            icon: Icons.apartment_rounded,
+            title: l10n.cuProject,
+            hint: l10n.fsAvailableHint,
+            child: FilterRadioList<String?>(
+              keyPrefix: 'units-project',
+              selected: _project,
+              onSelect: (v) => _set(() => _project = v),
+              options: [
+                FilterOption(null, l10n.cuAllProjects, sub: free(null)),
+                for (final (id, name) in widget.projects) FilterOption(id, name, sub: free(id)),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(controller: _max, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: l10n.cuPriceTo)),
-            ),
-          ]),
-          const SizedBox(height: 20),
-          Row(children: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                widget.onApply(UnitsQuery(status: q.status, search: q.search));
-              },
-              child: Text(l10n.cuClear),
-            ),
-            const Spacer(),
-            FilledButton(
-              key: const Key('units-apply'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                widget.onApply(UnitsQuery(
-                  status: q.status,
-                  search: q.search,
-                  projectId: _project,
-                  bedrooms: _rooms,
-                  priceMin: num.tryParse(_min.text.trim()),
-                  priceMax: num.tryParse(_max.text.trim()),
-                ));
-              },
-              child: Text(l10n.cuApply),
-            ),
-          ]),
-        ]),
-      ),
+          ),
+        FilterSection(
+          icon: Icons.bed_rounded,
+          title: l10n.cuBedrooms,
+          child: FilterSegments<int?>(
+            keyPrefix: 'units-rooms',
+            selected: _rooms,
+            onSelect: (v) => _set(() => _rooms = v),
+            options: [FilterOption(null, l10n.cuAny), for (final n in [1, 2, 3, 4, 5]) FilterOption(n, ltr('$n'))],
+          ),
+        ),
+        FilterSection(
+          icon: Icons.payments_rounded,
+          title: l10n.cuPrice,
+          hint: PriceFormatter.symbol(Localizations.localeOf(context).languageCode),
+          child: FilterPriceRange(
+            from: _min,
+            to: _max,
+            onChanged: (a, b) => _set(() {
+              _min = a;
+              _max = b;
+            }),
+          ),
+        ),
+      ],
     );
   }
 }

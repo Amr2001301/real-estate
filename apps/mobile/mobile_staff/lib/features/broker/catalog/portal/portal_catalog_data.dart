@@ -205,6 +205,16 @@ class PortalCatalogRepository {
         );
       });
 
+  /// How many units a choice gives, for the filter's apply label.
+  Future<int?> count(UnitsQuery q) => _count({
+        'status': ?q.status,
+        'projectId': ?q.projectId,
+        'bedrooms': ?q.bedrooms,
+        'minPrice': ?q.priceMin,
+        'maxPrice': ?q.priceMax,
+        if (q.search.isNotEmpty) 'q': q.search,
+      });
+
   /// Free, reserved and sold units over everything the broker may see.
   Future<PortalUnitCounts> counts() async {
     final c = await Future.wait([for (final s in ['AVAILABLE', 'RESERVED', 'SOLD']) _count({'status': s})]);
@@ -397,6 +407,8 @@ class PortalUnitsCubit extends Cubit<PortalUnitsState> {
       err: (_) => emit(state.copyWith(loadingMore: false)),
     );
   }
+
+  Future<int?> count(UnitsQuery q) => _repo.count(q);
 
   Future<void> apply(UnitsQuery q) async {
     emit(state.copyWith(query: q));

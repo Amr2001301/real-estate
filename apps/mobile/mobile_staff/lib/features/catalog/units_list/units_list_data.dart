@@ -141,6 +141,12 @@ class UnitsListRepository {
         return UnitsPage(rows: rows, total: ((r.data?['meta'] as Map?)?['total'] as num?)?.toInt() ?? rows.length);
       });
 
+  /// How many units a choice gives, for the filter's apply label.
+  Future<int?> count(UnitsQuery q) => _dio
+      .get<Map<String, dynamic>>('/units', queryParameters: q.params(1, 1))
+      .then<int?>((r) => ((r.data?['meta'] as Map?)?['total'] as num?)?.toInt())
+      .catchError((Object _) => null);
+
   /// Deliberately unfiltered: the strip describes the whole portfolio, as on
   /// the website.
   Future<Result<UnitsStrip>> strip() => guardApiCall(() async {
@@ -251,6 +257,8 @@ class UnitsListCubit extends Cubit<UnitsListState> {
       err: (_) => emit(state.copyWith(loadingMore: false)),
     );
   }
+
+  Future<int?> count(UnitsQuery q) => _repo.count(q);
 
   Future<void> apply(UnitsQuery q) async {
     emit(state.copyWith(query: q));

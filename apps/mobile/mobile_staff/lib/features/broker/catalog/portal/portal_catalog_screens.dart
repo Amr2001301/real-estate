@@ -12,6 +12,7 @@ import '../../../catalog/kit/catalog_media.dart';
 import '../../../catalog/unit_page/unit_page_screen.dart';
 import '../../../catalog/units_list/units_list_data.dart';
 import '../../../catalog/units_list/units_list_screen.dart';
+import '../../../dashboard/home_kit/filter_kit.dart';
 import '../../../dashboard/home_kit/home_kit.dart';
 import '../domain/repositories/broker_catalog_repository.dart';
 import 'portal_catalog_data.dart';
@@ -368,11 +369,9 @@ class _PortalUnitsScreenState extends State<PortalUnitsScreen> {
 
   void _filters() {
     final cubit = context.read<PortalUnitsCubit>();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => UnitsFilterSheet(query: cubit.state.query, projects: cubit.state.projects, onApply: cubit.apply),
+    showFilterSheet(
+      context,
+      (_) => UnitsFilterSheet(query: cubit.state.query, projects: cubit.state.projects, onApply: cubit.apply, count: cubit.count),
     );
   }
 

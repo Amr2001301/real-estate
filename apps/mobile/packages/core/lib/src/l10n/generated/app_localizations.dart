@@ -12169,6 +12169,546 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try other filters, or ask the company to widen your access.'**
   String get bcUnitsEmptyMessage;
+
+  /// No description provided for @kcCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No contracts} =1{1 contract} other{{n} contracts}}'**
+  String kcCountN(int n);
+
+  /// No description provided for @kcSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client or contract number'**
+  String get kcSearchHint;
+
+  /// No description provided for @kcContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get kcContracts;
+
+  /// No description provided for @kcSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed'**
+  String get kcSigned;
+
+  /// No description provided for @kcSignedOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed'**
+  String get kcSignedOne;
+
+  /// No description provided for @kcUnsigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting signature'**
+  String get kcUnsigned;
+
+  /// No description provided for @kcDelayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery late'**
+  String get kcDelayed;
+
+  /// No description provided for @kcSignedPct.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} of them'**
+  String kcSignedPct(String pct);
+
+  /// No description provided for @kcNeedsFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'Need follow-up'**
+  String get kcNeedsFollow;
+
+  /// No description provided for @kcAllSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'All signed'**
+  String get kcAllSigned;
+
+  /// No description provided for @kcFromReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Booked + manual'**
+  String get kcFromReservations;
+
+  /// No description provided for @kcFromReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'From booking {n}'**
+  String kcFromReservation(String n);
+
+  /// No description provided for @kcManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual contract'**
+  String get kcManual;
+
+  /// No description provided for @kcCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get kcCancelled;
+
+  /// No description provided for @kcValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get kcValue;
+
+  /// No description provided for @kcPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plan'**
+  String get kcPlan;
+
+  /// No description provided for @kcPlanLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{months} months · {monthly}'**
+  String kcPlanLine(int months, String monthly);
+
+  /// No description provided for @kcNoPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No instalment plan'**
+  String get kcNoPlan;
+
+  /// No description provided for @kcDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down {amount}'**
+  String kcDown(String amount);
+
+  /// No description provided for @kcSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get kcSource;
+
+  /// No description provided for @kcSourceAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All sources'**
+  String get kcSourceAll;
+
+  /// No description provided for @kcFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter contracts'**
+  String get kcFilters;
+
+  /// No description provided for @kcEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No contracts'**
+  String get kcEmpty;
+
+  /// No description provided for @kcEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts show here once bookings are converted.'**
+  String get kcEmptyMessage;
+
+  /// No description provided for @kcNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No contracts match this choice'**
+  String get kcNoMatch;
+
+  /// No description provided for @kcSignedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed · {date}'**
+  String kcSignedOn(String date);
+
+  /// No description provided for @kcCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected {amount} · {pct}'**
+  String kcCollected(String amount, String pct);
+
+  /// No description provided for @kcRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get kcRemaining;
+
+  /// No description provided for @kcOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get kcOverdue;
+
+  /// No description provided for @kcNoOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get kcNoOverdue;
+
+  /// No description provided for @kcOverdueN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 instalment late} other{{n} instalments late}}'**
+  String kcOverdueN(int n);
+
+  /// No description provided for @kcPlusFees.
+  ///
+  /// In en, this message translates to:
+  /// **'+ fees {amount}'**
+  String kcPlusFees(String amount);
+
+  /// No description provided for @kcTabOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get kcTabOverview;
+
+  /// No description provided for @kcTabInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments'**
+  String get kcTabInstallments;
+
+  /// No description provided for @kcTabStatement.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement'**
+  String get kcTabStatement;
+
+  /// No description provided for @kcTabPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments'**
+  String get kcTabPayments;
+
+  /// No description provided for @kcData.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract details'**
+  String get kcData;
+
+  /// No description provided for @kcSignedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed on'**
+  String get kcSignedAt;
+
+  /// No description provided for @kcNotSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed yet'**
+  String get kcNotSigned;
+
+  /// No description provided for @kcDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected delivery'**
+  String get kcDelivery;
+
+  /// No description provided for @kcDelayDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 day late} other{{n} days late}}'**
+  String kcDelayDays(int n);
+
+  /// No description provided for @kcInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment'**
+  String get kcInstallment;
+
+  /// No description provided for @kcStarts.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts'**
+  String get kcStarts;
+
+  /// No description provided for @kcPlanMonthlyN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =1{1 instalment} other{{n} instalments}}'**
+  String kcPlanMonthlyN(int n);
+
+  /// No description provided for @kcParties.
+  ///
+  /// In en, this message translates to:
+  /// **'Parties'**
+  String get kcParties;
+
+  /// No description provided for @kcClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get kcClient;
+
+  /// No description provided for @kcSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get kcSales;
+
+  /// No description provided for @kcBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker'**
+  String get kcBroker;
+
+  /// No description provided for @kcNextInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'Next instalments'**
+  String get kcNextInstallments;
+
+  /// No description provided for @kcAllInstallmentsN.
+  ///
+  /// In en, this message translates to:
+  /// **'All instalments · {n}'**
+  String kcAllInstallmentsN(int n);
+
+  /// No description provided for @kcDownPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get kcDownPayment;
+
+  /// No description provided for @kcInstallmentNOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment {i} of {n}'**
+  String kcInstallmentNOf(int i, int n);
+
+  /// No description provided for @kcPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get kcPaid;
+
+  /// No description provided for @kcDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get kcDue;
+
+  /// No description provided for @kcLate.
+  ///
+  /// In en, this message translates to:
+  /// **'Late'**
+  String get kcLate;
+
+  /// No description provided for @kcUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get kcUpcoming;
+
+  /// No description provided for @kcAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting review'**
+  String get kcAwaiting;
+
+  /// No description provided for @kcStatement.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement'**
+  String get kcStatement;
+
+  /// No description provided for @kcFullStatement.
+  ///
+  /// In en, this message translates to:
+  /// **'Full statement'**
+  String get kcFullStatement;
+
+  /// No description provided for @kcStPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get kcStPaid;
+
+  /// No description provided for @kcStBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get kcStBalance;
+
+  /// No description provided for @kcStOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get kcStOverdue;
+
+  /// No description provided for @kcStUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get kcStUpcoming;
+
+  /// No description provided for @kcStFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees'**
+  String get kcStFees;
+
+  /// No description provided for @kcLineContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get kcLineContract;
+
+  /// No description provided for @kcLinePayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment'**
+  String get kcLinePayment;
+
+  /// No description provided for @kcLineBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking payment'**
+  String get kcLineBooking;
+
+  /// No description provided for @kcLineFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee'**
+  String get kcLineFee;
+
+  /// No description provided for @kcLineRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get kcLineRefund;
+
+  /// No description provided for @kcPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments'**
+  String get kcPayments;
+
+  /// No description provided for @kcNoPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments recorded yet.'**
+  String get kcNoPayments;
+
+  /// No description provided for @kcDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get kcDocuments;
+
+  /// No description provided for @kcContractPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale contract'**
+  String get kcContractPdf;
+
+  /// No description provided for @kcAllDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'All contract documents'**
+  String get kcAllDocuments;
+
+  /// No description provided for @kcRecordPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a payment'**
+  String get kcRecordPayment;
+
+  /// No description provided for @kcNoInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'No instalments for this contract.'**
+  String get kcNoInstallments;
+
+  /// No description provided for @kcFromReservationShort.
+  ///
+  /// In en, this message translates to:
+  /// **'From a reservation'**
+  String get kcFromReservationShort;
+
+  /// No description provided for @kcStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get kcStatus;
+
+  /// No description provided for @fsActiveN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No filters} =1{1 filter on} other{{n} filters on}}'**
+  String fsActiveN(int n);
+
+  /// No description provided for @fsClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get fsClear;
+
+  /// No description provided for @fsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get fsNone;
+
+  /// No description provided for @fsAvailableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in each'**
+  String get fsAvailableHint;
+
+  /// No description provided for @fsPriceUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under {amount}'**
+  String fsPriceUnder(String amount);
+
+  /// No description provided for @fsPriceBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}'**
+  String fsPriceBetween(String from, String to);
+
+  /// No description provided for @fsPriceOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Over {amount}'**
+  String fsPriceOver(String amount);
+
+  /// No description provided for @fsMillion.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}M'**
+  String fsMillion(String n);
+
+  /// No description provided for @fsNoLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'No limit'**
+  String get fsNoLimit;
+
+  /// No description provided for @kcShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No contracts} =1{Show 1 contract} other{Show {n} contracts}}'**
+  String kcShowN(int n);
+
+  /// No description provided for @cuShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{Show 1 unit} other{Show {n} units}}'**
+  String cuShowN(int n);
+
+  /// No description provided for @cuBedrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedrooms'**
+  String get cuBedrooms;
 }
 
 class _AppLocalizationsDelegate
