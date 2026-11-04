@@ -39,9 +39,6 @@ import 'features/broker/catalog/domain/repositories/broker_catalog_repository.da
 import 'features/broker/commissions/data/datasources/broker_commissions_remote_data_source.dart';
 import 'features/broker/commissions/data/repositories/broker_commissions_repository_impl.dart';
 import 'features/broker/commissions/domain/repositories/broker_commissions_repository.dart';
-import 'features/broker/dashboard/data/datasources/broker_dashboard_remote_data_source.dart';
-import 'features/broker/dashboard/data/repositories/broker_dashboard_repository_impl.dart';
-import 'features/broker/dashboard/domain/repositories/broker_dashboard_repository.dart';
 import 'features/broker/leads/data/datasources/broker_leads_remote_data_source.dart';
 import 'features/broker/leads/data/repositories/broker_leads_repository_impl.dart';
 import 'features/broker/leads/domain/repositories/broker_leads_repository.dart';
@@ -217,10 +214,6 @@ class StaffApp extends StatelessWidget {
         RepositoryProvider<BrokerProfileRepository>(
           create: (ctx) =>
               BrokerProfileRepositoryImpl(BrokerProfileRemoteDataSourceImpl(ctx.read<Dio>())),
-        ),
-        RepositoryProvider<BrokerDashboardRepository>(
-          create: (ctx) =>
-              BrokerDashboardRepositoryImpl(BrokerDashboardRemoteDataSourceImpl(ctx.read<Dio>())),
         ),
         RepositoryProvider<BrokerCatalogRepository>(
           create: (ctx) =>

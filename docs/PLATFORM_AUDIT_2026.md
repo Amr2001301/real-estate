@@ -344,7 +344,7 @@ Every screen uses `DataStatus` state machine (initial/loading/success/empty/fail
 | Targets / Performance | ✅ | ✅ | `targets_screen` | ✅ | view | n/a | ✅ Ready |
 | Bonus List | ✅ | ✅ | `bonus_screen` | ✅ | view | n/a | ✅ Ready |
 | Notifications | ✅ | ✅ | `notifications_screen` | ✅ | read/read-all | ✅ | ✅ Ready |
-| Broker Dashboard | ✅ | ✅ | `broker_dashboard_screen` | ✅ | view | n/a | ✅ Ready |
+| Broker Dashboard | ✅ | ✅ | `broker_home_screen` | ✅ | view | n/a | ✅ Ready |
 | Broker Leads | ✅ | ✅ | `broker_leads_screen` | ✅ | create/view | ✅ | ✅ Ready |
 | Broker Reservations | ✅ | ✅ | `broker_reservations_screen` | ✅ | create/view | ✅ | ✅ Ready |
 | Broker Commissions | ✅ | ✅ | `broker_commissions_screen` | ✅ | view | n/a | ✅ Ready |
