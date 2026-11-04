@@ -102,6 +102,8 @@ class CreateBrokerReservationCubit extends Cubit<CreateBrokerReservationState> {
     this._getUnits,
     this._create, {
     String? leadId,
+    this.projectId,
+    this.unitId,
   }) : super(CreateBrokerReservationState(
           fixedLead: (leadId ?? '').isNotEmpty,
           selectedLeadId: leadId,
@@ -112,8 +114,16 @@ class CreateBrokerReservationCubit extends Cubit<CreateBrokerReservationState> {
   final GetBrokerProjectUnits _getUnits;
   final CreateBrokerReservation _create;
 
+  /// Opened from a unit ("book the unit"): its project and the unit, picked.
+  final String? projectId;
+  final String? unitId;
+
   Future<void> init() async {
     await Future.wait([if (!state.fixedLead) _loadLeads(), _loadProjects()]);
+    if (isClosed || (projectId ?? '').isEmpty) return;
+    await selectProject(projectId!);
+    if (isClosed || (unitId ?? '').isEmpty) return;
+    if (state.units.any((u) => u.id == unitId)) selectUnit(unitId!);
   }
 
   Future<void> _loadLeads() async {

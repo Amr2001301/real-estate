@@ -122,10 +122,16 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
                     ),
                     Transform.translate(
                       offset: const Offset(0, -30),
-                      child: _PriceCard(page: page, offers: _offers, onCalculate: () => _calculate(u)),
+                      child: UnitPriceCard(
+                        price: double.tryParse(u.price ?? ''),
+                        handover: u.specs.deliveryDate,
+                        pricePerMeter: page.pricePerMeter,
+                        offers: _offers,
+                        onCalculate: () => _calculate(u),
+                      ),
                     ),
-                    Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: _Facts(unit: u)),
-                    HomeSection(icon: Icons.list_alt_rounded, title: l10n.upSpecs, child: _Specs(page: page)),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: UnitFacts(area: double.tryParse(u.area ?? ''), bedrooms: u.bedrooms, bathrooms: u.bathrooms, floor: u.floor)),
+                    HomeSection(icon: Icons.list_alt_rounded, title: l10n.upSpecs, child: UnitSpecTable(code: u.code, typeName: page.typeName, specs: u.specs)),
                     HomeSection(
                       icon: Icons.bookmark_rounded,
                       title: l10n.upReservation,
@@ -184,27 +190,40 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
 
 /// The price, the cheapest instalment, the plan's down payment, term and
 /// handover, and "calculate your instalment".
-class _PriceCard extends StatelessWidget {
-  const _PriceCard({required this.page, required this.offers, required this.onCalculate});
-  final UnitPage page;
+class UnitPriceCard extends StatelessWidget {
+  const UnitPriceCard({
+    super.key,
+    required this.price,
+    required this.offers,
+    required this.onCalculate,
+    this.handover,
+    this.pricePerMeter,
+    this.extraMini,
+  });
+  final double? price;
   final List<InstallmentOffer> offers;
   final VoidCallback onCalculate;
+  final DateTime? handover;
+  final double? pricePerMeter;
+
+  /// One more mini figure after the plan's (the broker's commission).
+  final (String, String)? extraMini;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final u = page.unit;
-    final price = double.tryParse(u.price ?? '');
+    final price = this.price;
     final monthly = cheapestInstallmentLine(l10n, lang, offers);
     final offer = offers.where((o) => o.options.isNotEmpty).firstOrNull;
     final longest = offer?.longest;
-    final handover = u.specs.deliveryDate;
+    final handover = this.handover;
     final minis = <(String, String)>[
       if (offer != null) (l10n.detailUpfrontPct(offer.downPaymentPercentLabel), ltr(catalogGrouped(offer.downPayment))),
       if (longest != null) (l10n.detailTerm, durationText(l10n, longest.durationMonths)),
       if (handover != null) (l10n.detailHandover, ltr('${handover.year}')),
+      ?extraMini,
     ];
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
@@ -234,10 +253,10 @@ class _PriceCard extends StatelessWidget {
                 Text(monthly, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: catalogAvailable)),
             ]),
           ),
-          if (page.pricePerMeter != null)
+          if (pricePerMeter != null)
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text(l10n.upPerMeter, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-              Text(ltr(catalogGrouped(page.pricePerMeter!)), style: homeDisplay(15, colors.inkStrong)),
+              Text(ltr(catalogGrouped(pricePerMeter!)), style: homeDisplay(15, colors.inkStrong)),
             ]),
         ]),
         if (minis.isNotEmpty) ...[
@@ -293,20 +312,23 @@ class _PriceCard extends StatelessWidget {
 }
 
 /// Area, rooms, bathrooms, floor.
-class _Facts extends StatelessWidget {
-  const _Facts({required this.unit});
-  final StaffUnit unit;
+class UnitFacts extends StatelessWidget {
+  const UnitFacts({super.key, this.area, this.bedrooms, this.bathrooms, this.floor});
+  final double? area;
+  final int? bedrooms;
+  final int? bathrooms;
+  final int? floor;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final area = double.tryParse(unit.area ?? '');
+    final area = this.area;
     final facts = <(IconData, String, String)>[
       (Icons.straighten_rounded, area == null ? '—' : l10n.unitAreaValue(catalogGrouped(area)), l10n.unitArea),
-      (Icons.bed_rounded, unit.bedrooms == null ? '—' : '${unit.bedrooms}', l10n.unitBedrooms),
-      (Icons.bathtub_rounded, unit.bathrooms == null ? '—' : '${unit.bathrooms}', l10n.unitBathrooms),
-      (Icons.stairs_rounded, unit.floor == null ? '—' : (unit.floor == 0 ? l10n.cuGroundFloor : '${unit.floor}'), l10n.unitFloor),
+      (Icons.bed_rounded, bedrooms == null ? '—' : '$bedrooms', l10n.unitBedrooms),
+      (Icons.bathtub_rounded, bathrooms == null ? '—' : '$bathrooms', l10n.unitBathrooms),
+      (Icons.stairs_rounded, floor == null ? '—' : (floor == 0 ? l10n.cuGroundFloor : '$floor'), l10n.unitFloor),
     ];
     return Container(
       decoration: homeCard(context, radius: 22),
@@ -333,9 +355,14 @@ class _Facts extends StatelessWidget {
 }
 
 /// The code, the type and the specs the website shows, as a table.
-class _Specs extends StatelessWidget {
-  const _Specs({required this.page});
-  final UnitPage page;
+class UnitSpecTable extends StatelessWidget {
+  const UnitSpecTable({super.key, required this.code, this.typeName, required this.specs, this.extra = const []});
+  final String code;
+  final String? typeName;
+  final UnitSpecs specs;
+
+  /// Rows after the specs (the broker's access).
+  final List<(String, String)> extra;
 
   @override
   Widget build(BuildContext context) {
@@ -343,9 +370,10 @@ class _Specs extends StatelessWidget {
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final rows = <(String, String)>[
-      (l10n.upCode, ltr(page.unit.code)),
-      if ((page.typeName ?? '').isNotEmpty) (l10n.ppType, page.typeName!),
-      for (final it in unitSpecItems(page.unit.specs, l10n, lang)) (it.label, it.value),
+      (l10n.upCode, ltr(code)),
+      if ((typeName ?? '').isNotEmpty) (l10n.ppType, typeName!),
+      for (final it in unitSpecItems(specs, l10n, lang)) (it.label, it.value),
+      ...extra,
     ];
     return Container(
       key: const Key('unit-spec-table'),

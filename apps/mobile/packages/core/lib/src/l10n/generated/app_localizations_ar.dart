@@ -6701,4 +6701,90 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get upSoldNote => 'الوحدة مباعة.';
+
+  @override
+  String get bcSearchHint => 'ابحث باسم المشروع أو المدينة';
+
+  @override
+  String get bcReady => 'جاهزة للتسويق';
+
+  @override
+  String get bcReadyOne => 'جاهز للتسويق';
+
+  @override
+  String get bcPaused => 'موقوف';
+
+  @override
+  String get bcAllActive => 'كلها نشطة';
+
+  @override
+  String bcPausedN(int n) {
+    return '$n موقوف';
+  }
+
+  @override
+  String get bcAvailableForYou => 'وحدات متاحة لك';
+
+  @override
+  String get bcAvailableShort => 'متاحة لك';
+
+  @override
+  String bcInProjectsN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'في $n مشروعًا',
+      few: 'في $n مشاريع',
+      two: 'في مشروعين',
+      one: 'في مشروع واحد',
+      zero: 'في أي مشروع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get bcCommission => 'عمولتك';
+
+  @override
+  String get bcDefault => 'الافتراضية';
+
+  @override
+  String get bcBrowseUnits => 'تصفح الوحدات';
+
+  @override
+  String get bcAccessProject => 'صلاحية مشروع';
+
+  @override
+  String get bcAccessUnit => 'صلاحية وحدة';
+
+  @override
+  String get bcYourAccess => 'صلاحيتك';
+
+  @override
+  String get bcNoEnd => 'بلا انتهاء';
+
+  @override
+  String bcUntil(String date) {
+    return 'حتى $date';
+  }
+
+  @override
+  String get bcReserve => 'احجز';
+
+  @override
+  String get bcFreeForYou => 'الوحدات المتاحة لك';
+
+  @override
+  String get bcNotBookable => 'لا تُحجز الآن';
+
+  @override
+  String get bcEmpty => 'لا توجد مشاريع متاحة بعد';
+
+  @override
+  String get bcEmptyMessage =>
+      'بمجرد منحك صلاحيات على أي مشروع، ستظهر تفاصيله هنا.';
+
+  @override
+  String get bcUnitsEmptyMessage =>
+      'جرّب تعديل الفلاتر، أو تواصل مع الشركة لتوسيع صلاحيتك.';
 }

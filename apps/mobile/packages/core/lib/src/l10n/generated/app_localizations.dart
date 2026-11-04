@@ -12031,6 +12031,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The unit is sold.'**
   String get upSoldNote;
+
+  /// No description provided for @bcSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by project or city'**
+  String get bcSearchHint;
+
+  /// No description provided for @bcReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to market'**
+  String get bcReady;
+
+  /// No description provided for @bcReadyOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to market'**
+  String get bcReadyOne;
+
+  /// No description provided for @bcPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get bcPaused;
+
+  /// No description provided for @bcAllActive.
+  ///
+  /// In en, this message translates to:
+  /// **'All active'**
+  String get bcAllActive;
+
+  /// No description provided for @bcPausedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} paused'**
+  String bcPausedN(int n);
+
+  /// No description provided for @bcAvailableForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Units open to you'**
+  String get bcAvailableForYou;
+
+  /// No description provided for @bcAvailableShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Open to you'**
+  String get bcAvailableShort;
+
+  /// No description provided for @bcInProjectsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{in no project} =1{in 1 project} other{in {n} projects}}'**
+  String bcInProjectsN(int n);
+
+  /// No description provided for @bcCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get bcCommission;
+
+  /// No description provided for @bcDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'default'**
+  String get bcDefault;
+
+  /// No description provided for @bcBrowseUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse units'**
+  String get bcBrowseUnits;
+
+  /// No description provided for @bcAccessProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project access'**
+  String get bcAccessProject;
+
+  /// No description provided for @bcAccessUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit access'**
+  String get bcAccessUnit;
+
+  /// No description provided for @bcYourAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your access'**
+  String get bcYourAccess;
+
+  /// No description provided for @bcNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'No end date'**
+  String get bcNoEnd;
+
+  /// No description provided for @bcUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String bcUntil(String date);
+
+  /// No description provided for @bcReserve.
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get bcReserve;
+
+  /// No description provided for @bcFreeForYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Units open to you'**
+  String get bcFreeForYou;
+
+  /// No description provided for @bcNotBookable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not bookable now'**
+  String get bcNotBookable;
+
+  /// No description provided for @bcEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects yet'**
+  String get bcEmpty;
+
+  /// No description provided for @bcEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once you are given access to a project, it shows here.'**
+  String get bcEmptyMessage;
+
+  /// No description provided for @bcUnitsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try other filters, or ask the company to widen your access.'**
+  String get bcUnitsEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

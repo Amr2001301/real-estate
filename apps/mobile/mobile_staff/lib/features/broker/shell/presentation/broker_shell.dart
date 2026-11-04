@@ -8,9 +8,8 @@ import '../../home/broker_home_data.dart';
 import '../../home/broker_home_screen.dart';
 
 import '../../catalog/domain/repositories/broker_catalog_repository.dart';
-import '../../catalog/domain/usecases/broker_catalog_use_cases.dart';
-import '../../catalog/presentation/cubit/broker_projects_cubit.dart';
-import '../../catalog/presentation/screens/broker_projects_screen.dart';
+import '../../catalog/portal/portal_catalog_data.dart';
+import '../../catalog/portal/portal_catalog_screens.dart';
 import '../../leads/domain/repositories/broker_leads_repository.dart';
 import '../../leads/domain/usecases/broker_lead_use_cases.dart';
 import '../../leads/presentation/cubit/broker_leads_cubit.dart';
@@ -23,8 +22,6 @@ import '../../reservations/presentation/screens/broker_reservations_screen.dart'
 
 /// The authenticated Broker workspace: a 5-tab bottom-nav shell.
 ///
-/// [BrokerProjectsCubit] is hoisted here (not scoped to the projects tab)
-/// so both Dashboard and Projects screens can read the same live data.
 class BrokerShell extends StatefulWidget {
   const BrokerShell({super.key});
 
@@ -34,23 +31,6 @@ class BrokerShell extends StatefulWidget {
 
 class _BrokerShellState extends State<BrokerShell> {
   int _index = 0;
-
-  // Hoisted at shell level so the Dashboard tab can read project list data.
-  late final BrokerProjectsCubit _projectsCubit;
-
-  @override
-  void initState() {
-    super.initState();
-    _projectsCubit = BrokerProjectsCubit(
-      GetBrokerProjects(context.read<BrokerCatalogRepository>()),
-    )..load();
-  }
-
-  @override
-  void dispose() {
-    _projectsCubit.close();
-    super.dispose();
-  }
 
   void _switchTab(int index) => setState(() => _index = index);
 
@@ -62,7 +42,11 @@ class _BrokerShellState extends State<BrokerShell> {
       ),
       child: BrokerHomeScreen(onSwitchTab: _switchTab),
     ),
-    const BrokerProjectsScreen(),
+    // The approved design (2026-11-04), with the portal's projects page.
+    BlocProvider(
+      create: (ctx) => PortalProjectsCubit(PortalCatalogRepository(ctx.read<Dio>())),
+      child: const PortalProjectsScreen(),
+    ),
     BlocProvider(
       create: (ctx) =>
           BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>()), ctx.read<BrokerLeadsRepository>()),
@@ -79,9 +63,7 @@ class _BrokerShellState extends State<BrokerShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return BlocProvider.value(
-      value: _projectsCubit,
-      child: Scaffold(
+    return Scaffold(
         extendBody: true,
         body: IndexedStack(index: _index, children: _tabs),
         // The navy bar floating over the page, as the other staff homes.
@@ -96,7 +78,6 @@ class _BrokerShellState extends State<BrokerShell> {
             AppBottomNavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: l10n.bhNavAccount),
           ],
         ),
-      ),
     );
   }
 }
