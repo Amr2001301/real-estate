@@ -354,6 +354,8 @@ class _StaffQuickBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // «العملاء» is the admins' page, as on the website.
+    final clients = StaffAccess.clients(context.read<SessionCubit>().state.role, context.watch<StaffPermissionsCubit>().state);
     final items = [
       _QItem(
         icon: Icons.track_changes_rounded,
@@ -367,12 +369,13 @@ class _StaffQuickBar extends StatelessWidget {
         navyStyle: false,
         onTap: () => context.push('/visits'),
       ),
-      _QItem(
-        icon: AppIcons.profile,
-        label: l10n.staffShortcutClients,
-        navyStyle: true,
-        onTap: () => context.push('/clients'),
-      ),
+      if (clients)
+        _QItem(
+          icon: AppIcons.profile,
+          label: l10n.staffShortcutClients,
+          navyStyle: true,
+          onTap: () => context.push('/clients'),
+        ),
       _QItem(
         icon: Icons.payments_rounded,
         label: l10n.staffShortcutCommissions,
@@ -537,15 +540,17 @@ class _StaffServicesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+    final clients = StaffAccess.clients(context.read<SessionCubit>().state.role, context.watch<StaffPermissionsCubit>().state);
 
     final services = [
-      _SItem(
-        icon: AppIcons.profile,
-        label: l10n.navClients,
-        subtitle: l10n.staffMyClientsDesc,
-        navyStyle: true,
-        onTap: () => context.push('/clients'),
-      ),
+      if (clients)
+        _SItem(
+          icon: AppIcons.profile,
+          label: l10n.navClients,
+          subtitle: l10n.staffMyClientsDesc,
+          navyStyle: true,
+          onTap: () => context.push('/clients'),
+        ),
       _SItem(
         icon: Icons.people_alt_rounded,
         label: l10n.navLeads,

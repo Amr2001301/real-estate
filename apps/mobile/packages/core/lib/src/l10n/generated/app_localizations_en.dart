@@ -7365,4 +7365,189 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get kbEmptyMessage =>
       'Contracts of the clients you brought appear here once their bookings are converted.';
+
+  @override
+  String clOwnersN(int n) {
+    return '$n unit owners';
+  }
+
+  @override
+  String get clBrowsers => 'Browsing';
+
+  @override
+  String get clBrowsersHint => 'No unit yet';
+
+  @override
+  String get clSuspendedTitle => 'Suspended';
+
+  @override
+  String get clSuspendedHint => 'Suspended accounts';
+
+  @override
+  String get clAllActive => 'All active';
+
+  @override
+  String get clOwner => 'Owner';
+
+  @override
+  String get clBrowser => 'Browsing';
+
+  @override
+  String get clActive => 'Active';
+
+  @override
+  String get clSuspended => 'Suspended';
+
+  @override
+  String clJoined(String date) {
+    return 'Joined $date';
+  }
+
+  @override
+  String clLastLogin(String date) {
+    return 'Last sign-in $date';
+  }
+
+  @override
+  String get clNeverLogged => 'Never signed in';
+
+  @override
+  String get clSearchHint => 'Search by name, phone or e-mail';
+
+  @override
+  String get clEmpty => 'No clients yet.';
+
+  @override
+  String get clAccount => 'Account';
+
+  @override
+  String get clStatus => 'Status';
+
+  @override
+  String get clType => 'Type';
+
+  @override
+  String get clJoinedLbl => 'Registered';
+
+  @override
+  String get clLastLoginLbl => 'Last sign-in';
+
+  @override
+  String get clLocale => 'App language';
+
+  @override
+  String get clId => 'Client ID';
+
+  @override
+  String clSuspendedSince(String date) {
+    return 'Suspended since $date';
+  }
+
+  @override
+  String get clSuspend => 'Suspend account';
+
+  @override
+  String get clRestore => 'Restore account';
+
+  @override
+  String get clSuspendConfirm =>
+      'The client will not be able to sign in until the account is restored. Continue?';
+
+  @override
+  String get clConfirm => 'Confirm';
+
+  @override
+  String get clDetails => 'More details';
+
+  @override
+  String get clNationalId => 'National ID';
+
+  @override
+  String get clAddress => 'Address';
+
+  @override
+  String get clBirthDate => 'Date of birth';
+
+  @override
+  String get clBirthPlace => 'Place of birth';
+
+  @override
+  String get clOccupation => 'Occupation';
+
+  @override
+  String get clEmployer => 'Employer';
+
+  @override
+  String get clIdIssueDate => 'ID issue date';
+
+  @override
+  String get clIdIssuePlace => 'ID issued at';
+
+  @override
+  String get clHomePhone => 'Home phone';
+
+  @override
+  String get clLeads => 'Leads';
+
+  @override
+  String get clNoLeads => 'No leads for this client.';
+
+  @override
+  String get clReservations => 'Bookings';
+
+  @override
+  String get clContracts => 'Contracts';
+
+  @override
+  String get clSigned => 'Signed';
+
+  @override
+  String get clUnsigned => 'Awaiting signature';
+
+  @override
+  String get clMaintenance => 'Maintenance';
+
+  @override
+  String get clDocuments => 'Documents';
+
+  @override
+  String clBy(String name) {
+    return 'Uploaded by $name';
+  }
+
+  @override
+  String get clNoFollowUp => 'No follow-up set';
+
+  @override
+  String get clDocImage => 'Image';
+
+  @override
+  String get clDocContract => 'Contract';
+
+  @override
+  String get clDocReceipt => 'Receipt';
+
+  @override
+  String get clDocInvoice => 'Invoice';
+
+  @override
+  String get clDocBrokerAgreement => 'Broker agreement';
+
+  @override
+  String get clDocCommission => 'Commission statement';
+
+  @override
+  String get clDocPayout => 'Payout receipt';
+
+  @override
+  String get clDocId => 'ID document';
+
+  @override
+  String get clDocLegal => 'Legal';
+
+  @override
+  String get clDocFinancial => 'Financial';
+
+  @override
+  String get clDocOther => 'Other';
 }

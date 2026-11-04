@@ -5,10 +5,6 @@ import 'package:mobile_staff/features/clients/data/datasources/clients_remote_da
 import 'package:mobile_staff/features/clients/data/dtos/client_lead_dto.dart';
 import 'package:mobile_staff/features/clients/data/mappers/client_mapper.dart';
 import 'package:mobile_staff/features/clients/data/repositories/clients_repository_impl.dart';
-import 'package:mobile_staff/features/clients/domain/entities/staff_client.dart';
-import 'package:mobile_staff/features/clients/domain/repositories/clients_repository.dart';
-import 'package:mobile_staff/features/clients/domain/usecases/client_use_cases.dart';
-import 'package:mobile_staff/features/clients/presentation/cubit/clients_cubit.dart';
 
 class _FakeRemote implements ClientsRemoteDataSource {
   _FakeRemote({this.rows = const [], this.error});
@@ -24,15 +20,6 @@ class _FakeRemote implements ClientsRemoteDataSource {
   @override
   Future<List<ClientLeadDto>> listLeadsForClient(String clientId) async =>
       rows.where((r) => r.clientId == clientId).toList();
-}
-
-class _FakeRepo implements ClientsRepository {
-  _FakeRepo(this._clients);
-  final Result<List<StaffClient>> _clients;
-  @override
-  Future<Result<List<StaffClient>>> getMyClients({String? search}) async => _clients;
-  @override
-  Future<Result<ClientDetail>> getClient(String clientId) async => throw UnimplementedError();
 }
 
 ClientLeadDto _row(String clientId, String name, {String stage = 'NEW', String? date}) =>
@@ -93,20 +80,4 @@ void main() {
     });
   });
 
-  group('ClientsCubit', () {
-    test('empty → empty state', () async {
-      final cubit = ClientsCubit(GetMyClients(_FakeRepo(const Ok([]))));
-      await cubit.load();
-      expect(cubit.state.status, DataStatus.empty);
-    });
-
-    test('success → data state', () async {
-      final cubit = ClientsCubit(GetMyClients(_FakeRepo(const Ok([
-        StaffClient(clientId: 'c1', fullName: 'Mona', leadCount: 1, latestStage: 'NEW'),
-      ]))));
-      await cubit.load();
-      expect(cubit.state.status, DataStatus.success);
-      expect(cubit.state.clients, hasLength(1));
-    });
-  });
 }

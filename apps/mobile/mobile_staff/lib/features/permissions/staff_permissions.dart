@@ -30,6 +30,10 @@ abstract final class StaffAccess {
   /// «ليا وعليا» — the dashboard's receivables & payables (admin, or reports:financial:read).
   static bool ledger(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:financial:read');
 
+  /// «العملاء» — the client accounts, admins only as on the website (the
+  /// API's /users is ADMIN-only; no code opens it).
+  static bool clients(AppRole? r, StaffPermissions p) => r == AppRole.admin;
+
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
 }

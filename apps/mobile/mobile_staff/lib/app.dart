@@ -53,6 +53,7 @@ import 'features/catalog/data/repositories/staff_catalog_repository_impl.dart';
 import 'features/catalog/domain/repositories/staff_catalog_repository.dart';
 import 'features/clients/data/datasources/clients_remote_data_source.dart';
 import 'features/clients/data/repositories/clients_repository_impl.dart';
+import 'features/clients/clients_data.dart';
 import 'features/clients/domain/repositories/clients_repository.dart';
 import 'features/dashboard/data/datasources/dashboard_remote_data_source.dart';
 import 'features/dashboard/data/repositories/dashboard_repository_impl.dart';
@@ -165,6 +166,7 @@ class StaffApp extends StatelessWidget {
             PaymentsReviewRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
+        RepositoryProvider<AdminClientsRepository>(create: (ctx) => AdminClientsRepository(ctx.read<Dio>())),
         RepositoryProvider<ClientsRepository>(
           create: (ctx) =>
               ClientsRepositoryImpl(ClientsRemoteDataSourceImpl(ctx.read<Dio>())),

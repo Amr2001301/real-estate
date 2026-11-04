@@ -25,6 +25,11 @@ import '../features/campaigns/presentation/campaigns_cubit.dart';
 import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/clients/client_detail_screen.dart';
+import '../features/clients/clients_data.dart';
+import '../features/clients/domain/repositories/clients_repository.dart';
+import '../features/clients/domain/usecases/client_use_cases.dart';
+import '../features/clients/clients_screen.dart';
 import '../features/cheques/domain/cheque.dart';
 import '../features/ledger/domain/ledger.dart';
 import '../features/ledger/presentation/ledger_group_screen.dart';
@@ -98,13 +103,6 @@ import '../features/catalog/units_list/units_list_data.dart';
 import '../features/catalog/units_list/units_list_screen.dart';
 import '../features/catalog/unit_page/unit_page_data.dart';
 import '../features/catalog/unit_page/unit_page_screen.dart';
-import '../features/clients/domain/entities/staff_client.dart';
-import '../features/clients/domain/repositories/clients_repository.dart';
-import '../features/clients/domain/usecases/client_use_cases.dart';
-import '../features/clients/presentation/cubit/client_detail_cubit.dart';
-import '../features/clients/presentation/cubit/clients_cubit.dart';
-import '../features/clients/presentation/screens/client_detail_screen.dart';
-import '../features/clients/presentation/screens/clients_screen.dart';
 import '../features/leads/domain/entities/lead.dart';
 import '../features/leads/domain/repositories/leads_repository.dart';
 import '../features/leads/domain/usecases/lead_use_cases.dart';
@@ -555,26 +553,27 @@ GoRouter createStaffRouter(
         },
       ),
 
-      // ── Clients list ─────────────────────────────────────────────────────
+      // ── Clients (admins only, as on the website) ────────────────────────
       GoRoute(
         path: '/clients',
-        builder: (context, state) => BlocProvider(
-          create: (ctx) =>
-              ClientsCubit(GetMyClients(ctx.read<ClientsRepository>())),
-          child: const ClientsScreen(),
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.clients,
+          child: BlocProvider(
+            create: (ctx) => ClientsCubit(ctx.read<AdminClientsRepository>()),
+            child: const ClientsScreen(),
+          ),
         ),
       ),
-
-      // ── Client detail ────────────────────────────────────────────────────
       GoRoute(
         path: '/clients/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final client = state.extra as StaffClient?;
-          return BlocProvider(
-            create: (ctx) =>
-                ClientDetailCubit(GetClientDetail(ctx.read<ClientsRepository>()), clientId: id),
-            child: ClientDetailScreen(fallback: client),
+          return StaffAccessGate(
+            allows: StaffAccess.clients,
+            child: BlocProvider(
+              create: (ctx) => ClientDetailCubit(ctx.read<AdminClientsRepository>(), clientId: id),
+              child: ClientDetailScreen(fallback: state.extra as ClientRow?),
+            ),
           );
         },
       ),
