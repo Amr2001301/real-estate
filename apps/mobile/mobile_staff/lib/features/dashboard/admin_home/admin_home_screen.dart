@@ -217,8 +217,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             unit: l10n.ahOfN(d.totalUnits),
             sub: l10n.ahSoldReserved(d.soldUnits, d.reservedUnits),
           ),
-          HomeTile(label: l10n.ahBrokerDue, value: due, unit: dueUnit, sub: _symbol(context)),
-          HomeTile(label: l10n.ahExpected30, value: expected, unit: eUnit, sub: _symbol(context)),
+          HomeTile(label: l10n.ahBrokerDue, value: due, unit: '$dueUnit ${_symbol(context)}'.trim(), sub: l10n.ahBrokerDueSub),
+          HomeTile(label: l10n.ahExpected30, value: expected, unit: '$eUnit ${_symbol(context)}'.trim(), sub: l10n.ahExpected30Sub),
         ]),
       ]),
     );

@@ -5517,10 +5517,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get ahBrokerDue => 'عمولات وسطاء مستحقة';
+  String get ahBrokerDue => 'عمولات الوسطاء';
 
   @override
-  String get ahExpected30 => 'تحصيل متوقع خلال 30 يومًا';
+  String get ahExpected30 => 'تحصيل متوقع';
 
   @override
   String get ahNeedsAction => 'تحتاج إجراء';
@@ -5660,4 +5660,10 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get ahBrokerDueSub => 'مستحقة الصرف';
+
+  @override
+  String get ahExpected30Sub => 'خلال 30 يومًا';
 }

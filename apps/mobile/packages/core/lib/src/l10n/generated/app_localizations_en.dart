@@ -5548,10 +5548,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ahBrokerDue => 'Broker commissions due';
+  String get ahBrokerDue => 'Broker commissions';
 
   @override
-  String get ahExpected30 => 'Expected in 30 days';
+  String get ahExpected30 => 'Expected collection';
 
   @override
   String get ahNeedsAction => 'Needs action';
@@ -5683,4 +5683,10 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get ahBrokerDueSub => 'due to be paid';
+
+  @override
+  String get ahExpected30Sub => 'in the next 30 days';
 }

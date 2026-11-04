@@ -10187,13 +10187,13 @@ abstract class AppLocalizations {
   /// No description provided for @ahBrokerDue.
   ///
   /// In en, this message translates to:
-  /// **'Broker commissions due'**
+  /// **'Broker commissions'**
   String get ahBrokerDue;
 
   /// No description provided for @ahExpected30.
   ///
   /// In en, this message translates to:
-  /// **'Expected in 30 days'**
+  /// **'Expected collection'**
   String get ahExpected30;
 
   /// No description provided for @ahNeedsAction.
@@ -10387,6 +10387,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n, plural, =1{1 day ago} other{{n} days ago}}'**
   String ahAgoDays(int n);
+
+  /// No description provided for @ahBrokerDueSub.
+  ///
+  /// In en, this message translates to:
+  /// **'due to be paid'**
+  String get ahBrokerDueSub;
+
+  /// No description provided for @ahExpected30Sub.
+  ///
+  /// In en, this message translates to:
+  /// **'in the next 30 days'**
+  String get ahExpected30Sub;
 }
 
 class _AppLocalizationsDelegate

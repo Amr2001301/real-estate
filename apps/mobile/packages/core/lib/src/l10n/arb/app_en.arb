@@ -1884,8 +1884,8 @@
   "@ahOfN": {"placeholders": {"n": {"type": "int"}}},
   "ahSoldReserved": "{sold} sold · {reserved} reserved",
   "@ahSoldReserved": {"placeholders": {"sold": {"type": "int"}, "reserved": {"type": "int"}}},
-  "ahBrokerDue": "Broker commissions due",
-  "ahExpected30": "Expected in 30 days",
+  "ahBrokerDue": "Broker commissions",
+  "ahExpected30": "Expected collection",
   "ahNeedsAction": "Needs action",
   "ahAttSign": "Contracts awaiting signature",
   "ahAttVisits": "Visits awaiting confirmation",
@@ -1922,5 +1922,7 @@
   "ahAgoHours": "{n, plural, =1{1 hour ago} other{{n} hours ago}}",
   "@ahAgoHours": {"placeholders": {"n": {"type": "int"}}},
   "ahAgoDays": "{n, plural, =1{1 day ago} other{{n} days ago}}",
-  "@ahAgoDays": {"placeholders": {"n": {"type": "int"}}}
+  "@ahAgoDays": {"placeholders": {"n": {"type": "int"}}},
+  "ahBrokerDueSub": "due to be paid",
+  "ahExpected30Sub": "in the next 30 days"
 }

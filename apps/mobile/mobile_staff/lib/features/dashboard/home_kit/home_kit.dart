@@ -667,7 +667,7 @@ class HomeTiles extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(tiles[i].label, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      Text(tiles[i].label, maxLines: 1, overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 11, color: context.appColors.inkMuted)),
                       const SizedBox(height: 3),
                       FittedBox(

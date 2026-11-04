@@ -1876,8 +1876,8 @@
   "@ahOfN": {"placeholders": {"n": {"type": "int"}}},
   "ahSoldReserved": "{sold} مبيعة · {reserved} محجوزة",
   "@ahSoldReserved": {"placeholders": {"sold": {"type": "int"}, "reserved": {"type": "int"}}},
-  "ahBrokerDue": "عمولات وسطاء مستحقة",
-  "ahExpected30": "تحصيل متوقع خلال 30 يومًا",
+  "ahBrokerDue": "عمولات الوسطاء",
+  "ahExpected30": "تحصيل متوقع",
   "ahNeedsAction": "تحتاج إجراء",
   "ahAttSign": "عقود تنتظر التوقيع",
   "ahAttVisits": "زيارات تنتظر التأكيد",
@@ -1914,5 +1914,7 @@
   "ahAgoHours": "{n, plural, =1{منذ ساعة} =2{منذ ساعتين} few{منذ {n} ساعات} other{منذ {n} ساعة}}",
   "@ahAgoHours": {"placeholders": {"n": {"type": "int"}}},
   "ahAgoDays": "{n, plural, =1{منذ يوم} =2{منذ يومين} few{منذ {n} أيام} other{منذ {n} يومًا}}",
-  "@ahAgoDays": {"placeholders": {"n": {"type": "int"}}}
+  "@ahAgoDays": {"placeholders": {"n": {"type": "int"}}},
+  "ahBrokerDueSub": "مستحقة الصرف",
+  "ahExpected30Sub": "خلال 30 يومًا"
 }
