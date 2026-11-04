@@ -113,7 +113,7 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: HomeListHero(
-                      title: l10n.navLeads,
+                      title: l10n.bhNavClients,
                       subtitle: c == null ? null : l10n.lvCountN(c.total),
                       actions: [
                         HomeHeroButton(
@@ -241,6 +241,10 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
   }
 }
 
+/// One broker lead, in the same card as the company's leads list: who,
+/// the project and unit, the approval, the stage and the company's rep, and
+/// underneath where the request stands (with the rejection reason) and when
+/// it was sent, with WhatsApp and call.
 class BrokerLeadCard extends StatelessWidget {
   const BrokerLeadCard({super.key, required this.lead});
   final BrokerLead lead;
@@ -255,77 +259,120 @@ class BrokerLeadCard extends StatelessWidget {
       if ((lead.projectName ?? '').isNotEmpty) lead.projectName!,
       (lead.unitCode ?? '').isNotEmpty ? ltr(lead.unitCode!) : l10n.blAnyUnit,
     ].join(' · ');
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        key: Key('broker-lead-${lead.id}'),
+    final reason = (lead.rejectionReason ?? '').trim();
+
+    // Where the request stands, as the track on the lead's page.
+    final (IconData statusIcon, String statusText) = switch (lead.approvalStatus) {
+      'APPROVED' => (
+          Icons.verified_rounded,
+          lead.approvedAt == null ? l10n.blStepApproved : '${l10n.blStepApproved} · ${leadWhen(context, lead.approvedAt!, withTime: false)}',
+        ),
+      'REJECTED' => (Icons.cancel_rounded, reason.isNotEmpty ? reason : l10n.blStepRejected),
+      'DUPLICATE' => (Icons.content_copy_rounded, l10n.blStepDuplicate),
+      'EXPIRED' => (Icons.timer_off_rounded, l10n.blStepExpired),
+      _ => (Icons.hourglass_top_rounded, l10n.blWaitingCompany),
+    };
+
+    return Opacity(
+      opacity: duplicate ? 0.6 : 1,
+      child: Material(
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
-        child: Opacity(
-          opacity: duplicate ? 0.6 : 1,
+        child: InkWell(
+          key: Key('broker-lead-${lead.id}'),
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => context.push('/broker/leads/${lead.id}', extra: lead),
           child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: homeCard(context),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                child: duplicate
-                    ? const Icon(Icons.content_copy_rounded, size: 18, color: AppPalette.gold300)
-                    : Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.hairline),
+            ),
+            child: Column(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                    child: duplicate
+                        ? const Icon(Icons.content_copy_rounded, size: 18, color: AppPalette.gold300)
+                        : Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Expanded(
+                          child: Text(lead.fullName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                        ),
+                        const SizedBox(width: 6),
+                        _Pill(text: brokerLeadStatusLabel(l10n, lead.approvalStatus), color: approval),
+                      ]),
+                      const SizedBox(height: 3),
+                      Row(children: [
+                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(where,
+                              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        ),
+                      ]),
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 6, runSpacing: 4, children: [
+                        _Tag(icon: Icons.flag_rounded, text: leadStageLabel(l10n, lead.stage), color: leadStageColor(lead.stage, colors)),
+                        if ((lead.assignedSalesName ?? '').isNotEmpty)
+                          _Tag(icon: Icons.person_rounded, text: lead.assignedSalesName!)
+                        else
+                          _Tag(icon: Icons.person_off_rounded, text: l10n.blNoRep),
+                      ]),
+                    ]),
+                  ),
+                ]),
               ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(lead.fullName,
-                          maxLines: 1,
+              Container(
+                padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                decoration: BoxDecoration(
+                  color: colors.surfaceSoft.withValues(alpha: 0.6),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+                  border: Border(top: BorderSide(color: colors.hairline)),
+                ),
+                child: Row(children: [
+                  Icon(statusIcon, size: 15, color: approval),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(statusText,
+                          key: Key('broker-lead-status-${lead.id}'),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: approval)),
+                      if (lead.sentAt != null)
+                        Text(l10n.blSent(leadWhen(context, lead.sentAt!, withTime: false)),
+                            style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    ]),
+                  ),
+                  if ((lead.phone ?? '').isNotEmpty) ...[
+                    _RoundAction(
+                      key: Key('broker-lead-whatsapp-${lead.id}'),
+                      icon: Icons.chat_rounded,
+                      color: const Color(0xFF1E9E5A),
+                      onTap: () => ContactActions.whatsApp(number: lead.phone!),
                     ),
-                    _Pill(text: brokerLeadStatusLabel(l10n, lead.approvalStatus), color: approval),
-                  ]),
-                  const SizedBox(height: 3),
-                  Row(children: [
-                    Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                    const SizedBox(width: 6),
+                    _RoundAction(
+                      key: Key('broker-lead-call-${lead.id}'),
+                      icon: Icons.phone_rounded,
+                      color: AppPalette.navy,
+                      onTap: () => ContactActions.call(lead.phone!),
                     ),
-                  ]),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    _Pill(text: leadStageLabel(l10n, lead.stage), color: leadStageColor(lead.stage, colors)),
-                    if ((lead.assignedSalesName ?? '').isNotEmpty)
-                      _Pill(text: l10n.blRep(lead.assignedSalesName!), color: colors.inkMuted, icon: Icons.person_rounded),
-                    if (lead.sentAt != null)
-                      Text(l10n.blSent(leadWhen(context, lead.sentAt!, withTime: false)),
-                          style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                  ]),
-                  if (lead.approvalStatus == 'REJECTED' && (lead.rejectionReason ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(lead.rejectionReason!,
-                        maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.error)),
                   ],
                 ]),
               ),
-              if ((lead.phone ?? '').isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Material(
-                  color: AppPalette.navy.withValues(alpha: 0.08),
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    key: Key('broker-lead-call-${lead.id}'),
-                    customBorder: const CircleBorder(),
-                    onTap: () => ContactActions.call(lead.phone!),
-                    child: const SizedBox(width: 36, height: 36, child: Icon(Icons.phone_rounded, size: 18, color: AppPalette.navy)),
-                  ),
-                ),
-              ],
             ]),
           ),
         ),
@@ -334,22 +381,57 @@ class BrokerLeadCard extends StatelessWidget {
   }
 }
 
+class _Tag extends StatelessWidget {
+  const _Tag({required this.icon, required this.text, this.color});
+  final IconData icon;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? context.appColors.inkMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: context.appColors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 12, color: c),
+        const SizedBox(width: 4),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({super.key, required this.icon, required this.color, required this.onTap});
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: color.withValues(alpha: 0.10),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 18, color: color)),
+        ),
+      );
+}
+
 class _Pill extends StatelessWidget {
-  const _Pill({required this.text, required this.color, this.icon});
+  const _Pill({required this.text, required this.color});
   final String text;
   final Color color;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 12, color: color), const SizedBox(width: 3)],
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 170),
-            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
-          ),
-        ]),
+        child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
       );
 }
