@@ -7324,4 +7324,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mcPlanLater => 'بعد الإنشاء أضف خطة الأقساط من الموقع.';
+
+  @override
+  String get kbFromClients => 'من عملائك';
+
+  @override
+  String get kbValueM => 'القيمة (مليون)';
+
+  @override
+  String get kbYourCommission => 'عمولتك';
+
+  @override
+  String kbYourCommissionPct(String pct) {
+    return 'عمولتك $pct';
+  }
+
+  @override
+  String get kbCommissionStatus => 'الحالة';
+
+  @override
+  String get kbNet => 'الصافي';
+
+  @override
+  String get kbClient => 'العميل';
+
+  @override
+  String get kbUnitProject => 'الوحدة والمشروع';
+
+  @override
+  String get kbType => 'النوع';
+
+  @override
+  String get kbArea => 'المساحة';
+
+  @override
+  String kbAreaM(String n) {
+    return '$n م²';
+  }
+
+  @override
+  String get kbBuilding => 'المبنى';
+
+  @override
+  String get kbDelivery => 'التسليم';
+
+  @override
+  String get kbPlan => 'خطة السداد';
+
+  @override
+  String get kbPayments => 'الدفعات المسجّلة';
+
+  @override
+  String get kbEmpty => 'لا توجد عقود بعد';
+
+  @override
+  String get kbEmptyMessage =>
+      'تظهر هنا عقود العملاء الذين أحضرتهم بعد تحويل حجوزاتهم إلى عقود.';
 }

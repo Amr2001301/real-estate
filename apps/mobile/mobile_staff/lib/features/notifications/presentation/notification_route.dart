@@ -23,6 +23,10 @@ String? staffNotificationRoute(
     if (code.startsWith('broker_commission_') || code.startsWith('broker_payout_')) {
       return '/broker/commissions';
     }
+    if (code.contains('contract') || entityType == 'contract') {
+      final id = idOf('contract', 'contractId');
+      return id != null ? '/broker/contracts/$id' : '/broker/contracts';
+    }
     if (code.contains('reservation') || entityType == 'reservation') {
       final id = idOf('reservation', 'reservationId');
       return id != null ? '/broker/reservations/$id' : '/broker/home';

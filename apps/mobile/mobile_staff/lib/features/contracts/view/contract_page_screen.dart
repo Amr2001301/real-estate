@@ -170,11 +170,11 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           decoration: homeCard(context, radius: 22),
           child: Column(children: [
-            _Party(label: l10n.kcClient, name: p.row.customerName ?? '—', phone: p.row.customerPhone),
-            if ((p.salesName ?? '').isNotEmpty) ...[Divider(height: 1, color: colors.hairline), _Party(label: l10n.kcSales, name: p.salesName!)],
+            ContractParty(label: l10n.kcClient, name: p.row.customerName ?? '—', phone: p.row.customerPhone),
+            if ((p.salesName ?? '').isNotEmpty) ...[Divider(height: 1, color: colors.hairline), ContractParty(label: l10n.kcSales, name: p.salesName!)],
             if ((p.brokerName ?? '').isNotEmpty) ...[
               Divider(height: 1, color: colors.hairline),
-              _Party(label: l10n.kcBroker, name: [p.brokerName!, if ((p.brokerAgentName ?? '').isNotEmpty) p.brokerAgentName!].join(' · '), icon: Icons.handshake_rounded),
+              ContractParty(label: l10n.kcBroker, name: [p.brokerName!, if ((p.brokerAgentName ?? '').isNotEmpty) p.brokerAgentName!].join(' · '), icon: Icons.handshake_rounded),
             ],
           ]),
         ),
@@ -429,8 +429,8 @@ class KvTable extends StatelessWidget {
   }
 }
 
-class _Party extends StatelessWidget {
-  const _Party({required this.label, required this.name, this.phone, this.icon});
+class ContractParty extends StatelessWidget {
+  const ContractParty({super.key, required this.label, required this.name, this.phone, this.icon});
   final String label;
   final String name;
   final String? phone;
