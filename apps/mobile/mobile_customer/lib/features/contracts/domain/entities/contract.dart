@@ -18,6 +18,9 @@ class Contract extends Equatable {
     this.deliveryDate,
     this.expectedDeliveryDate,
     this.deliveryDelayDays = 0,
+    this.totalAmount,
+    this.downPayment,
+    this.plan,
   });
 
   final String id;
@@ -38,7 +41,32 @@ class Contract extends Equatable {
   /// Days the expected date is past the promised one; 0 when on time.
   final int deliveryDelayDays;
 
+  /// The contract's price and down payment, as the website shows them.
+  final double? totalAmount;
+  final double? downPayment;
+
+  /// The installment plan; null for a cash contract.
+  final ContractPlan? plan;
+
   @override
   List<Object?> get props =>
-      [id, contractNumber, unitCode, status, signedAt, handedOverAt, deliveryDate, expectedDeliveryDate, deliveryDelayDays];
+      [id, contractNumber, unitCode, status, signedAt, handedOverAt, deliveryDate, expectedDeliveryDate, deliveryDelayDays,
+        totalAmount, downPayment, plan];
+}
+
+/// The installment plan of a contract: how long, how much each time, how often.
+class ContractPlan extends Equatable {
+  const ContractPlan({required this.totalMonths, required this.monthlyAmount, this.startsAt, this.frequency = 'MONTHLY'});
+
+  final int totalMonths;
+
+  /// The amount of each installment (named monthly on the API whatever the frequency).
+  final double monthlyAmount;
+  final DateTime? startsAt;
+
+  /// MONTHLY, QUARTERLY, SEMI_ANNUAL or ANNUAL.
+  final String frequency;
+
+  @override
+  List<Object?> get props => [totalMonths, monthlyAmount, startsAt, frequency];
 }

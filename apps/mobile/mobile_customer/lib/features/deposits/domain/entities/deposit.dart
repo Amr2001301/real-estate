@@ -32,6 +32,14 @@ class Deposit extends Equatable {
     this.contractNumber,
     this.unitCode,
     this.state,
+    this.paymentMethod,
+    this.reviewStatus,
+    this.rejectionReason,
+    this.reviewedAt,
+    this.createdAt,
+    this.installmentDueDate,
+    this.reservationNumber,
+    this.hasProof = false,
   });
 
   final String id;
@@ -46,11 +54,34 @@ class Deposit extends Equatable {
   /// CHEQUE_PENDING, REJECTED, REVERSED, BOUNCED).
   final String? state;
 
+  /// CASH, BANK_TRANSFER, CHEQUE, CARD, … as recorded.
+  final String? paymentMethod;
+
+  /// The proof's review: PENDING, APPROVED, REJECTED (or none when recorded
+  /// by the company).
+  final String? reviewStatus;
+  final String? rejectionReason;
+  final DateTime? reviewedAt;
+
+  /// When the payment was sent or recorded.
+  final DateTime? createdAt;
+
+  /// The schedule row it paid, when it paid one.
+  final DateTime? installmentDueDate;
+
+  /// The booking it paid, for a booking payment.
+  final String? reservationNumber;
+
+  /// The customer sent a proof for it (a payment the company recorded itself
+  /// has none).
+  final bool hasProof;
+
   /// Counts as paid: collected — not a proof under review, a rejected one, a
   /// reversed payment or a returned cheque. An older API without `state`
   /// falls back to `verified`.
   bool get collected => state != null ? state == 'COLLECTED' : verified;
 
   @override
-  List<Object?> get props => [id, amount, type, verified, paidAt, state];
+  List<Object?> get props => [id, amount, type, verified, paidAt, state, paymentMethod, reviewStatus, rejectionReason,
+        reviewedAt, createdAt, installmentDueDate, reservationNumber, hasProof];
 }

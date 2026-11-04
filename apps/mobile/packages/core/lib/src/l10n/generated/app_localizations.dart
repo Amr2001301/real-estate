@@ -9283,6 +9283,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'WhatsApp'**
   String get contentContactWhatsApp;
+
+  /// No description provided for @contractMoneyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment summary'**
+  String get contractMoneyTitle;
+
+  /// No description provided for @contractPaidShare.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of the contract paid'**
+  String contractPaidShare(String percent);
+
+  /// No description provided for @contractRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get contractRemaining;
+
+  /// No description provided for @contractNextInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next installment'**
+  String get contractNextInstallment;
+
+  /// No description provided for @contractNextDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due on {date}'**
+  String contractNextDue(String date);
+
+  /// No description provided for @contractNextOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue since {date}'**
+  String contractNextOverdue(String date);
+
+  /// No description provided for @contractNoUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is due from you right now.'**
+  String get contractNoUpcoming;
+
+  /// No description provided for @contractViewInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'All installments'**
+  String get contractViewInstallments;
+
+  /// No description provided for @contractPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment plan'**
+  String get contractPlanTitle;
+
+  /// No description provided for @contractPlanEach.
+  ///
+  /// In en, this message translates to:
+  /// **'Each installment'**
+  String get contractPlanEach;
+
+  /// No description provided for @contractPlanDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get contractPlanDuration;
+
+  /// No description provided for @contractPlanStart.
+  ///
+  /// In en, this message translates to:
+  /// **'First installment'**
+  String get contractPlanStart;
+
+  /// No description provided for @contractPlanFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Every'**
+  String get contractPlanFrequency;
+
+  /// No description provided for @contractPlanCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in full, no installments'**
+  String get contractPlanCash;
+
+  /// No description provided for @freqMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'month'**
+  String get freqMonthly;
+
+  /// No description provided for @freqQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'3 months'**
+  String get freqQuarterly;
+
+  /// No description provided for @freqSemiAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'6 months'**
+  String get freqSemiAnnual;
+
+  /// No description provided for @freqAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'year'**
+  String get freqAnnual;
+
+  /// No description provided for @contractUnitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The unit'**
+  String get contractUnitTitle;
+
+  /// No description provided for @statementCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'Charge'**
+  String get statementCharge;
+
+  /// No description provided for @statementPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get statementPayment;
+
+  /// No description provided for @depositStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment status'**
+  String get depositStatusTitle;
+
+  /// No description provided for @depositDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment details'**
+  String get depositDetailsTitle;
+
+  /// No description provided for @depositStateCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get depositStateCollected;
+
+  /// No description provided for @depositStatePendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get depositStatePendingReview;
+
+  /// No description provided for @depositStateChequePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque not cleared yet'**
+  String get depositStateChequePending;
+
+  /// No description provided for @depositStateRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get depositStateRejected;
+
+  /// No description provided for @depositStateReversed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reversed by the company'**
+  String get depositStateReversed;
+
+  /// No description provided for @depositStateBounced.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque returned'**
+  String get depositStateBounced;
+
+  /// No description provided for @depositStepSent.
+  ///
+  /// In en, this message translates to:
+  /// **'You sent the proof'**
+  String get depositStepSent;
+
+  /// No description provided for @depositStepRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded by the company'**
+  String get depositStepRecorded;
+
+  /// No description provided for @depositStepReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Company review'**
+  String get depositStepReview;
+
+  /// No description provided for @depositStepConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment confirmed'**
+  String get depositStepConfirmed;
+
+  /// No description provided for @depositStepRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof rejected'**
+  String get depositStepRejected;
+
+  /// No description provided for @depositStepWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get depositStepWaiting;
+
+  /// No description provided for @depositMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get depositMethod;
+
+  /// No description provided for @depositForInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'For the installment due on'**
+  String get depositForInstallment;
+
+  /// No description provided for @depositBookingNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking number'**
+  String get depositBookingNumber;
+
+  /// No description provided for @depositRejectedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why it was rejected'**
+  String get depositRejectedReason;
+
+  /// No description provided for @paymentMethodCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Card'**
+  String get paymentMethodCard;
 }
 
 class _AppLocalizationsDelegate

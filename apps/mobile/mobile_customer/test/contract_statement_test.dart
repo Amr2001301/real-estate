@@ -83,12 +83,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('كشف الحساب'), findsOneWidget);
-    expect(find.text('المتبقي على العقد'), findsOneWidget);
+    expect(find.text('المتبقي'), findsOneWidget);
     expect(find.text('متأخر'), findsOneWidget);
     expect(find.text('بانتظار التأكيد'), findsOneWidget);
     expect(find.text('مستحق اليوم'), findsNothing); // zero figures are hidden
-    await tester.scrollUntilVisible(find.text('قيمة العقد'), 200, scrollable: find.byType(Scrollable).first);
-    expect(find.text('قيمة العقد'), findsOneWidget);
+    // The summary's label and the contract's own movement.
+    await tester.scrollUntilVisible(find.text('قيمة العقد').last, 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('قيمة العقد'), findsNWidgets(2));
     await tester.scrollUntilVisible(find.text('سداد الدفعة المقدمة — نقدًا'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('سداد الدفعة المقدمة — نقدًا'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('عكس سداد قسط'), 200, scrollable: find.byType(Scrollable).first);

@@ -17,5 +17,15 @@ extension ContractDtoMapper on ContractDto {
         deliveryDate: DateTime.tryParse(deliveryDate ?? ''),
         expectedDeliveryDate: DateTime.tryParse(expectedDeliveryDate ?? ''),
         deliveryDelayDays: deliveryDelayDays,
+        totalAmount: totalAmount,
+        downPayment: downPayment,
+        plan: planMonths != null && planAmount != null
+            ? ContractPlan(
+                totalMonths: planMonths!,
+                monthlyAmount: planAmount!,
+                startsAt: DateTime.tryParse(planStartsAt ?? ''),
+                frequency: planFrequency ?? 'MONTHLY',
+              )
+            : null,
       );
 }

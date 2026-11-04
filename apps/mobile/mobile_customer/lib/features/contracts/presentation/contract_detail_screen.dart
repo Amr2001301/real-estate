@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../documents/presentation/widgets/documents_list_view.dart';
 import '../domain/entities/contract.dart';
+import 'contract_detail_sections.dart';
 
 const _navyDeep = Color(0xFF0B1726);
 const _navyLight = Color(0xFF243F62);
@@ -57,6 +58,13 @@ class ContractDetailScreen extends StatelessWidget {
                   theme: theme,
                   signed: signed,
                 ),
+                const SizedBox(height: AppSpacing.md),
+
+                // ── Money: paid / remaining, and the next installment
+                if (signed) ContractMoneySection(contract: contract),
+
+                // ── The price and how it is paid
+                ContractPlanCard(contract: contract),
                 const SizedBox(height: AppSpacing.md),
 
                 // ── Statement of account

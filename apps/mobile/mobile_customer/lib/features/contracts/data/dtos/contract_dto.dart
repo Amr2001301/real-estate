@@ -18,6 +18,12 @@ class ContractDto {
     this.deliveryDate,
     this.expectedDeliveryDate,
     this.deliveryDelayDays = 0,
+    this.totalAmount,
+    this.downPayment,
+    this.planMonths,
+    this.planAmount,
+    this.planStartsAt,
+    this.planFrequency,
   });
 
   final String id;
@@ -36,6 +42,16 @@ class ContractDto {
   final String? deliveryDate;
   final String? expectedDeliveryDate;
   final int deliveryDelayDays;
+
+  /// Money arrives as a number or a decimal string.
+  final double? totalAmount;
+  final double? downPayment;
+  final int? planMonths;
+  final double? planAmount;
+  final String? planStartsAt;
+  final String? planFrequency;
+
+  static double? _money(Object? v) => v is num ? v.toDouble() : double.tryParse('${v ?? ''}');
 
   factory ContractDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unit'] as Map<String, dynamic>?;
@@ -60,6 +76,12 @@ class ContractDto {
       deliveryDate: json['deliveryDate'] as String?,
       expectedDeliveryDate: json['expectedDeliveryDate'] as String?,
       deliveryDelayDays: (json['deliveryDelayDays'] as num?)?.toInt() ?? 0,
+      totalAmount: _money(json['totalAmount']),
+      downPayment: _money(json['downPayment']),
+      planMonths: ((json['installmentPlan'] as Map<String, dynamic>?)?['totalMonths'] as num?)?.toInt(),
+      planAmount: _money((json['installmentPlan'] as Map<String, dynamic>?)?['monthlyAmount']),
+      planStartsAt: (json['installmentPlan'] as Map<String, dynamic>?)?['startsAt'] as String?,
+      planFrequency: (json['installmentPlan'] as Map<String, dynamic>?)?['frequency'] as String?,
     );
   }
 }

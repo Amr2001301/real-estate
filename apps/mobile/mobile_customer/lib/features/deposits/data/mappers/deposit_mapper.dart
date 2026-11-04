@@ -11,5 +11,13 @@ extension DepositDtoMapper on DepositDto {
         contractNumber: contractNumber,
         unitCode: unitCode,
         state: state,
+        paymentMethod: paymentMethod,
+        reviewStatus: reviewStatus,
+        rejectionReason: rejectionReason,
+        reviewedAt: DateTime.tryParse(reviewedAt ?? ''),
+        createdAt: DateTime.tryParse(createdAt ?? ''),
+        installmentDueDate: DateTime.tryParse(installmentDueDate ?? ''),
+        reservationNumber: reservationNumber,
+        hasProof: hasProof,
       );
 }

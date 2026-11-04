@@ -14,6 +14,10 @@ abstract final class DateFormatter {
   static String dayMonth(DateTime date, {required String languageCode}) =>
       _western(languageCode == 'ar' ? DateFormat('d MMMM', 'ar') : DateFormat('MMM d', 'en')).format(date);
 
+  /// Month and year only ("نوفمبر 2026", "November 2026").
+  static String monthYear(DateTime date, {required String languageCode}) =>
+      _western(DateFormat.yMMMM(_locale(languageCode))).format(date);
+
   static String _locale(String languageCode) => languageCode == 'ar' ? 'ar' : 'en';
 
   static DateFormat _western(DateFormat f) => f..useNativeDigits = false;
