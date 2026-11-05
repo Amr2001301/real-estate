@@ -2903,5 +2903,16 @@
   "clDocId": "إثبات هوية",
   "clDocLegal": "مستند قانوني",
   "clDocFinancial": "مستند مالي",
-  "clDocOther": "أخرى"
+  "clDocOther": "أخرى",
+  "calculatorUnitSection": "الوحدة وخططها",
+  "calculatorProject": "المشروع",
+  "calculatorUnit": "الوحدة",
+  "calculatorNoPlans": "لا توجد خطط سداد فعّالة لهذه الوحدة. يمكنك الحساب يدويًا بالأسفل.",
+  "calculatorPlanUpfront": "المقدم والحجز {amount}",
+  "@calculatorPlanUpfront": {"placeholders": {"amount": {"type": "String"}}},
+  "calculatorPlanDurations": "مدد السداد",
+  "calculatorPerMonth": "{amount} شهريًا",
+  "@calculatorPerMonth": {"placeholders": {"amount": {"type": "String"}}},
+  "calculatorCashPlan": "سداد نقدي",
+  "calculatorManual": "حساب يدوي"
 }

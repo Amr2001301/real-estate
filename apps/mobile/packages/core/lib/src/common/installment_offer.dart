@@ -18,12 +18,16 @@ class InstallmentOfferOption {
     required this.count,
     required this.amount,
     required this.totalPayable,
+    this.increasePercentage = 0,
   });
   final int durationMonths;
   final InstallmentPeriod period;
   final int count;
   final double amount;
   final double totalPayable;
+
+  /// The markup this duration adds to the financed amount, in percent.
+  final double increasePercentage;
 }
 
 /// A payment plan of a unit: the price after discount, what is paid before
@@ -183,6 +187,7 @@ InstallmentOffer installmentOfferFromTemplateJson(Map<String, dynamic> json) {
         count: months,
         amount: (financed ~/ months) / 100,
         totalPayable: (cents(booking) + cents(down) + financed + cents(last)) / 100,
+        increasePercentage: _num(d['increasePercentage']),
       ));
     }
   } else if (!isCash) {
