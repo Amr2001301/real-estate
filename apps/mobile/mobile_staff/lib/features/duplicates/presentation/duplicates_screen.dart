@@ -1,10 +1,11 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../common/lead_stage_label.dart';
 import '../../../common/staff_list_skeleton.dart';
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/duplicates.dart';
 import 'duplicates_cubit.dart';
@@ -32,67 +33,51 @@ class _DuplicatesScreenState extends State<DuplicatesScreen> {
     final cubit = context.read<DuplicatesCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.duplicatesTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-            ),
-          ),
-          Expanded(
-            child: BlocConsumer<DuplicatesCubit, DuplicatesState>(
-              listenWhen: (a, b) => a.merged != b.merged || a.actionFailure != b.actionFailure,
-              listener: (context, state) {
-                final text = state.actionFailure != null
-                    ? state.actionFailure!.userMessage(l10n)
-                    : state.merged != null
-                        ? l10n.duplicatesMerged(latinDigits('${state.merged}'))
-                        : null;
-                if (text != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-              },
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton(rows: 3);
-                  case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
-                  case DataStatus.empty:
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          const SizedBox(height: AppSpacing.xl),
-                          EmptyState(
-                            icon: Icons.verified_user_outlined,
-                            title: l10n.duplicatesEmpty,
-                            message: l10n.duplicatesEmptyHint,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocConsumer<DuplicatesCubit, DuplicatesState>(
+          listenWhen: (a, b) => a.merged != b.merged || a.actionFailure != b.actionFailure,
+          listener: (context, state) {
+            final text = state.actionFailure != null
+                ? state.actionFailure!.userMessage(l10n)
+                : state.merged != null
+                    ? l10n.duplicatesMerged(latinDigits('${state.merged}'))
+                    : null;
+            if (text != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+          },
+          builder: (context, state) {
+            final ready = state.status == DataStatus.success;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: ListView(
+                key: const Key('duplicates'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(bottom: bottomPad + 60),
+                children: [
+                  HomeListHero(back: true, title: l10n.duplicatesTitle, subtitle: ready ? l10n.duplicatesCountN(state.groups.length) : null),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SizedBox(height: 420, child: StaffListSkeleton(rows: 3))],
+                    DataStatus.failure => [ErrorState(failure: state.failure, onRetry: cubit.load)],
+                    DataStatus.empty => [
+                        const SizedBox(height: AppSpacing.xl),
+                        EmptyState(icon: Icons.verified_user_outlined, title: l10n.duplicatesEmpty, message: l10n.duplicatesEmptyHint),
+                      ],
+                    DataStatus.success => [
+                        const Padding(padding: EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0), child: _HowItWorks()),
+                        for (final g in state.groups)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                            child: _GroupCard(group: g, state: state),
                           ),
-                        ],
-                      ),
-                    );
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, bottomPad + 60),
-                        itemCount: state.groups.length + 1,
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, i) =>
-                            i == 0 ? const _HowItWorks() : _GroupCard(group: state.groups[i - 1], state: state),
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
+                      ],
+                  },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -105,16 +90,16 @@ class _HowItWorks extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.appColors;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: c.info.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: c.info.withValues(alpha: 0.25)),
+        color: AppPalette.gold50,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppPalette.gold100),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: c.info),
+          const Icon(Icons.info_outline_rounded, size: 18, color: AppPalette.gold600),
           const SizedBox(width: AppSpacing.xs),
           Expanded(child: Text(context.l10n.duplicatesHow, style: TextStyle(fontSize: 12.5, height: 1.6, color: c.ink))),
         ],
@@ -155,23 +140,18 @@ class _GroupCard extends StatelessWidget {
 
     return Container(
       key: ValueKey('dup-${group.clientId}'),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.card,
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: homeCard(context, radius: 24),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: colors.warning.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(Icons.people_alt_rounded, color: colors.warning, size: 20),
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(gradient: homeGoldGradient, borderRadius: BorderRadius.circular(15)),
+                child: const Icon(Icons.people_alt_rounded, color: AppPalette.navy, size: 22),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -209,28 +189,28 @@ class _GroupCard extends StatelessWidget {
               child: InkWell(
                 key: ValueKey('dup-merge-${group.clientId}'),
                 onTap: toMerge.isEmpty || busy ? null : () => _merge(context, toMerge.length),
-                borderRadius: BorderRadius.circular(AppRadii.md),
+                borderRadius: BorderRadius.circular(15),
                 child: Ink(
-                  height: 46,
+                  height: 48,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
-                    borderRadius: BorderRadius.circular(AppRadii.md),
+                    gradient: homeGoldGradient,
+                    borderRadius: BorderRadius.circular(15),
                   ),
                   child: Center(
                     child: busy
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy),
                           )
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.merge_rounded, color: Colors.white, size: 18),
+                              const Icon(Icons.merge_rounded, color: AppPalette.navy, size: 19),
                               const SizedBox(width: 6),
                               Text(
                                 l10n.duplicatesMergeN(latinDigits('${toMerge.length}')),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                                style: const TextStyle(color: AppPalette.navy, fontWeight: FontWeight.w800, fontSize: 14),
                               ),
                             ],
                           ),
@@ -274,7 +254,7 @@ class _LeadRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(AppSpacing.sm, 10, AppSpacing.sm, 10),
       decoration: BoxDecoration(
         color: isKeep ? AppPalette.gold400.withValues(alpha: 0.08) : colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(AppRadii.md),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: isKeep ? AppPalette.gold400.withValues(alpha: 0.6) : colors.hairline),
       ),
       child: Column(

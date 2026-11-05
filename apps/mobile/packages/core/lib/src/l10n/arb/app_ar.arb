@@ -2927,5 +2927,11 @@
   "prFigTotal": "إجمالي المبالغ",
   "prFigItems": "{n, plural, =0{لا إيصالات} =1{إيصال واحد} =2{إيصالان} few{{n} إيصالات} other{{n} إيصالًا}}",
   "@prFigItems": {"placeholders": {"n": {"type": "int"}}},
-  "prOpenProof": "فتح الإيصال"
+  "prOpenProof": "فتح الإيصال",
+  "campaignsFilterTitle": "تصفية الحملات",
+  "campaignsFilterApply": "عرض الحملات",
+  "campaignsCountN": "{n, plural, =0{لا حملات} =1{حملة واحدة} =2{حملتان} few{{n} حملات} other{{n} حملة}}",
+  "@campaignsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "duplicatesCountN": "{n, plural, =0{لا عملاء مكررون} =1{عميل واحد بفرص مكررة} =2{عميلان بفرص مكررة} few{{n} عملاء بفرص مكررة} other{{n} عميلًا بفرص مكررة}}",
+  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}}
 }

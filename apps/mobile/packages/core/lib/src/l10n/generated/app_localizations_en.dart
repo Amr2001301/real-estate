@@ -8831,4 +8831,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prOpenProof => 'Open receipt';
+
+  @override
+  String get campaignsFilterTitle => 'Filter campaigns';
+
+  @override
+  String get campaignsFilterApply => 'Show campaigns';
+
+  @override
+  String campaignsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n campaigns',
+      one: '1 campaign',
+      zero: 'no campaigns',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String duplicatesCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n customers with duplicates',
+      one: '1 customer with duplicates',
+      zero: 'no duplicates',
+    );
+    return '$_temp0';
+  }
 }
