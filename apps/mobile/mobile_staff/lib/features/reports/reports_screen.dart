@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../common/staff_list_skeleton.dart';
 import '../dashboard/home_kit/filter_kit.dart';
 import '../dashboard/home_kit/home_kit.dart';
+import 'financial_report_screen.dart' show comparisonMonths, percentChange, previousRange;
 
 /// The sales report, as on the website's «التقارير»: the period's sales,
 /// contracts, what was collected and the lead-to-contract conversion, the
@@ -93,10 +94,24 @@ class ReportsRepository {
     }
   }
 
-  Future<Result<SalesReport>> sales(ReportPeriod p, {DateTime? now}) => guardApiCall(() async {
-        final today = now ?? DateTime.now();
-        final r = reportRange(p, today);
-        final q = {'dateFrom': r.from, 'dateTo': r.to};
+  /// The report for [p].
+  Future<Result<SalesReport>> sales(ReportPeriod p, {DateTime? now}) {
+    final today = now ?? DateTime.now();
+    final r = reportRange(p, today);
+    return salesBetween(r.from, r.to, today.year);
+  }
+
+  /// The equal-length period right before [p] (for the comparison).
+  Future<Result<SalesReport>> salesBefore(ReportPeriod p, {DateTime? now}) {
+    final today = now ?? DateTime.now();
+    final r = reportRange(p, today);
+    final prev = previousRange(r.from, r.to, months: comparisonMonths(p));
+    return salesBetween(prev.from, prev.to, DateTime.parse(prev.from).year);
+  }
+
+  Future<Result<SalesReport>> salesBetween(String from, String to, int year) => guardApiCall(() async {
+        final today = DateTime(year);
+        final q = {'dateFrom': from, 'dateTo': to};
         Future<Response<T>> get<T>(String path, [Map<String, dynamic>? query]) => _dio.get<T>(path, queryParameters: query ?? q);
         final res = await Future.wait<Object?>([
           get<Map<String, dynamic>>('/reports/sales'),
@@ -175,6 +190,8 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   ReportPeriod _period = ReportPeriod.thisMonth;
+  bool _compare = false;
+  SalesReport? _before;
   SalesReport? _data;
   AppFailure? _failure;
   bool _loading = true;
@@ -190,10 +207,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _loading = _data == null;
       _failure = null;
     });
-    final r = await widget.repository.sales(_period);
+    final out = await Future.wait([
+      widget.repository.sales(_period),
+      if (_compare) widget.repository.salesBefore(_period),
+    ]);
     if (!mounted) return;
+    final r = out[0];
+    final before = _compare ? out[1].dataOrNull : null;
     setState(() {
       _loading = false;
+      _before = before;
       switch (r) {
         case Ok(data: final v):
           _data = v;
@@ -207,8 +230,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         context,
         (_) => _PeriodSheet(
           selected: _period,
-          onApply: (p) {
+          compare: _compare,
+          onApply: (p, c) {
             _period = p;
+            _compare = c;
             _load();
           },
         ),
@@ -234,12 +259,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               HomeListHero(
                 back: true,
                 title: l10n.rpTitle,
-                subtitle: reportPeriodLabel(l10n, _period),
+                subtitle: '${reportPeriodLabel(l10n, _period)}${_compare ? ' · ${l10n.frCompareOn}' : ''}',
                 actions: [
                   HomeHeroButton(
                     key: const Key('reports-filters'),
                     icon: Icons.tune_rounded,
-                    dot: _period != ReportPeriod.thisMonth,
+                    dot: _period != ReportPeriod.thisMonth || _compare,
                     tooltip: l10n.rpFilterTitle,
                     onTap: _filters,
                   ),
@@ -253,8 +278,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
                   child: HomeBand(figures: [
-                    HomeFigure(id: 'sales', value: homeCompact(d.sales, l10n).$1, label: '${l10n.rpSales} · ${homeCompact(d.sales, l10n).$2}'.replaceAll(RegExp(r' · $'), ''), hint: l10n.rpAvgContract(money(d.average))),
-                    HomeFigure(id: 'contracts', value: '${d.contracts}', label: l10n.rpContracts, hint: l10n.rpContractsHint),
+                    HomeFigure(id: 'sales', value: homeCompact(d.sales, l10n).$1, label: '${l10n.rpSales} · ${homeCompact(d.sales, l10n).$2}'.replaceAll(RegExp(r' · $'), ''), hint: _vs(l10n, d.sales, _before?.sales) ?? l10n.rpAvgContract(money(d.average)), warn: _before != null && d.sales < _before!.sales),
+                    HomeFigure(id: 'contracts', value: '${d.contracts}', label: l10n.rpContracts, hint: _vs(l10n, d.contracts, _before?.contracts) ?? l10n.rpContractsHint, warn: _before != null && d.contracts < _before!.contracts),
                     HomeFigure(
                       id: 'conversion',
                       value: d.conversion == null ? '—' : '${d.conversion}%',
@@ -343,6 +368,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
 }
 
 /// The bookings by state, a bar split and a legend with each share.
+/// «+12% عن الفترة السابقة», or null without a comparison or a base.
+String? _vs(AppLocalizations l10n, num now, num? before) {
+  final c = before == null ? null : percentChange(now, before);
+  return c == null ? null : l10n.frVsBefore(ltr('${c > 0 ? '+' : ''}$c%'));
+}
+
 class _States extends StatelessWidget {
   const _States({required this.rows});
   final List<(String, int)> rows;
@@ -386,9 +417,10 @@ class _States extends StatelessWidget {
 }
 
 class _PeriodSheet extends StatefulWidget {
-  const _PeriodSheet({required this.selected, required this.onApply});
+  const _PeriodSheet({required this.selected, required this.compare, required this.onApply});
   final ReportPeriod selected;
-  final ValueChanged<ReportPeriod> onApply;
+  final bool compare;
+  final void Function(ReportPeriod, bool) onApply;
 
   @override
   State<_PeriodSheet> createState() => _PeriodSheetState();
@@ -396,17 +428,21 @@ class _PeriodSheet extends StatefulWidget {
 
 class _PeriodSheetState extends State<_PeriodSheet> {
   late ReportPeriod _p = widget.selected;
+  late bool _c = widget.compare;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return FilterSheet(
       title: l10n.rpFilterTitle,
-      active: _p == ReportPeriod.thisMonth ? 0 : 1,
-      onClear: () => setState(() => _p = ReportPeriod.thisMonth),
+      active: (_p == ReportPeriod.thisMonth ? 0 : 1) + (_c ? 1 : 0),
+      onClear: () => setState(() {
+        _p = ReportPeriod.thisMonth;
+        _c = false;
+      }),
       applyLabel: l10n.rpFilterApply,
       onApply: () {
-        widget.onApply(_p);
+        widget.onApply(_p, _c);
         Navigator.of(context).pop();
       },
       sections: [
@@ -418,6 +454,16 @@ class _PeriodSheetState extends State<_PeriodSheet> {
             selected: _p,
             onSelect: (v) => setState(() => _p = v),
             options: [for (final p in ReportPeriod.values) FilterOption<ReportPeriod>(p, reportPeriodLabel(l10n, p))],
+          ),
+        ),
+        FilterSection(
+          icon: Icons.compare_arrows_rounded,
+          title: l10n.frCompare,
+          child: FilterRadioList<bool>(
+            keyPrefix: 'report-compare',
+            selected: _c,
+            onSelect: (v) => setState(() => _c = v),
+            options: [FilterOption<bool>(false, l10n.frCompareOff), FilterOption<bool>(true, l10n.frCompareOn)],
           ),
         ),
       ],

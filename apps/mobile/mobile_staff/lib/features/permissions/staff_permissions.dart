@@ -42,6 +42,9 @@ abstract final class StaffAccess {
   /// «التقارير» — the sales report (reports:sales:read; the admin has it).
   static bool reports(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:sales:read');
 
+  /// «التقرير المالي» (reports:financial:read; the admin has it).
+  static bool financialReport(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:financial:read');
+
   /// «الوسطاء» — the brokers' pages, each tab by its own code (the admin all).
   static bool brokers(AppRole? r, StaffPermissions p) =>
       r == AppRole.admin ||

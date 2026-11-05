@@ -29,6 +29,7 @@ import '../features/clients/client_detail_screen.dart';
 import '../features/brokers_admin/broker_actions.dart';
 import '../features/brokers_admin/brokers_hub_screen.dart';
 import '../features/inquiries/inquiries_screen.dart';
+import '../features/reports/financial_report_screen.dart';
 import '../features/reports/reports_screen.dart';
 import '../features/clients/clients_data.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
@@ -617,6 +618,15 @@ GoRouter createStaffRouter(
         builder: (context, state) => StaffAccessGate(
           allows: StaffAccess.reports,
           child: Builder(builder: (ctx) => ReportsScreen(repository: ReportsRepository(ctx.read<Dio>()))),
+        ),
+      ),
+
+      // ── Financial report (reports:financial:read, as on the website) ────
+      GoRoute(
+        path: '/reports/financial',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.financialReport,
+          child: Builder(builder: (ctx) => FinancialReportScreen(repository: FinancialReportRepository(ctx.read<Dio>()))),
         ),
       ),
 
