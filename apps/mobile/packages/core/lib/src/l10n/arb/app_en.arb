@@ -2949,5 +2949,6 @@
   "maintenanceFilterTitle": "Filter requests",
   "maintenanceFilterApply": "Show requests",
   "plansNoUnitPlans": "This unit has no payment plans.",
-  "plansPickHint": "Pick the project, then the unit, to see its payment plans."
+  "plansPickHint": "Pick the project, then the unit, to see its payment plans.",
+  "visitInfoTitle": "Visit details"
 }

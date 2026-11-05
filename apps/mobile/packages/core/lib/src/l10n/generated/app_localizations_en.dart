@@ -8892,4 +8892,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get plansPickHint =>
       'Pick the project, then the unit, to see its payment plans.';
+
+  @override
+  String get visitInfoTitle => 'Visit details';
 }

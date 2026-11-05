@@ -8928,4 +8928,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get plansPickHint => 'اختر المشروع ثم الوحدة لتظهر خطط سدادها.';
+
+  @override
+  String get visitInfoTitle => 'بيانات الزيارة';
 }

@@ -2,14 +2,12 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../common/visit_status_label.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/visit.dart';
 import '../cubit/visit_detail_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid  = Color(0xFF14273F);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Root screen
@@ -252,13 +250,6 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         VisitTransition.noShow   => l10n.visitActionNoShow,
       };
 
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
@@ -290,17 +281,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
                   context, state, l10n, lang, colors, topInset);
             }
 
-            return Stack(
-              children: [
-                scrollBody,
-                // Back button — start edge: right in RTL, left in LTR
-                PositionedDirectional(
-                  top: topInset + 10,
-                  start: 14,
-                  child: _CircleBackButton(onTap: () => context.pop()),
-                ),
-              ],
-            );
+            return scrollBody;
           },
         ),
       ),
@@ -313,10 +294,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       physics: const NeverScrollableScrollPhysics(),
       slivers: [
         SliverToBoxAdapter(
-          child: _HeroShell(
-            topInset: topInset,
-            child: const SizedBox.shrink(),
-          ),
+          child: HomeListHero(back: true, title: context.l10n.navVisits),
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(
@@ -404,14 +382,12 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
       CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: _HeroShell(
-              topInset: topInset,
-              child: Center(
-                child: ErrorState(
-                  failure: state.failure,
-                  onRetry: () => context.read<VisitDetailCubit>().load(),
-                ),
-              ),
+            child: HomeListHero(back: true, title: context.l10n.navVisits),
+          ),
+          SliverToBoxAdapter(
+            child: ErrorState(
+              failure: state.failure,
+              onRetry: () => context.read<VisitDetailCubit>().load(),
             ),
           ),
         ],
@@ -438,373 +414,110 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
         (v.requestPreferredTime?.isNotEmpty ?? false) ||
         (v.requestNotes?.isNotEmpty ?? false);
 
+    Widget pad(Widget w) => Padding(padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0), child: w);
+    final place = [if (v.projectName != null) v.projectName!, if (v.unitCode != null) v.unitCode!].join(' · ');
+
     return CustomScrollView(
-      physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics()),
+      key: const Key('visit-detail'),
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         SliverToBoxAdapter(
-          child: _HeroCard(
-            visit: v,
-            initials: _initials(v.clientName ?? ''),
-            topInset: topInset,
-            l10n: l10n,
-            lang: lang,
+          child: HomeListHero(
+            back: true,
+            title: (v.clientName ?? '').isEmpty ? l10n.navVisits : v.clientName!,
+            subtitle: place.isEmpty ? null : place,
+            actions: [_StatusPill(label: visitStatusLabel(l10n, v.status), tone: visitStatusTone(v.status))],
+            bottom: (v.clientPhone ?? '').trim().isEmpty ? null : _DarkContactButtons(phone: v.clientPhone, l10n: l10n),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, 80),
-          sliver: SliverList.list(children: [
-            if (hasRequestCtx) ...[
-              _CustomerRequestCard(v: v, l10n: l10n, lang: lang),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            if (v.status == 'PENDING_RESCHEDULE' &&
-                v.customerFeedback?.isNotEmpty == true) ...[
-              _InfoCard(
-                icon: Icons.schedule_rounded,
-                title: l10n.customerRescheduleReasonLabel,
-                body: v.customerFeedback!,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            if (allowed.isNotEmpty) ...[
-              _SectionLabel(l10n.visitUpdateStatus),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
+        SliverList.list(children: [
+          // ── The visit: when, where ──────────────────────────────────────
+          HomeSection(
+            icon: Icons.event_rounded,
+            title: l10n.visitInfoTitle,
+            child: Container(
+              key: const Key('visit-info'),
+              padding: const EdgeInsets.all(14),
+              decoration: homeCard(context, radius: 24),
+              child: Column(children: [
+                if (v.scheduledAt != null)
+                  _InfoRow(icon: Icons.schedule_rounded, text: DateFormatter.mediumDate(v.scheduledAt!, languageCode: lang)),
+                if (place.isNotEmpty) _InfoRow(icon: Icons.apartment_rounded, text: place),
+                if (v.location?.isNotEmpty == true) _InfoRow(icon: Icons.location_on_rounded, text: v.location!),
+                if (v.visitNumber?.isNotEmpty == true) _InfoRow(icon: Icons.tag_rounded, text: ltr(v.visitNumber!)),
+              ]),
+            ),
+          ),
+          if (hasRequestCtx) pad(_CustomerRequestCard(v: v, l10n: l10n, lang: lang)),
+          if (v.status == 'PENDING_RESCHEDULE' && v.customerFeedback?.isNotEmpty == true)
+            pad(_InfoCard(icon: Icons.schedule_rounded, title: l10n.customerRescheduleReasonLabel, body: v.customerFeedback!)),
+          if (allowed.isNotEmpty)
+            HomeSection(
+              icon: Icons.published_with_changes_rounded,
+              title: l10n.visitUpdateStatus,
+              child: Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: allowed
                     .map((t) => AppButton(
                           label: _transitionLabel(l10n, t),
                           size: AppButtonSize.medium,
-                          variant: (t == VisitTransition.complete ||
-                                  t == VisitTransition.confirm)
-                              ? AppButtonVariant.gold
-                              : AppButtonVariant.outline,
-                          onPressed: state.working
-                              ? null
-                              : () => _apply(t),
+                          variant: (t == VisitTransition.complete || t == VisitTransition.confirm) ? AppButtonVariant.gold : AppButtonVariant.outline,
+                          onPressed: state.working ? null : () => _apply(t),
                         ))
                     .toList(),
               ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            if (isActive || isAdmin) ...[
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  if (isActive)
-                    _GlassChip(
-                      icon: Icons.calendar_today_outlined,
-                      label: l10n.visitReschedule,
-                      onTap: state.working ? null : _doReschedule,
-                    ),
-                  if (isAdmin)
-                    _GlassChip(
-                      icon: Icons.swap_horiz_rounded,
-                      label: l10n.visitReassign,
-                      onTap: state.working ? null : _doReassign,
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            if (isCompleted) ...[
-              _FeedbackTile(
-                l10n: l10n,
-                onTap: state.working ? null : _doFeedback,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            if (detail.salesNotes?.isNotEmpty == true) ...[
-              _InfoCard(
-                icon: Icons.sticky_note_2_outlined,
-                title: l10n.visitNotes,
-                body: detail.salesNotes!,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            _SectionLabel(l10n.leadTimeline),
-            const SizedBox(height: AppSpacing.md),
-            if (detail.timeline.isEmpty)
-              Text(
-                l10n.leadTimelineEmpty,
-                style: TextStyle(fontSize: 14, color: colors.inkMuted),
-              )
-            else
-              _Timeline(
-                  entries: detail.timeline, lang: lang, l10n: l10n),
-          ]),
-        ),
+            ),
+          if (isActive || isAdmin)
+            pad(Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                if (isActive) _GlassChip(icon: Icons.calendar_today_outlined, label: l10n.visitReschedule, onTap: state.working ? null : _doReschedule),
+                if (isAdmin) _GlassChip(icon: Icons.swap_horiz_rounded, label: l10n.visitReassign, onTap: state.working ? null : _doReassign),
+              ],
+            )),
+          if (isCompleted) pad(_FeedbackTile(l10n: l10n, onTap: state.working ? null : _doFeedback)),
+          if (detail.salesNotes?.isNotEmpty == true) pad(_InfoCard(icon: Icons.sticky_note_2_outlined, title: l10n.visitNotes, body: detail.salesNotes!)),
+          HomeSection(
+            icon: Icons.history_rounded,
+            title: l10n.leadTimeline,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: homeCard(context, radius: 24),
+              child: detail.timeline.isEmpty
+                  ? Text(l10n.leadTimelineEmpty, style: TextStyle(fontSize: 14, color: colors.inkMuted))
+                  : _Timeline(entries: detail.timeline, lang: lang, l10n: l10n),
+            ),
+          ),
+          SizedBox(height: MediaQuery.paddingOf(context).bottom + 40),
+        ]),
       ],
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Hero card — full-bleed navy gradient, no SliverAppBar needed
-// ══════════════════════════════════════════════════════════════════════════════
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.visit,
-    required this.initials,
-    required this.topInset,
-    required this.l10n,
-    required this.lang,
-  });
-
-  final Visit visit;
-  final String initials;
-  final double topInset;
-  final AppLocalizations l10n;
-  final String lang;
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final v = visit;
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A3255), _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, size: 19, color: AppPalette.gold600),
         ),
-      ),
-      child: Stack(
-        children: [
-          // Gold radial bloom — top-right accent
-          Positioned(
-            top: -50,
-            right: -50,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.14),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Bottom gold shimmer line
-          const Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0x00B8941F),
-                    AppPalette.gold400,
-                    Color(0x00B8941F),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Content
-          Padding(
-            // top padding: status bar height + toolbar-sized gap for back btn
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              topInset + 56, // enough room for the back button overlay
-              AppSpacing.lg,
-              AppSpacing.xl,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // ── Avatar ────────────────────────────────────────────────────
-                Container(
-                  width: 76,
-                  height: 76,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [AppPalette.gold300, AppPalette.gold500],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppPalette.gold400.withValues(alpha: 0.55),
-                        blurRadius: 28,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ── Status badge ─────────────────────────────────────────────
-                _StatusPill(
-                  label: visitStatusLabel(l10n, v.status),
-                  tone: visitStatusTone(v.status),
-                ),
-
-                const SizedBox(height: 14),
-
-                // ── Client name ───────────────────────────────────────────────
-                Text(
-                  v.clientName ?? '',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                    shadows: [
-                      Shadow(color: Colors.black38, blurRadius: 12),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // ── Date ─────────────────────────────────────────────────────
-                if (v.scheduledAt != null) ...[
-                  Text(
-                    DateFormatter.mediumDate(v.scheduledAt!,
-                        languageCode: lang),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.68),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                ],
-
-                // ── Project · Unit ────────────────────────────────────────────
-                if (v.projectName != null)
-                  Text(
-                    [
-                      v.projectName!,
-                      if (v.unitCode != null) v.unitCode!,
-                    ].join(' · '),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.82),
-                    ),
-                  ),
-
-                // ── Location ─────────────────────────────────────────────────
-                if (v.location?.isNotEmpty == true) ...[
-                  const SizedBox(height: 5),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.location_on_rounded,
-                        size: 12,
-                        color: AppPalette.gold400.withValues(alpha: 0.75),
-                      ),
-                      const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          v.location!,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.52),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                const SizedBox(height: AppSpacing.xl),
-
-                // ── Thin gold divider ─────────────────────────────────────────
-                Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.transparent,
-                        AppPalette.gold400.withValues(alpha: 0.30),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: AppSpacing.lg),
-
-                // ── Contact buttons (glass style for dark background) ─────────
-                _DarkContactButtons(phone: v.clientPhone, l10n: l10n),
-              ],
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong))),
+      ]),
     );
-  }
-}
-
-// Loading/error hero shell
-class _HeroShell extends StatelessWidget {
-  const _HeroShell({required this.topInset, required this.child});
-  final double topInset;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 300 + topInset,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A3255), _navyMid, _navyDeep],
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Circle back button — physical top-left (Positioned.left, not start)
-// ══════════════════════════════════════════════════════════════════════════════
-class _CircleBackButton extends StatelessWidget {
-  const _CircleBackButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return NavHeaderBack(onTap: onTap);
   }
 }
 
@@ -849,44 +562,6 @@ class _StatusPill extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Section label
-// ══════════════════════════════════════════════════════════════════════════════
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 20,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          text,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
-                letterSpacing: -0.2,
-              ),
-        ),
-      ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
 // Info card
 // ══════════════════════════════════════════════════════════════════════════════
 class _InfoCard extends StatelessWidget {
@@ -904,18 +579,7 @@ class _InfoCard extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: homeCard(context, radius: 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -15727,6 +15727,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick the project, then the unit, to see its payment plans.'**
   String get plansPickHint;
+
+  /// No description provided for @visitInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit details'**
+  String get visitInfoTitle;
 }
 
 class _AppLocalizationsDelegate

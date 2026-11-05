@@ -2941,5 +2941,6 @@
   "maintenanceFilterTitle": "تصفية الطلبات",
   "maintenanceFilterApply": "عرض الطلبات",
   "plansNoUnitPlans": "لا توجد خطط تقسيط لهذه الوحدة.",
-  "plansPickHint": "اختر المشروع ثم الوحدة لتظهر خطط سدادها."
+  "plansPickHint": "اختر المشروع ثم الوحدة لتظهر خطط سدادها.",
+  "visitInfoTitle": "بيانات الزيارة"
 }

@@ -13,6 +13,7 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_detail_cubit.dart';
 import '../maintenance_format.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _navyDeep = Color(0xFF0B1726);
@@ -94,6 +95,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
+        backgroundColor: context.appColors.canvas,
         body: BlocConsumer<MaintenanceDetailCubit, MaintenanceDetailState>(
           listenWhen: (a, b) =>
               a.actionFailure != b.actionFailure && b.actionFailure != null,
@@ -110,14 +112,25 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
             return CustomScrollView(
               slivers: [
                 // Pinned collapsible header — stays visible while scrolling.
-                AppNavSliverHeader(
-                  title: l10n.maintenanceCompactDetailTitle,
-                  subtitle: l10n.maintenanceDetailSubtitle,
-                  leadingAction: const NavHeaderBack(),
-                  actions: [
-                    if (status != null)
-                      NavHeaderPill(label: maintenanceStatusLabel(context.l10n, status), color: accent),
-                  ],
+                SliverToBoxAdapter(
+                  child: HomeListHero(
+                    back: true,
+                    title: l10n.maintenanceCompactDetailTitle,
+                    subtitle: l10n.maintenanceDetailSubtitle,
+                    actions: [
+                      if (status != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.16),
+                            border: Border.all(color: accent.withValues(alpha: 0.5)),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Text(maintenanceStatusLabel(context.l10n, status),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
+                        ),
+                    ],
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
