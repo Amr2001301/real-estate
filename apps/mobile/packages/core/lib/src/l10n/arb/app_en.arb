@@ -2922,5 +2922,8 @@
   "calculatorPerMonth": "{amount} / month",
   "@calculatorPerMonth": {"placeholders": {"amount": {"type": "String"}}},
   "calculatorCashPlan": "Cash",
-  "calculatorManual": "Manual calculation"
+  "calculatorManual": "Manual calculation",
+  "profileSectionAdmin": "Admin and review",
+  "profileSectionAccount": "Account and security",
+  "profileSectionBrokerWork": "My work"
 }

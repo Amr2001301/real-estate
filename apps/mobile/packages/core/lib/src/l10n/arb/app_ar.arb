@@ -2914,5 +2914,8 @@
   "calculatorPerMonth": "{amount} شهريًا",
   "@calculatorPerMonth": {"placeholders": {"amount": {"type": "String"}}},
   "calculatorCashPlan": "سداد نقدي",
-  "calculatorManual": "حساب يدوي"
+  "calculatorManual": "حساب يدوي",
+  "profileSectionAdmin": "الإدارة والمراجعة",
+  "profileSectionAccount": "الحساب والأمان",
+  "profileSectionBrokerWork": "أعمالي"
 }

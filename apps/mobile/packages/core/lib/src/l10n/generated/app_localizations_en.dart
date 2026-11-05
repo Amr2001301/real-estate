@@ -8787,4 +8787,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get calculatorManual => 'Manual calculation';
+
+  @override
+  String get profileSectionAdmin => 'Admin and review';
+
+  @override
+  String get profileSectionAccount => 'Account and security';
+
+  @override
+  String get profileSectionBrokerWork => 'My work';
 }
