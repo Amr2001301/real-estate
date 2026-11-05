@@ -242,7 +242,11 @@ class _NotificationTile extends StatelessWidget {
         : (rawMsg is String ? rawMsg : null);
 
     final icon = _icon;
-    final (iconBg, iconFg) = _iconStyle;
+    final (_, baseFg) = _iconStyle;
+    final dark = theme.brightness == Brightness.dark;
+    final iconFg =
+        dark ? baseFg : Color.lerp(baseFg, Colors.black, 0.4) ?? baseFg;
+    final iconBg = iconFg.withValues(alpha: 0.14);
 
     return GestureDetector(
       onTap: onTap,
@@ -296,16 +300,6 @@ class _NotificationTile extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: iconBg,
                           borderRadius: BorderRadius.circular(13),
-                          border: Border.all(
-                            color: iconFg.withValues(alpha: 0.25),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: iconFg.withValues(alpha: 0.18),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: Icon(icon, color: iconFg, size: 20),
                       ),
