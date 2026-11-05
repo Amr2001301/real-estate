@@ -9073,4 +9073,93 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get inqActionFailed => 'تعذّر تحديث الاستفسار.';
+
+  @override
+  String get rpTitle => 'التقارير';
+
+  @override
+  String get rpProfileDesc => 'المبيعات والتحويل والمشاريع والوسطاء';
+
+  @override
+  String get rpFilterTitle => 'فترة التقرير';
+
+  @override
+  String get rpFilterPeriod => 'الفترة';
+
+  @override
+  String get rpFilterApply => 'عرض التقرير';
+
+  @override
+  String get rpPeriodThisMonth => 'هذا الشهر';
+
+  @override
+  String get rpPeriodLastMonth => 'الشهر الماضي';
+
+  @override
+  String get rpPeriodQuarter => 'هذا الربع';
+
+  @override
+  String get rpPeriodYear => 'هذه السنة';
+
+  @override
+  String get rpSales => 'إجمالي المبيعات';
+
+  @override
+  String rpAvgContract(String value) {
+    return 'المتوسط $value';
+  }
+
+  @override
+  String get rpContracts => 'عقود موقّعة';
+
+  @override
+  String get rpContractsHint => 'في الفترة';
+
+  @override
+  String get rpConversion => 'نسبة التحويل';
+
+  @override
+  String get rpConversionHint => 'من عميل محتمل إلى عقد';
+
+  @override
+  String get rpCollected => 'المحصَّل';
+
+  @override
+  String get rpCollectedSub => 'من ثمن العقود';
+
+  @override
+  String get rpFees => 'رسوم وغرامات';
+
+  @override
+  String get rpTrend => 'العقود شهريًّا هذا العام';
+
+  @override
+  String get rpReservationStates => 'حالات الحجوزات';
+
+  @override
+  String get rpResPending => 'قيد الانتظار';
+
+  @override
+  String get rpResConfirmed => 'مؤكَّد';
+
+  @override
+  String get rpResApproved => 'معتمد';
+
+  @override
+  String get rpResConverted => 'تحوّل إلى عقد';
+
+  @override
+  String get rpResCancelled => 'ملغى';
+
+  @override
+  String get rpResExpired => 'منتهٍ';
+
+  @override
+  String get rpProjects => 'المشاريع حسب المبيعات';
+
+  @override
+  String get rpUnknownProject => 'مشروع غير معروف';
+
+  @override
+  String get rpNoSales => 'لا مبيعات في هذه الفترة.';
 }

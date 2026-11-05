@@ -9035,4 +9035,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inqActionFailed => 'Could not update the inquiry.';
+
+  @override
+  String get rpTitle => 'Reports';
+
+  @override
+  String get rpProfileDesc => 'Sales, conversion, projects and brokers';
+
+  @override
+  String get rpFilterTitle => 'Report period';
+
+  @override
+  String get rpFilterPeriod => 'Period';
+
+  @override
+  String get rpFilterApply => 'Show report';
+
+  @override
+  String get rpPeriodThisMonth => 'This month';
+
+  @override
+  String get rpPeriodLastMonth => 'Last month';
+
+  @override
+  String get rpPeriodQuarter => 'This quarter';
+
+  @override
+  String get rpPeriodYear => 'This year';
+
+  @override
+  String get rpSales => 'Total sales';
+
+  @override
+  String rpAvgContract(String value) {
+    return 'Average $value';
+  }
+
+  @override
+  String get rpContracts => 'Contracts signed';
+
+  @override
+  String get rpContractsHint => 'In the period';
+
+  @override
+  String get rpConversion => 'Conversion';
+
+  @override
+  String get rpConversionHint => 'Lead to contract';
+
+  @override
+  String get rpCollected => 'Collected';
+
+  @override
+  String get rpCollectedSub => 'Towards the price';
+
+  @override
+  String get rpFees => 'Fees and penalties';
+
+  @override
+  String get rpTrend => 'Contracts per month this year';
+
+  @override
+  String get rpReservationStates => 'Booking states';
+
+  @override
+  String get rpResPending => 'Pending';
+
+  @override
+  String get rpResConfirmed => 'Confirmed';
+
+  @override
+  String get rpResApproved => 'Approved';
+
+  @override
+  String get rpResConverted => 'Converted';
+
+  @override
+  String get rpResCancelled => 'Cancelled';
+
+  @override
+  String get rpResExpired => 'Expired';
+
+  @override
+  String get rpProjects => 'Projects by sales';
+
+  @override
+  String get rpUnknownProject => 'Unknown project';
+
+  @override
+  String get rpNoSales => 'No sales in this period.';
 }

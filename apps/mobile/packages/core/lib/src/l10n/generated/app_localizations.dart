@@ -15979,6 +15979,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not update the inquiry.'**
   String get inqActionFailed;
+
+  /// No description provided for @rpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get rpTitle;
+
+  /// No description provided for @rpProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales, conversion, projects and brokers'**
+  String get rpProfileDesc;
+
+  /// No description provided for @rpFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report period'**
+  String get rpFilterTitle;
+
+  /// No description provided for @rpFilterPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get rpFilterPeriod;
+
+  /// No description provided for @rpFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show report'**
+  String get rpFilterApply;
+
+  /// No description provided for @rpPeriodThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get rpPeriodThisMonth;
+
+  /// No description provided for @rpPeriodLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get rpPeriodLastMonth;
+
+  /// No description provided for @rpPeriodQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'This quarter'**
+  String get rpPeriodQuarter;
+
+  /// No description provided for @rpPeriodYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get rpPeriodYear;
+
+  /// No description provided for @rpSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Total sales'**
+  String get rpSales;
+
+  /// No description provided for @rpAvgContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {value}'**
+  String rpAvgContract(String value);
+
+  /// No description provided for @rpContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts signed'**
+  String get rpContracts;
+
+  /// No description provided for @rpContractsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In the period'**
+  String get rpContractsHint;
+
+  /// No description provided for @rpConversion.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion'**
+  String get rpConversion;
+
+  /// No description provided for @rpConversionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead to contract'**
+  String get rpConversionHint;
+
+  /// No description provided for @rpCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get rpCollected;
+
+  /// No description provided for @rpCollectedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Towards the price'**
+  String get rpCollectedSub;
+
+  /// No description provided for @rpFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees and penalties'**
+  String get rpFees;
+
+  /// No description provided for @rpTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts per month this year'**
+  String get rpTrend;
+
+  /// No description provided for @rpReservationStates.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking states'**
+  String get rpReservationStates;
+
+  /// No description provided for @rpResPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get rpResPending;
+
+  /// No description provided for @rpResConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get rpResConfirmed;
+
+  /// No description provided for @rpResApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rpResApproved;
+
+  /// No description provided for @rpResConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rpResConverted;
+
+  /// No description provided for @rpResCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rpResCancelled;
+
+  /// No description provided for @rpResExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get rpResExpired;
+
+  /// No description provided for @rpProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects by sales'**
+  String get rpProjects;
+
+  /// No description provided for @rpUnknownProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown project'**
+  String get rpUnknownProject;
+
+  /// No description provided for @rpNoSales.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales in this period.'**
+  String get rpNoSales;
 }
 
 class _AppLocalizationsDelegate

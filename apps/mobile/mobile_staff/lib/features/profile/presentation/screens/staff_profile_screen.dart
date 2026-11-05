@@ -166,6 +166,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                     label: l10n.paymentReviewTitle,
                     onTap: () => context.push('/payments-review')),
               // The brokers' performance report is the admin's.
+              if (StaffAccess.reports(role, perms))
+                ProfileItem(
+                    id: 'reports',
+                    icon: Icons.bar_chart_rounded,
+                    label: l10n.rpTitle,
+                    subtitle: l10n.rpProfileDesc,
+                    onTap: () => context.push('/reports')),
               if (role == AppRole.admin)
                 ProfileItem(id: 'brokers', icon: Icons.handshake_rounded, label: l10n.bpTitle, onTap: () => context.push('/performance/brokers')),
             ],

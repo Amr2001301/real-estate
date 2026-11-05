@@ -39,6 +39,9 @@ abstract final class StaffAccess {
   static bool inquiries(AppRole? r, StaffPermissions p) => _manager(r) || p.has('visits:read');
   static bool inquiriesAct(AppRole? r, StaffPermissions p) => _manager(r) || p.has('visits:approve');
 
+  /// «التقارير» — the sales report (reports:sales:read; the admin has it).
+  static bool reports(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:sales:read');
+
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
 }
