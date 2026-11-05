@@ -8796,4 +8796,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileSectionBrokerWork => 'My work';
+
+  @override
+  String ledgerNoItemsIn(String names) {
+    return 'No items: $names';
+  }
+
+  @override
+  String get ledgerFilterTitle => 'Filter balances';
+
+  @override
+  String get ledgerFilterPeriod => 'Period';
+
+  @override
+  String get ledgerFilterApply => 'Show results';
 }

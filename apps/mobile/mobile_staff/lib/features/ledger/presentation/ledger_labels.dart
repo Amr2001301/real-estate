@@ -57,3 +57,15 @@ String ledgerPeriodLabel(AppLocalizations l10n, LedgerPeriod p) => switch (p) {
       LedgerPeriod.quarter => l10n.ledgerPeriodQuarter,
       LedgerPeriod.year => l10n.ledgerPeriodYear,
     };
+
+IconData ledgerGroupIcon(LedgerGroup g) => switch (g) {
+      LedgerGroup.installments => Icons.calendar_month_rounded,
+      LedgerGroup.bookings => Icons.bookmark_rounded,
+      LedgerGroup.fees => Icons.receipt_long_rounded,
+      LedgerGroup.clawbacks => Icons.undo_rounded,
+      LedgerGroup.commissions => Icons.handshake_rounded,
+      LedgerGroup.bonuses => Icons.emoji_events_rounded,
+      LedgerGroup.topUps => Icons.add_card_rounded,
+      LedgerGroup.refunds => Icons.replay_rounded,
+      LedgerGroup.onHold => Icons.pause_circle_outline_rounded,
+    };

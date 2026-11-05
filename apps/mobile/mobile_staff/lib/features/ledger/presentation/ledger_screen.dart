@@ -1,8 +1,11 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../dashboard/home_kit/filter_kit.dart';
+import '../../dashboard/home_kit/home_kit.dart';
 import '../domain/ledger.dart';
 import 'ledger_labels.dart';
 
@@ -40,161 +43,117 @@ class _LedgerScreenState extends State<LedgerScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final r = _result;
-    return Scaffold(
-      backgroundColor: colors.canvas,
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.ledgerTitle,
-            subtitle: switch (r) {
-              Ok(:final data) => '${l10n.ledgerSubtitle} · ${l10n.statementAsOf(DateFormatter.mediumDate(data.asOf, languageCode: lang))}',
-              _ => l10n.ledgerSubtitle,
-            },
-            compact: true,
-            leadingAction: const NavHeaderBack(),
-          ),
-          SizedBox(
-            height: 52,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              children: [
-                for (final p in LedgerPeriod.values) ...[
-                  ChoiceChip(
-                    key: Key('ledger-period-${p.name}'),
-                    label: Text(ledgerPeriodLabel(l10n, p)),
-                    selected: _period == p,
-                    onSelected: _today == null && p != LedgerPeriod.all
-                        ? null
-                        : (_) {
-                            setState(() => _period = p);
-                            _load();
-                          },
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-              ],
-            ),
-          ),
-          Expanded(
-            child: switch (r) {
-              null => const Center(child: CircularProgressIndicator()),
-              Err(:final failure) => ErrorState(failure: failure, onRetry: _load),
-              Ok(:final data) => RefreshIndicator(
-                  onRefresh: _load,
-                  child: _LedgerBody(summary: data, range: _range),
-                ),
-            },
-          ),
-        ],
+  void _filters() {
+    showFilterSheet(
+      context,
+      (_) => _PeriodSheet(
+        selected: _period,
+        enabled: _today != null,
+        onApply: (p) {
+          setState(() => _period = p);
+          _load();
+        },
       ),
     );
   }
-}
-
-class _LedgerBody extends StatelessWidget {
-  const _LedgerBody({required this.summary, required this.range});
-  final LedgerSummary summary;
-  final ({String? dateFrom, String? dateTo}) range;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    String money(double v) => PriceFormatter.format(v, languageCode: lang);
-    final s = summary;
-    final netPositive = s.net >= 0;
-
-    return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xs,
-        AppSpacing.lg,
-        AppSpacing.xl + MediaQuery.of(context).padding.bottom,
-      ),
-      children: [
-        Container(
-          key: const Key('ledger-net'),
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF243F62), Color(0xFF0B1726)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final r = _result;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: RefreshIndicator(
+          onRefresh: _load,
+          child: ListView(
+            key: const Key('ledger'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
             children: [
-              Text(
-                l10n.ledgerNet,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w600),
+              HomeListHero(
+                back: true,
+                title: l10n.ledgerTitle,
+                subtitle: switch (r) {
+                  Ok(:final data) => '${l10n.statementAsOf(DateFormatter.mediumDate(data.asOf, languageCode: lang))}${_period == LedgerPeriod.all ? '' : ' · ${ledgerPeriodLabel(l10n, _period)}'}',
+                  _ => l10n.ledgerSubtitle,
+                },
+                actions: [
+                  HomeHeroButton(
+                    key: const Key('ledger-filters'),
+                    icon: Icons.tune_rounded,
+                    dot: _period != LedgerPeriod.all,
+                    tooltip: l10n.ledgerFilterTitle,
+                    onTap: _filters,
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  money(s.net.abs()),
-                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                netPositive ? l10n.ledgerNetForCompany : l10n.ledgerNetOnCompany,
-                style: TextStyle(
-                  color: netPositive ? const Color(0xFF4ADE80) : const Color(0xFFF87171),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              ...switch (r) {
+                null => [const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()))],
+                Err(:final failure) => [ErrorState(failure: failure, onRetry: _load)],
+                Ok(:final data) => _body(context, data),
+              },
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: AppKpiTile(
-                key: const Key('ledger-receivables'),
-                icon: Icons.south_west_rounded,
-                iconColor: colors.success,
-                label: l10n.ledgerReceivables,
-                value: money(s.receivables),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: AppKpiTile(
-                key: const Key('ledger-payables'),
-                icon: Icons.north_east_rounded,
-                iconColor: colors.error,
-                label: l10n.ledgerPayables,
-                value: money(s.payables),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AppSectionHeader(title: l10n.ledgerReceivablesTitle),
-        const SizedBox(height: AppSpacing.sm),
-        for (final g in LedgerGroup.values.where((g) => g.receivable))
-          _GroupCard(group: g, figure: s.groups[g] ?? const LedgerFigure(amount: 0, count: 0), range: range),
-        const SizedBox(height: AppSpacing.md),
-        AppSectionHeader(title: l10n.ledgerPayablesTitle),
-        const SizedBox(height: AppSpacing.sm),
-        for (final g in LedgerGroup.values.where((g) => !g.receivable))
-          _GroupCard(group: g, figure: s.groups[g] ?? const LedgerFigure(amount: 0, count: 0), range: range),
-      ],
+      ),
     );
+  }
+
+  /// The groups that have items as cards; the empty ones in one quiet line.
+  Widget _groups(BuildContext context, LedgerSummary s, {required bool receivable}) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final all = LedgerGroup.values.where((g) => g.receivable == receivable);
+    LedgerFigure fig(LedgerGroup g) => s.groups[g] ?? const LedgerFigure(amount: 0, count: 0);
+    final empty = [for (final g in all) if (fig(g).count == 0) ledgerGroupTitle(l10n, g)];
+    return Column(children: [
+      for (final g in all)
+        if (fig(g).count > 0) _GroupCard(group: g, figure: fig(g), range: _range),
+      if (empty.isNotEmpty)
+        Padding(
+          key: Key('ledger-empty-${receivable ? 'in' : 'out'}'),
+          padding: const EdgeInsets.fromLTRB(4, 2, 4, 0),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.check_circle_outline_rounded, size: 16, color: colors.inkMuted),
+            const SizedBox(width: 6),
+            Expanded(child: Text(l10n.ledgerNoItemsIn(empty.join(' · ')), style: TextStyle(fontSize: 11.5, height: 1.5, color: colors.inkMuted))),
+          ]),
+        ),
+    ]);
+  }
+
+  List<Widget> _body(BuildContext context, LedgerSummary s) {
+    final l10n = context.l10n;
+    final netPositive = s.net >= 0;
+    HomeFigure fig(String id, double v, String label, String hint, {bool warn = false}) {
+      final (n, u) = homeCompact(v, l10n);
+      return HomeFigure(id: id, value: ltr(n), label: u.isEmpty ? label : '$label · $u', hint: hint, warn: warn);
+    }
+
+    int items(bool receivable) => LedgerGroup.values.where((g) => g.receivable == receivable).fold(0, (a, g) => a + (s.groups[g]?.count ?? 0));
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+        child: HomeBand(figures: [
+          fig('net', s.net.abs(), l10n.ledgerNet, netPositive ? l10n.ledgerNetForCompany : l10n.ledgerNetOnCompany, warn: !netPositive),
+          fig('receivables', s.receivables, l10n.ledgerReceivables, l10n.ledgerItems(items(true))),
+          fig('payables', s.payables, l10n.ledgerPayables, l10n.ledgerItems(items(false))),
+        ]),
+      ),
+      HomeSection(
+        icon: Icons.south_west_rounded,
+        title: l10n.ledgerReceivablesTitle,
+        child: _groups(context, s, receivable: true),
+      ),
+      HomeSection(
+        icon: Icons.north_east_rounded,
+        title: l10n.ledgerPayablesTitle,
+        child: _groups(context, s, receivable: false),
+      ),
+    ];
   }
 }
 
@@ -208,65 +167,142 @@ class _GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
-    String money(double v) => PriceFormatter.format(v, languageCode: lang);
+    String money(double v) => PriceFormatter.format(v.roundToDouble(), languageCode: lang);
     final states = LedgerState.values.where((s) => (figure.states[s]?.amount ?? 0) > 0).toList();
+    final total = states.fold<double>(0, (a, st) => a + figure.states[st]!.amount);
+    final late = figure.states[LedgerState.late]?.amount ?? 0;
+    final open = figure.count > 0;
+    final receivable = group.receivable;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        key: Key('ledger-group-${group.wire}'),
-        onTap: figure.count == 0
-            ? null
-            : () => context.push(
-                  '/ledger/${group.wire}',
-                  extra: (dateFrom: range.dateFrom, dateTo: range.dateTo),
-                ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    ledgerGroupTitle(l10n, group),
-                    style: theme.textTheme.titleSmall?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w800),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: BorderSide(color: colors.hairline)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: Key('ledger-group-${group.wire}'),
+          onTap: open ? () => context.push('/ledger/${group.wire}', extra: (dateFrom: range.dateFrom, dateTo: range.dateTo)) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    gradient: receivable ? homeGoldGradient : homeNavyGradient,
+                    borderRadius: BorderRadius.circular(15),
                   ),
+                  child: Icon(ledgerGroupIcon(group), size: 23, color: receivable ? AppPalette.navy : AppPalette.gold300),
                 ),
-                Text(
-                  money(figure.amount),
-                  style: theme.textTheme.titleSmall?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w800),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(ledgerGroupTitle(l10n, group), style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      Text(l10n.ledgerItems(figure.count), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      if (group == LedgerGroup.onHold) Text(' · ${l10n.ledgerOnHoldNote}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                    ]),
+                  ]),
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(l10n.ledgerItems(figure.count), style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
-                if (group == LedgerGroup.onHold) ...[
-                  const SizedBox(width: 6),
-                  Text('· ${l10n.ledgerOnHoldNote}', style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
-                ],
-              ],
-            ),
-            if (states.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final st in states)
-                    AppInfoChip(
-                      icon: Icons.circle,
-                      label: '${ledgerStateLabel(l10n, st)} ${money(figure.states[st]!.amount)}',
-                      color: ledgerStateColor(colors, st),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(money(figure.amount), style: homeDisplay(17, colors.inkStrong)),
+                  if (late > 0)
+                    Container(
+                      margin: const EdgeInsets.only(top: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                      decoration: BoxDecoration(color: colors.error.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(99)),
+                      child: Text(ledgerStateLabel(l10n, LedgerState.late),
+                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: colors.error)),
                     ),
+                ]),
+                if (open) ...[
+                  const SizedBox(width: 2),
+                  Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
                 ],
-              ),
-            ],
-          ],
+              ]),
+              if (states.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Row(children: [
+                  for (final (i, st) in states.indexed) ...[
+                    if (i > 0) const SizedBox(width: 3),
+                    Expanded(
+                      flex: (figure.states[st]!.amount / total * 1000).round().clamp(8, 1000),
+                      child: Container(
+                        height: 8,
+                        decoration: BoxDecoration(color: ledgerStateColor(colors, st), borderRadius: BorderRadius.circular(99)),
+                      ),
+                    ),
+                  ],
+                ]),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(14)),
+                  child: Column(children: [
+                    for (final st in states)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(children: [
+                          Container(width: 9, height: 9, decoration: BoxDecoration(color: ledgerStateColor(colors, st), shape: BoxShape.circle)),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(ledgerStateLabel(l10n, st), style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+                          Text(money(figure.states[st]!.amount), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                        ]),
+                      ),
+                  ]),
+                ),
+              ],
+            ]),
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _PeriodSheet extends StatefulWidget {
+  const _PeriodSheet({required this.selected, required this.enabled, required this.onApply});
+  final LedgerPeriod selected;
+  final bool enabled;
+  final ValueChanged<LedgerPeriod> onApply;
+
+  @override
+  State<_PeriodSheet> createState() => _PeriodSheetState();
+}
+
+class _PeriodSheetState extends State<_PeriodSheet> {
+  late LedgerPeriod _p = widget.selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FilterSheet(
+      title: l10n.ledgerFilterTitle,
+      active: _p == LedgerPeriod.all ? 0 : 1,
+      onClear: () => setState(() => _p = LedgerPeriod.all),
+      applyLabel: l10n.ledgerFilterApply,
+      onApply: () {
+        widget.onApply(_p);
+        Navigator.of(context).pop();
+      },
+      sections: [
+        FilterSection(
+          icon: Icons.date_range_rounded,
+          title: l10n.ledgerFilterPeriod,
+          child: FilterRadioList<LedgerPeriod>(
+            keyPrefix: 'ledger-period',
+            selected: _p,
+            onSelect: (v) => setState(() => _p = v),
+            options: [
+              for (final p in LedgerPeriod.values)
+                FilterOption(p, ledgerPeriodLabel(l10n, p), empty: !widget.enabled && p != LedgerPeriod.all),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
