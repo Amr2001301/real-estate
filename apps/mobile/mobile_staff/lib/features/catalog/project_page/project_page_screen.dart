@@ -189,7 +189,7 @@ class _Occupancy extends StatelessWidget {
               )
             else
               Text(l10n.priceOnRequest, style: homeDisplay(17, colors.inkMuted)),
-            Text(l10n.ppTakenOf(page.taken, page.total), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            Text(l10n.ppTakenOf(page.taken, page.total), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             const SizedBox(height: 8),
             CatalogUnitsMix(available: page.available, reserved: page.reserved, sold: page.sold, other: page.other),
           ]),
@@ -222,7 +222,7 @@ class _Ring extends StatelessWidget {
         ),
         Column(mainAxisSize: MainAxisSize.min, children: [
           Text(percent == null ? '—' : ltr('$percent%'), key: const Key('project-occupancy'), style: homeDisplay(20, colors.inkStrong)),
-          Text(label, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+          Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ]),
       ]),
     );
@@ -256,7 +256,7 @@ class _About extends StatelessWidget {
               SizedBox(
                 width: k == l10n.ppLicense ? double.infinity : 140,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   Text(v, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                 ]),
               ),
@@ -323,7 +323,7 @@ class _Phases extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(ph.name, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                   Text('${l10n.ppBuildingsN(ph.buildings.length)} · ${l10n.cuCountN(ph.units)}',
-                      style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
               if (ph.delivery != null)
@@ -334,7 +334,7 @@ class _Phases extends StatelessWidget {
                     Icon(Icons.event_rounded, size: 14, color: colors.inkMuted),
                     const SizedBox(width: 4),
                     Text(l10n.ppDelivery(DateFormatter.monthYear(ph.delivery!, languageCode: lang)),
-                        style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                        style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
             ]),
@@ -354,14 +354,14 @@ class _Phases extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(b.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                     Text([if (b.floors != null) l10n.ppFloorsN(b.floors!), l10n.cuCountN(b.units)].join(' · '),
-                        style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                        style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
                 if (b.available != null)
                   Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                     Text(l10n.ppAvailableN(b.available!),
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: catalogAvailable)),
-                    Text(l10n.ppSoldN(b.sold ?? 0), style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable)),
+                    Text(l10n.ppSoldN(b.sold ?? 0), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
               ]),
             ],

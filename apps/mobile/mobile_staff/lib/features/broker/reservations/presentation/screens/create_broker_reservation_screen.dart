@@ -379,7 +379,7 @@ class _ErrorText extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: TextStyle(color: context.appColors.error, fontSize: 11.5),
+          style: TextStyle(color: context.appColors.error, fontSize: 12),
         ),
       ],
     );

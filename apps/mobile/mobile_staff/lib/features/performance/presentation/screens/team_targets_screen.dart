@@ -142,7 +142,7 @@ class _TargetCard extends StatelessWidget {
                   Text(target.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                   Text.rich(TextSpan(children: [
                     TextSpan(text: contractMoney(double.tryParse(target.amountTarget) ?? 0), style: homeDisplay(15, colors.inkStrong)),
-                    TextSpan(text: ' $currency · ${l10n.tmUnitsLine(target.unitsTarget)}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                    TextSpan(text: ' $currency · ${l10n.tmUnitsLine(target.unitsTarget)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ])),
                 ]),
               ),
@@ -259,7 +259,7 @@ class _TargetSheetState extends State<TargetSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: invalid ? colors.error : colors.hairline, width: 1.5)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+              Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(text, style: TextStyle(fontSize: 13.5, color: colors.inkStrong)),
             ]),
           ),
@@ -303,7 +303,7 @@ class _TargetSheetState extends State<TargetSheet> {
                   decoration: deco(l10n.targetUnits),
                   validator: (v) => (v == null || v.trim().isEmpty) ? l10n.validationRequired : null,
                 ),
-                Padding(padding: const EdgeInsets.fromLTRB(2, 8, 2, 12), child: Text(l10n.tmSheetNote, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+                Padding(padding: const EdgeInsets.fromLTRB(2, 8, 2, 12), child: Text(l10n.tmSheetNote, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
                 Row(children: [
                   Expanded(
                     child: OutlinedButton(

@@ -258,7 +258,7 @@ class PortalProjectCard extends StatelessWidget {
                     Row(children: [
                       const Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
                       const SizedBox(width: 3),
-                      Text(row.city!, style: const TextStyle(fontSize: 11.5, color: Color(0xFFDCE3EC))),
+                      Text(row.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                     ]),
                 ]),
               ),
@@ -272,10 +272,10 @@ class PortalProjectCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
-                        child: Text(s, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+                        child: Text(s, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkMuted)),
                       ),
                     if (row.services.length > 3)
-                      Text(ltr('+${row.services.length - 3}'), style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                      Text(ltr('+${row.services.length - 3}'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 const SizedBox(height: 10),
                 Row(children: [
@@ -329,10 +329,10 @@ class _Mini extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         Text(value, key: valueKey, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-        if (note != null) Text(note!, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+        if (note != null) Text(note!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
       ]),
     );
   }
@@ -595,7 +595,7 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
                     else
                       Text(_loading ? '…' : l10n.priceOnRequest, style: homeDisplay(19, colors.inkMuted)),
                     if (planLine != null)
-                      Text(planLine, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: catalogAvailable)),
+                      Text(planLine, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: catalogAvailable)),
                     const SizedBox(height: 11),
                     Row(children: [
                       Expanded(
@@ -744,7 +744,7 @@ class _PortalUnitPageState extends State<PortalUnitPage> {
           child: Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text((v ?? '').isEmpty ? '—' : v!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
             ]),
           ),
@@ -798,7 +798,7 @@ class _PortalUnitPageState extends State<PortalUnitPage> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(l10n.upProject, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                          Text(l10n.upProject, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                           Text(r.projectName ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                         ]),
                       ),

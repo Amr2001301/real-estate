@@ -203,7 +203,7 @@ class _CatalogFloorPlansState extends State<CatalogFloorPlans> {
                   child: Text(
                     '${_page + 1} / ${widget.urls.length}',
                     style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.white),
                   ),

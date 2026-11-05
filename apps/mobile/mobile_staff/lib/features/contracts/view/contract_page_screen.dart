@@ -290,9 +290,9 @@ class _Figures extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(16, colors.inkStrong)),
-              if (note != null) Text(note, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+              if (note != null) Text(note, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
         );
@@ -315,7 +315,7 @@ class _Figures extends StatelessWidget {
           ]),
         ),
         if ((page.row.downPayment ?? 0) > 0)
-          Text(l10n.kcDown('${contractMoney(page.row.downPayment!)} $currency'), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+          Text(l10n.kcDown('${contractMoney(page.row.downPayment!)} $currency'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         const SizedBox(height: 10),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
@@ -328,7 +328,7 @@ class _Figures extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(l10n.kcCollected('${contractMoney(page.paid)} $currency', ltr('${page.collectedPct}%')),
-            key: const Key('contract-collected'), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            key: const Key('contract-collected'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         const SizedBox(height: 10),
         Row(children: [
           tile(
@@ -383,7 +383,7 @@ class _TabChip extends StatelessWidget {
                   borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(ltr('$badge'),
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: alert ? colors.error : colors.inkMuted)),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: alert ? colors.error : colors.inkMuted)),
               ),
             ],
           ]),
@@ -418,7 +418,7 @@ class KvTable extends StatelessWidget {
                 ),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const SizedBox(height: 2),
                 Text(v, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
               ]),
@@ -462,9 +462,9 @@ class ContractParty extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+            Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             Text(name, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-            if ((phone ?? '').isNotEmpty) Text(ltr(phone!), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            if ((phone ?? '').isNotEmpty) Text(ltr(phone!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           ]),
         ),
         if ((phone ?? '').isNotEmpty) ...[
@@ -516,14 +516,14 @@ class _Installments extends StatelessWidget {
                   width: 44,
                   child: Column(children: [
                     Text(i.dueDate == null ? '—' : ltr('${i.dueDate!.day}'), style: homeDisplay(16, colors.inkStrong)),
-                    if (i.dueDate != null) Text(DateFormatter.monthShort(i.dueDate!, languageCode: lang), style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                    if (i.dueDate != null) Text(DateFormatter.monthShort(i.dueDate!, languageCode: lang), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(_installmentTitle(l10n, page, i), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                    if (i.dueDate != null) Text(ltr('${i.dueDate!.year}'), style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    if (i.dueDate != null) Text(ltr('${i.dueDate!.year}'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
                 if (i.amount != null) Text(contractMoney(i.amount!), style: homeDisplay(14.5, colors.inkStrong)),
@@ -615,7 +615,7 @@ class _Statement extends StatelessWidget {
                           if (l.date != null) DateFormatter.mediumDate(l.date!, languageCode: lang),
                           ?paymentMethodLabel(l10n, PaymentMethod.fromWire(l.method)),
                         ].join(' · '),
-                        style: TextStyle(fontSize: 10.5, color: colors.inkMuted),
+                        style: TextStyle(fontSize: 12, color: colors.inkMuted),
                       ),
                     ]),
                   ),
@@ -624,7 +624,7 @@ class _Statement extends StatelessWidget {
                       ltr(l.credit > 0 ? '− ${contractMoney(l.credit)}' : '+ ${contractMoney(l.debit)}'),
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: l.credit > 0 ? catalogAvailable : colors.inkStrong),
                     ),
-                    Text(ltr(contractMoney(l.balance)), style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    Text(ltr(contractMoney(l.balance)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ]),
               ),
@@ -679,7 +679,7 @@ class _Payments extends StatelessWidget {
                       if (d.paidAt != null) DateFormatter.mediumDate(d.paidAt!, languageCode: lang),
                       ?paymentMethodLabel(l10n, PaymentMethod.fromWire(d.method)),
                     ].join(' · '),
-                    style: TextStyle(fontSize: 10.5, color: colors.inkMuted),
+                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
                   ),
                 ]),
               ),

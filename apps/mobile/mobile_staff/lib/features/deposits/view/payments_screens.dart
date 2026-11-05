@@ -297,19 +297,19 @@ class PaymentCardView extends StatelessWidget {
 
     final List<Widget> foot = switch (row.state) {
       'PENDING_REVIEW' => [
-          if (row.hasProof) Text(l10n.pmProofAttached, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          if (row.hasProof) Text(l10n.pmProofAttached, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           const Spacer(),
-          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ],
       'CHEQUE_PENDING' => [
-          if (row.dueDate != null) Text(l10n.pmDueOn(day(row.dueDate!)), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          if (row.dueDate != null) Text(l10n.pmDueOn(day(row.dueDate!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           const Spacer(),
           if (row.instrumentId != null)
             InkWell(
               key: Key('payment-cheque-${row.id}'),
               onTap: () => context.push('/cheques/${row.instrumentId}'),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(l10n.pmOpenCheque, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                Text(l10n.pmOpenCheque, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                 const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
               ]),
             ),
@@ -320,12 +320,12 @@ class PaymentCardView extends StatelessWidget {
               (row.rejectionReason ?? '').isNotEmpty ? l10n.pmReasonLine(row.rejectionReason!) : (row.paidAt == null ? '' : day(row.paidAt!)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: tone),
+              style: TextStyle(fontSize: 12, color: tone),
             ),
           ),
         ],
       _ => [
-          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ],
     };
 
@@ -359,14 +359,14 @@ class PaymentCardView extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text.rich(TextSpan(children: [
                         TextSpan(text: contractMoney(row.amount), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ])),
                     ]),
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
                         if (row.reference != null) TextSpan(text: ltr(row.reference!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if ((row.unitCode ?? '').isNotEmpty) TextSpan(text: ' · ${ltr(row.unitCode!)}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        if ((row.unitCode ?? '').isNotEmpty) TextSpan(text: ' · ${ltr(row.unitCode!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -374,7 +374,7 @@ class PaymentCardView extends StatelessWidget {
                     const SizedBox(height: 5),
                     Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                       paymentBadge(l10n, row),
-                      Text(kind, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      Text(kind, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ]),
                 ),
@@ -544,11 +544,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ]),
                           ),
                           if (p.state == 'CHEQUE_PENDING')
-                            Text(l10n.pmNotCounted, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppPalette.gold600))
+                            Text(l10n.pmNotCounted, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
                           else if (p.state == 'COLLECTED' && p.paidAt != null)
-                            Text('✓ ${l10n.pmPaidOn(DateFormatter.mediumDate(p.paidAt!, languageCode: lang))}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: catalogAvailable))
+                            Text('✓ ${l10n.pmPaidOn(DateFormatter.mediumDate(p.paidAt!, languageCode: lang))}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable))
                           else if ((p.rejectionReason ?? '').isNotEmpty)
-                            Text(l10n.pmReasonLine(p.rejectionReason!), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: tone)),
+                            Text(l10n.pmReasonLine(p.rejectionReason!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tone)),
                           const SizedBox(height: 14),
                           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             for (final (i, (label, at, done)) in steps.indexed)
@@ -570,8 +570,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                                  Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 9.5, color: colors.inkMuted)),
+                                  Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                                  Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                                 ]),
                               ),
                           ]),

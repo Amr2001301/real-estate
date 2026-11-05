@@ -350,10 +350,10 @@ class _BudgetBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label, style: TextStyle(fontSize: 11.5, color: colors.inkMuted))),
+            Expanded(child: Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
             Text(
               '${latinDigits((used * 100).round().toString())}%',
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
             ),
           ],
         ),

@@ -418,7 +418,7 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     [ledgerTypeLabel(l10n, d.deposits[i].type), if (!d.deposits[i].verified) l10n.frUnverified].join(' · '),
-                                    style: TextStyle(fontSize: 11.5, color: d.deposits[i].verified ? context.appColors.inkMuted : context.appColors.warning),
+                                    style: TextStyle(fontSize: 12, color: d.deposits[i].verified ? context.appColors.inkMuted : context.appColors.warning),
                                   ),
                                 ]),
                               ),
@@ -459,7 +459,7 @@ class _Rows extends StatelessWidget {
               Row(children: [
                 Expanded(child: Text(rows[i].$1, style: TextStyle(fontSize: 13, color: colors.ink))),
                 if (rows[i].$3.isNotEmpty) ...[
-                  Text(rows[i].$3, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  Text(rows[i].$3, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   const SizedBox(width: 10),
                 ],
                 Text(ltr(rows[i].$2), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
@@ -514,7 +514,7 @@ class _InstallmentList extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       [ledgerTypeLabel(l10n, rows[i].type), if (rows[i].unit.isNotEmpty) ltr(rows[i].unit), if (rows[i].dueDate != null) DateFormatter.dayMonth(rows[i].dueDate!, languageCode: Localizations.localeOf(context).languageCode)].join(' · '),
-                      style: TextStyle(fontSize: 11.5, color: colors.inkMuted),
+                      style: TextStyle(fontSize: 12, color: colors.inkMuted),
                     ),
                   ]),
                 ),

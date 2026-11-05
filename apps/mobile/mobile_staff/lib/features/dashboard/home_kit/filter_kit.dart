@@ -68,7 +68,7 @@ class FilterSheet extends StatelessWidget {
                   Text(title, style: homeDisplay(19, colors.inkStrong)),
                   Text(l10n.fsActiveN(active),
                       key: const Key('filter-active'),
-                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
               Material(
@@ -150,7 +150,7 @@ class FilterSection extends StatelessWidget {
           const SizedBox(width: 6),
           Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
           const Spacer(),
-          if (hint != null) Text(hint!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          if (hint != null) Text(hint!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ]),
         const SizedBox(height: 8),
         child,
@@ -220,7 +220,7 @@ class FilterTiles<T> extends StatelessWidget {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(o.label, maxLines: 1, overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                              if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                              if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                             ]),
                           ),
                         ]),
@@ -286,7 +286,7 @@ class FilterSegments<T> extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: o.value == selected ? colors.inkStrong : const Color(0xFF6B6256),
                       )),
-                  if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
             ),
@@ -340,12 +340,12 @@ class FilterRadioList<T> extends StatelessWidget {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                      if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   )
                 else ...[
                   Expanded(child: Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
-                  if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ],
               ]),
             ),
@@ -380,7 +380,7 @@ class FilterPriceRange extends StatelessWidget {
       (l10n.fsPriceOver(m(7)), 7000000, null),
     ];
     Widget end(String k, String v, CrossAxisAlignment a) => Column(crossAxisAlignment: a, children: [
-          Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+          Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           Text(v, style: homeDisplay(15, colors.inkStrong)),
         ]);
     return Container(
@@ -423,7 +423,7 @@ class FilterPriceRange extends StatelessWidget {
                   onTap: () => on ? onChanged(null, null) : onChanged(a, b),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                    child: Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: on ? Colors.white : colors.inkStrong)),
+                    child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: on ? Colors.white : colors.inkStrong)),
                   ),
                 ),
               );

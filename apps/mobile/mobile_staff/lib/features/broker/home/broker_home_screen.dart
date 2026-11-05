@@ -272,7 +272,7 @@ class _LeadsList extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                           if (leads[i].at != null)
-                            Text(_sent(context, leads[i].at!), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                            Text(_sent(context, leads[i].at!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         ]),
                       ),
                       _StatusChip(status: leads[i].status),
@@ -307,7 +307,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
+      child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
@@ -366,7 +366,7 @@ class _ProjectsStrip extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
                       child: Text(l10n.bhUnitsAvailable(units),
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.navy)),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
                     ),
                   ),
                   PositionedDirectional(
@@ -380,7 +380,7 @@ class _ProjectsStrip extends StatelessWidget {
                         Row(children: [
                           const Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
                           const SizedBox(width: 3),
-                          Text(p.city!, style: const TextStyle(fontSize: 11, color: Color(0xFFDCE3EC))),
+                          Text(p.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                         ]),
                     ]),
                   ),

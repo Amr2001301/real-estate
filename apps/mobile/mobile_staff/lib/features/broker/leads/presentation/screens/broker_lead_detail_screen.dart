@@ -224,7 +224,7 @@ class _Track extends StatelessWidget {
               ),
               const SizedBox(width: 11),
               Expanded(child: Text(steps[i].$2, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-              if (steps[i].$3 != null) Text(steps[i].$3!, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              if (steps[i].$3 != null) Text(steps[i].$3!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
       ]),
@@ -297,7 +297,7 @@ class _Visits extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('${l10n.ldAppointment} ${ltr(v.number ?? '')}'.trim(),
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                    if (v.at != null) Text(leadWhen(context, v.at!), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                    if (v.at != null) Text(leadWhen(context, v.at!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
                 _Pill(text: visitStatusLabel(l10n, v.status), color: colors.info),
@@ -343,7 +343,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
-        child: Text(text, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
       );
 }
 

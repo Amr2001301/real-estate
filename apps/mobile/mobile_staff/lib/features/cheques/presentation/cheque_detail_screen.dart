@@ -157,7 +157,7 @@ class _Body extends StatelessWidget {
                 TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
               ]),
             ),
-            if (dueLine != null) Text(dueLine, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: dueNow ? colors.error : AppPalette.gold600)),
+            if (dueLine != null) Text(dueLine, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: dueNow ? colors.error : AppPalette.gold600)),
             const SizedBox(height: 14),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               for (final (i, (label, at, done)) in steps.indexed)
@@ -179,8 +179,8 @@ class _Body extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                    Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 9.5, color: colors.inkMuted)),
+                    Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                    Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
             ]),

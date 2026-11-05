@@ -159,7 +159,7 @@ class CatalogBadge extends StatelessWidget {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (icon != null) ...[Icon(icon, size: 13, color: foreground), const SizedBox(width: 3)],
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: foreground)),
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: foreground))),
         ]),
       );
 }
@@ -185,7 +185,7 @@ class CatalogUnitsMix extends StatelessWidget {
     Widget legend(String label, int n, Color c) => Row(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 7, height: 7, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           const SizedBox(width: 3),
           Text(ltr('$n'), style: homeDisplay(12, colors.inkStrong)),
         ]);
@@ -283,7 +283,7 @@ class _CatalogPageHeroState extends State<CatalogPageHero> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(color: AppPalette.navy.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(99)),
-                  child: Text(l10n.ppPhotoOf(_i + 1, photos.length), style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text(l10n.ppPhotoOf(_i + 1, photos.length), style: const TextStyle(fontSize: 12, color: Colors.white)),
                 ),
               if (widget.onShare != null) ...[
                 const SizedBox(width: 8),

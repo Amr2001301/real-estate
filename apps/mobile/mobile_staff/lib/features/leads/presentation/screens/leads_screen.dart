@@ -400,7 +400,7 @@ class LeadCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                         decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
                         child: Text(leadStageLabel(l10n, lead.stage),
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: stageColor)),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stageColor)),
                       ),
                     ]),
                     if (where.isNotEmpty) ...[
@@ -445,7 +445,7 @@ class LeadCard extends StatelessWidget {
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: nextColor)),
                     if (days != null)
                       Text(l10n.lvInStage(days),
-                          style: TextStyle(fontSize: 10.5, color: days >= 14 ? colors.warning : colors.inkMuted)),
+                          style: TextStyle(fontSize: 12, color: days >= 14 ? colors.warning : colors.inkMuted)),
                   ]),
                 ),
                 if ((lead.phone ?? '').isNotEmpty) ...[
@@ -492,7 +492,7 @@ class _Tag extends StatelessWidget {
         const SizedBox(width: 4),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 170),
-          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c)),
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c)),
         ),
       ]),
     );

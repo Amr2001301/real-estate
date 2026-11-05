@@ -147,7 +147,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         _Field(key: const Key('bc-title-en'), label: l10n.bcTitleEn, controller: _titleEn, maxLength: 200, ltrText: true, onChanged: (_) => _content(cubit)),
                         _Field(key: const Key('bc-body-ar'), label: l10n.bcBodyAr, controller: _bodyAr, maxLength: 500, lines: 3, onChanged: (_) => _content(cubit)),
                         _Field(key: const Key('bc-body-en'), label: l10n.bcBodyEn, controller: _bodyEn, maxLength: 500, lines: 3, ltrText: true, onChanged: (_) => _content(cubit)),
-                        Padding(padding: const EdgeInsets.only(top: 2), child: Text(l10n.bcBothRequired, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+                        Padding(padding: const EdgeInsets.only(top: 2), child: Text(l10n.bcBothRequired, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
                       ]),
                     ),
                     HomeSection(
@@ -184,7 +184,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                             child: Text(s.content.entityLabel == null ? l10n.bcRecordHint : '${entities[e]} · ${ltr(s.content.entityLabel!)}',
                                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                           ),
-                        Padding(padding: const EdgeInsets.only(top: 6), child: Text(l10n.bcLinkNote, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+                        Padding(padding: const EdgeInsets.only(top: 6), child: Text(l10n.bcLinkNote, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
                       ]),
                     ),
                     HomeSection(
@@ -200,7 +200,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(_titleAr.text.isEmpty ? l10n.bcTitleAr : _titleAr.text, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: _titleAr.text.isEmpty ? colors.inkMuted : colors.inkStrong)),
                               Text(_bodyAr.text.isEmpty ? l10n.bcBodyAr : _bodyAr.text, style: TextStyle(fontSize: 12, height: 1.55, color: colors.inkMuted)),
-                              Text(l10n.bcNow, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                              Text(l10n.bcNow, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                             ]),
                           ),
                         ]),
@@ -330,7 +330,7 @@ class _Opt extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                if (sub != null) Text(sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                if (sub != null) Text(sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               ]),
             ),
           ]),
@@ -408,7 +408,7 @@ class _ResultCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(18)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(l10n.bcResult, style: TextStyle(fontSize: 11, color: color)),
+          Text(l10n.bcResult, style: TextStyle(fontSize: 12, color: color)),
           Text(o == 0 ? l10n.bcResOk : (o == 1 ? l10n.bcResPartial : l10n.bcResFail), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: color)),
           const SizedBox(height: 4),
           line(l10n.bcRecipients, result.recipients),

@@ -93,13 +93,13 @@ class PaymentReviewTile extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(item.customerName ?? l10n.paymentReviewTitle,
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  if (methodLabel != null) Text(methodLabel, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                  if (methodLabel != null) Text(methodLabel, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
-                child: Text(paymentReviewStatusLabel(l10n, item.reviewStatus), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: accent)),
+                child: Text(paymentReviewStatusLabel(l10n, item.reviewStatus), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
               ),
             ]),
             const SizedBox(height: 14),
@@ -117,8 +117,8 @@ class PaymentReviewTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  if (item.contractNumber != null) Text(ltr(item.contractNumber!), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppPalette.gold300)),
-                  if (item.unitCode != null) Text(ltr(item.unitCode!), style: const TextStyle(fontSize: 11, color: Color(0xFFC9D2DE))),
+                  if (item.contractNumber != null) Text(ltr(item.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold300)),
+                  if (item.unitCode != null) Text(ltr(item.unitCode!), style: const TextStyle(fontSize: 12, color: Color(0xFFC9D2DE))),
                 ]),
               ]),
             ),
@@ -223,7 +223,7 @@ class _Date extends StatelessWidget {
       const SizedBox(width: 7),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+          Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           Text(value, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
         ]),
       ),

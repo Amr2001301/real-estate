@@ -255,7 +255,7 @@ class _Kpis extends StatelessWidget {
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Text(ltr(cells[i].$1), style: homeDisplay(21, cells[i].$3)),
                   const SizedBox(height: 4),
-                  Text(cells[i].$2, textAlign: TextAlign.center, maxLines: 2, style: TextStyle(fontSize: 10.5, color: colors.inkMuted, height: 1.3)),
+                  Text(cells[i].$2, textAlign: TextAlign.center, maxLines: 2, style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3)),
                 ]),
               ),
             ),

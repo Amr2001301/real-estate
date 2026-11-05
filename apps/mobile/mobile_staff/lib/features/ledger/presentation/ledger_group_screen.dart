@@ -188,7 +188,7 @@ class _RowCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(color: stateColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-              child: Text(ledgerStateLabel(l10n, state), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: stateColor)),
+              child: Text(ledgerStateLabel(l10n, state), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stateColor)),
             ),
           ],
         ]),
@@ -269,7 +269,7 @@ class _Ref extends StatelessWidget {
         border: Border.all(color: gold ? AppPalette.gold100 : colors.hairline),
         borderRadius: BorderRadius.circular(99),
       ),
-      child: Text(ltr(text), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: gold ? AppPalette.gold600 : colors.inkMuted)),
+      child: Text(ltr(text), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: gold ? AppPalette.gold600 : colors.inkMuted)),
     );
   }
 }

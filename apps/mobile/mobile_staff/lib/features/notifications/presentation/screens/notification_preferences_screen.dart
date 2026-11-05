@@ -94,7 +94,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
                                   padding: const EdgeInsets.only(top: 8, bottom: 2),
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(groups[group]!.$1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                                    Text(groups[group]!.$2, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                    Text(groups[group]!.$2, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                                   ]),
                                 ),
                                 for (final (i, channel) in prefChannels.indexed)
@@ -108,7 +108,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
                                           padding: const EdgeInsets.symmetric(vertical: 8),
                                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                             Text(channel == 'email' ? l10n.npEmail : l10n.npPush, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                                            Text(channel == 'email' ? l10n.npEmailHint : l10n.npPushHint, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                            Text(channel == 'email' ? l10n.npEmailHint : l10n.npPushHint, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                                           ]),
                                         ),
                                       ),

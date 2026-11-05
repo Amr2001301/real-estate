@@ -119,7 +119,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Icon(Icons.check_circle_outline_rounded, size: 16, color: colors.inkMuted),
             const SizedBox(width: 6),
-            Expanded(child: Text(l10n.ledgerNoItemsIn(empty.join(' · ')), style: TextStyle(fontSize: 11.5, height: 1.5, color: colors.inkMuted))),
+            Expanded(child: Text(l10n.ledgerNoItemsIn(empty.join(' · ')), style: TextStyle(fontSize: 12, height: 1.5, color: colors.inkMuted))),
           ]),
         ),
     ]);
@@ -202,8 +202,8 @@ class _GroupCard extends StatelessWidget {
                     Text(ledgerGroupTitle(l10n, group), style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                     const SizedBox(height: 3),
                     Row(children: [
-                      Text(l10n.ledgerItems(figure.count), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
-                      if (group == LedgerGroup.onHold) Text(' · ${l10n.ledgerOnHoldNote}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      Text(l10n.ledgerItems(figure.count), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                      if (group == LedgerGroup.onHold) Text(' · ${l10n.ledgerOnHoldNote}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ]),
                 ),
@@ -215,7 +215,7 @@ class _GroupCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                       decoration: BoxDecoration(color: colors.error.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(99)),
                       child: Text(ledgerStateLabel(l10n, LedgerState.late),
-                          style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: colors.error)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.error)),
                     ),
                 ]),
                 if (open) ...[

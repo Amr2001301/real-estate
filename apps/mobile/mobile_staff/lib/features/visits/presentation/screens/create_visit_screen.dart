@@ -346,7 +346,7 @@ class _Segment extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   height: 1.25,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected ? AppPalette.gold600 : colors.inkMuted,
@@ -900,7 +900,7 @@ class _WalkInForm extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(l10n.visitWalkInNameRequired,
                         style: TextStyle(
-                            color: colors.error, fontSize: 11)),
+                            color: colors.error, fontSize: 12)),
                   ],
                 ],
               ),
@@ -921,7 +921,7 @@ class _WalkInForm extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(l10n.visitWalkInPhoneRequired,
                         style: TextStyle(
-                            color: colors.error, fontSize: 11)),
+                            color: colors.error, fontSize: 12)),
                   ],
                 ],
               ),

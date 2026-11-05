@@ -34,13 +34,13 @@ class FormFieldBox extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkMuted)),
         const SizedBox(height: 4),
         child,
         if (error != null)
-          Padding(padding: const EdgeInsets.only(top: 4), child: Text(error!, style: TextStyle(fontSize: 11, color: colors.error)))
+          Padding(padding: const EdgeInsets.only(top: 4), child: Text(error!, style: TextStyle(fontSize: 12, color: colors.error)))
         else if (hint != null)
-          Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint!, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+          Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint!, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
       ]),
     );
   }

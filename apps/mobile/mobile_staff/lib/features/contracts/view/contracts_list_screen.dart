@@ -250,7 +250,7 @@ class ContractCardView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
             ]),
           ),
@@ -289,13 +289,13 @@ class ContractCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(TextSpan(children: [
                       TextSpan(text: ltr(row.displayNumber), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                      TextSpan(text: ' · $source', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      TextSpan(text: ' · $source', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ])),
                     if (where.isNotEmpty)
                       Row(children: [
                         Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
                         const SizedBox(width: 3),
-                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted))),
+                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
                       ]),
                   ]),
                 ),
@@ -324,13 +324,13 @@ class ContractCardView extends StatelessWidget {
                   if (row.signedAt != null)
                     Expanded(
                       child: Text(l10n.kcSignedOn(DateFormatter.dayMonth(row.signedAt!, languageCode: lang)),
-                          style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                          style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     )
                   else
                     const Spacer(),
                   if ((row.downPayment ?? 0) > 0)
                     Text(l10n.kcDown(contractMoney(row.downPayment!)),
-                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
           ]),

@@ -197,15 +197,15 @@ class ChequeCardView extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text.rich(TextSpan(children: [
                         TextSpan(text: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ])),
                     ]),
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
                         if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
-                        if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -213,7 +213,7 @@ class ChequeCardView extends StatelessWidget {
                     const SizedBox(height: 5),
                     Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                       CatalogBadge.status(chequeStatusLabel(l10n, c.status), tone),
-                      if (dueNow) Text(l10n.chequeDueForDeposit, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: colors.error)),
+                      if (dueNow) Text(l10n.chequeDueForDeposit, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.error)),
                     ]),
                   ]),
                 ),
@@ -223,7 +223,7 @@ class ChequeCardView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
               child: Row(children: [
-                if (c.dueDate != null) Text(l10n.pmDueOn(followUpDate(c.dueDate!, lang)), style: TextStyle(fontSize: 11, color: dueNow ? colors.error : colors.inkMuted)),
+                if (c.dueDate != null) Text(l10n.pmDueOn(followUpDate(c.dueDate!, lang)), style: TextStyle(fontSize: 12, color: dueNow ? colors.error : colors.inkMuted)),
                 const Spacer(),
                 Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
               ]),

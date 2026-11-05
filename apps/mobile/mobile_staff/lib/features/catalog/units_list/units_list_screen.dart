@@ -312,7 +312,7 @@ class UnitCard extends StatelessWidget {
                         Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
                         const SizedBox(width: 3),
                         Expanded(
-                          child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                          child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         ),
                       ]),
                   ]),
@@ -330,7 +330,7 @@ class UnitCard extends StatelessWidget {
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(icon, size: 13, color: AppPalette.gold500),
                         const SizedBox(width: 4),
-                        Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                        Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkStrong)),
                       ]),
                     ),
                 ]),
@@ -344,7 +344,7 @@ class UnitCard extends StatelessWidget {
                   const Icon(Icons.timer_rounded, size: 14, color: Color(0xFF8A5A12)),
                   const SizedBox(width: 4),
                   Text(l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
-                      key: Key('unit-reserved-${row.id}'), style: const TextStyle(fontSize: 11.5, color: Color(0xFF8A5A12))),
+                      key: Key('unit-reserved-${row.id}'), style: const TextStyle(fontSize: 12, color: Color(0xFF8A5A12))),
                 ]),
               ),
             Container(
@@ -356,14 +356,14 @@ class UnitCard extends StatelessWidget {
               child: Row(children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(l10n.cuPrice, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    Text(l10n.cuPrice, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     if (row.price != null)
                       Text.rich(TextSpan(children: [
                         TextSpan(
                           text: ltr(catalogGrouped(row.price!)),
                           style: homeDisplay(18, AppPalette.gold600),
                         ),
-                        TextSpan(text: ' ${PriceFormatter.symbol(lang)}', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                        TextSpan(text: ' ${PriceFormatter.symbol(lang)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]))
                     else
                       Text(l10n.priceOnRequest, style: TextStyle(fontSize: 13, color: colors.inkMuted)),

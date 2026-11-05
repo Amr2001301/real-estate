@@ -332,7 +332,7 @@ class ReservationBookingCard extends StatelessWidget {
               ),
               if (r.bookingStatus == 'PAID' && r.bookingPaidAt != null)
                 Text('✓ ${l10n.rvPaidOn(DateFormatter.mediumDate(r.bookingPaidAt!, languageCode: lang))}',
-                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: catalogAvailable)),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable)),
             ]),
           ),
           if (r.bookingAmount > 0)
@@ -366,8 +366,8 @@ class ReservationBookingCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                Text(i == now ? l10n.rvNextStep : day(at), style: TextStyle(fontSize: 9.5, color: colors.inkMuted)),
+                Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                Text(i == now ? l10n.rvNextStep : day(at), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               ]),
             ),
         ]),
@@ -404,7 +404,7 @@ class ReservationLinkCard extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                if (subtitle != null) Text(subtitle!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                if (subtitle != null) Text(subtitle!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               ]),
             ),
             // chevron_right mirrors to ‹ in Arabic: "more", outward.
@@ -466,7 +466,7 @@ class ReservationHistory extends StatelessWidget {
                       if ((e.by ?? '').isNotEmpty) RegExp('[A-Za-z]').hasMatch(e.by!) ? ltr(e.by!) : e.by!,
                       if (e.at != null) DateFormatter.mediumDate(e.at!, languageCode: lang),
                     ].join(' · '),
-                    style: TextStyle(fontSize: 10.5, color: colors.inkMuted),
+                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
                   ),
                 ]),
               ),

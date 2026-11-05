@@ -171,14 +171,14 @@ class CommissionCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text.rich(TextSpan(children: [
                         TextSpan(text: contractMoney(net), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ])),
                     ]),
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
                         if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (basis != null && pct != null) TextSpan(text: ' · ${context.l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%'))}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        if (basis != null && pct != null) TextSpan(text: ' · ${context.l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -193,9 +193,9 @@ class CommissionCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
               child: Row(children: [
-                if (c.earnedAt != null) Text(l10n.bkEarnedOn(DateFormatter.dayMonth(c.earnedAt!.toLocal(), languageCode: lang)), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                if (c.earnedAt != null) Text(l10n.bkEarnedOn(DateFormatter.dayMonth(c.earnedAt!.toLocal(), languageCode: lang)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const Spacer(),
-                if (foot.isNotEmpty) Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+                if (foot.isNotEmpty) Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
               ]),
             ),
           ]),
@@ -242,12 +242,12 @@ class _PayoutCard extends StatelessWidget {
               const SizedBox(width: 6),
               CatalogBadge.status(label, tone),
             ]),
-            if (sub.isNotEmpty) Text(sub, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            if (sub.isNotEmpty) Text(sub, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           ]),
         ),
         Text.rich(TextSpan(children: [
           TextSpan(text: contractMoney(p.totalNet), style: homeDisplay(15, colors.inkStrong)),
-          TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+          TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ])),
       ]),
     );

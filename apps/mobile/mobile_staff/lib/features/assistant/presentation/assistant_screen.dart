@@ -304,7 +304,7 @@ class _Bubble extends StatelessWidget {
                           Text(
                             context.l10n.assistantTitle,
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppPalette.gold600,
                             ),

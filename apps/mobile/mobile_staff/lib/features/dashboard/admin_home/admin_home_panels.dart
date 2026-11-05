@@ -37,7 +37,7 @@ class _Dot extends StatelessWidget {
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 5),
-        Text(label, style: TextStyle(fontSize: 11, color: context.appColors.inkMuted)),
+        Text(label, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
       ]);
 }
 
@@ -82,12 +82,12 @@ class AdminProjectHealth extends StatelessWidget {
                       Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15.5, colors.inkStrong)),
                       const SizedBox(height: 2),
                       Text(l10n.ahProjectContracts(p.contracts, _money(context, p.value)),
-                          style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                          style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ),
                   Text(ltr('${p.total}'), style: homeDisplay(18, colors.inkStrong)),
                   const SizedBox(width: 3),
-                  Text(l10n.ahUnitsWord, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  Text(l10n.ahUnitsWord, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
                 const SizedBox(height: 12),
                 _SplitBar(parts: [
@@ -141,7 +141,7 @@ class AdminFinanceHealth extends StatelessWidget {
               Container(width: 9, height: 9, decoration: BoxDecoration(color: r.$3, shape: BoxShape.circle)),
               const SizedBox(width: 8),
               Expanded(child: Text(r.$1, style: TextStyle(fontSize: 13, color: colors.ink))),
-              Text(total > 0 ? '${(r.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              Text(total > 0 ? '${(r.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               const SizedBox(width: 10),
               Text(ltr(_money(context, r.$2)), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
             ]),
@@ -195,7 +195,7 @@ class AdminCashFlow extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
                 Expanded(child: Text(s.$1, style: TextStyle(fontSize: 12.5, color: colors.ink))),
-                Text(total > 0 ? '${(s.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                Text(total > 0 ? '${(s.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const SizedBox(width: 10),
                 Text(ltr(_money(context, s.$2)), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
               ]),
@@ -236,7 +236,7 @@ class AdminLeadSources extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
                 Expanded(child: Text(shown[i].$1, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: colors.ink))),
-                Text('${(shown[i].$2 / total * 100).round()}%', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                Text('${(shown[i].$2 / total * 100).round()}%', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const SizedBox(width: 10),
                 Text(ltr('${shown[i].$2}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
               ]),
