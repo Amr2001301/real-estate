@@ -9002,4 +9002,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ahSourcesOther => 'أخرى';
+
+  @override
+  String get inqTitle => 'استفسارات العملاء';
+
+  @override
+  String get inqProfileDesc => 'ما سأل عنه العملاء والزوار';
+
+  @override
+  String inqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n استفسارًا',
+      few: '$n استفسارات',
+      two: 'استفساران',
+      one: 'استفسار واحد',
+      zero: 'لا استفسارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inqStatusOpen => 'مفتوح';
+
+  @override
+  String get inqStatusReplied => 'تم الرد';
+
+  @override
+  String get inqStatusClosed => 'مغلق';
+
+  @override
+  String get inqOpenHint => 'تنتظر ردًّا';
+
+  @override
+  String get inqAllAnswered => 'كلها أُجيب عنها';
+
+  @override
+  String get inqRepliedHint => 'أُجيب عنها';
+
+  @override
+  String get inqClosedHint => 'انتهت';
+
+  @override
+  String get inqFilterTitle => 'تصفية الاستفسارات';
+
+  @override
+  String get inqFilterApply => 'عرض الاستفسارات';
+
+  @override
+  String get inqEmpty => 'لا استفسارات بهذه الحالة.';
+
+  @override
+  String get inqVisitor => 'زائر';
+
+  @override
+  String get inqOwner => 'مالك وحدة';
+
+  @override
+  String get inqBrowser => 'متصفّح';
+
+  @override
+  String get inqNoName => 'زائر دون اسم';
+
+  @override
+  String get inqMarkReplied => 'تم الرد';
+
+  @override
+  String get inqClose => 'إغلاق';
+
+  @override
+  String get inqActionFailed => 'تعذّر تحديث الاستفسار.';
 }

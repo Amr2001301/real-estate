@@ -15859,6 +15859,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get ahSourcesOther;
+
+  /// No description provided for @inqTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer inquiries'**
+  String get inqTitle;
+
+  /// No description provided for @inqProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'What customers and visitors asked'**
+  String get inqProfileDesc;
+
+  /// No description provided for @inqCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No inquiries} =1{1 inquiry} other{{n} inquiries}}'**
+  String inqCountN(int n);
+
+  /// No description provided for @inqStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get inqStatusOpen;
+
+  /// No description provided for @inqStatusReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Replied'**
+  String get inqStatusReplied;
+
+  /// No description provided for @inqStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get inqStatusClosed;
+
+  /// No description provided for @inqOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a reply'**
+  String get inqOpenHint;
+
+  /// No description provided for @inqAllAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'All answered'**
+  String get inqAllAnswered;
+
+  /// No description provided for @inqRepliedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get inqRepliedHint;
+
+  /// No description provided for @inqClosedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get inqClosedHint;
+
+  /// No description provided for @inqFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter inquiries'**
+  String get inqFilterTitle;
+
+  /// No description provided for @inqFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show inquiries'**
+  String get inqFilterApply;
+
+  /// No description provided for @inqEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No inquiries in this state.'**
+  String get inqEmpty;
+
+  /// No description provided for @inqVisitor.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitor'**
+  String get inqVisitor;
+
+  /// No description provided for @inqOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit owner'**
+  String get inqOwner;
+
+  /// No description provided for @inqBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing client'**
+  String get inqBrowser;
+
+  /// No description provided for @inqNoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitor without a name'**
+  String get inqNoName;
+
+  /// No description provided for @inqMarkReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark replied'**
+  String get inqMarkReplied;
+
+  /// No description provided for @inqClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get inqClose;
+
+  /// No description provided for @inqActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update the inquiry.'**
+  String get inqActionFailed;
 }
 
 class _AppLocalizationsDelegate

@@ -8966,4 +8966,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ahSourcesOther => 'Other';
+
+  @override
+  String get inqTitle => 'Customer inquiries';
+
+  @override
+  String get inqProfileDesc => 'What customers and visitors asked';
+
+  @override
+  String inqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n inquiries',
+      one: '1 inquiry',
+      zero: 'No inquiries',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inqStatusOpen => 'Open';
+
+  @override
+  String get inqStatusReplied => 'Replied';
+
+  @override
+  String get inqStatusClosed => 'Closed';
+
+  @override
+  String get inqOpenHint => 'Waiting for a reply';
+
+  @override
+  String get inqAllAnswered => 'All answered';
+
+  @override
+  String get inqRepliedHint => 'Answered';
+
+  @override
+  String get inqClosedHint => 'Done';
+
+  @override
+  String get inqFilterTitle => 'Filter inquiries';
+
+  @override
+  String get inqFilterApply => 'Show inquiries';
+
+  @override
+  String get inqEmpty => 'No inquiries in this state.';
+
+  @override
+  String get inqVisitor => 'Visitor';
+
+  @override
+  String get inqOwner => 'Unit owner';
+
+  @override
+  String get inqBrowser => 'Browsing client';
+
+  @override
+  String get inqNoName => 'Visitor without a name';
+
+  @override
+  String get inqMarkReplied => 'Mark replied';
+
+  @override
+  String get inqClose => 'Close';
+
+  @override
+  String get inqActionFailed => 'Could not update the inquiry.';
 }

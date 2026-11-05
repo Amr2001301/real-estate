@@ -295,7 +295,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             tone: HomeTone.sky,
             count: a.infoRequestsOpen,
             label: l10n.ahAttInquiries,
-            onTap: () => widget.onSwitchTab?.call(1),
+            onTap: () => context.push('/inquiries'),
           ),
           HomeAttention(
             id: 'proofs',
