@@ -8,6 +8,7 @@ import '../dashboard/home_kit/filter_kit.dart';
 import '../dashboard/home_kit/home_kit.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import '../permissions/staff_permissions.dart';
+import 'broker_actions.dart';
 
 /// The brokers' side of the company, for whoever manages it (the website's
 /// «الوسطاء» pages): the firms, the leads and bookings they send, their
@@ -80,7 +81,7 @@ Color brokerStatusColor(String s, AppColorsExt c) => switch (s) {
 
 /// One card on any tab: who or what, a line under it, a figure, a state.
 class BrokerRow extends Equatable {
-  const BrokerRow({required this.id, required this.title, required this.subtitle, required this.status, this.amount, this.at, this.note, this.details = const []});
+  const BrokerRow({required this.id, required this.title, required this.subtitle, required this.status, this.amount, this.at, this.note, this.details = const [], this.raw = const {}});
   final String id;
   final String title;
   final String subtitle;
@@ -96,8 +97,11 @@ class BrokerRow extends Equatable {
   /// Small facts with an icon each (a firm's code, city and phone).
   final List<(IconData, String)> details;
 
+  /// The API's row, for the detail sheet.
+  final Map<String, dynamic> raw;
+
   @override
-  List<Object?> get props => [id, title, subtitle, status, amount, at, note, details];
+  List<Object?> get props => [id, title, subtitle, status, amount, at, note, details, raw];
 
   static BrokerRow fromJson(BrokerTab tab, Map<String, dynamic> j, String lang) {
     String s(Object? v) => v is String ? v : '';
@@ -113,6 +117,7 @@ class BrokerRow extends Equatable {
       case BrokerTab.firms:
         final hold = j['payoutHold'] == true;
         return BrokerRow(
+          raw: j,
           id: id,
           title: s(j['commercialName']).isNotEmpty ? s(j['commercialName']) : s(j['companyName']),
           subtitle: '',
@@ -127,6 +132,7 @@ class BrokerRow extends Equatable {
         );
       case BrokerTab.leads:
         return BrokerRow(
+          raw: j,
           id: id,
           title: s(j['fullName']),
           subtitle: join([brokerName, project(j['projectInterest'])]),
@@ -137,6 +143,7 @@ class BrokerRow extends Equatable {
       case BrokerTab.reservations:
         final unit = m(j['unit']);
         return BrokerRow(
+          raw: j,
           id: id,
           title: join([ltr(s(j['reservationNumber'])), ltr(s(unit['code']))]),
           subtitle: join([brokerName, agent, s(m(j['client'])['fullName'])]),
@@ -146,6 +153,7 @@ class BrokerRow extends Equatable {
         );
       case BrokerTab.contracts:
         return BrokerRow(
+          raw: j,
           id: id,
           title: join([ltr(s(j['contractNumber'])), ltr(s(m(j['unit'])['code']))]),
           subtitle: join([brokerName, s(m(j['customer'])['fullName'])]),
@@ -155,6 +163,7 @@ class BrokerRow extends Equatable {
         );
       case BrokerTab.commissions:
         return BrokerRow(
+          raw: j,
           id: id,
           title: ltr(s(j['commissionNumber'])),
           subtitle: join([brokerName, agent]),
@@ -165,6 +174,7 @@ class BrokerRow extends Equatable {
         );
       case BrokerTab.payouts:
         return BrokerRow(
+          raw: j,
           id: id,
           title: ltr(s(j['payoutNumber'])),
           subtitle: join([brokerName, s(j['period'])]),
@@ -180,6 +190,9 @@ class BrokersAdminRepository {
   BrokersAdminRepository(this._dio);
   final Dio _dio;
 
+  /// For the actions (see broker_actions.dart).
+  Dio get dioForActions => _dio;
+
   Future<Result<Paginated<BrokerRow>>> list(BrokerTab tab, {String? status, int page = 1, String lang = 'ar'}) => guardApiCall(() async {
         final res = await _dio.get<Map<String, dynamic>>(tab.path, queryParameters: {
           'page': page,
@@ -190,11 +203,16 @@ class BrokersAdminRepository {
       });
 }
 
+bool _allowNone(String code) => false;
+
 class BrokersHubScreen extends StatefulWidget {
-  const BrokersHubScreen({super.key, required this.repository, required this.tabs, this.initial});
+  const BrokersHubScreen({super.key, required this.repository, required this.tabs, this.initial, this.can = _allowNone});
   final BrokersAdminRepository repository;
   final List<BrokerTab> tabs;
   final BrokerTab? initial;
+
+  /// Whether the account holds a code (the admin holds them all).
+  final bool Function(String code) can;
 
   @override
   State<BrokersHubScreen> createState() => _BrokersHubScreenState();
@@ -338,7 +356,14 @@ class _BrokersHubScreenState extends State<BrokersHubScreen> {
                 for (final r in _rows)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 0),
-                    child: _BrokerCard(tab: _tab, row: r),
+                    child: _BrokerCard(
+                      tab: _tab,
+                      row: r,
+                      onTap: () async {
+                        final changed = await showBrokerDetail(context, tab: _tab, row: r, repository: widget.repository, can: widget.can);
+                        if (changed && mounted) _load();
+                      },
+                    ),
                   ),
               if (_loadingMore) const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
             ],
@@ -350,9 +375,10 @@ class _BrokersHubScreenState extends State<BrokersHubScreen> {
 }
 
 class _BrokerCard extends StatelessWidget {
-  const _BrokerCard({required this.tab, required this.row});
+  const _BrokerCard({required this.tab, required this.row, required this.onTap});
   final BrokerTab tab;
   final BrokerRow row;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -368,8 +394,13 @@ class _BrokerCard extends StatelessWidget {
         : firm
             ? ltr('${amount.toStringAsFixed(amount % 1 == 0 ? 0 : 1)}%')
             : '${homeCompactText(amount, l10n)} $symbol';
-    return Container(
-      key: Key('broker-${tab.name}-${row.id}'),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: Key('broker-${tab.name}-${row.id}'),
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
       decoration: homeCard(context, radius: 22),
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
@@ -448,6 +479,8 @@ class _BrokerCard extends StatelessWidget {
             ),
           ),
         ]),
+      ),
+        ),
       ),
     );
   }

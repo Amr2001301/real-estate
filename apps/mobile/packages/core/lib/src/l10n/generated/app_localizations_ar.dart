@@ -9263,4 +9263,142 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brkStUnsigned => 'بانتظار التوقيع';
+
+  @override
+  String get brkActApprove => 'اعتماد';
+
+  @override
+  String get brkActReject => 'رفض';
+
+  @override
+  String get brkActCancel => 'إلغاء';
+
+  @override
+  String get brkActDuplicate => 'تحديد كمكرّر';
+
+  @override
+  String get brkActProcess => 'بدء الصرف';
+
+  @override
+  String get brkActMarkPaid => 'تأكيد الدفع';
+
+  @override
+  String get brkActSuspend => 'إيقاف الشركة';
+
+  @override
+  String get brkActTerminate => 'إنهاء التعاقد';
+
+  @override
+  String get brkActActivate => 'تفعيل الشركة';
+
+  @override
+  String get brkActHoldOn => 'إيقاف مدفوعاتها';
+
+  @override
+  String get brkActHoldOff => 'استئناف مدفوعاتها';
+
+  @override
+  String get brkReasonHint => 'اكتب السبب';
+
+  @override
+  String get brkActionFailed => 'تعذّر تنفيذ الإجراء.';
+
+  @override
+  String get brkPmBank => 'تحويل بنكي';
+
+  @override
+  String get brkPmCheque => 'شيك';
+
+  @override
+  String get brkPmCash => 'نقدًا';
+
+  @override
+  String get brkPmOther => 'أخرى';
+
+  @override
+  String get brkFBroker => 'الشركة';
+
+  @override
+  String get brkFAgent => 'المندوب';
+
+  @override
+  String get brkFPhone => 'الهاتف';
+
+  @override
+  String get brkFEmail => 'البريد';
+
+  @override
+  String get brkFCity => 'المدينة';
+
+  @override
+  String get brkFProject => 'المشروع';
+
+  @override
+  String get brkFUnit => 'الوحدة';
+
+  @override
+  String get brkFCustomer => 'العميل';
+
+  @override
+  String get brkFAssigned => 'مسؤول المبيعات';
+
+  @override
+  String get brkFSubmitted => 'تاريخ الإرسال';
+
+  @override
+  String get brkFReason => 'السبب';
+
+  @override
+  String get brkFBooking => 'مبلغ الحجز';
+
+  @override
+  String get brkFExpires => 'ينتهي الحجز';
+
+  @override
+  String get brkFTotal => 'قيمة العقد';
+
+  @override
+  String get brkFDown => 'المقدم';
+
+  @override
+  String get brkFSigned => 'تاريخ التوقيع';
+
+  @override
+  String get brkFBasis => 'أساس العمولة';
+
+  @override
+  String get brkFCommission => 'نسبة العمولة';
+
+  @override
+  String get brkFGross => 'الإجمالي';
+
+  @override
+  String get brkFTax => 'الضريبة';
+
+  @override
+  String get brkFWithholding => 'الخصم من المنبع';
+
+  @override
+  String get brkFNet => 'الصافي';
+
+  @override
+  String get brkFEarned => 'تاريخ الاستحقاق';
+
+  @override
+  String get brkFPeriod => 'الفترة';
+
+  @override
+  String get brkFMethod => 'طريقة الدفع';
+
+  @override
+  String get brkFReference => 'المرجع';
+
+  @override
+  String get brkFContractPeriod => 'مدة التعاقد';
+
+  @override
+  String get brkFBank => 'البنك';
+
+  @override
+  String get brkFNotes => 'ملاحظات';
 }

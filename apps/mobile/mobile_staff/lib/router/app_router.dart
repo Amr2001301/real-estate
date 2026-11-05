@@ -26,6 +26,7 @@ import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/clients/client_detail_screen.dart';
+import '../features/brokers_admin/broker_actions.dart';
 import '../features/brokers_admin/brokers_hub_screen.dart';
 import '../features/inquiries/inquiries_screen.dart';
 import '../features/reports/reports_screen.dart';
@@ -632,6 +633,7 @@ GoRouter createStaffRouter(
               repository: BrokersAdminRepository(ctx.read<Dio>()),
               tabs: brokerTabsFor(role, perms),
               initial: tab,
+              can: (code) => canRunBrokerCode(role, perms, code),
             );
           }),
         ),
