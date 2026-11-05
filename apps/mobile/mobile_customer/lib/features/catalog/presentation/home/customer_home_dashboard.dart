@@ -634,6 +634,7 @@ class _PropertyUnit extends StatelessWidget {
               l10n: l10n,
             ),
           ),
+          Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg, color: colors.hairline),
           if (stats.isNotEmpty) _StatsBlock(stats: stats, colors: colors),
           if (property.hasInstallmentPlan &&
               property.monthlyAmount != null &&
@@ -677,147 +678,88 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dotColor = owned ? const Color(0xFF34C77B) : AppPalette.gold400;
-    return SizedBox(
-      height: 88,
-      child: Stack(
-        fit: StackFit.expand,
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final dotColor = owned
+        ? (dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))
+        : (dark ? AppPalette.gold300 : const Color(0xFF9A6F1E));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Row(
         children: [
-          const DecoratedBox(
+          Container(
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_navyLight, _navyCard, _navy],
-                stops: [0.0, 0.48, 1.0],
-              ),
+              color: AppPalette.gold400.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-          ),
-          const IgnorePointer(child: _Dots()),
-          PositionedDirectional(
-            end: 52,
-            top: 8,
-            bottom: 8,
             child: Icon(
               Icons.domain_rounded,
-              size: 64,
-              color: Colors.white.withValues(alpha: 0.045),
+              color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+              size: 26,
             ),
           ),
-          Positioned(
-            bottom: 0,
-            left: 32,
-            right: 32,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.50),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  projectName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  city.isNotEmpty
+                      ? '$unitType · $unitCode · $city'
+                      : '$unitType · $unitCode',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
+          const SizedBox(width: AppSpacing.xs),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+            decoration: BoxDecoration(
+              color: dotColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppPalette.gold400.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: AppPalette.gold400.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.domain_rounded,
-                    color: AppPalette.gold400,
-                    size: 26,
-                  ),
+                  width: 6,
+                  height: 6,
+                  decoration:
+                      BoxDecoration(color: dotColor, shape: BoxShape.circle),
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        projectName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        city.isNotEmpty
-                            ? '$unitType · $unitCode · $city'
-                            : '$unitType · $unitCode',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          fontSize: 12,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: (owned ? const Color(0xFF34C77B) : AppPalette.gold400).withValues(
-                      alpha: 0.14,
-                    ),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: dotColor.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: dotColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        owned
-                            ? l10n.myPropertyStatusOwned
-                            : l10n.myPropertyStatusReserved,
-                        style: TextStyle(
-                          color: dotColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 5),
+                Text(
+                  owned
+                      ? l10n.myPropertyStatusOwned
+                      : l10n.myPropertyStatusReserved,
+                  style: TextStyle(
+                    color: dotColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],

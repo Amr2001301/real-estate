@@ -485,8 +485,8 @@ class _ProfileHero extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   profile.fullName ?? profile.email ?? '—',
-                  style: const TextStyle(
-                    color: _navyDeep,
+                  style: TextStyle(
+                    color: colors.inkStrong,
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                   ),
