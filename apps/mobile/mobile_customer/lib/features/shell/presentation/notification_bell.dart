@@ -45,7 +45,7 @@ class NotificationBell extends StatelessWidget {
                   count > 9 ? '9+' : '$count',
                   style: TextStyle(
                     color: colors.brandNavy,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     height: 1,
                   ),

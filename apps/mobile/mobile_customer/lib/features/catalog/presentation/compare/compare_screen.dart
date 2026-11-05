@@ -420,7 +420,7 @@ class _AttrRow extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.inkMuted,
                     fontWeight: FontWeight.w600,
-                    fontSize: 10,
+                    fontSize: 12,
                     height: 1.3,
                   ),
                 ),
@@ -774,7 +774,7 @@ class _Step extends StatelessWidget {
                     '$stepNumber',
                     style: const TextStyle(
                       color: AppPalette.navy,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w900,
                     ),
                   ),

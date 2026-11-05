@@ -429,7 +429,7 @@ class _QuickTile extends StatelessWidget {
                         '${item.badge}',
                         style: const TextStyle(
                           color: _navyDeep,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w900,
                         ),
                       ),

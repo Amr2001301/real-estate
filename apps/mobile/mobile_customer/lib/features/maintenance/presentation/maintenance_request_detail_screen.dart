@@ -650,7 +650,7 @@ class _AttachmentTile extends StatelessWidget {
                         Text(
                           document.fileName!,
                           style: const TextStyle(
-                              fontSize: 11, color: Color(0xFF9CA3AF)),
+                              fontSize: 12, color: Color(0xFF9CA3AF)),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -746,7 +746,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF9CA3AF),
                   ),

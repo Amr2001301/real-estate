@@ -49,7 +49,7 @@ class AppKpiTile extends StatelessWidget {
                   label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted, fontSize: 10),
+                  style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted, fontSize: 12),
                 ),
               ],
             ),

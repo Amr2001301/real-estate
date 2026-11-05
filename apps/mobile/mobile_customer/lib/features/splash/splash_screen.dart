@@ -289,7 +289,7 @@ class _Wordmark extends StatelessWidget {
           'REAL ESTATE',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.45),
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w500,
             letterSpacing: 3.5,
           ),

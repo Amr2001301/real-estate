@@ -469,7 +469,7 @@ class _TypePill extends StatelessWidget {
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -501,7 +501,7 @@ class _SavedPill extends StatelessWidget {
             context.l10n.savedBadge,
             style: TextStyle(
               color: AppPalette.gold300,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

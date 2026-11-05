@@ -254,7 +254,7 @@ class _StatusBadge extends StatelessWidget {
             label,
             style: TextStyle(
               color: accent,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),

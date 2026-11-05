@@ -84,7 +84,7 @@ class ContractMoneyCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               l10n.statementAsOf(DateFormatter.mediumDate(s.asOf, languageCode: lang)),
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
             ),
           ],
         ],

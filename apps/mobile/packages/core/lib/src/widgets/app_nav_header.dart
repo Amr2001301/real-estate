@@ -387,7 +387,7 @@ class NavHeaderBadge extends StatelessWidget {
         count > 9 ? '9+' : '$count',
         style: const TextStyle(
           color: Color(0xFF0B1726),
-          fontSize: 8.5,
+          fontSize: 12,
           fontWeight: FontWeight.w800,
           height: 1,
         ),
@@ -485,7 +485,7 @@ class NavHeaderPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700, height: 1.1),
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, height: 1.1),
           ),
         ],
       ),

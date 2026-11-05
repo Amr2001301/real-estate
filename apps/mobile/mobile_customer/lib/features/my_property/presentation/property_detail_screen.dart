@@ -372,7 +372,7 @@ class _UnitHeader extends StatelessWidget {
                                 context.l10n.ofTotal(total),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.48),
-                                  fontSize: 9,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -509,7 +509,7 @@ class _PillTabBar extends StatelessWidget {
                       '$overdueCount',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w800,
                         height: 1.3,
                       ),
@@ -1065,7 +1065,7 @@ class _StatCell extends StatelessWidget {
           label,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.45),
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
           textAlign: TextAlign.center,

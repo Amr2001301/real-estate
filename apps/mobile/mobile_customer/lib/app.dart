@@ -85,6 +85,9 @@ import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
 import 'company_lock.dart';
 
+/// How much bigger the customer app's text is than the design sizes.
+const double kCustomerTextBoost = 1.1;
+
 /// Root of the Customer App. Provides feature repositories (data→domain
 /// contracts) + app-wide cubits, then wires the 401→refresh handler and
 /// favorites-load-on-auth before building the router.
@@ -492,12 +495,23 @@ class _CustomerRootState extends State<_CustomerRoot> {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         routerConfig: router,
-        builder: (context, child) => Column(
-          children: [
-            const OfflineBanner(),
-            Expanded(child: child ?? const SizedBox.shrink()),
-          ],
-        ),
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          final system = mq.textScaler.scale(100) / 100;
+          return MediaQuery(
+            data: mq.copyWith(
+              textScaler: TextScaler.linear(
+                (system * kCustomerTextBoost).clamp(1.0, 1.6),
+              ),
+            ),
+            child: Column(
+              children: [
+                const OfflineBanner(),
+                Expanded(child: child ?? const SizedBox.shrink()),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

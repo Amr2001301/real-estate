@@ -95,7 +95,7 @@ class AppFilterChip extends StatelessWidget {
                     '$count',
                     style: TextStyle(
                       color: selected ? Colors.white : colors.inkMuted,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w800,
                       height: 1.2,
                     ),

@@ -543,7 +543,7 @@ class _MoreFooter extends StatelessWidget {
           'v1.0.0',
           style: TextStyle(
             color: colors.inkMuted,
-            fontSize: 11,
+            fontSize: 12,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
