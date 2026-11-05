@@ -1027,8 +1027,8 @@ class _LocationCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 13,
+                        AppIcons.chevronForward,
+                        size: 16,
                         color: Color(0xFF1A73E8),
                       ),
                     ],
