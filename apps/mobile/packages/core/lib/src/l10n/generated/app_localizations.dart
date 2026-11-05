@@ -15121,6 +15121,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Bank transfer'**
   String get bkMethodBank;
+
+  /// No description provided for @fuCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No follow-ups} =1{1 follow-up} other{{n} follow-ups}}'**
+  String fuCountN(int n);
+
+  /// No description provided for @fuOverdueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Need a call now'**
+  String get fuOverdueHint;
+
+  /// No description provided for @fuNoneToday.
+  ///
+  /// In en, this message translates to:
+  /// **'None today'**
+  String get fuNoneToday;
+
+  /// No description provided for @fuNoneUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'None coming'**
+  String get fuNoneUpcoming;
+
+  /// No description provided for @fuLogResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a result'**
+  String get fuLogResult;
+
+  /// No description provided for @fuBandToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get fuBandToday;
+
+  /// No description provided for @calBandDay.
+  ///
+  /// In en, this message translates to:
+  /// **'This day'**
+  String get calBandDay;
+
+  /// No description provided for @calBandVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get calBandVisits;
+
+  /// No description provided for @calBandFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get calBandFollowUps;
+
+  /// No description provided for @calBandContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get calBandContracts;
+
+  /// No description provided for @asSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers from your company\'s data only'**
+  String get asSubtitle;
+
+  /// No description provided for @asTryAlso.
+  ///
+  /// In en, this message translates to:
+  /// **'Try also'**
+  String get asTryAlso;
 }
 
 class _AppLocalizationsDelegate

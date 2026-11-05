@@ -1,18 +1,19 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/follow_ups_cubit.dart';
 import '../follow_up_labels.dart';
 
-/// FU1 — «المتابعات»: the customers due a call, in three lists (overdue,
-/// today, upcoming) with their counts, as on the dashboard. A rep sees their
-/// own; a manager their team's. Laid out like the other staff lists: a
-/// filter bar under the header and accent-striped cards.
+/// «المتابعات» (design x1, owner-approved 2026-11-05): the customers due a
+/// call, in three lists (overdue, today, upcoming) with their counts, as on
+/// the dashboard. A rep sees their own; a manager their team's.
 class FollowUpsScreen extends StatefulWidget {
   const FollowUpsScreen({super.key});
 
@@ -50,383 +51,205 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<FollowUpsCubit>();
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.followUpsTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-            ),
-          ),
-          const _BucketFilter(),
-          Expanded(
-            child: BlocBuilder<FollowUpsCubit, FollowUpsState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.event_available_rounded,
-                      title: _emptyLabel(l10n, state.bucket),
-                      message: l10n.followUpsEmptyHint,
-                    );
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      onRefresh: cubit.refresh,
-                      child: ListView.separated(
-                        controller: _scroll,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + 100),
-                        itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          if (i >= state.items.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          final item = state.items[i];
-                          return _FollowUpTile(
-                            item: item,
-                            bucket: state.bucket,
-                            onTap: () async {
-                              await context.push('/leads/${item.lead.id}', extra: item.lead);
-                              // Back from the lead: what was logged there moves it.
-                              if (context.mounted) await cubit.refresh();
-                            },
-                          );
-                        },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocBuilder<FollowUpsCubit, FollowUpsState>(
+          builder: (context, state) {
+            final s = state.summary;
+            Color tone(FollowUpBucket b) => switch (b) {
+                  FollowUpBucket.overdue => const Color(0xFFB3261E),
+                  FollowUpBucket.today => AppPalette.gold500,
+                  FollowUpBucket.upcoming => const Color(0xFF26405F),
+                };
+            String label(FollowUpBucket b) => switch (b) {
+                  FollowUpBucket.overdue => l10n.followUpsOverdue,
+                  FollowUpBucket.today => l10n.followUpsToday,
+                  FollowUpBucket.upcoming => l10n.followUpsUpcoming,
+                };
+            return RefreshIndicator(
+              onRefresh: cubit.refresh,
+              child: CustomScrollView(
+                controller: _scroll,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.followUpsTitle,
+                      subtitle: s == null ? null : l10n.fuCountN(s.overdue + s.today + s.upcoming),
+                      back: true,
+                    ),
+                  ),
+                  if (s != null) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                        child: HomeBand(figures: [
+                          HomeFigure(id: 'overdue', value: '${s.overdue}', label: l10n.followUpsOverdue, hint: l10n.fuOverdueHint, warn: s.overdue > 0),
+                          HomeFigure(id: 'today', value: '${s.today}', label: l10n.followUpsToday, hint: s.today == 0 ? l10n.fuNoneToday : l10n.followUpsToday),
+                          HomeFigure(id: 'upcoming', value: '${s.upcoming}', label: l10n.followUpsUpcoming, hint: s.upcoming == 0 ? l10n.fuNoneUpcoming : l10n.followUpsUpcoming),
+                        ]),
                       ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Each list's colour: late is red, today gold, later navy.
-Color _bucketColor(FollowUpBucket b, AppColorsExt c) => switch (b) {
-      FollowUpBucket.overdue => c.error,
-      FollowUpBucket.today => c.brandGold,
-      FollowUpBucket.upcoming => c.brandNavy,
-    };
-
-// ── Bucket filter bar ─────────────────────────────────────────────────────────
-
-class _BucketFilter extends StatelessWidget {
-  const _BucketFilter();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final cubit = context.read<FollowUpsCubit>();
-
-    String label(FollowUpBucket b) => switch (b) {
-          FollowUpBucket.overdue => l10n.followUpsOverdue,
-          FollowUpBucket.today => l10n.followUpsToday,
-          FollowUpBucket.upcoming => l10n.followUpsUpcoming,
-        };
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: BlocBuilder<FollowUpsCubit, FollowUpsState>(
-        buildWhen: (a, b) => a.bucket != b.bucket || a.summary != b.summary,
-        builder: (context, state) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
-          child: Row(
-            children: [
-              for (final b in FollowUpBucket.values) ...[
-                if (b != FollowUpBucket.values.first) const SizedBox(width: AppSpacing.xs),
-                _BucketChip(
-                  key: ValueKey('bucket-${b.name}'),
-                  label: label(b),
-                  count: state.summary?.of(b),
-                  dotColor: _bucketColor(b, colors),
-                  active: state.bucket == b,
-                  onTap: () => cubit.select(b),
-                ),
-              ],
-            ],
-          ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: HomePills(pills: [
+                          for (final b in FollowUpBucket.values)
+                            HomePill(id: b.name, label: label(b), count: s.of(b), dot: tone(b), selected: state.bucket == b, onTap: () => cubit.select(b)),
+                        ]),
+                      ),
+                    ),
+                  ],
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SliverToBoxAdapter(child: SizedBox(height: 520, child: StaffListSkeleton()))],
+                    DataStatus.failure => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                    DataStatus.empty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.event_available_rounded, title: _emptyLabel(l10n, state.bucket), message: l10n.followUpsEmptyHint))],
+                    DataStatus.success => [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                          sliver: SliverList.separated(
+                            itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              if (i >= state.items.length) return const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Center(child: CircularProgressIndicator()));
+                              final item = state.items[i];
+                              return FollowUpCard(
+                                item: item,
+                                color: tone(state.bucket),
+                                onTap: () async {
+                                  await context.push('/leads/${item.lead.id}', extra: item.lead);
+                                  // Back from the lead: what was logged there moves it.
+                                  if (context.mounted) await cubit.refresh();
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                  },
+                  SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 100)),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _BucketChip extends StatelessWidget {
-  const _BucketChip({
-    super.key,
-    required this.label,
-    required this.active,
-    required this.onTap,
-    required this.dotColor,
-    this.count,
-  });
-  final String label;
-  final int? count;
-  final bool active;
-  final VoidCallback onTap;
-  final Color dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppFilterChip(label: label, count: count, selected: active, onTap: onTap, dotColor: dotColor);
-  }
-}
-
-// ── Follow-up tile ────────────────────────────────────────────────────────────
-
-class _FollowUpTile extends StatefulWidget {
-  const _FollowUpTile({required this.item, required this.bucket, required this.onTap});
+/// One customer due a call: who, the stage, what to do and when, the last
+/// contact, and call / WhatsApp; a tap opens the lead to log the result.
+class FollowUpCard extends StatelessWidget {
+  const FollowUpCard({super.key, required this.item, required this.color, required this.onTap});
   final FollowUp item;
-  final FollowUpBucket bucket;
+  final Color color;
   final VoidCallback onTap;
-
-  @override
-  State<_FollowUpTile> createState() => _FollowUpTileState();
-}
-
-class _FollowUpTileState extends State<_FollowUpTile> {
-  bool _pressed = false;
-
-  static String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '؟';
-    if (parts.length == 1) return parts.first.characters.first;
-    return '${parts.first.characters.first}${parts[1].characters.first}';
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = context.read<LocaleCubit>().isRtl;
-    final item = widget.item;
     final lead = item.lead;
-    final accent = _bucketColor(widget.bucket, colors);
     final at = lead.nextActionAt;
     final type = lead.nextActionType ?? 'FOLLOW_UP';
     final note = lead.nextActionNote?.trim();
     final phone = lead.phone?.trim();
-    final subtitle = (note != null && note.isNotEmpty) ? note : (lead.projectInterest ?? lead.assignedSalesName);
-
-    return GestureDetector(
-      key: ValueKey('follow-up-${lead.id}'),
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(color: accent.withValues(alpha: 0.16), width: 0.9),
-            boxShadow: [
-              BoxShadow(color: accent.withValues(alpha: 0.10), blurRadius: 20, offset: const Offset(0, 6)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
-            ],
+    final where = [
+      if ((lead.projectInterest ?? '').isNotEmpty) lead.projectInterest!,
+      if ((lead.assignedSalesName ?? '').isNotEmpty) lead.assignedSalesName!,
+    ].join(' · ');
+    Widget round(IconData icon, Color c, String tip, VoidCallback f) => Tooltip(
+          message: tip,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(99),
+            onTap: f,
+            child: Container(width: 36, height: 36, decoration: BoxDecoration(color: c.withValues(alpha: 0.12), shape: BoxShape.circle), child: Icon(icon, size: 18, color: c)),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Accent strip ─────────────────────────────────────────────
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                    colors: [accent, accent.withValues(alpha: 0.0)],
+        );
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('follow-up-${lead.id}'),
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                  child: Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(child: Text(lead.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
+                      const SizedBox(width: 6),
+                      StatusBadge(label: leadStageLabel(l10n, lead.stage), tone: leadStageTone(lead.stage)),
+                    ]),
+                    if (note != null && note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+                    if (where.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(children: [
+                          Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
+                          const SizedBox(width: 3),
+                          Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted))),
+                        ]),
+                      ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(noteKindIcon(type), size: 13, color: color),
+                        const SizedBox(width: 4),
+                        Flexible(child: Text(at == null ? noteKindLabel(l10n, type) : '${noteKindLabel(l10n, type)} · ${followUpWhen(at, l10n, lang)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
+              child: Row(children: [
+                if (phone != null && phone.isNotEmpty) ...[
+                  round(Icons.call_rounded, colors.success, l10n.contactCall, () => ContactActions.call(phone)),
+                  const SizedBox(width: 8),
+                  round(Icons.chat_rounded, const Color(0xFF128C7E), l10n.contactWhatsapp, () => ContactActions.whatsApp(number: phone)),
+                ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.lastAt == null
+                        ? l10n.followUpsNoActivity
+                        : item.lastCallResult != null
+                            ? '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${callResultLabel(l10n, item.lastCallResult!)}'
+                            : '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${followUpDate(item.lastAt!, lang)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: colors.inkMuted),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 13, AppSpacing.md, 13),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Initials · name + what to do · stage · chevron ──
-                    Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.10),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: accent.withValues(alpha: 0.28), width: 1.2),
-                          ),
-                          child: Text(
-                            _initials(lead.fullName),
-                            style: TextStyle(color: accent, fontSize: 15, fontWeight: FontWeight.w700, height: 1),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                lead.fullName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 3),
-                                Text(
-                                  subtitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            StatusBadge(label: leadStageLabel(l10n, lead.stage), tone: leadStageTone(lead.stage)),
-                            const SizedBox(height: 4),
-                            Icon(Icons.chevron_right_rounded, size: 16, color: colors.inkMuted.withValues(alpha: 0.5)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    // ── When · last activity · call / WhatsApp ───────────
-                    const SizedBox(height: 10),
-                    Container(height: 0.5, color: colors.hairline),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              _InfoChip(
-                                icon: noteKindIcon(type),
-                                label: at == null
-                                    ? noteKindLabel(l10n, type)
-                                    : '${noteKindLabel(l10n, type)} · ${followUpWhen(at, l10n, lang)}',
-                                color: accent,
-                              ),
-                              _InfoChip(
-                                icon: Icons.history_rounded,
-                                label: item.lastAt == null
-                                    ? l10n.followUpsNoActivity
-                                    : item.lastCallResult != null
-                                        ? '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${callResultLabel(l10n, item.lastCallResult!)}'
-                                        : '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${followUpDate(item.lastAt!, lang)}',
-                                color: colors.inkMuted,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (phone != null && phone.isNotEmpty) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          _RoundAction(
-                            icon: Icons.chat_rounded,
-                            color: const Color(0xFF128C7E),
-                            tooltip: l10n.contactWhatsapp,
-                            onTap: () => ContactActions.whatsApp(number: phone),
-                          ),
-                          const SizedBox(width: 6),
-                          _RoundAction(
-                            icon: Icons.call_rounded,
-                            color: colors.success,
-                            tooltip: l10n.contactCall,
-                            onTap: () => ContactActions.call(phone),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                Text(l10n.fuLogResult, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
+              ]),
+            ),
+          ]),
         ),
       ),
     );
-  }
-}
-
-// ── Round contact button (as on the leads list) ───────────────────────────────
-
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({required this.icon, required this.color, required this.tooltip, required this.onTap});
-  final IconData icon;
-  final Color color;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              border: Border.all(color: color.withValues(alpha: 0.25)),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 15, color: color),
-          ),
-        ),
-      );
-}
-
-// ── Info chip (as on the reservations and visits lists) ───────────────────────
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label, required this.color});
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppInfoChip(icon: icon, label: label, color: color);
   }
 }

@@ -8525,4 +8525,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bkMethodBank => 'Bank transfer';
+
+  @override
+  String fuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n follow-ups',
+      one: '1 follow-up',
+      zero: 'No follow-ups',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fuOverdueHint => 'Need a call now';
+
+  @override
+  String get fuNoneToday => 'None today';
+
+  @override
+  String get fuNoneUpcoming => 'None coming';
+
+  @override
+  String get fuLogResult => 'Log a result';
+
+  @override
+  String get fuBandToday => 'Today';
+
+  @override
+  String get calBandDay => 'This day';
+
+  @override
+  String get calBandVisits => 'Visits';
+
+  @override
+  String get calBandFollowUps => 'Follow-ups';
+
+  @override
+  String get calBandContracts => 'Signed contracts';
+
+  @override
+  String get asSubtitle => 'Answers from your company\'s data only';
+
+  @override
+  String get asTryAlso => 'Try also';
 }

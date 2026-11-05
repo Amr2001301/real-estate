@@ -2827,5 +2827,18 @@
   "@bkEarnedOn": {"placeholders": {"date": {"type": "String"}}},
   "bkOnPayout": "ضمن كشف صرف",
   "bkWaitingPayout": "بانتظار كشف الصرف",
-  "bkMethodBank": "تحويل بنكي"
+  "bkMethodBank": "تحويل بنكي",
+  "fuCountN": "{n, plural, =0{لا متابعات} =1{متابعة واحدة} =2{متابعتان} few{{n} متابعات} other{{n} متابعة}}",
+  "@fuCountN": {"placeholders": {"n": {"type": "int"}}},
+  "fuOverdueHint": "تحتاج اتصالك الآن",
+  "fuNoneToday": "لا موعد اليوم",
+  "fuNoneUpcoming": "لا مواعيد قادمة",
+  "fuLogResult": "تسجيل نتيجة",
+  "fuBandToday": "اليوم",
+  "calBandDay": "اليوم",
+  "calBandVisits": "زيارات",
+  "calBandFollowUps": "متابعات",
+  "calBandContracts": "عقود موقّعة",
+  "asSubtitle": "يجيب من بيانات شركتك فقط",
+  "asTryAlso": "جرّب أيضًا"
 }
