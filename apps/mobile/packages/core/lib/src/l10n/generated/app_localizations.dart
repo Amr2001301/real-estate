@@ -14557,6 +14557,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All active users'**
   String get bcAllActiveUsers;
+
+  /// No description provided for @bnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My dues'**
+  String get bnSubtitle;
+
+  /// No description provided for @bnTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your total dues'**
+  String get bnTotal;
+
+  /// No description provided for @bnPendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid after the contract'**
+  String get bnPendingHint;
+
+  /// No description provided for @bnPaidHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached you'**
+  String get bnPaidHint;
+
+  /// No description provided for @bnBasisLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Basis {basis} × {pct}'**
+  String bnBasisLine(String basis, String pct);
+
+  /// No description provided for @bnPeriodLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Period {period}'**
+  String bnPeriodLine(String period);
+
+  /// No description provided for @bnWhenSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted when the contract is signed'**
+  String get bnWhenSigned;
+
+  /// No description provided for @bnApprovedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved, awaiting payment'**
+  String get bnApprovedNote;
+
+  /// No description provided for @bnPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String bnPaidOn(String date);
+
+  /// No description provided for @tgSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales value'**
+  String get tgSales;
+
+  /// No description provided for @tgOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {amount}'**
+  String tgOf(String amount);
+
+  /// No description provided for @tgUnitsSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Units sold'**
+  String get tgUnitsSold;
+
+  /// No description provided for @tgUnitsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{a} of {b}'**
+  String tgUnitsOf(int a, int b);
+
+  /// No description provided for @tgRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Left to reach the target'**
+  String get tgRemaining;
+
+  /// No description provided for @tgNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target for this period yet.'**
+  String get tgNoTarget;
+
+  /// No description provided for @tgPeriodActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Your activity this period'**
+  String get tgPeriodActivity;
+
+  /// No description provided for @tmPeriodPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the period'**
+  String get tmPeriodPick;
+
+  /// No description provided for @tmEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the target'**
+  String get tmEditTitle;
+
+  /// No description provided for @tmSheetNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows in the member\'s targets; progress is measured from their signed contracts.'**
+  String get tmSheetNote;
+
+  /// No description provided for @tmCreatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String tmCreatedOn(String date);
+
+  /// No description provided for @tmUnitsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} units'**
+  String tmUnitsLine(int n);
+
+  /// No description provided for @tpFunnelLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get tpFunnelLeads;
+
+  /// No description provided for @tpVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get tpVisits;
+
+  /// No description provided for @tpBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get tpBookings;
+
+  /// No description provided for @tpContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get tpContracts;
+
+  /// No description provided for @tmCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No targets} =1{1 target} other{{n} targets}}'**
+  String tmCountN(int n);
+
+  /// No description provided for @tmPeriodField.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get tmPeriodField;
 }
 
 class _AppLocalizationsDelegate

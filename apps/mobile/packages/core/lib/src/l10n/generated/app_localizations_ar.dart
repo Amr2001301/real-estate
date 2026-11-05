@@ -8209,4 +8209,111 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bcAllActiveUsers => 'جميع المستخدمين النشطين';
+
+  @override
+  String get bnSubtitle => 'مستحقاتي';
+
+  @override
+  String get bnTotal => 'إجمالي مستحقاتك';
+
+  @override
+  String get bnPendingHint => 'يُصرف بعد التعاقد';
+
+  @override
+  String get bnPaidHint => 'وصل إليك';
+
+  @override
+  String bnBasisLine(String basis, String pct) {
+    return 'الأساس $basis × $pct';
+  }
+
+  @override
+  String bnPeriodLine(String period) {
+    return 'الفترة $period';
+  }
+
+  @override
+  String get bnWhenSigned => 'تُحتسب عند توقيع العقد';
+
+  @override
+  String get bnApprovedNote => 'معتمدة وبانتظار الصرف';
+
+  @override
+  String bnPaidOn(String date) {
+    return 'صُرفت $date';
+  }
+
+  @override
+  String get tgSales => 'قيمة المبيعات';
+
+  @override
+  String tgOf(String amount) {
+    return 'من $amount';
+  }
+
+  @override
+  String get tgUnitsSold => 'الوحدات المباعة';
+
+  @override
+  String tgUnitsOf(int a, int b) {
+    return '$a من $b';
+  }
+
+  @override
+  String get tgRemaining => 'المتبقي لبلوغ الهدف';
+
+  @override
+  String get tgNoTarget => 'لا يوجد هدف لهذه الفترة بعد.';
+
+  @override
+  String get tgPeriodActivity => 'نشاطك هذه الفترة';
+
+  @override
+  String get tmPeriodPick => 'اختر الفترة';
+
+  @override
+  String get tmEditTitle => 'تعديل الهدف';
+
+  @override
+  String get tmSheetNote =>
+      'يظهر للموظف في «أهدافي» وتُقاس نسبة الإنجاز تلقائيًا من عقوده الموقّعة.';
+
+  @override
+  String tmCreatedOn(String date) {
+    return 'أُنشئ $date';
+  }
+
+  @override
+  String tmUnitsLine(int n) {
+    return '$n وحدات';
+  }
+
+  @override
+  String get tpFunnelLeads => 'فرص';
+
+  @override
+  String get tpVisits => 'زيارات';
+
+  @override
+  String get tpBookings => 'حجوزات';
+
+  @override
+  String get tpContracts => 'عقود';
+
+  @override
+  String tmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n هدفًا مسجّلًا',
+      few: '$n أهداف مسجّلة',
+      two: 'هدفان مسجّلان',
+      one: 'هدف واحد مسجّل',
+      zero: 'لا أهداف مسجّلة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tmPeriodField => 'الفترة';
 }

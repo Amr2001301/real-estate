@@ -10,6 +10,8 @@ class BonusEntry extends Equatable {
     required this.status,
     this.ruleName,
     this.commissionPct,
+    this.basisAmount,
+    this.contractId,
     this.paidAt,
     this.createdAt,
   });
@@ -20,6 +22,10 @@ class BonusEntry extends Equatable {
   final String status;
   final String? ruleName;
   final String? commissionPct;
+
+  /// What the rate was taken on (the contract's value), and the contract.
+  final String? basisAmount;
+  final String? contractId;
   final DateTime? paidAt;
   final DateTime? createdAt;
 

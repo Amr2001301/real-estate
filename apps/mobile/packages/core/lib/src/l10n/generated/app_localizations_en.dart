@@ -8186,4 +8186,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bcAllActiveUsers => 'All active users';
+
+  @override
+  String get bnSubtitle => 'My dues';
+
+  @override
+  String get bnTotal => 'Your total dues';
+
+  @override
+  String get bnPendingHint => 'Paid after the contract';
+
+  @override
+  String get bnPaidHint => 'Reached you';
+
+  @override
+  String bnBasisLine(String basis, String pct) {
+    return 'Basis $basis × $pct';
+  }
+
+  @override
+  String bnPeriodLine(String period) {
+    return 'Period $period';
+  }
+
+  @override
+  String get bnWhenSigned => 'Counted when the contract is signed';
+
+  @override
+  String get bnApprovedNote => 'Approved, awaiting payment';
+
+  @override
+  String bnPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get tgSales => 'Sales value';
+
+  @override
+  String tgOf(String amount) {
+    return 'of $amount';
+  }
+
+  @override
+  String get tgUnitsSold => 'Units sold';
+
+  @override
+  String tgUnitsOf(int a, int b) {
+    return '$a of $b';
+  }
+
+  @override
+  String get tgRemaining => 'Left to reach the target';
+
+  @override
+  String get tgNoTarget => 'No target for this period yet.';
+
+  @override
+  String get tgPeriodActivity => 'Your activity this period';
+
+  @override
+  String get tmPeriodPick => 'Pick the period';
+
+  @override
+  String get tmEditTitle => 'Edit the target';
+
+  @override
+  String get tmSheetNote =>
+      'Shows in the member\'s targets; progress is measured from their signed contracts.';
+
+  @override
+  String tmCreatedOn(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String tmUnitsLine(int n) {
+    return '$n units';
+  }
+
+  @override
+  String get tpFunnelLeads => 'Leads';
+
+  @override
+  String get tpVisits => 'Visits';
+
+  @override
+  String get tpBookings => 'Bookings';
+
+  @override
+  String get tpContracts => 'Contracts';
+
+  @override
+  String tmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n targets',
+      one: '1 target',
+      zero: 'No targets',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tmPeriodField => 'Period';
 }
