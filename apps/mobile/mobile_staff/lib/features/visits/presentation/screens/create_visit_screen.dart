@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../clients/domain/entities/staff_client.dart';
 import '../cubit/create_visit_cubit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 /// "Schedule visit" form — mirrors the dashboard's 3-section create-visit flow:
 ///   01 العميل   02 المشروع والوحدة   03 موعد الزيارة والملاحظات
@@ -64,14 +65,7 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
       backgroundColor: colors.canvas,
       body: Column(
         children: [
-          AppNavHeader(
-            compact: true,
-            title: l10n.visitNew,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.pop(),
-            ),
-          ),
+          HomeListHero(back: true, title: l10n.visitNew),
           Expanded(
             child: BlocConsumer<CreateVisitCubit, CreateVisitState>(
               listenWhen: (a, b) =>

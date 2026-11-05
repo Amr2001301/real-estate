@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/installment.dart';
 import '../cubit/installment_plans_cubit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 const _navy = Color(0xFF0B1726);
 const _navyLight = Color(0xFF243F62);
@@ -103,13 +104,10 @@ class _PlansHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppNavHeader(
-      title: l10n.planTemplatesTitle,
-      subtitle: l10n.planTemplatesSubtitle,
-      compact: true,
-      leadingAction: const NavHeaderBack(),
-      bottom: _PlansSearchBar(controller: searchController, hint: l10n.planTemplatesSearch, onChanged: onSearch),
-    );
+    return HomeListHero(back: true, title: l10n.planTemplatesTitle, subtitle: l10n.planTemplatesSubtitle, bottom: HomeSearchField(controller: searchController, hint: l10n.planTemplatesSearch, onSubmitted: onSearch, onClear: () {
+        searchController.clear();
+        onSearch('');
+      }));
   }
 }
 
@@ -126,18 +124,7 @@ class _PlanCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: homeCard(context, radius: 24),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,40 +184,15 @@ class _PlanCard extends StatelessWidget {
                 ),
                 // Use plan → go to calculator
                 Material(
-                  color: AppPalette.gold400.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppPalette.gold50,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: const BorderSide(color: AppPalette.gold100)),
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => context.push(
-                      '/calculator',
-                      extra: {
-                        'templateId': template.id,
-                      },
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.calculate_rounded,
-                            size: 14,
-                            color: AppPalette.gold500,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            l10n.calculatorTitle,
-                            style: const TextStyle(
-                              color: AppPalette.gold500,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                    key: Key('plan-calc-${template.id}'),
+                    borderRadius: BorderRadius.circular(13),
+                    onTap: () => context.push('/calculator', extra: {'templateId': template.id}),
+                    child: Tooltip(
+                      message: l10n.calculatorTitle,
+                      child: const SizedBox(width: 40, height: 40, child: Icon(Icons.calculate_rounded, size: 20, color: AppPalette.gold600)),
                     ),
                   ),
                 ),

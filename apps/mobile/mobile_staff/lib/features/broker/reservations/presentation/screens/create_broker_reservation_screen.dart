@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../cubit/create_broker_reservation_cubit.dart';
+import '../../../../dashboard/home_kit/home_kit.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,12 +169,7 @@ class _FormHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return AppNavHeader(
-      title: l10n.reservationNew,
-      subtitle: l10n.brokerReservationNewSubtitle,
-      compact: true,
-      leadingAction: const NavHeaderBack(),
-    );
+    return HomeListHero(back: true, title: l10n.reservationNew, subtitle: l10n.brokerReservationNewSubtitle);
   }
 }
 

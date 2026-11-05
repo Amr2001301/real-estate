@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/lead_detail_cubit.dart';
 import '../follow_up_labels.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 /// FU1 — opens «سجّل تواصل» over the lead, on the lead's own cubit.
 Future<void> openLogActivity(BuildContext context, LeadDetailCubit cubit, {String? leadName, DateTime? currentNext}) {
@@ -157,15 +158,7 @@ class _LogActivityScreenState extends State<LogActivityScreen> {
       backgroundColor: colors.canvas,
       body: Column(
         children: [
-          AppNavHeader(
-            compact: true,
-            title: l10n.leadLogActivity,
-            subtitle: widget.leadName,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
-          ),
+          HomeListHero(back: true, title: l10n.leadLogActivity, subtitle: widget.leadName),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxl),

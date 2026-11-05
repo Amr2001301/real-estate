@@ -8896,4 +8896,30 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get visitsFilterTitle => 'تصفية الزيارات';
+
+  @override
+  String get visitsFilterApply => 'عرض الزيارات';
+
+  @override
+  String visitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n زيارة',
+      few: '$n زيارات',
+      two: 'زيارتان',
+      one: 'زيارة واحدة',
+      zero: 'لا زيارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get maintenanceFilterTitle => 'تصفية الطلبات';
+
+  @override
+  String get maintenanceFilterApply => 'عرض الطلبات';
 }

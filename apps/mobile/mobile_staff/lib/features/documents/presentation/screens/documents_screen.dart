@@ -1,11 +1,11 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../cubit/documents_cubit.dart';
 import '../widgets/document_tile.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 class StaffDocumentsScreen extends StatefulWidget {
   const StaffDocumentsScreen({
@@ -36,16 +36,10 @@ class _StaffDocumentsScreenState extends State<StaffDocumentsScreen> {
     final cubit = context.read<DocumentsCubit>();
 
     return Scaffold(
+      backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
-          AppNavHeader(
-            title: widget.title ?? l10n.contractsDocumentsTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.pop(),
-            ),
-          ),
+          HomeListHero(back: true, title: widget.title ?? l10n.contractsDocumentsTitle),
           Expanded(
             child: BlocConsumer<DocumentsCubit, DocumentsState>(
               listenWhen: (a, b) =>

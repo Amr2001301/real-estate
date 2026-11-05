@@ -8861,4 +8861,28 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get visitsFilterTitle => 'Filter visits';
+
+  @override
+  String get visitsFilterApply => 'Show visits';
+
+  @override
+  String visitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n visits',
+      one: '1 visit',
+      zero: 'no visits',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get maintenanceFilterTitle => 'Filter requests';
+
+  @override
+  String get maintenanceFilterApply => 'Show requests';
 }
