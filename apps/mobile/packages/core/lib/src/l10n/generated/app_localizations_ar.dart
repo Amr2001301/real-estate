@@ -7776,4 +7776,160 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rbOpenContract => 'فتح العقد';
+
+  @override
+  String pmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n دفعة',
+      few: '$n دفعات',
+      two: 'دفعتان',
+      one: 'دفعة واحدة',
+      zero: 'لا دفعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pmSearchHint => 'ابحث بالعميل أو رقم العقد أو الوحدة';
+
+  @override
+  String get pmCollected => 'المحصّل';
+
+  @override
+  String pmCollectedHint(int n) {
+    return 'من $n دفعة';
+  }
+
+  @override
+  String get pmNeedReview => 'تحتاج مراجعتك';
+
+  @override
+  String get pmNeedReviewHint => 'إيصالات العملاء';
+
+  @override
+  String get pmChequesWaiting => 'شيكات لم تُصرف';
+
+  @override
+  String get pmChequesHint => 'اضغط لفتحها';
+
+  @override
+  String get pmPillReview => 'قيد المراجعة';
+
+  @override
+  String get pmPillCheque => 'شيكات';
+
+  @override
+  String get pmPillCollected => 'محصّلة';
+
+  @override
+  String get pmPillClosed => 'مرفوضة ومرتدة';
+
+  @override
+  String get pmEmpty => 'لا توجد دفعات';
+
+  @override
+  String get pmEmptyMessage =>
+      'ستظهر هنا الدفعات عند تسجيلها أو إرسال العملاء إيصالاتهم.';
+
+  @override
+  String get pmNoMatch => 'لا توجد دفعات بهذا الاختيار';
+
+  @override
+  String get pmMethodCash => 'نقدًا';
+
+  @override
+  String get pmMethodBank => 'تحويل بنكي';
+
+  @override
+  String get pmMethodCheque => 'شيك';
+
+  @override
+  String pmChequeN(String no) {
+    return 'شيك $no';
+  }
+
+  @override
+  String pmDueOn(String date) {
+    return 'استحقاق $date';
+  }
+
+  @override
+  String pmPaidOn(String date) {
+    return 'دُفعت $date';
+  }
+
+  @override
+  String get pmProofAttached => 'إيصال مرفق';
+
+  @override
+  String get pmViewProof => 'عرض الإيصال';
+
+  @override
+  String get pmOpenCheque => 'فتح الشيك';
+
+  @override
+  String pmReasonLine(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get pmNotCounted => 'لا تُحسب في الرصيد حتى يُصرف الشيك.';
+
+  @override
+  String get pmStRecorded => 'سُجّلت';
+
+  @override
+  String get pmStReview => 'المراجعة';
+
+  @override
+  String get pmStCleared => 'الصرف';
+
+  @override
+  String get pmStCollected => 'التحصيل';
+
+  @override
+  String get pmNow => 'الآن';
+
+  @override
+  String get pmCheque => 'الشيك';
+
+  @override
+  String get pmChequeNo => 'رقم الشيك';
+
+  @override
+  String get pmChequeState => 'حالة الشيك';
+
+  @override
+  String get pmOpenChequePage => 'فتح صفحة الشيك';
+
+  @override
+  String get pmContractInstallment => 'العقد والقسط';
+
+  @override
+  String get pmContract => 'العقد';
+
+  @override
+  String get pmClient => 'العميل';
+
+  @override
+  String get pmInstallmentDue => 'القسط المستحق';
+
+  @override
+  String get pmInstallmentAmount => 'قيمة القسط';
+
+  @override
+  String get pmBooking => 'الحجز';
+
+  @override
+  String pmReversedNote(String by) {
+    return 'عُكست هذه الدفعة$by';
+  }
+
+  @override
+  String get pmDecisionTitleApprove => 'اعتماد الدفعة؟';
+
+  @override
+  String get pmDecisionApproveBody => 'سيُحتسب المبلغ على القسط.';
 }

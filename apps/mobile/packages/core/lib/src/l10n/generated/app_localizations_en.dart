@@ -7755,4 +7755,160 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rbOpenContract => 'Open the contract';
+
+  @override
+  String pmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n payments',
+      one: '1 payment',
+      zero: 'No payments',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pmSearchHint => 'Search by client, contract or unit';
+
+  @override
+  String get pmCollected => 'Collected';
+
+  @override
+  String pmCollectedHint(int n) {
+    return 'from $n payments';
+  }
+
+  @override
+  String get pmNeedReview => 'Need your review';
+
+  @override
+  String get pmNeedReviewHint => 'Client proofs';
+
+  @override
+  String get pmChequesWaiting => 'Uncleared cheques';
+
+  @override
+  String get pmChequesHint => 'Tap to open';
+
+  @override
+  String get pmPillReview => 'Under review';
+
+  @override
+  String get pmPillCheque => 'Cheques';
+
+  @override
+  String get pmPillCollected => 'Collected';
+
+  @override
+  String get pmPillClosed => 'Rejected / bounced';
+
+  @override
+  String get pmEmpty => 'No payments';
+
+  @override
+  String get pmEmptyMessage =>
+      'Payments appear here when recorded or when clients send proofs.';
+
+  @override
+  String get pmNoMatch => 'No payments match';
+
+  @override
+  String get pmMethodCash => 'Cash';
+
+  @override
+  String get pmMethodBank => 'Bank transfer';
+
+  @override
+  String get pmMethodCheque => 'Cheque';
+
+  @override
+  String pmChequeN(String no) {
+    return 'Cheque $no';
+  }
+
+  @override
+  String pmDueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String pmPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get pmProofAttached => 'Proof attached';
+
+  @override
+  String get pmViewProof => 'View proof';
+
+  @override
+  String get pmOpenCheque => 'Open the cheque';
+
+  @override
+  String pmReasonLine(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get pmNotCounted =>
+      'Not counted in the balance until the cheque clears.';
+
+  @override
+  String get pmStRecorded => 'Recorded';
+
+  @override
+  String get pmStReview => 'Review';
+
+  @override
+  String get pmStCleared => 'Clearing';
+
+  @override
+  String get pmStCollected => 'Collected';
+
+  @override
+  String get pmNow => 'Now';
+
+  @override
+  String get pmCheque => 'The cheque';
+
+  @override
+  String get pmChequeNo => 'Cheque number';
+
+  @override
+  String get pmChequeState => 'Cheque status';
+
+  @override
+  String get pmOpenChequePage => 'Open the cheque page';
+
+  @override
+  String get pmContractInstallment => 'Contract and instalment';
+
+  @override
+  String get pmContract => 'Contract';
+
+  @override
+  String get pmClient => 'Client';
+
+  @override
+  String get pmInstallmentDue => 'Instalment due';
+
+  @override
+  String get pmInstallmentAmount => 'Instalment amount';
+
+  @override
+  String get pmBooking => 'Booking';
+
+  @override
+  String pmReversedNote(String by) {
+    return 'This payment was reversed$by';
+  }
+
+  @override
+  String get pmDecisionTitleApprove => 'Approve this payment?';
+
+  @override
+  String get pmDecisionApproveBody =>
+      'The amount will count towards the instalment.';
 }

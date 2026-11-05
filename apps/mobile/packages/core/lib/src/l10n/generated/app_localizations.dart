@@ -13783,6 +13783,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open the contract'**
   String get rbOpenContract;
+
+  /// No description provided for @pmCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No payments} =1{1 payment} other{{n} payments}}'**
+  String pmCountN(int n);
+
+  /// No description provided for @pmSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client, contract or unit'**
+  String get pmSearchHint;
+
+  /// No description provided for @pmCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmCollected;
+
+  /// No description provided for @pmCollectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'from {n} payments'**
+  String pmCollectedHint(int n);
+
+  /// No description provided for @pmNeedReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Need your review'**
+  String get pmNeedReview;
+
+  /// No description provided for @pmNeedReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Client proofs'**
+  String get pmNeedReviewHint;
+
+  /// No description provided for @pmChequesWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncleared cheques'**
+  String get pmChequesWaiting;
+
+  /// No description provided for @pmChequesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to open'**
+  String get pmChequesHint;
+
+  /// No description provided for @pmPillReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get pmPillReview;
+
+  /// No description provided for @pmPillCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheques'**
+  String get pmPillCheque;
+
+  /// No description provided for @pmPillCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmPillCollected;
+
+  /// No description provided for @pmPillClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected / bounced'**
+  String get pmPillClosed;
+
+  /// No description provided for @pmEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments'**
+  String get pmEmpty;
+
+  /// No description provided for @pmEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments appear here when recorded or when clients send proofs.'**
+  String get pmEmptyMessage;
+
+  /// No description provided for @pmNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments match'**
+  String get pmNoMatch;
+
+  /// No description provided for @pmMethodCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get pmMethodCash;
+
+  /// No description provided for @pmMethodBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get pmMethodBank;
+
+  /// No description provided for @pmMethodCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get pmMethodCheque;
+
+  /// No description provided for @pmChequeN.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque {no}'**
+  String pmChequeN(String no);
+
+  /// No description provided for @pmDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String pmDueOn(String date);
+
+  /// No description provided for @pmPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String pmPaidOn(String date);
+
+  /// No description provided for @pmProofAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof attached'**
+  String get pmProofAttached;
+
+  /// No description provided for @pmViewProof.
+  ///
+  /// In en, this message translates to:
+  /// **'View proof'**
+  String get pmViewProof;
+
+  /// No description provided for @pmOpenCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the cheque'**
+  String get pmOpenCheque;
+
+  /// No description provided for @pmReasonLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String pmReasonLine(String reason);
+
+  /// No description provided for @pmNotCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not counted in the balance until the cheque clears.'**
+  String get pmNotCounted;
+
+  /// No description provided for @pmStRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get pmStRecorded;
+
+  /// No description provided for @pmStReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get pmStReview;
+
+  /// No description provided for @pmStCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing'**
+  String get pmStCleared;
+
+  /// No description provided for @pmStCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmStCollected;
+
+  /// No description provided for @pmNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get pmNow;
+
+  /// No description provided for @pmCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'The cheque'**
+  String get pmCheque;
+
+  /// No description provided for @pmChequeNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque number'**
+  String get pmChequeNo;
+
+  /// No description provided for @pmChequeState.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque status'**
+  String get pmChequeState;
+
+  /// No description provided for @pmOpenChequePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the cheque page'**
+  String get pmOpenChequePage;
+
+  /// No description provided for @pmContractInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract and instalment'**
+  String get pmContractInstallment;
+
+  /// No description provided for @pmContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get pmContract;
+
+  /// No description provided for @pmClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get pmClient;
+
+  /// No description provided for @pmInstallmentDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment due'**
+  String get pmInstallmentDue;
+
+  /// No description provided for @pmInstallmentAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment amount'**
+  String get pmInstallmentAmount;
+
+  /// No description provided for @pmBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get pmBooking;
+
+  /// No description provided for @pmReversedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment was reversed{by}'**
+  String pmReversedNote(String by);
+
+  /// No description provided for @pmDecisionTitleApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this payment?'**
+  String get pmDecisionTitleApprove;
+
+  /// No description provided for @pmDecisionApproveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The amount will count towards the instalment.'**
+  String get pmDecisionApproveBody;
 }
 
 class _AppLocalizationsDelegate

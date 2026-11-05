@@ -134,9 +134,9 @@ import '../features/reservations/domain/usecases/reservation_use_cases.dart';
 import '../features/reservations/presentation/cubit/create_reservation_cubit.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
-import '../features/deposits/presentation/cubit/deposits_cubit.dart';
+import '../features/deposits/view/payments_data.dart';
+import '../features/deposits/view/payments_screens.dart';
 import '../features/deposits/presentation/cubit/record_deposit_cubit.dart';
-import '../features/deposits/presentation/screens/deposits_screen.dart';
 import '../features/deposits/presentation/screens/record_deposit_screen.dart';
 import '../features/documents/domain/repositories/documents_repository.dart';
 import '../features/documents/domain/usecases/document_use_cases.dart';
@@ -742,8 +742,8 @@ GoRouter createStaffRouter(
         builder: (context, state) {
           final contractId = state.uri.queryParameters['contractId'];
           return BlocProvider(
-            create: (ctx) => DepositsCubit(ListDeposits(ctx.read<StaffDepositsRepository>())),
-            child: DepositsScreen(contractId: contractId),
+            create: (ctx) => PaymentsListCubit(PaymentsRepository(ctx.read<Dio>()), contractId: contractId),
+            child: const PaymentsListScreen(),
           );
         },
       ),
@@ -766,6 +766,17 @@ GoRouter createStaffRouter(
               suggestedAmount: (args['amount'] as num?)?.toDouble() ?? 0,
               installmentLabel: args['label'] as String?,
             ),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/deposits/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return BlocProvider(
+            create: (ctx) => PaymentCubit(PaymentsRepository(ctx.read<Dio>()), paymentId: id, initial: state.extra as PaymentRow?),
+            child: const PaymentScreen(),
           );
         },
       ),
