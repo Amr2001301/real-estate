@@ -232,7 +232,7 @@ class UnitPriceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: colors.hairline),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -269,8 +269,8 @@ class UnitPriceCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                   decoration: BoxDecoration(
-                    color: AppPalette.gold50,
-                    border: Border.all(color: AppPalette.gold100),
+                    color: homeTint(context),
+                    border: Border.all(color: homeTintBorder(context)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -429,9 +429,11 @@ class _Reservation extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFFFF9EC), Color(0xFFFCF0D8)]),
+                gradient: Theme.of(context).brightness == Brightness.dark
+                    ? LinearGradient(colors: [AppPalette.gold500.withValues(alpha: 0.16), AppPalette.gold500.withValues(alpha: 0.08)])
+                    : const LinearGradient(colors: [Color(0xFFFFF9EC), Color(0xFFFCF0D8)]),
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0xFFF1D9A8)),
+                border: Border.all(color: homeTintBorder(context)),
               ),
               child: Column(children: [
                 Row(children: [
@@ -461,7 +463,7 @@ class _Reservation extends StatelessWidget {
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.75), borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(color: colors.surface.withValues(alpha: 0.75), borderRadius: BorderRadius.circular(12)),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(k, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
                           Text(v, maxLines: 1, overflow: TextOverflow.ellipsis,

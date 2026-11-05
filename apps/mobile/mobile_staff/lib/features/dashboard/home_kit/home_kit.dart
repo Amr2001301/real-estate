@@ -60,6 +60,13 @@ const homeGoldGradient = LinearGradient(
 TextStyle homeDisplay(double size, Color color) =>
     TextStyle(fontFamily: AppTypography.displayFamily, fontWeight: FontWeight.w800, fontSize: size, color: color, height: 1.15);
 
+/// A soft gold tile for facts under a price: the pale cream by day, a faint
+/// gold wash on the dark theme (the cream there left white text on white).
+Color homeTint(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500.withValues(alpha: 0.14) : AppPalette.gold50;
+Color homeTintBorder(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500.withValues(alpha: 0.32) : AppPalette.gold100;
+
 BoxDecoration homeCard(BuildContext context, {double radius = 20}) => BoxDecoration(
       color: context.appColors.surface,
       border: Border.all(color: context.appColors.hairline),

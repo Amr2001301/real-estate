@@ -315,9 +315,9 @@ class _Btn extends StatelessWidget {
         child: SizedBox(
           height: 44,
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : AppPalette.navy),
+            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : colors.inkStrong),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : AppPalette.navy)),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : colors.inkStrong)),
           ]),
         ),
       ),

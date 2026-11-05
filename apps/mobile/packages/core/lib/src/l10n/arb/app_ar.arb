@@ -3129,5 +3129,6 @@
   "@frVsBefore": {"placeholders": {"value": {"type": "String"}}},
   "frCompare": "المقارنة",
   "frCompareOff": "بدون مقارنة",
-  "frCompareOn": "مقارنة بالفترة السابقة"
+  "frCompareOn": "مقارنة بالفترة السابقة",
+  "brkConfirmHint": "هل تريد تنفيذ هذا الإجراء؟"
 }

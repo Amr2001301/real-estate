@@ -285,8 +285,8 @@ class _Figures extends StatelessWidget {
             key: key,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: bg ?? AppPalette.gold50,
-              border: Border.all(color: border ?? AppPalette.gold100),
+              color: bg ?? homeTint(context),
+              border: Border.all(color: border ?? homeTintBorder(context)),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -302,7 +302,7 @@ class _Figures extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: colors.hairline),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -342,11 +342,11 @@ class _Figures extends StatelessWidget {
                   l10n.kcOverdue,
                   page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late),
                   note: late > 0 && page.overdue > 0.005 ? l10n.kcOverdueN(late) : null,
-                  bg: const Color(0xFFF8E6E4),
-                  border: const Color(0xFFF1C9C4),
+                  bg: colors.error.withValues(alpha: 0.12),
+                  border: colors.error.withValues(alpha: 0.35),
                   key: const Key('contract-overdue'),
                 )
-              : tile(l10n.kcOverdue, l10n.kcNoOverdue, bg: const Color(0xFFE6F2EA), border: const Color(0xFFC9E2D2), key: const Key('contract-overdue')),
+              : tile(l10n.kcOverdue, l10n.kcNoOverdue, bg: colors.success.withValues(alpha: 0.12), border: colors.success.withValues(alpha: 0.35), key: const Key('contract-overdue')),
         ]),
       ]),
     );
@@ -365,21 +365,21 @@ class _TabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: selected ? AppPalette.navy : colors.surface,
-      shape: StadiumBorder(side: BorderSide(color: selected ? AppPalette.navy : colors.hairline)),
+      color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500 : AppPalette.navy) : colors.surface,
+      shape: StadiumBorder(side: BorderSide(color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500 : AppPalette.navy) : colors.hairline)),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 13),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? Colors.white : colors.inkStrong)),
+            Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.navy : Colors.white) : colors.inkStrong)),
             if (badge != null) ...[
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(
-                  color: alert ? const Color(0xFFF8E6E4) : colors.surfaceSoft,
+                  color: alert ? colors.error.withValues(alpha: 0.14) : colors.surfaceSoft,
                   borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(ltr('$badge'),

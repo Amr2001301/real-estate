@@ -9500,4 +9500,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get frCompareOn => 'مقارنة بالفترة السابقة';
+
+  @override
+  String get brkConfirmHint => 'هل تريد تنفيذ هذا الإجراء؟';
 }
