@@ -2,6 +2,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/staff_document.dart';
 import '../cubit/documents_cubit.dart';
 
@@ -46,19 +47,7 @@ class _StaffDocumentTileState extends State<StaffDocumentTile> {
             scale: _pressed ? 0.975 : 1.0,
             duration: const Duration(milliseconds: 100),
             child: Container(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(AppRadii.lg),
-                border:
-                    Border.all(color: colors.hairline.withValues(alpha: 0.5)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
+              decoration: homeCard(context, radius: 24),
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
               child: Row(
@@ -69,7 +58,7 @@ class _StaffDocumentTileState extends State<StaffDocumentTile> {
                     height: 44,
                     decoration: BoxDecoration(
                       color: iconBg,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: iconBorder),
                     ),
                     child: Icon(iconData, size: 20, color: iconColor),
@@ -138,8 +127,8 @@ class _StaffDocumentTileState extends State<StaffDocumentTile> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: colors.brandGold.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
+                        color: colors.brandGold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         Icons.download_rounded,

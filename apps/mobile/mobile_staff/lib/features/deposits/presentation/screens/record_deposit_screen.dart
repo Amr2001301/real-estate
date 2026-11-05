@@ -103,12 +103,19 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       children: [
               if (widget.installmentLabel != null) ...[
-                AppCard(
-                  elevation: AppCardElevation.soft,
-                  child: Text(
-                    widget.installmentLabel!,
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: homeCard(context, radius: 20),
+                  child: Row(children: [
+                    Icon(Icons.event_note_rounded, color: context.appColors.brandGold),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        widget.installmentLabel!,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                  ]),
                 ),
                 const SizedBox(height: AppSpacing.md),
               ],
@@ -147,15 +154,12 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
               BlocBuilder<RecordDepositCubit, RecordDepositState>(
                 builder: (context, state) {
                   final loading = state.status == RecordDepositStatus.submitting;
-                  return FilledButton(
+                  return AppButton(
+                    label: l10n.recordDeposit,
+                    variant: AppButtonVariant.gold,
+                    expand: true,
+                    isLoading: loading,
                     onPressed: loading ? null : _submit,
-                    child: loading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.recordDeposit),
                   );
                 },
               ),
