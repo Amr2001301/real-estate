@@ -40,60 +40,42 @@ extension on AppointmentStatus {
 }
 
 // ─── card theme ───────────────────────────────────────────────────────────────
-typedef _CardTheme = ({List<Color> gradient, Color accent, IconData icon});
+typedef _CardTheme = ({Color accent, IconData icon});
 
-_CardTheme _cardTheme(VisitRequest req) {
+_CardTheme _cardTheme(VisitRequest req, bool dark) {
+  Color pick(Color light, Color darkC) => dark ? darkC : light;
+  final green = pick(const Color(0xFF15803D), const Color(0xFF4ADE80));
+  final gold = pick(const Color(0xFF9A6F1E), AppPalette.gold300);
+  final amber = pick(const Color(0xFFB45309), const Color(0xFFFBD27A));
+  final red = pick(const Color(0xFFB91C1C), const Color(0xFFF87171));
+  final blue = pick(const Color(0xFF1D4ED8), const Color(0xFF93C5FD));
   final appt = req.latestAppointment;
   if (appt != null) {
     return switch (appt.status) {
       AppointmentStatus.confirmed || AppointmentStatus.completed => (
-        gradient: const [Color(0xFF1B5E3F), Color(0xFF0D3826)],
-        accent: const Color(0xFF4ADE80),
+        accent: green,
         icon: Icons.check_circle_rounded,
       ),
-      AppointmentStatus.scheduled => (
-        gradient: const [_navyLight, _navyDeep],
-        accent: AppPalette.gold300,
-        icon: Icons.event_rounded,
-      ),
+      AppointmentStatus.scheduled => (accent: gold, icon: Icons.event_rounded),
       AppointmentStatus.pendingReschedule => (
-        gradient: const [Color(0xFF7A5C1E), Color(0xFF4A3610)],
-        accent: const Color(0xFFFBD27A),
+        accent: amber,
         icon: Icons.update_rounded,
       ),
       AppointmentStatus.cancelled || AppointmentStatus.noShow => (
-        gradient: const [Color(0xFF9B2020), Color(0xFF620D0D)],
-        accent: const Color(0xFFF87171),
+        accent: red,
         icon: Icons.cancel_rounded,
       ),
-      _ => (
-        gradient: const [_navyLight, _navyDeep],
-        accent: AppPalette.gold300,
-        icon: Icons.event_rounded,
-      ),
+      _ => (accent: gold, icon: Icons.event_rounded),
     };
   }
   return switch (req.status) {
-    VisitStatus.completed => (
-      gradient: const [Color(0xFF1B5E3F), Color(0xFF0D3826)],
-      accent: const Color(0xFF4ADE80),
-      icon: Icons.done_all_rounded,
-    ),
+    VisitStatus.completed => (accent: green, icon: Icons.done_all_rounded),
     VisitStatus.approved || VisitStatus.scheduled => (
-      gradient: const [Color(0xFF1E3A6E), Color(0xFF0B1F42)],
-      accent: const Color(0xFF93C5FD),
+      accent: blue,
       icon: Icons.event_available_rounded,
     ),
-    VisitStatus.cancelled => (
-      gradient: const [Color(0xFF9B2020), Color(0xFF620D0D)],
-      accent: const Color(0xFFF87171),
-      icon: Icons.cancel_rounded,
-    ),
-    _ => (
-      gradient: const [_navyLight, _navyDeep],
-      accent: AppPalette.gold300,
-      icon: Icons.calendar_today_rounded,
-    ),
+    VisitStatus.cancelled => (accent: red, icon: Icons.cancel_rounded),
+    _ => (accent: gold, icon: Icons.calendar_today_rounded),
   };
 }
 
@@ -151,7 +133,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
           // ── Header
@@ -331,7 +313,7 @@ class _FilterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFF5F7FA),
+      color: context.appColors.canvas,
       padding: const EdgeInsets.fromLTRB(16, 12, 0, 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -376,26 +358,24 @@ class _FilterItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final selFill = dark ? AppPalette.gold300.withValues(alpha: 0.18) : _navyCard;
+    final selText = dark ? AppPalette.gold300 : Colors.white;
+    final dotColor = dot == Colors.white ? colors.inkMuted : dot;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? _navyCard : Colors.white,
+          color: selected ? selFill : colors.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? _navyCard : const Color(0xFFE5E7EB),
+            color: selected
+                ? (dark ? AppPalette.gold300.withValues(alpha: 0.5) : _navyCard)
+                : colors.hairline,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _navyCard.withValues(alpha: 0.18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -404,7 +384,7 @@ class _FilterItem extends StatelessWidget {
               width: 7,
               height: 7,
               decoration: BoxDecoration(
-                color: selected ? dot : dot.withValues(alpha: 0.45),
+                color: selected ? (dot == Colors.white ? selText : dot) : dotColor.withValues(alpha: 0.6),
                 shape: BoxShape.circle,
               ),
             ),
@@ -412,7 +392,7 @@ class _FilterItem extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF6B7280),
+                color: selected ? selText : colors.inkMuted,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -424,14 +404,14 @@ class _FilterItem extends StatelessWidget {
                     const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: selected
-                      ? dot.withValues(alpha: 0.22)
-                      : const Color(0xFFF3F4F6),
+                      ? selText.withValues(alpha: 0.18)
+                      : colors.inkMuted.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    color: selected ? dot : const Color(0xFF9CA3AF),
+                    color: selected ? selText : colors.inkMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -627,8 +607,11 @@ class _VisitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appt  = request.latestAppointment;
-    final theme = _cardTheme(request);
+    final appt = request.latestAppointment;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final ct = _cardTheme(request, dark);
 
     final statusLabel = appt != null
         ? appt.status.customerLabel(l10n)
@@ -636,316 +619,213 @@ class _VisitCard extends StatelessWidget {
 
     final projectTitle = request.projectName?.resolve(lang) ??
         l10n.visitRequestTitle;
+    final hasNotes = request.notes?.isNotEmpty == true;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Gradient strip ───────────────────────────────────────────────
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: theme.gradient,
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: ct.accent.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(ct.icon, color: ct.accent, size: 24),
               ),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const IgnorePointer(child: _DotTexture()),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 1,
-                    color: theme.accent.withValues(alpha: 0.3),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      projectTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.visitRequestTitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: ct.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: ct.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Icon box
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: theme.accent.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: theme.accent.withValues(alpha: 0.35)),
-                        ),
-                        child: Icon(theme.icon,
-                            color: theme.accent, size: 26),
-                      ),
-                      const SizedBox(width: 14),
-                      // Title + type label
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              projectTitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_month_rounded,
-                                  size: 12,
-                                  color: theme.accent.withValues(alpha: 0.8),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  l10n.visitRequestTitle,
-                                  style: TextStyle(
-                                    color: theme.accent.withValues(alpha: 0.85),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Status badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: theme.accent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: theme.accent.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: theme.accent,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              statusLabel,
-                              style: TextStyle(
-                                color: theme.accent,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          // ── White body ───────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.hairline),
+          const SizedBox(height: AppSpacing.md),
+          if (request.preferredDate != null)
+            _InfoCell(
+              icon: AppIcons.calendar,
+              label: context.l10n.preferredDateLabel,
+              value: DateFormatter.mediumDate(
+                request.preferredDate!,
+                languageCode: lang,
+              ),
+              accent: ct.accent,
+            ),
+          if (request.preferredTime?.isNotEmpty == true)
+            _InfoCell(
+              icon: Icons.schedule_rounded,
+              label: l10n.preferredTimeLabel,
+              value: request.preferredTime!,
+              accent: ct.accent,
+            ),
+          if (appt?.scheduledAt != null)
+            _InfoCell(
+              icon: Icons.event_available_rounded,
+              label: l10n.appointmentProposedDateLabel,
+              value: DateFormatter.mediumDate(
+                appt!.scheduledAt!,
+                languageCode: lang,
+              ),
+              accent: ct.accent,
+              highlight: true,
+            ),
+          if (request.assignedSalesName?.isNotEmpty == true)
+            _InfoCell(
+              icon: Icons.person_rounded,
+              label: context.l10n.salesRepLabel,
+              value: request.assignedSalesName!,
+              accent: ct.accent,
+            ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.inkMuted.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Info rows
-                if (request.preferredDate != null)
-                  _InfoCell(
-                    icon: AppIcons.calendar,
-                    label: context.l10n.preferredDateLabel,
-                    value: DateFormatter.mediumDate(
-                      request.preferredDate!,
-                      languageCode: lang,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 14,
+                      color: colors.inkMuted,
                     ),
-                    accent: theme.accent,
-                  ),
-                if (request.preferredTime?.isNotEmpty == true)
-                  _InfoCell(
-                    icon: Icons.schedule_rounded,
-                    label: l10n.preferredTimeLabel,
-                    value: request.preferredTime!,
-                    accent: theme.accent,
-                  ),
-                if (appt?.scheduledAt != null)
-                  _InfoCell(
-                    icon: Icons.event_available_rounded,
-                    label: l10n.appointmentProposedDateLabel,
-                    value: DateFormatter.mediumDate(
-                      appt!.scheduledAt!,
-                      languageCode: lang,
+                    const SizedBox(width: 5),
+                    Text(
+                      l10n.customerMessageLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                      ),
                     ),
-                    accent: theme.accent,
-                    highlight: true,
-                  ),
-                if (request.assignedSalesName?.isNotEmpty == true)
-                  _InfoCell(
-                    icon: Icons.person_rounded,
-                    label: context.l10n.salesRepLabel,
-                    value: request.assignedSalesName!,
-                    accent: theme.accent,
-                  ),
-
-                // Customer message
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded,
-                              size: 13,
-                              color: const Color(0xFF9CA3AF)),
-                          const SizedBox(width: 5),
-                          Text(
-                            l10n.customerMessageLabel,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF9CA3AF),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        request.notes?.isNotEmpty == true
-                            ? request.notes!
-                            : context.l10n.noMessage,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: request.notes?.isNotEmpty == true
-                              ? const Color(0xFF1A1A2E)
-                              : const Color(0xFFB0B7C3),
-                          fontWeight: FontWeight.w500,
-                          height: 1.5,
-                          fontStyle: request.notes?.isNotEmpty == true
-                              ? FontStyle.normal
-                              : FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  hasNotes ? request.notes! : context.l10n.noMessage,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: hasNotes ? colors.ink : colors.inkMuted,
+                    height: 1.5,
+                    fontStyle: hasNotes ? FontStyle.normal : FontStyle.italic,
                   ),
                 ),
-
-                // Reschedule reason (when pendingReschedule)
-                if (appt?.status == AppointmentStatus.pendingReschedule &&
-                    appt?.customerFeedback?.isNotEmpty == true) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                          const Color(0xFFFBD27A).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: const Color(0xFFFBD27A)
-                              .withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${l10n.customerRescheduleReasonLabel}:',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFFFBD27A),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          appt!.customerFeedback!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF1A1A2E),
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                // Appointment actions (awaits customer confirmation)
-                if (appt != null && appt.awaitsCustomer) ...[
-                  const SizedBox(height: 12),
-                  _AppointmentActions(
-                    appointment: appt,
-                    busy: busy,
-                  ),
-                ],
-
-                // Creation date footer
-                if (request.createdAt != null) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 12,
-                        color: const Color(0xFFB0B7C3),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.l10n.requestDateValue(DateFormatter.mediumDate(request.createdAt!, languageCode: lang)),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFB0B7C3),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           ),
+          if (appt?.status == AppointmentStatus.pendingReschedule &&
+              appt?.customerFeedback?.isNotEmpty == true) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ct.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${l10n.customerRescheduleReasonLabel}:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: ct.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    appt!.customerFeedback!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (appt != null && appt.awaitsCustomer) ...[
+            const SizedBox(height: 12),
+            _AppointmentActions(appointment: appt, busy: busy),
+          ],
+          if (request.createdAt != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.access_time_rounded, size: 13, color: colors.inkMuted),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.requestDateValue(
+                    DateFormatter.mediumDate(request.createdAt!, languageCode: lang),
+                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -981,7 +861,6 @@ class _InfoCell extends StatelessWidget {
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: accent.withValues(alpha: 0.25)),
             ),
             child: Icon(icon, size: 15, color: accent),
           ),
@@ -992,9 +871,9 @@ class _InfoCell extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF9CA3AF),
+                    color: context.appColors.inkMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1007,7 +886,7 @@ class _InfoCell extends StatelessWidget {
                         highlight ? FontWeight.w800 : FontWeight.w600,
                     color: highlight
                         ? accent
-                        : const Color(0xFF1A1A2E),
+                        : context.appColors.inkStrong,
                   ),
                 ),
               ],
