@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-05, after #283)
+# Handoff — where the work stands (2026-11-05, after #302)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -103,11 +103,21 @@
 - **المتابعات والتقويم والمساعد الذكي:** بنفس الشكل (PR لاحق).
 - **الجاي:** شاشة 42، الحاسبة (73)، الأمان (76)؛ وإصلاح «أهدافي/مستحقاتي» للأدمن والمدير (القسم 2l، Known gaps)؛ والنشر على السيرفر لما توافق.
 
+**بعد كده (5 نوفمبر، #284–#302، كله مدموج):** القسم **2m** تحت. تطبيق الموظفين اتكمّل بنفس الشكل وقورن بلوحة تحكم الأدمن:
+- **الرئيسية والتفاصيل:** كل صفحات الدخول، وصفحات التفاصيل، والنماذج، ولوحات الأدمن الجديدة (صحة المشاريع، الصحة المالية، التدفق النقدي، مصادر العملاء).
+- **صفحات جديدة للأدمن:** استفسارات العملاء، تقرير المبيعات، التقرير المالي مع المقارنة بالفترة السابقة، وصفحات الوسطاء الست بتفاصيلها وأزرارها (اعتماد عمولة، صرف دفعة، إيقاف شركة…).
+- **التجربة على الأدوار الأربعة (مدير مبيعات، مبيعات، وسيط، مشرف صيانة):** كل الصفحات بتفتح بدون أخطاء، وكل دور محصور في صفحاته. الأزرار والنماذج اتجرّبت على بيانات الديمو واتأكدت من قاعدة البيانات.
+- **الوضع الليلي:** اتصلّحت الأماكن اللي كان فيها نص أبيض على فاتح (#302). **لسه حوالي 100 مكان بألوان ثابتة فاتحة** (مهمة DK1).
+- **طلباتك الجديدة (المهام الجديدة):**
+  1. **حجم الخط في تطبيق الموظفين** — صغير مش مقروء (مهمة FS1).
+  2. **تطبيق العملاء صفحة صفحة** بنفس شكل تطبيق الموظفين، مع الخط والوضع الليلي (CU-0، CU-1…n).
+  3. **قايمة اختبار الجهاز الحقيقي** (`docs/staff-app-device-test.md`) وقرارات الإصدار اللي عليك (REL1).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #283 (+ عمولات البروكر) مدموج. **ابدأ بالقسم 2l** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #302 مدموج. **ابدأ بالقسم 2m** (آخر جدول والمهام الجديدة)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -567,6 +577,44 @@ Same method as 2k: a mockup from real data approved first, then one PR per part 
 1. Screens 42, 73 (calculator) and 76 (security) from the gallery.
 2. The «أهدافي/مستحقاتي» scope fix for the admin and the manager (above).
 3. Production deploy — explicit owner approval and a backup first (section 5).
+
+### 2m. #284–#302 (2026-11-05) — the rest of the staff app, the admin's missing pages, a trial on every role
+
+Same method as 2k/2l: one PR per part, a screenshot from a real web build, merged when the owner said «ادمج» and CI was green. After a squash-merge the branch is synced with `git fetch origin main && git merge -s ours origin/main`, `git read-tree -u --reset origin/main`, amend, normal push.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #284–#285 | Broker commissions; follow-ups, calendar, assistant | See 2l. |
+| #286–#287 | Calculator (CA1), security page (SC1) | Project → unit → the unit's own plans (`CalculatorUnitPlans`, shared with the installment-plans page). Security page in the homes' look. |
+| #288–#292 | Profiles, ledger, receipts review, campaigns, duplicates, the remaining lists | Hero + sections profile (staff and broker); ledger band, group cards, period/state filter sheets; filter sheets instead of pills everywhere; arrows use `AppIcons.chevronForward`. |
+| #293–#295 | Maintenance arrows, installment plans page, visit and maintenance detail | `/installment-plans` = project → unit → its plans, same widget as the calculator. |
+| #296 | Sign-in pages and the old dashboard | `StaffAuthHero`; the unused `DashboardScreen` removed. |
+| #297 | Admin home panels, customer inquiries, sales report | Home: project health, financial health, cash flow, lead sources. `/inquiries` (`visits:read`; reply/close with `visits:approve`). `/reports` (`reports:sales:read`): period sheet, figures, stages, booking states, projects, brokers. Documents tile and record-deposit form in the new look. |
+| #298 | The company's brokers pages | `/company-brokers` (one page, six tabs: firms, leads, bookings, contracts, commissions, payouts; each tab by its own code). The path is **not** `/brokers`: the router treats `/broker…` as the broker's workspace and sent the admin home. |
+| #299 | Broker detail sheets and actions | A sheet per row with the website's buttons: approve / reject / cancel a commission, approve / reject / mark duplicate a lead, approve / start paying / mark paid / cancel a payout, suspend / activate / hold payouts / terminate a firm. `@PermissionsStrict` codes (`broker_*:approve|reject|cancel|process|pay`, `brokers:suspend|terminate`) are never opened by the admin role alone: `canRunBrokerCode`. |
+| #300 | Financial report and the comparison | `/reports/financial` (`reports:financial:read`) from `/reports/financial-dashboard`; the period sheet has a comparison (same dates a month / quarter / year earlier, clipped to the shorter month) on both reports. |
+| #301 | One card layout | Visits, installments of contracts, clients and targets cards: initials/icon tile, name, state pill, divider, footer. The blank gaps on the targets page came from a shrink-wrapped `GridView` taking the safe-area padding (`padding: EdgeInsets.zero`). |
+| #302 | Dark theme fixes, the broker questions as sheets | `homeTint` / `homeTintBorder` in the home kit; contract, unit, lead and client pages readable on dark; the confirm / reason / payment-method questions are sheets (`_showQuestion`), not system dialogs. |
+
+**Trial on the four roles (2026-11-05):** manager, sales, broker and maintenance supervisor were driven through every route they can reach on the web build: no HTTP or Flutter errors; pages a role may not open say «this page is not available for your account»; broker and supervisor stay inside their own area. Actions tried on the demo data and checked in the database: reply to an inquiry, log a contact, approve a commission, start and complete a payout, record a payment, create a lead. The demo database was restored afterwards. Not tried to the end: creating a visit or a booking, rejecting a commission, cancelling a payout. Nine detail pages (lead, visit, booking, contract, payment, unit, project, client, cheque) open on light and dark.
+
+**Owner requests not done yet (tasks in the list):**
+1. **FS1 — staff app font size.** The owner finds the text small. Many labels are 10–12.5. Set a readable floor and a shared scale; check at default and the largest system text size.
+2. **CU-0 / CU-1…n — the customer app, page by page,** in the staff app's look (home kit: hero, cards, sheets), with readable fonts and a proper dark theme. The customer app still uses the older strip-and-white-body cards (`InstallmentCard` etc.). Order: home, catalog (projects, units, compare, favourites), my property and contracts, installments and proofs, statement, payments, visits and requests, maintenance, documents, notifications, account and profile, content pages, sign-in. One PR per group; the owner reviews on screen.
+3. **DK1 — the rest of the staff dark theme** (about 100 fixed light colours: `grep -rn "Color(0xFF[EF]" apps/mobile/mobile_staff/lib`).
+4. **REL1 — release decisions that are the owner's:** the Android `applicationId` (`com.realestate.staff.mobile_staff`, a TODO, immutable after the first Play upload), the iOS bundle id, a release keystore (a release build without `key.properties` is signed with the debug key), the Firebase files (`google-services.json`, `GoogleService-Info.plist`; only `.example` files are in the repo), the app name «Devora Staff», push on a real device. The checklist for the phone is `docs/staff-app-device-test.md`.
+
+**Things learned (so they are not found again):**
+- The web build behind `qa/` in a cloud session dies between turns (Postgres, API, static server); restart them before screenshots.
+- A shrink-wrapped `GridView`/`ListView` inside a list adds the screen's safe-area padding: pass `padding: EdgeInsets.zero`.
+- `AppPalette.gold50/gold100` and `Colors.white` as a tile background leave white text on pale on the dark theme; use `homeTint(context)`.
+- A route that starts with `/broker` is the broker's area for the redirect (`staffRedirect`).
+- `@PermissionsStrict` on the API means «the explicit code, even for the admin»; the app must hide the button without the code.
+- Two GitHub hiccups (a 502 on creating a PR, a rejected first push) were transient; retry.
+
+**Next (owner's order):** DOC1 (this file), FS1, then CU-0 and the customer app group by group, DK1 and REL1 on the side.
+
+---
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
