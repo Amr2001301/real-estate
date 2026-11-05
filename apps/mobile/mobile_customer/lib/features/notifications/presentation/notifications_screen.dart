@@ -367,7 +367,7 @@ class _NotificationTile extends StatelessWidget {
                                 style: TextStyle(
                                   color: colors.inkMuted
                                       .withValues(alpha: 0.65),
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),

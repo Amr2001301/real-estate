@@ -222,7 +222,7 @@ class _SectionRow extends StatelessWidget {
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.error,
                       fontWeight: FontWeight.w800,
-                      fontSize: 11,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -397,7 +397,7 @@ class _ActionCard extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.52),
                       height: 1.35,
-                      fontSize: 11.5,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -499,7 +499,7 @@ class _StatusPill extends StatelessWidget {
             label,
             style: TextStyle(
               color: accent,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -813,7 +813,7 @@ class _CardHeader extends StatelessWidget {
                             : l10n.myPropertyStatusReserved,
                         style: TextStyle(
                           color: dotColor,
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1011,7 +1011,7 @@ class _QItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.inkMuted,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
                   ),
@@ -1259,7 +1259,7 @@ class _FinancialCard extends StatelessWidget {
                           color: isOverdue
                               ? const Color(0xFFEF4444).withValues(alpha: 0.72)
                               : Colors.white.withValues(alpha: 0.48),
-                          fontSize: 11,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.5,
                         ),
@@ -1382,7 +1382,7 @@ class _FinancialCard extends StatelessWidget {
                         context.l10n.paymentProgress,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.38),
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w500,
                           letterSpacing: 0.4,
                         ),
@@ -1391,7 +1391,7 @@ class _FinancialCard extends StatelessWidget {
                         '$paid / $total  ·  ${(progress * 100).round()}%',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.38),
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1496,7 +1496,7 @@ class _HeaderBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700,
+              color: color, fontSize: 12, fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1610,7 +1610,7 @@ class _NStat extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.38),
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),

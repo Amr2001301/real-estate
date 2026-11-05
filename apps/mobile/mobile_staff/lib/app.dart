@@ -103,11 +103,12 @@ import 'features/maintenance/data/repositories/maintenance_repository_impl.dart'
 import 'features/maintenance/domain/repositories/maintenance_repository.dart';
 import 'router/app_router.dart';
 
+/// How much bigger the staff app's text is than the design sizes.
+const double kStaffTextBoost = 1.1;
+
 /// Root of the Staff App (Sales / Broker). Provides feature repositories (data→
 /// domain contracts) + the app-wide StaffAuthCubit, wires the 401→refresh
 /// handler, then builds the router. Shares design/theme/l10n with core.
-/// How much bigger the staff app's text is than the design sizes.
-const double kStaffTextBoost = 1.1;
 
 class StaffApp extends StatelessWidget {
   const StaffApp({super.key});

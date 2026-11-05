@@ -333,7 +333,7 @@ class _BannerCard extends StatelessWidget {
                         Directionality.of(context) == TextDirection.rtl ? 'الآن' : 'Now',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.28),
-                          fontSize: 10,
+                          fontSize: 12,
                           letterSpacing: 0,
                         ),
                       ),

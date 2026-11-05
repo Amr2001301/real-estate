@@ -208,7 +208,7 @@ class _NavItem extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
-            fontSize: 11.5,
+            fontSize: 12,
             height: 1.0,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
             color: selected ? AppPalette.gold600 : colors.inkMuted,

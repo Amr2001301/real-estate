@@ -216,7 +216,7 @@ class _CustomerDateChip extends StatelessWidget {
         _fmt(DateTime.now(), lang),
         style: TextStyle(
           color: Colors.white.withValues(alpha: 0.80),
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -1605,7 +1605,7 @@ class _MiniSpec extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colors.inkStrong,
-              fontSize: 11,
+              fontSize: 12,
             ),
           ),
         ],

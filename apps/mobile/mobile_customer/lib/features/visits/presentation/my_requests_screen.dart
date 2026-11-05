@@ -432,7 +432,7 @@ class _FilterItem extends StatelessWidget {
                   '$count',
                   style: TextStyle(
                     color: selected ? dot : const Color(0xFF9CA3AF),
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -840,7 +840,7 @@ class _VisitCard extends StatelessWidget {
                           Text(
                             l10n.customerMessageLabel,
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: Color(0xFF9CA3AF),
                               fontWeight: FontWeight.w500,
                             ),
@@ -891,7 +891,7 @@ class _VisitCard extends StatelessWidget {
                         Text(
                           '${l10n.customerRescheduleReasonLabel}:',
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 12,
                             color: Color(0xFFFBD27A),
                             fontWeight: FontWeight.w600,
                           ),
@@ -935,7 +935,7 @@ class _VisitCard extends StatelessWidget {
                       Text(
                         context.l10n.requestDateValue(DateFormatter.mediumDate(request.createdAt!, languageCode: lang)),
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Color(0xFFB0B7C3),
                           fontWeight: FontWeight.w500,
                         ),
@@ -993,7 +993,7 @@ class _InfoCell extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     color: Color(0xFF9CA3AF),
                     fontWeight: FontWeight.w500,
                   ),

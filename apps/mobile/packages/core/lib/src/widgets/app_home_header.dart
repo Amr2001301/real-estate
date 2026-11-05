@@ -186,7 +186,7 @@ class HeaderDateChip extends StatelessWidget {
       ),
       child: Text(
         DateFormatter.dayMonth(DateTime.now(), languageCode: lang),
-        style: TextStyle(color: Colors.white.withValues(alpha: 0.80), fontSize: 11, fontWeight: FontWeight.w500),
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.80), fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );
   }

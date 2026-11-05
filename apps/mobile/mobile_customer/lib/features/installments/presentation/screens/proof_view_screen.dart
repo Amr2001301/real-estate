@@ -209,7 +209,7 @@ class _InstallmentSummaryCard extends StatelessWidget {
                                   : l10n.paymentProofStatusPendingReview,
                               style: TextStyle(
                                 color: accentColor,
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),

@@ -193,7 +193,7 @@ class _AssistantLabel extends StatelessWidget {
             'AI',
             style: TextStyle(
               color: AppPalette.navy,
-              fontSize: 8.5,
+              fontSize: 12,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.6,
             ),

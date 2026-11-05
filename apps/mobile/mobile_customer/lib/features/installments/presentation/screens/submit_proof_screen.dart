@@ -319,7 +319,7 @@ class _InstallmentCard extends StatelessWidget {
                                   : l10n.installmentStatusPending,
                               style: TextStyle(
                                 color: accent,
-                                fontSize: 11,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -638,7 +638,7 @@ class _FilePicker extends StatelessWidget {
                         : context.l10n.proofFileTypes,
                     style: TextStyle(
                       color: colors.inkMuted,
-                      fontSize: 11.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -708,7 +708,7 @@ class _NoteField extends StatelessWidget {
           border: InputBorder.none,
           counterStyle: TextStyle(
             color: colors.inkMuted,
-            fontSize: 11,
+            fontSize: 12,
           ),
         ),
       ),
