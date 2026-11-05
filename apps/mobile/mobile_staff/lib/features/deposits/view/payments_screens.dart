@@ -158,6 +158,8 @@ class _PaymentsListScreenState extends State<PaymentsListScreen> {
             final shown = state.shown;
             final review = state.count(PaymentGroup.review);
             final cheques = state.count(PaymentGroup.cheque);
+            // The number alone is the big figure; «مليون ج.م» goes under it.
+            final collected = homeCompact(state.totals.amount, l10n);
             return RefreshIndicator(
               onRefresh: cubit.load,
               child: CustomScrollView(
@@ -184,7 +186,7 @@ class _PaymentsListScreenState extends State<PaymentsListScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
                         child: HomeBand(figures: [
-                          HomeFigure(id: 'collected', value: homeCompactText(state.totals.amount, l10n), label: l10n.pmCollected, hint: currency),
+                          HomeFigure(id: 'collected', value: collected.$1, label: l10n.pmCollected, hint: [if (collected.$2.isNotEmpty) collected.$2, currency].join(' ')),
                           HomeFigure(id: 'review', value: '$review', label: l10n.pmNeedReview, hint: l10n.pmNeedReviewHint, warn: review > 0),
                           HomeFigure(id: 'cheques', value: '$cheques', label: l10n.pmChequesWaiting, hint: l10n.pmChequesHint, warn: cheques > 0),
                         ]),
