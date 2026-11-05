@@ -11,43 +11,47 @@ const _navyLight = Color(0xFF243F62);
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
 const _paidAccent = Color(0xFF4ADE80);
-const _overdueGradient = [
-  Color(0xFF9B2020),
-  Color(0xFF620D0D),
-]; // warmer crimson
 const _overdueAccent = Color(0xFFF87171);
 const _pendingGradient = [_navyLight, _navyDeep];
 const _pendingAccent = AppPalette.gold300;
 
-/// The one installment card of the customer app: amount and status on a
-/// coloured strip, payment type and project/unit, due and paid dates, payment
-/// method, rejection reason, and the view-proof / submit-proof actions. Used by
+/// The one installment card of the customer app: a status tile, the amount and
+/// payment type, a state pill, project/unit, due and paid dates, payment method,
+/// rejection reason, and the view-proof / submit-proof actions. Used by
 /// «أقساطي» and the installments tab of a property.
 class InstallmentCard extends StatelessWidget {
   const InstallmentCard({super.key, required this.installment});
   final Installment installment;
 
-  static _StripStyle _stripStyle(Installment inst) {
+  static _StripStyle _stripStyle(Installment inst, bool dark) {
+    _StripStyle make(Color light, Color darkC, IconData icon) =>
+        _StripStyle(accentColor: dark ? darkC : light, icon: icon);
+    final paid = make(
+      const Color(0xFF15803D),
+      _paidAccent,
+      Icons.check_circle_rounded,
+    );
+    final overdue = make(
+      const Color(0xFFB91C1C),
+      _overdueAccent,
+      Icons.warning_rounded,
+    );
     final proof = inst.latestProof;
     if (proof != null) {
       switch (proof.reviewStatus) {
         case PaymentProofStatus.pendingReview:
-          return const _StripStyle(
-            colors: [Color(0xFF7A5C1E), Color(0xFF4A3610)],
-            accentColor: Color(0xFFFBBF24),
-            icon: Icons.hourglass_top_rounded,
+          return make(
+            const Color(0xFFB45309),
+            const Color(0xFFFBBF24),
+            Icons.hourglass_top_rounded,
           );
         case PaymentProofStatus.approved:
-          return const _StripStyle(
-            colors: _paidGradient,
-            accentColor: _paidAccent,
-            icon: Icons.check_circle_rounded,
-          );
+          return paid;
         case PaymentProofStatus.rejected:
-          return const _StripStyle(
-            colors: _overdueGradient,
-            accentColor: _overdueAccent,
-            icon: Icons.cancel_rounded,
+          return make(
+            const Color(0xFFB91C1C),
+            _overdueAccent,
+            Icons.cancel_rounded,
           );
         case PaymentProofStatus.noProof:
         case PaymentProofStatus.unknown:
@@ -55,20 +59,12 @@ class InstallmentCard extends StatelessWidget {
       }
     }
     return switch (inst.status) {
-      InstallmentStatus.paid => const _StripStyle(
-        colors: _paidGradient,
-        accentColor: _paidAccent,
-        icon: Icons.check_circle_rounded,
-      ),
-      InstallmentStatus.overdue => const _StripStyle(
-        colors: _overdueGradient,
-        accentColor: _overdueAccent,
-        icon: Icons.warning_rounded,
-      ),
-      _ => const _StripStyle(
-        colors: _pendingGradient,
-        accentColor: _pendingAccent,
-        icon: AppIcons.installments,
+      InstallmentStatus.paid => paid,
+      InstallmentStatus.overdue => overdue,
+      _ => make(
+        const Color(0xFF9A6F1E),
+        _pendingAccent,
+        AppIcons.installments,
       ),
     };
   }
@@ -124,12 +120,17 @@ class InstallmentCard extends StatelessWidget {
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
 
-    final style = _stripStyle(installment);
+    final style = _stripStyle(
+      installment,
+      Theme.of(context).brightness == Brightness.dark,
+    );
+    final accent = style.accentColor;
     final projectName =
         (lang == 'ar' ? installment.projectNameAr : installment.projectNameEn)
             ?.trim();
-    final hasLocation = projectName != null || installment.unitCode != null;
     final locationLine = [
+      if (installment.contractNumber?.isNotEmpty ?? false)
+        installment.contractNumber,
       if (projectName?.isNotEmpty ?? false) projectName,
       if (installment.unitCode?.isNotEmpty ?? false) installment.unitCode,
     ].join(' · ');
@@ -138,330 +139,220 @@ class InstallmentCard extends StatelessWidget {
     final hasMethod =
         proof?.paymentMethod != null &&
         proof!.paymentMethod != PaymentMethod.unknown;
+    final tint = accent.withValues(alpha: 0.12);
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
-          if (_isApprovedProof)
-            BoxShadow(
-              color: _paidAccent.withValues(alpha: 0.06),
-              blurRadius: 20,
-              spreadRadius: 2,
-            ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Gradient strip
-          SizedBox(
-            height: 100,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: style.colors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
+          // Status tile, amount + type, state pill
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const IgnorePointer(child: _DotTexture()),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 1,
-                    color: style.accentColor.withValues(alpha: 0.3),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: style.accentColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: style.accentColor.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Icon(
-                          style.icon,
-                          color: style.accentColor,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              PriceFormatter.formatString(
-                                installment.amount,
-                                languageCode: lang,
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 20,
-                                height: 1.0,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (installment.contractNumber != null)
-                              Text(
-                                installment.contractNumber!,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: style.accentColor.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: style.accentColor.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Text(
-                          _statusLabel(l10n),
-                          style: TextStyle(
-                            color: style.accentColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── White body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Payment type + project/unit
-                Row(
+                child: Icon(style.icon, color: accent, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_navyLight, _navyDeep],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
+                    Text(
+                      PriceFormatter.formatString(
+                        installment.amount,
+                        languageCode: lang,
                       ),
-                      child: const Icon(
-                        AppIcons.property,
-                        size: 16,
-                        color: AppPalette.gold300,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _paymentTypeLabel(l10n),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colors.inkStrong,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (hasLocation && locationLine.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              locationLine,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.inkMuted,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Divider(height: 1, color: colors.hairline),
-                const SizedBox(height: AppSpacing.md),
-
-                // Dates row
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DateCell(
-                        icon: AppIcons.calendar,
-                        label: l10n.installmentDueOn(''),
-                        value: DateFormatter.shortDate(
-                          installment.dueDate,
-                          languageCode: lang,
-                        ),
-                      ),
-                    ),
-                    if (installment.paidAt != null) ...[
-                      Container(
-                        width: 1,
-                        height: 36,
-                        color: colors.hairline,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                      ),
-                      Expanded(
-                        child: _DateCell(
-                          icon: Icons.check_circle_outline_rounded,
-                          label: l10n.paidDateLabel,
-                          value: DateFormatter.shortDate(
-                            installment.paidAt!,
-                            languageCode: lang,
-                          ),
-                          accent: _paidAccent,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-
-                // Payment method row (clean)
-                if (hasMethod) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Divider(height: 1, color: colors.hairline),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.account_balance_rounded,
-                        size: 14,
+                    const SizedBox(height: 2),
+                    Text(
+                      _paymentTypeLabel(l10n),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${l10n.paymentProofMethodLabel}: ',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.inkMuted,
-                        ),
-                      ),
-                      Expanded(
-                        child: Text(
-                          _paymentMethodLabel(l10n, proof.paymentMethod!),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.inkStrong,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-
-                // Rejection reason banner
-                if (proof?.reviewStatus == PaymentProofStatus.rejected &&
-                    proof?.rejectionReason != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: colors.error.withValues(alpha: 0.07),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: colors.error.withValues(alpha: 0.18),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          size: 14,
-                          color: colors.error,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            l10n.paymentProofRejectionReason(
-                              proof!.rejectionReason!,
-                            ),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.error,
-                            ),
-                          ),
-                        ),
-                      ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  _statusLabel(l10n),
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (locationLine.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(AppIcons.property, size: 15, color: colors.inkMuted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    locationLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.inkMuted,
                     ),
                   ),
-                ],
-
-                // ── View proof action card (approved proofs)
-                if (_isApprovedProof) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _ViewProofCard(
-                    onTap: () => context.push(
-                      '/account/installments/${installment.id}/proof',
-                      extra: installment,
-                    ),
-                  ),
-                ],
-
-                // Submit / Resubmit proof button (pending or rejected)
-                if (installment.canSubmitProof) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _SubmitProofButton(
-                    isResubmit: installment.isResubmit,
-                    onTap: () => context.push(
-                      '/account/installments/${installment.id}/submit-proof',
-                      extra: installment,
-                    ),
-                  ),
-                ],
+                ),
               ],
             ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.hairline),
+          const SizedBox(height: AppSpacing.md),
+
+          // Dates as tinted tiles
+          Row(
+            children: [
+              Expanded(
+                child: _DateCell(
+                  icon: AppIcons.calendar,
+                  label: l10n.installmentDueOn(''),
+                  value: DateFormatter.shortDate(
+                    installment.dueDate,
+                    languageCode: lang,
+                  ),
+                ),
+              ),
+              if (installment.paidAt != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _DateCell(
+                    icon: Icons.check_circle_outline_rounded,
+                    label: l10n.paidDateLabel,
+                    value: DateFormatter.shortDate(
+                      installment.paidAt!,
+                      languageCode: lang,
+                    ),
+                    accent: accent,
+                  ),
+                ),
+              ],
+            ],
           ),
+
+          if (hasMethod) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(
+                  Icons.account_balance_rounded,
+                  size: 15,
+                  color: colors.inkMuted,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${l10n.paymentProofMethodLabel}: ',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _paymentMethodLabel(l10n, proof.paymentMethod!),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.inkStrong,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          if (proof?.reviewStatus == PaymentProofStatus.rejected &&
+              proof?.rejectionReason != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: colors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: colors.error,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.paymentProofRejectionReason(proof!.rejectionReason!),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.error,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          if (_isApprovedProof) ...[
+            const SizedBox(height: AppSpacing.md),
+            _ViewProofCard(
+              onTap: () => context.push(
+                '/account/installments/${installment.id}/proof',
+                extra: installment,
+              ),
+            ),
+          ],
+
+          if (installment.canSubmitProof) ...[
+            const SizedBox(height: AppSpacing.md),
+            _SubmitProofButton(
+              isResubmit: installment.isResubmit,
+              onTap: () => context.push(
+                '/account/installments/${installment.id}/submit-proof',
+                extra: installment,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -690,12 +581,7 @@ class _SubmitProofButton extends StatelessWidget {
 // ── Strip style config ────────────────────────────────────────────────────────
 
 class _StripStyle {
-  const _StripStyle({
-    required this.colors,
-    required this.accentColor,
-    required this.icon,
-  });
-  final List<Color> colors;
+  const _StripStyle({required this.accentColor, required this.icon});
   final Color accentColor;
   final IconData icon;
 }
@@ -719,55 +605,44 @@ class _DateCell extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
     final iconColor = accent ?? colors.inkMuted;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 13, color: iconColor),
-            const SizedBox(width: 4),
-            Text(
-              label.replaceAll(':', '').trim(),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.inkMuted,
-                fontSize: 13,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.inkMuted.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label.replaceAll(':', '').trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colors.inkStrong,
-            fontWeight: FontWeight.w700,
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.inkStrong,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
 }
