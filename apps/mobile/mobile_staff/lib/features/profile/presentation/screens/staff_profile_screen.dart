@@ -173,6 +173,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                     label: l10n.rpTitle,
                     subtitle: l10n.rpProfileDesc,
                     onTap: () => context.push('/reports')),
+              if (StaffAccess.financialReport(role, perms))
+                ProfileItem(
+                    id: 'financial-report',
+                    icon: Icons.account_balance_wallet_rounded,
+                    label: l10n.frTitle,
+                    subtitle: l10n.frProfileDesc,
+                    onTap: () => context.push('/reports/financial')),
               if (StaffAccess.brokers(role, perms))
                 ProfileItem(
                     id: 'brokers-hub',

@@ -16609,6 +16609,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notes'**
   String get brkFNotes;
+
+  /// No description provided for @frTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial report'**
+  String get frTitle;
+
+  /// No description provided for @frProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection, dues and liabilities'**
+  String get frProfileDesc;
+
+  /// No description provided for @frContractValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get frContractValue;
+
+  /// No description provided for @frCollectedMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected this month'**
+  String get frCollectedMonth;
+
+  /// No description provided for @frDueMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {value}'**
+  String frDueMonth(String value);
+
+  /// No description provided for @frRateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Of what is due by today'**
+  String get frRateHint;
+
+  /// No description provided for @frCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get frCollected;
+
+  /// No description provided for @frRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get frRemaining;
+
+  /// No description provided for @frAging.
+  ///
+  /// In en, this message translates to:
+  /// **'Aging of arrears'**
+  String get frAging;
+
+  /// No description provided for @frByType.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected by type'**
+  String get frByType;
+
+  /// No description provided for @frAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'On its way {value}'**
+  String frAwaiting(String value);
+
+  /// No description provided for @frBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get frBooking;
+
+  /// No description provided for @frBookingCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking money collected'**
+  String get frBookingCollected;
+
+  /// No description provided for @frBookingUncollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking money not collected (estimate)'**
+  String get frBookingUncollected;
+
+  /// No description provided for @frBookingPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending bookings'**
+  String get frBookingPending;
+
+  /// No description provided for @frBookingApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved bookings'**
+  String get frBookingApproved;
+
+  /// No description provided for @frLiabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'What the company owes'**
+  String get frLiabilities;
+
+  /// No description provided for @frLiabBonus.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid sales bonuses'**
+  String get frLiabBonus;
+
+  /// No description provided for @frLiabCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid broker commissions'**
+  String get frLiabCommissions;
+
+  /// No description provided for @frLiabPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker payouts in progress'**
+  String get frLiabPayouts;
+
+  /// No description provided for @frLiabRefunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunds owed to customers'**
+  String get frLiabRefunds;
+
+  /// No description provided for @frLiabClawbacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Clawbacks owed to the company'**
+  String get frLiabClawbacks;
+
+  /// No description provided for @frLiabTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get frLiabTotal;
+
+  /// No description provided for @frOverdueList.
+  ///
+  /// In en, this message translates to:
+  /// **'Late installments'**
+  String get frOverdueList;
+
+  /// No description provided for @frUpcomingWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Installments this week'**
+  String get frUpcomingWeek;
+
+  /// No description provided for @frRecentPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest payments'**
+  String get frRecentPayments;
+
+  /// No description provided for @frUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reviewed'**
+  String get frUnverified;
+
+  /// No description provided for @frVsBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} vs the period before'**
+  String frVsBefore(String value);
+
+  /// No description provided for @frCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison'**
+  String get frCompare;
+
+  /// No description provided for @frCompareOff.
+  ///
+  /// In en, this message translates to:
+  /// **'No comparison'**
+  String get frCompareOff;
+
+  /// No description provided for @frCompareOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Against the period before'**
+  String get frCompareOn;
 }
 
 class _AppLocalizationsDelegate

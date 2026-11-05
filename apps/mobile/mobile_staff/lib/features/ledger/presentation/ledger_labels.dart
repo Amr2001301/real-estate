@@ -33,7 +33,8 @@ Color ledgerStateColor(AppColorsExt c, LedgerState s) => switch (s) {
 
 /// A row's type in words, as on the dashboard.
 String ledgerTypeLabel(AppLocalizations l10n, String type) => switch (type) {
-      'RESERVATION' || 'BOOKING' => l10n.depositTypeBooking,
+      'RESERVATION' || 'BOOKING' || 'BOOKING_AMOUNT' => l10n.depositTypeBooking,
+      'FEE' => l10n.depositTypeFee,
       'DOWN_PAYMENT' => l10n.depositTypeDownPayment,
       'INSTALLMENT' => l10n.depositTypeInstallment,
       'FINAL_PAYMENT' => l10n.depositTypeFinal,

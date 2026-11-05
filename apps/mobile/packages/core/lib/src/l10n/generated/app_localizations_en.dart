@@ -9362,4 +9362,103 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brkFNotes => 'Notes';
+
+  @override
+  String get frTitle => 'Financial report';
+
+  @override
+  String get frProfileDesc => 'Collection, dues and liabilities';
+
+  @override
+  String get frContractValue => 'Contract value';
+
+  @override
+  String get frCollectedMonth => 'Collected this month';
+
+  @override
+  String frDueMonth(String value) {
+    return 'Due $value';
+  }
+
+  @override
+  String get frRateHint => 'Of what is due by today';
+
+  @override
+  String get frCollected => 'Collected';
+
+  @override
+  String get frRemaining => 'Remaining';
+
+  @override
+  String get frAging => 'Aging of arrears';
+
+  @override
+  String get frByType => 'Collected by type';
+
+  @override
+  String frAwaiting(String value) {
+    return 'On its way $value';
+  }
+
+  @override
+  String get frBooking => 'Bookings';
+
+  @override
+  String get frBookingCollected => 'Booking money collected';
+
+  @override
+  String get frBookingUncollected => 'Booking money not collected (estimate)';
+
+  @override
+  String get frBookingPending => 'Pending bookings';
+
+  @override
+  String get frBookingApproved => 'Approved bookings';
+
+  @override
+  String get frLiabilities => 'What the company owes';
+
+  @override
+  String get frLiabBonus => 'Unpaid sales bonuses';
+
+  @override
+  String get frLiabCommissions => 'Unpaid broker commissions';
+
+  @override
+  String get frLiabPayouts => 'Broker payouts in progress';
+
+  @override
+  String get frLiabRefunds => 'Refunds owed to customers';
+
+  @override
+  String get frLiabClawbacks => 'Clawbacks owed to the company';
+
+  @override
+  String get frLiabTotal => 'Total';
+
+  @override
+  String get frOverdueList => 'Late installments';
+
+  @override
+  String get frUpcomingWeek => 'Installments this week';
+
+  @override
+  String get frRecentPayments => 'Latest payments';
+
+  @override
+  String get frUnverified => 'Not reviewed';
+
+  @override
+  String frVsBefore(String value) {
+    return '$value vs the period before';
+  }
+
+  @override
+  String get frCompare => 'Comparison';
+
+  @override
+  String get frCompareOff => 'No comparison';
+
+  @override
+  String get frCompareOn => 'Against the period before';
 }

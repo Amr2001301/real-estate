@@ -9401,4 +9401,103 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brkFNotes => 'ملاحظات';
+
+  @override
+  String get frTitle => 'التقرير المالي';
+
+  @override
+  String get frProfileDesc => 'التحصيل والمستحقات والالتزامات';
+
+  @override
+  String get frContractValue => 'قيمة العقود';
+
+  @override
+  String get frCollectedMonth => 'محصَّل الشهر';
+
+  @override
+  String frDueMonth(String value) {
+    return 'المستحق $value';
+  }
+
+  @override
+  String get frRateHint => 'من المستحق حتى اليوم';
+
+  @override
+  String get frCollected => 'المحصَّل';
+
+  @override
+  String get frRemaining => 'المتبقي';
+
+  @override
+  String get frAging => 'أعمار المتأخرات';
+
+  @override
+  String get frByType => 'التحصيل حسب النوع';
+
+  @override
+  String frAwaiting(String value) {
+    return 'في الطريق $value';
+  }
+
+  @override
+  String get frBooking => 'الحجوزات';
+
+  @override
+  String get frBookingCollected => 'مقدمات محصَّلة';
+
+  @override
+  String get frBookingUncollected => 'مقدمات لم تُحصَّل (تقدير)';
+
+  @override
+  String get frBookingPending => 'حجوزات قيد الانتظار';
+
+  @override
+  String get frBookingApproved => 'حجوزات معتمدة';
+
+  @override
+  String get frLiabilities => 'الالتزامات على الشركة';
+
+  @override
+  String get frLiabBonus => 'مكافآت مبيعات غير مدفوعة';
+
+  @override
+  String get frLiabCommissions => 'عمولات وسطاء غير مدفوعة';
+
+  @override
+  String get frLiabPayouts => 'مدفوعات وسطاء قيد التنفيذ';
+
+  @override
+  String get frLiabRefunds => 'مبالغ مستردة للعملاء';
+
+  @override
+  String get frLiabClawbacks => 'مبالغ مستردة للشركة';
+
+  @override
+  String get frLiabTotal => 'الإجمالي';
+
+  @override
+  String get frOverdueList => 'أقساط متأخرة';
+
+  @override
+  String get frUpcomingWeek => 'أقساط هذا الأسبوع';
+
+  @override
+  String get frRecentPayments => 'آخر الدفعات';
+
+  @override
+  String get frUnverified => 'لم تُراجَع';
+
+  @override
+  String frVsBefore(String value) {
+    return '$value عن الفترة السابقة';
+  }
+
+  @override
+  String get frCompare => 'المقارنة';
+
+  @override
+  String get frCompareOff => 'بدون مقارنة';
+
+  @override
+  String get frCompareOn => 'مقارنة بالفترة السابقة';
 }
