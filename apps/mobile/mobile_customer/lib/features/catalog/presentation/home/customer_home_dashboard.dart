@@ -861,7 +861,7 @@ class _QuickActionsFooter extends StatelessWidget {
       ),
       (
         icon: AppIcons.contract,
-        label: l10n.homeViewContractPdf,
+        label: l10n.accountContracts,
         onTap: () => context.push('/account/contracts'),
         highlight: false,
       ),
@@ -879,7 +879,7 @@ class _QuickActionsFooter extends StatelessWidget {
     ];
 
     return Container(
-      height: 72,
+      height: 84,
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: colors.hairline.withValues(alpha: 0.60)),
@@ -891,7 +891,7 @@ class _QuickActionsFooter extends StatelessWidget {
             if (i > 0)
               SizedBox(
                 width: 1,
-                height: 72,
+                height: 84,
                 child: ColoredBox(
                   color: colors.hairline.withValues(alpha: 0.60),
                 ),
@@ -948,7 +948,7 @@ class _QItem extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   label,
-                  maxLines: 1,
+                  maxLines: 2,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
