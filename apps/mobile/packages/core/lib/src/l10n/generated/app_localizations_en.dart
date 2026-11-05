@@ -8470,4 +8470,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bpEmptyMsg => 'Figures appear after the brokers\' first activity.';
+
+  @override
+  String get bkSubtitle => 'My commissions and payouts';
+
+  @override
+  String get bkNet => 'Your net commissions';
+
+  @override
+  String get bkNetHint => 'Pending and approved';
+
+  @override
+  String get bkPaidOutHint => 'Payouts paid';
+
+  @override
+  String get bkStRejected => 'Rejected';
+
+  @override
+  String get bkStCancelled => 'Cancelled';
+
+  @override
+  String get bkPayouts => 'Payout statements';
+
+  @override
+  String get bkPoDraft => 'Draft';
+
+  @override
+  String get bkPoApproved => 'Approved';
+
+  @override
+  String get bkPoProcessing => 'Processing';
+
+  @override
+  String get bkPoPaid => 'Paid';
+
+  @override
+  String get bkPoCancelled => 'Cancelled';
+
+  @override
+  String bkPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String bkEarnedOn(String date) {
+    return 'Earned $date';
+  }
+
+  @override
+  String get bkOnPayout => 'On a payout statement';
+
+  @override
+  String get bkWaitingPayout => 'Waiting for a payout statement';
+
+  @override
+  String get bkMethodBank => 'Bank transfer';
 }
