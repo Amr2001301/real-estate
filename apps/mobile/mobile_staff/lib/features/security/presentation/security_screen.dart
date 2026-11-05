@@ -2,9 +2,9 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/security.dart';
 import 'security_cubit.dart';
@@ -51,15 +51,12 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final l10n = context.l10n;
     final cubit = context.read<SecurityCubit>();
     return Scaffold(
+      backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
-          AppNavHeader(
+          HomeListHero(
+            back: true,
             title: l10n.settingsSecurity,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-            ),
           ),
           Expanded(
             child: BlocBuilder<SecurityCubit, SecurityState>(
@@ -823,12 +820,7 @@ class _Card extends StatelessWidget {
     final c = context.appColors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: AppRadii.card,
-        border: Border.all(color: c.hairline.withValues(alpha: 0.6)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: homeCard(context, radius: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -838,8 +830,8 @@ class _Card extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: AppPalette.gold400.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(icon, size: 19, color: AppPalette.gold500),
+                decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, size: 19, color: AppPalette.gold600),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
