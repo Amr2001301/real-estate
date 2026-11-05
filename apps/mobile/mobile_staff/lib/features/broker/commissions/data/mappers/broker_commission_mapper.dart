@@ -9,5 +9,13 @@ extension BrokerCommissionDtoMapper on BrokerCommissionDto {
         netAmount: netAmount,
         projectName: projectName,
         createdAt: DateTime.tryParse(createdAt ?? ''),
+        number: number,
+        contractId: contractId,
+        contractNumber: contractNumber,
+        clientName: clientName,
+        basisAmount: basisAmount,
+        commissionPct: commissionPct,
+        earnedAt: DateTime.tryParse(earnedAt ?? ''),
+        payoutId: payoutId,
       );
 }

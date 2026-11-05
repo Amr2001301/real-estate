@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-04, after #278)
+# Handoff — where the work stands (2026-11-05, after #283)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -95,11 +95,18 @@
 - **#278:** الكارت الأبيض فوق الجزء الكحلي بقى بياخد اللمس في مكانه في كل الصفحات (كان الجزء اللي فوق الكحلي مش بيستجيب)، والملف ده.
 - **الجاي:** شاشة 42، الحاسبة (73)، الأمان (76)؛ والنشر على السيرفر لما توافق.
 
+**بعد كده (5 نوفمبر، #279–#283 + عمولات البروكر):** القسم **2l** تحت. الحجوزات والدفعات والإشعارات والمستحقات والأهداف والشيكات وأداء الوسطاء بنفس الشكل:
+- **الحجوزات (#279–#281):** قائمة وصفحة الحجز للسيلز ومدير المبيعات والأدمن (الأدمن والمدير بيعتمدوا ويرفضوا من الكارت)، ونموذج حجز جديد بخطوات، وحجوزات البروكر بعمولته.
+- **الدفعات (#282):** قائمة الدفعات وصفحة الدفعة؛ الأدمن بيعتمد أو يرفض إيصال العميل، والشيك اللي لم يُصرف بيفتح صفحته.
+- **#283:** الإشعارات (القائمة والتفضيلات وإرسال إشعار يدوي للأدمن)، مستحقاتي، أهدافي، إدارة الأهداف، أداء الفريق، الشيكات، أداء الوسطاء (للأدمن بس) وأدائي (للبروكر).
+- **عمولات البروكر:** `/broker/commissions` بنفس الشكل، مع كشوف الصرف.
+- **الجاي:** شاشة 42، الحاسبة (73)، الأمان (76)؛ وإصلاح «أهدافي/مستحقاتي» للأدمن والمدير (القسم 2l، Known gaps)؛ والنشر على السيرفر لما توافق.
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #278 مدموج. **ابدأ بالقسم 2k** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #283 (+ عمولات البروكر) مدموج. **ابدأ بالقسم 2l** (آخر جدول و«Next»)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -528,6 +535,36 @@ Every page below follows an owner-approved mockup (made from real data and appro
 2. Production deploy — explicit owner approval and a backup first (section 5).
 
 **QA harness:** in the scratchpad `qa/`: `up.sh` (restart the local API; it dies from time to time), `rebuild_staff.sh` (staff web build on :8082), `shot.js` (steps: goto, click [CSS px], type, scroll, shot). Logins: the first 8 steps of `s86.json` (admin@example.com) and `bpb.json` (karim.broker@demo-full.devora). Mockups: `mockups/gen_*.py` + `render.js`.
+
+### 2l. #279–#283 and the broker commissions page (2026-11-05) — bookings, payments, notifications, dues, targets, cheques, broker performance
+
+Same method as 2k: a mockup from real data approved first, then one PR per part with screenshots from a real web build; merged when the owner said «ادمج» and CI was green.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #279 | Bookings R1 | `/reservations` (count, search, band, status pills, cards with the booking amount, plan and next step; admin and manager approve/reject on the card) and `/reservations/:id` (booking amount, journey, party, plan, history, notes; admin: record booking payment, convert, cancel). Data: `features/reservations/view/reservations_data.dart`. A manager cannot decide on their own booking (as the API). |
+| #280 | Bookings R2 | `/reservations/new`: progress bar, pickers for client / project / free unit, plan cards (only the plans matched to the unit once loaded), booking amount mode (plan / fixed / percentage), hold time chips, notes, summary. `FilterRadioList(stacked: true)` added to the filter kit. |
+| #281 | Bookings R3 | The broker's bookings tab and page (`features/broker/reservations/view/`): band (bookings, became contracts, commission), pills, cards with the commission, the page with commission tiles and the contract it became (looked up by reservation number among `/portal/contracts`; the portal does not link it). |
+| #282 | Payments | `/deposits` list (collected total from the API's `totals`, proof-review and uncleared-cheque counts, state pills, cards) and `/deposits/:id` (journey, cheque, proof via a fresh signed link, contract and instalment). State is the website's `state` (collected / proof pending / cheque not cleared / rejected / bounced / reversed). Admin approves/rejects only a payment in the proof-pending state; an uncleared cheque links to its page. The single-payment read is admin-only, so the page opens from the list row and falls back to it. All payments are read whole (pages of 100, up to 20) and filtered on the phone. |
+| #283 | Notifications, dues, targets, cheques, broker performance | **Notifications:** inbox by day with all / unread / finance / sales; preferences (strings in l10n); admin manual send `/notifications/send` over `/notifications/broadcast` (+ `/preview`): audience, both languages, channel, linked page, estimate, confirmation for a group send, result. **Dues/targets:** مستحقاتي (`/bonus`), أهدافي (`/targets`), إدارة الأهداف (`/team-targets`, with the add/edit sheet and a period bar), أداء الفريق (`/team-performance`). **Cheques:** `/cheques` and `/cheques/:id` (road received → deposited → cleared; the deposit/clear steps and dialogs unchanged; bounce stays on the dashboard). **Broker performance:** `/performance/brokers` (admin only, from `/broker-reports/*`) and `/broker/performance` (the broker's own, from `/portal/performance`); entry points are the admin's profile list and the broker's profile. |
+| this PR | Broker commissions | `/broker/commissions`: net / pending / paid-out band, the payout statements (`/portal/payouts`), status pills with counts, a card per commission (client, contract, basis × rate, status, earned date, on a statement or not). This file. |
+
+**Owner decisions (2026-11-05):** brokers' performance is the admin's only (the API restricts it; the manager does not get it); the notification send is the admin's; cheque bouncing stays on the website; the big band figure is the number alone with «مليون / ألف ج.م» underneath (`homeCompact`).
+
+**Known gaps:**
+- «أهدافي» and «مستحقاتي» for the admin and the sales manager: `/sales-targets/performance` returns the team's/company's rows and the app takes the first, and `/bonus-entries` returns the company's entries for the admin. They are not filtered to the signed-in user. The owner said to leave it for now. Fix: filter by the session's user id (empty state when there is none); for the admin decide between «العمولات» (company-wide) and own.
+- The approve/reject buttons on payments are covered by tests but not by a screenshot (the demo data has no proof awaiting review).
+- Brokers' performance has no period filter (all time); manager access needs an API permission change first.
+- Only the admin and the broker were checked on screen for the pages in #282–#283; the rep and the manager use the same screens with their own scope.
+
+**Keys:** new l10n keys are prefixed (`pm*` payments, `nt*`/`np*`/`bc*` notifications and send, `bn*`/`tg*`/`tm*`/`tp*` dues and targets, `cq*` cheques, `bp*` broker performance, `bk*` broker commissions). `bcAllActive` already existed (broker catalog), so the send uses `bcAllActiveUsers`. The `addarb` approach: append to both `app_ar.arb` and `app_en.arb`, give placeholders to the English `@key`, run `flutter gen-l10n` in `packages/core`.
+
+**Routing note:** a path starting with `/broker` is the broker's area (staff users are sent home from it, broker users are kept inside it), which is why the admin's report is `/performance/brokers`.
+
+**Next (owner picks; one PR each):**
+1. Screens 42, 73 (calculator) and 76 (security) from the gallery.
+2. The «أهدافي/مستحقاتي» scope fix for the admin and the manager (above).
+3. Production deploy — explicit owner approval and a backup first (section 5).
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 

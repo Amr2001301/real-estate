@@ -8497,4 +8497,59 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bpEmptyMsg => 'ستظهر هنا أرقام الوسطاء بعد أول عملياتهم.';
+
+  @override
+  String get bkSubtitle => 'عمولاتي وكشوف الصرف';
+
+  @override
+  String get bkNet => 'صافي عمولاتك';
+
+  @override
+  String get bkNetHint => 'المعلّقة والمعتمدة';
+
+  @override
+  String get bkPaidOutHint => 'كشوف مصروفة';
+
+  @override
+  String get bkStRejected => 'مرفوضة';
+
+  @override
+  String get bkStCancelled => 'ملغاة';
+
+  @override
+  String get bkPayouts => 'كشوف الصرف';
+
+  @override
+  String get bkPoDraft => 'مسودة';
+
+  @override
+  String get bkPoApproved => 'معتمد';
+
+  @override
+  String get bkPoProcessing => 'قيد التحويل';
+
+  @override
+  String get bkPoPaid => 'تم الصرف';
+
+  @override
+  String get bkPoCancelled => 'ملغى';
+
+  @override
+  String bkPaidOn(String date) {
+    return 'صُرف $date';
+  }
+
+  @override
+  String bkEarnedOn(String date) {
+    return 'استحقت $date';
+  }
+
+  @override
+  String get bkOnPayout => 'ضمن كشف صرف';
+
+  @override
+  String get bkWaitingPayout => 'بانتظار كشف الصرف';
+
+  @override
+  String get bkMethodBank => 'تحويل بنكي';
 }

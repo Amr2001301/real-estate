@@ -15019,6 +15019,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Figures appear after the brokers\' first activity.'**
   String get bpEmptyMsg;
+
+  /// No description provided for @bkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My commissions and payouts'**
+  String get bkSubtitle;
+
+  /// No description provided for @bkNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your net commissions'**
+  String get bkNet;
+
+  /// No description provided for @bkNetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending and approved'**
+  String get bkNetHint;
+
+  /// No description provided for @bkPaidOutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Payouts paid'**
+  String get bkPaidOutHint;
+
+  /// No description provided for @bkStRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get bkStRejected;
+
+  /// No description provided for @bkStCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bkStCancelled;
+
+  /// No description provided for @bkPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout statements'**
+  String get bkPayouts;
+
+  /// No description provided for @bkPoDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get bkPoDraft;
+
+  /// No description provided for @bkPoApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get bkPoApproved;
+
+  /// No description provided for @bkPoProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get bkPoProcessing;
+
+  /// No description provided for @bkPoPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bkPoPaid;
+
+  /// No description provided for @bkPoCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bkPoCancelled;
+
+  /// No description provided for @bkPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String bkPaidOn(String date);
+
+  /// No description provided for @bkEarnedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned {date}'**
+  String bkEarnedOn(String date);
+
+  /// No description provided for @bkOnPayout.
+  ///
+  /// In en, this message translates to:
+  /// **'On a payout statement'**
+  String get bkOnPayout;
+
+  /// No description provided for @bkWaitingPayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a payout statement'**
+  String get bkWaitingPayout;
+
+  /// No description provided for @bkMethodBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get bkMethodBank;
 }
 
 class _AppLocalizationsDelegate

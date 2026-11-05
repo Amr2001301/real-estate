@@ -61,6 +61,7 @@ import '../features/broker/commissions/domain/repositories/broker_commissions_re
 import '../features/broker/commissions/domain/usecases/get_broker_commissions.dart';
 import '../features/broker/commissions/presentation/cubit/broker_commissions_cubit.dart';
 import '../features/broker/commissions/presentation/screens/broker_commissions_screen.dart';
+import '../features/broker/commissions/view/broker_payouts_data.dart';
 import '../features/broker/leads/domain/entities/broker_lead.dart';
 import '../features/broker/leads/domain/repositories/broker_leads_repository.dart';
 import '../features/broker/leads/domain/usecases/broker_lead_use_cases.dart';
@@ -373,9 +374,11 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/broker/commissions',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) =>
-              BrokerCommissionsCubit(GetBrokerCommissions(ctx.read<BrokerCommissionsRepository>())),
+        builder: (context, _) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (ctx) => BrokerCommissionsCubit(GetBrokerCommissions(ctx.read<BrokerCommissionsRepository>()))),
+            BlocProvider(create: (ctx) => BrokerPayoutsCubit(BrokerPayoutsRepository(ctx.read<Dio>()))),
+          ],
           child: const BrokerCommissionsScreen(),
         ),
       ),
