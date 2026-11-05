@@ -15595,6 +15595,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manual calculation'**
   String get calculatorManual;
+
+  /// No description provided for @profileSectionAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin and review'**
+  String get profileSectionAdmin;
+
+  /// No description provided for @profileSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and security'**
+  String get profileSectionAccount;
+
+  /// No description provided for @profileSectionBrokerWork.
+  ///
+  /// In en, this message translates to:
+  /// **'My work'**
+  String get profileSectionBrokerWork;
 }
 
 class _AppLocalizationsDelegate

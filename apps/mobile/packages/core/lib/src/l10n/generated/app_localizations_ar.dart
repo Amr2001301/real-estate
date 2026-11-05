@@ -8816,4 +8816,13 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get calculatorManual => 'حساب يدوي';
+
+  @override
+  String get profileSectionAdmin => 'الإدارة والمراجعة';
+
+  @override
+  String get profileSectionAccount => 'الحساب والأمان';
+
+  @override
+  String get profileSectionBrokerWork => 'أعمالي';
 }
