@@ -58,6 +58,7 @@ class _BrokerBookingsScreenState extends State<BrokerBookingsScreen> {
             final all = state.all;
             final ready = state.data.status == DataStatus.success || state.data.status == DataStatus.empty;
             final shown = state.shown;
+            final commission = homeCompact(state.commission, l10n);
             return RefreshIndicator(
               onRefresh: cubit.load,
               child: CustomScrollView(
@@ -92,7 +93,7 @@ class _BrokerBookingsScreenState extends State<BrokerBookingsScreen> {
                             hint: state.converted == all.length ? l10n.rbAll : l10n.rvOutOf(l10n.rvCountN(all.length)),
                           ),
                           if (state.hasCommission)
-                            HomeFigure(id: 'commission', value: homeCompactText(state.commission, l10n), label: l10n.rbCommission, hint: currency)
+                            HomeFigure(id: 'commission', value: commission.$1, label: l10n.rbCommission, hint: [if (commission.$2.isNotEmpty) commission.$2, currency].join(' '))
                           else
                             HomeFigure(id: 'pending', value: '${state.count('PENDING')}', label: l10n.rvUnderReview, hint: l10n.rvStPending, warn: state.count('PENDING') > 0),
                         ]),
