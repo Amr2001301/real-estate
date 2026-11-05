@@ -306,68 +306,150 @@ class _DetailSheetState extends State<_DetailSheet> {
       for (final a in brokerActionsFor(widget.tab, widget.row.status, hold: widget.row.raw['payoutHold'] == true))
         if (widget.can(brokerActionCode(widget.tab, a))) a,
     ];
+    // One main action on top; the rest, and every risky one, below it in pairs.
+    final main = actions.where((a) => !brokerActionDestructive(a)).firstOrNull;
+    final others = [for (final a in actions) if (a != main) a];
     final color = brokerStatusColor(widget.row.status, colors);
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.62,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (context, scroll) => Container(
-        key: const Key('broker-detail'),
-        decoration: BoxDecoration(color: colors.canvas, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
-        child: ListView(
-          controller: scroll,
-          padding: EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 24),
-          children: [
+    final maxH = MediaQuery.sizeOf(context).height * 0.88;
+    return Container(
+      key: const Key('broker-detail'),
+      constraints: BoxConstraints(maxHeight: maxH),
+      decoration: BoxDecoration(color: colors.canvas, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 18),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: colors.hairline, borderRadius: BorderRadius.circular(4)))),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(child: Text(widget.row.title, style: homeDisplay(20, colors.inkStrong))),
-              const SizedBox(width: 8),
+            const SizedBox(height: 16),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
-                child: Text(brokerStatusLabel(l10n, widget.row.status), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(15)),
+                child: Icon(brokerTabIcon(widget.tab), size: 23, color: AppPalette.gold500),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(widget.row.title, style: homeDisplay(19, colors.inkStrong)),
+                  if (widget.row.subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(widget.row.subtitle, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+                  ],
+                  const SizedBox(height: 7),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
+                    child: Text(brokerStatusLabel(l10n, widget.row.status), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+                  ),
+                ]),
+              ),
+              IconButton(
+                tooltip: l10n.actionClose,
+                onPressed: () => Navigator.of(context).pop(false),
+                icon: Icon(Icons.close_rounded, color: colors.inkMuted),
               ),
             ]),
-            if (widget.row.subtitle.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(widget.row.subtitle, style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-            ],
-            const SizedBox(height: 14),
-            Container(
-              decoration: homeCard(context, radius: 22),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              child: Column(children: [
-                for (var i = 0; i < facts.length; i++) ...[
-                  if (i > 0) Divider(height: 1, color: colors.hairline),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      SizedBox(width: 112, child: Text(facts[i].$1, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-                      Expanded(child: Text(facts[i].$2, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong))),
-                    ]),
-                  ),
-                ],
-              ]),
-            ),
-            if (actions.isNotEmpty) ...[
+            if (facts.isNotEmpty) ...[
               const SizedBox(height: 16),
-              for (final a in actions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: AppButton(
-                    key: Key('broker-act-${a.name}'),
-                    label: brokerActionLabel(l10n, a),
-                    variant: a == actions.first && !brokerActionDestructive(a) ? AppButtonVariant.gold : AppButtonVariant.outline,
-                    expand: true,
-                    isLoading: _busy,
-                    onPressed: _busy ? null : () => _run(a),
-                  ),
-                ),
+              Container(
+                decoration: homeCard(context, radius: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: Column(children: [
+                  for (var i = 0; i < facts.length; i++) ...[
+                    if (i > 0) Divider(height: 1, color: colors.hairline),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        SizedBox(width: 112, child: Text(facts[i].$1, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
+                        Expanded(child: Text(facts[i].$2, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong))),
+                      ]),
+                    ),
+                  ],
+                ]),
+              ),
             ],
-          ],
+            if (main != null) ...[
+              const SizedBox(height: 18),
+              AppButton(
+                key: Key('broker-act-${main.name}'),
+                label: brokerActionLabel(context.l10n, main),
+                icon: _actionIcon(main),
+                variant: AppButtonVariant.gold,
+                expand: true,
+                isLoading: _busy,
+                onPressed: _busy ? null : () => _run(main),
+              ),
+            ],
+            if (others.isNotEmpty) ...[
+              SizedBox(height: main != null ? 10 : 18),
+              LayoutBuilder(builder: (context, c) {
+                final w = others.length == 1 ? c.maxWidth : (c.maxWidth - 8) / 2;
+                return Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final a in others)
+                    SizedBox(
+                      width: w,
+                      child: _SecondaryAction(
+                        key: Key('broker-act-${a.name}'),
+                        icon: _actionIcon(a),
+                        label: brokerActionLabel(l10n, a),
+                        danger: brokerActionDestructive(a),
+                        onTap: _busy ? null : () => _run(a),
+                      ),
+                    ),
+                ]);
+              }),
+            ],
+          ]),
         ),
+      ),
+    );
+  }
+}
+
+IconData _actionIcon(BrokerAction a) => switch (a) {
+      BrokerAction.approve => Icons.check_circle_outline_rounded,
+      BrokerAction.reject => Icons.highlight_off_rounded,
+      BrokerAction.cancel => Icons.block_rounded,
+      BrokerAction.markDuplicate => Icons.content_copy_rounded,
+      BrokerAction.process => Icons.play_circle_outline_rounded,
+      BrokerAction.markPaid => Icons.payments_rounded,
+      BrokerAction.suspend => Icons.pause_circle_outline_rounded,
+      BrokerAction.terminate => Icons.gavel_rounded,
+      BrokerAction.activate => Icons.verified_outlined,
+      BrokerAction.holdOn => Icons.lock_outline_rounded,
+      BrokerAction.holdOff => Icons.lock_open_rounded,
+    };
+
+/// A compact outlined action; red for those that end or refuse something.
+class _SecondaryAction extends StatelessWidget {
+  const _SecondaryAction({super.key, required this.icon, required this.label, required this.danger, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool danger;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final fg = danger ? colors.error : colors.ink;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: danger ? colors.error.withValues(alpha: 0.06) : colors.surface,
+          border: Border.all(color: danger ? colors.error.withValues(alpha: 0.35) : colors.hairline),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, size: 18, color: fg),
+          const SizedBox(width: 6),
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fg))),
+        ]),
       ),
     );
   }
