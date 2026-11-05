@@ -439,12 +439,7 @@ class _SummaryCell extends StatelessWidget {
 // ── Card theme config ─────────────────────────────────────────────────────────
 
 class _CardTheme {
-  const _CardTheme({
-    required this.gradient,
-    required this.accent,
-    required this.icon,
-  });
-  final List<Color> gradient;
+  const _CardTheme({required this.accent, required this.icon});
   final Color accent;
   final IconData icon;
 }
@@ -455,29 +450,17 @@ class _RequestCard extends StatelessWidget {
   const _RequestCard({required this.request});
   final MaintenanceRequest request;
 
-  _CardTheme _cardTheme() => switch (request.status) {
-        MaintenanceStatus.open ||
-        MaintenanceStatus.assigned =>
-          const _CardTheme(
-            gradient: _openGradient,
-            accent: _openAccent,
-            icon: Icons.build_rounded,
-          ),
-        MaintenanceStatus.inProgress => const _CardTheme(
-            gradient: _inProgressGradient,
-            accent: _inProgressAccent,
+  _CardTheme _cardTheme(bool dark) => switch (request.status) {
+        MaintenanceStatus.inProgress => _CardTheme(
+            accent: dark ? _inProgressAccent : const Color(0xFF1D4ED8),
             icon: Icons.sync_rounded,
           ),
-        MaintenanceStatus.resolved ||
-        MaintenanceStatus.closed =>
-          const _CardTheme(
-            gradient: _closedGradient,
-            accent: _closedAccent,
+        MaintenanceStatus.resolved || MaintenanceStatus.closed => _CardTheme(
+            accent: dark ? _closedAccent : const Color(0xFF15803D),
             icon: Icons.check_circle_rounded,
           ),
-        _ => const _CardTheme(
-            gradient: _openGradient,
-            accent: _openAccent,
+        _ => _CardTheme(
+            accent: dark ? _openAccent : const Color(0xFF9A6F1E),
             icon: Icons.build_rounded,
           ),
       };
@@ -488,8 +471,9 @@ class _RequestCard extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
+    final dark = theme.brightness == Brightness.dark;
 
-    final ct = _cardTheme();
+    final ct = _cardTheme(dark);
     final category = request.categoryName?.resolve(lang);
     final title =
         (category?.isNotEmpty == true) ? category! : l10n.accountMaintenance;
@@ -502,208 +486,134 @@ class _RequestCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+          border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 20,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Gradient strip (mirrors installments card) ─────────────
-            SizedBox(
-              height: 100,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: ct.gradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
+            Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: ct.accent.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  const IgnorePointer(child: _DotTexture()),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 1,
-                      color: ct.accent.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Row(
-                      children: [
-                        // Status-accented icon box
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: ct.accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: ct.accent.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Icon(ct.icon, color: ct.accent, size: 24),
+                  child: Icon(ct.icon, color: ct.accent, size: 24),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colors.inkStrong,
+                          fontWeight: FontWeight.w800,
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        // Category title + unit code
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                title,
+                      ),
+                      if (request.unitCode?.isNotEmpty == true) ...[
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(
+                              AppIcons.property,
+                              size: 14,
+                              color: colors.inkMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                request.unitCode!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 20,
-                                  height: 1.0,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colors.inkMuted,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (request.unitCode?.isNotEmpty == true) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      AppIcons.property,
-                                      size: 13,
-                                      color:
-                                          Colors.white.withValues(alpha: 0.65),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        request.unitCode!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.75),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        // Status pill
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: ct.accent.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: ct.accent.withValues(alpha: 0.4),
                             ),
-                          ),
-                          child: Text(
-                            maintenanceStatusLabel(l10n, request.status),
-                            style: TextStyle(
-                              color: ct.accent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          ],
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── White body ─────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Description
-                  Text(
-                    hasDescription ? request.description : context.l10n.supervisorNoDescription,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: hasDescription ? colors.ink : colors.inkMuted,
-                      height: 1.55,
-                      fontSize: 15,
-                      fontStyle: hasDescription
-                          ? FontStyle.normal
-                          : FontStyle.italic,
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.md),
-                  Divider(height: 1, color: colors.hairline),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Date + priority
-                  Row(
-                    children: [
-                      if (request.createdAt != null) ...[
-                        Expanded(
-                          child: _InfoCell(
-                            icon: AppIcons.calendar,
-                            label: context.l10n.maintenanceRequestDate,
-                            value: DateFormatter.shortDate(
-                              request.createdAt!,
-                              languageCode: lang,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 36,
-                          color: colors.hairline,
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md),
-                        ),
-                      ],
-                      Expanded(
-                        child: _InfoCell(
-                          icon: Icons.flag_rounded,
-                          label: context.l10n.maintenancePriorityLabel,
-                          value: maintenancePriorityLabel(l10n, request.priority),
-                          accent: _priorityAccent(request.priority),
-                        ),
-                      ),
                     ],
                   ),
-
-                  const SizedBox(height: AppSpacing.md),
-
-                  // "عرض التفاصيل" action row
-                  _DetailsRow(accent: ct.accent),
-                ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: ct.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    maintenanceStatusLabel(l10n, request.status),
+                    style: TextStyle(
+                      color: ct.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Divider(height: 1, color: colors.hairline),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              hasDescription
+                  ? request.description
+                  : context.l10n.supervisorNoDescription,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: hasDescription ? colors.ink : colors.inkMuted,
+                height: 1.55,
+                fontStyle:
+                    hasDescription ? FontStyle.normal : FontStyle.italic,
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                if (request.createdAt != null) ...[
+                  Expanded(
+                    child: _InfoCell(
+                      icon: AppIcons.calendar,
+                      label: context.l10n.maintenanceRequestDate,
+                      value: DateFormatter.shortDate(
+                        request.createdAt!,
+                        languageCode: lang,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                Expanded(
+                  child: _InfoCell(
+                    icon: Icons.flag_rounded,
+                    label: context.l10n.maintenancePriorityLabel,
+                    value: maintenancePriorityLabel(l10n, request.priority),
+                    accent: _priorityAccent(request.priority, dark),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _DetailsRow(accent: ct.accent),
           ],
         ),
       ),
@@ -711,11 +621,13 @@ class _RequestCard extends StatelessWidget {
   }
 }
 
-Color _priorityAccent(MaintenancePriority p) => switch (p) {
-      MaintenancePriority.low => const Color(0xFF94A3B8),
-      MaintenancePriority.medium => AppPalette.gold400,
-      MaintenancePriority.high => const Color(0xFFF87171),
-      MaintenancePriority.urgent => const Color(0xFFEF4444),
+Color _priorityAccent(MaintenancePriority p, bool dark) => switch (p) {
+      MaintenancePriority.medium =>
+        dark ? AppPalette.gold400 : const Color(0xFF9A6F1E),
+      MaintenancePriority.high =>
+        dark ? const Color(0xFFF87171) : const Color(0xFFB91C1C),
+      MaintenancePriority.urgent =>
+        dark ? const Color(0xFFEF4444) : const Color(0xFF991B1B),
       _ => const Color(0xFF94A3B8),
     };
 
@@ -768,7 +680,7 @@ class _DetailsRow extends StatelessWidget {
                 color: accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(7),
               ),
-              child: Icon(Icons.arrow_forward_ios_rounded, color: accent, size: 13),
+              child: Icon(AppIcons.chevronForward, color: accent, size: 16),
             ),
           ],
         ),
@@ -797,32 +709,44 @@ class _InfoCell extends StatelessWidget {
     final theme = Theme.of(context);
     final iconColor = accent ?? colors.inkMuted;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 13, color: iconColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.inkMuted,
-                fontSize: 13,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.inkMuted.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: accent ?? colors.inkStrong,
-            fontWeight: FontWeight.w700,
-            fontSize: 15,
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 3),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: accent ?? colors.inkStrong,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

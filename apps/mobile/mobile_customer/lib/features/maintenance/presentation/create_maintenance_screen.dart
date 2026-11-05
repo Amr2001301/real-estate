@@ -461,9 +461,9 @@ class _PhotoSourceSheet extends StatelessWidget {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8F6F1),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: colors.canvas,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -609,9 +609,9 @@ class _SourceCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.appColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+          border: Border.all(color: context.appColors.hairline),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
