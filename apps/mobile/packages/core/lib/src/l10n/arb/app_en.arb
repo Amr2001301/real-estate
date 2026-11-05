@@ -2935,5 +2935,11 @@
   "prFigTotal": "Total amount",
   "prFigItems": "{n, plural, =0{no receipts} =1{1 receipt} other{{n} receipts}}",
   "@prFigItems": {"placeholders": {"n": {"type": "int"}}},
-  "prOpenProof": "Open receipt"
+  "prOpenProof": "Open receipt",
+  "campaignsFilterTitle": "Filter campaigns",
+  "campaignsFilterApply": "Show campaigns",
+  "campaignsCountN": "{n, plural, =0{no campaigns} =1{1 campaign} other{{n} campaigns}}",
+  "@campaignsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "duplicatesCountN": "{n, plural, =0{no duplicates} =1{1 customer with duplicates} other{{n} customers with duplicates}}",
+  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}}
 }

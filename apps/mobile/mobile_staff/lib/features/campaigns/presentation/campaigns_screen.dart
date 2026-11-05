@@ -1,9 +1,12 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
+import '../../dashboard/home_kit/filter_kit.dart';
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/campaign.dart';
 import 'campaigns_cubit.dart';
@@ -92,64 +95,108 @@ class _CampaignsScreenState extends State<CampaignsScreen> {
     context.read<CampaignsCubit>().load();
   }
 
+  void _filters() {
+    final cubit = context.read<CampaignsCubit>();
+    showFilterSheet(context, (_) => _StatusSheet(selected: cubit.state.filter, onApply: cubit.setFilter));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<CampaignsCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.campaignsTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-            ),
-          ),
-          const _StatusFilter(),
-          Expanded(
-            child: BlocBuilder<CampaignsCubit, CampaignsState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.campaign_outlined,
-                      title: l10n.campaignsEmpty,
-                      message: l10n.campaignsEmptyHint,
-                    );
-                  case DataStatus.success:
-                    final items = state.page.items;
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: ListView.separated(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + 100),
-                        itemCount: items.length + 1,
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          if (i == 0) return _Totals(totals: state.page.totals);
-                          final c = items[i - 1];
-                          return _CampaignTile(
-                            campaign: c,
-                            onTap: () => context.push('/campaigns/${c.id}', extra: c),
-                          );
-                        },
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocBuilder<CampaignsCubit, CampaignsState>(
+          builder: (context, state) {
+            final ready = state.status == DataStatus.success;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: ListView(
+                key: const Key('campaigns'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(bottom: bottomPad + 100),
+                children: [
+                  HomeListHero(
+                    back: true,
+                    title: l10n.campaignsTitle,
+                    subtitle: ready ? l10n.campaignsCountN(state.page.items.length) : null,
+                    actions: [
+                      HomeHeroButton(
+                        key: const Key('campaigns-filters'),
+                        icon: Icons.tune_rounded,
+                        dot: state.filter != null,
+                        tooltip: l10n.campaignsFilterTitle,
+                        onTap: _filters,
                       ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
+                    ],
+                  ),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SizedBox(height: 480, child: StaffListSkeleton())],
+                    DataStatus.failure => [ErrorState(failure: state.failure, onRetry: cubit.load)],
+                    DataStatus.empty => [EmptyState(icon: Icons.campaign_outlined, title: l10n.campaignsEmpty, message: l10n.campaignsEmptyHint)],
+                    DataStatus.success => [
+                        Padding(padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0), child: _Totals(totals: state.page.totals)),
+                        for (final c in state.page.items)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                            child: _CampaignTile(campaign: c, onTap: () => context.push('/campaigns/${c.id}', extra: c)),
+                          ),
+                      ],
+                  },
+                ],
+              ),
+            );
+          },
+        ),
       ),
+    );
+  }
+}
+
+class _StatusSheet extends StatefulWidget {
+  const _StatusSheet({required this.selected, required this.onApply});
+  final String? selected;
+  final ValueChanged<String?> onApply;
+
+  @override
+  State<_StatusSheet> createState() => _StatusSheetState();
+}
+
+class _StatusSheetState extends State<_StatusSheet> {
+  late String? _s = widget.selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    return FilterSheet(
+      title: l10n.campaignsFilterTitle,
+      active: _s == null ? 0 : 1,
+      onClear: () => setState(() => _s = null),
+      applyLabel: l10n.campaignsFilterApply,
+      onApply: () {
+        widget.onApply(_s);
+        Navigator.of(context).pop();
+      },
+      sections: [
+        FilterSection(
+          icon: Icons.flag_outlined,
+          title: l10n.kcStatus,
+          child: FilterRadioList<String?>(
+            keyPrefix: 'campaign-filter',
+            selected: _s,
+            onSelect: (v) => setState(() => _s = v),
+            options: [
+              FilterOption<String?>(null, l10n.leadsFilterAll),
+              for (final st in kCampaignStatuses) FilterOption<String?>(st, campaignStatusLabel(l10n, st), color: campaignStatusColor(st, colors)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -164,148 +211,18 @@ class _Totals extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
-    return Container(
+    HomeFigure money(String id, num? v, String label, String hint) {
+      final (n, u) = homeCompact(v ?? 0, l10n);
+      return HomeFigure(id: id, value: ltr(n), label: u.isEmpty ? label : '$label · $u', hint: hint);
+    }
+
+    return KeyedSubtree(
       key: const Key('campaigns-totals'),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppPalette.navy, AppPalette.navy700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadii.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.campaignsSpend, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7))),
-          const SizedBox(height: 4),
-          Text(
-            campaignMoney(totals.spend, lang),
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              _Kpi(label: l10n.campaignsLeads, value: _count(totals.leads)),
-              _Kpi(label: l10n.campaignsCpl, value: campaignMoney(totals.cpl, lang)),
-              _Kpi(label: l10n.campaignsWon, value: _count(totals.won)),
-              _Kpi(label: l10n.campaignsCpa, value: campaignMoney(totals.cpa, lang)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Kpi extends StatelessWidget {
-  const _Kpi({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.65))),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppPalette.gold300)),
-            ),
-          ],
-        ),
-      );
-}
-
-// ── Status filter bar (as on the other staff lists) ───────────────────────────
-
-class _StatusFilter extends StatelessWidget {
-  const _StatusFilter();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final cubit = context.read<CampaignsCubit>();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: BlocBuilder<CampaignsCubit, CampaignsState>(
-        buildWhen: (a, b) => a.filter != b.filter,
-        builder: (context, state) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
-          child: Row(
-            children: [
-              _Chip(
-                key: const ValueKey('campaign-filter-all'),
-                label: l10n.leadsFilterAll,
-                active: state.filter == null,
-                onTap: () => cubit.setFilter(null),
-              ),
-              for (final s in kCampaignStatuses) ...[
-                const SizedBox(width: AppSpacing.xs),
-                _Chip(
-                  key: ValueKey('campaign-filter-$s'),
-                  label: campaignStatusLabel(l10n, s),
-                  active: state.filter == s,
-                  dotColor: campaignStatusColor(s, colors),
-                  onTap: () => cubit.setFilter(s),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({super.key, required this.label, required this.active, required this.onTap, this.dotColor});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final Color? dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
-          borderRadius: AppRadii.pillAll,
-          border: Border.all(color: active ? colors.brandNavy : colors.hairline, width: active ? 0 : 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!active && dotColor != null) ...[
-              Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-              const SizedBox(width: AppSpacing.xxs + 2),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? Colors.white : colors.inkStrong,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: HomeBand(figures: [
+        money('spend', totals.spend, l10n.campaignsSpend, '${l10n.campaignsCpl} ${campaignMoney(totals.cpl, lang)}'),
+        HomeFigure(id: 'leads', value: _count(totals.leads), label: l10n.campaignsLeads, hint: campaignMoney(totals.cpl, lang)),
+        HomeFigure(id: 'won', value: _count(totals.won), label: l10n.campaignsWon, hint: '${l10n.campaignsCpa} ${campaignMoney(totals.cpa, lang)}'),
+      ]),
     );
   }
 }
@@ -333,12 +250,8 @@ class _CampaignTile extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: AppRadii.card,
-          border: Border.all(color: accent.withValues(alpha: 0.16), width: 0.9),
-          boxShadow: [
-            BoxShadow(color: accent.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, 6)),
-            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
-          ],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colors.hairline),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -365,9 +278,8 @@ class _CampaignTile extends StatelessWidget {
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.10),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: accent.withValues(alpha: 0.28), width: 1.2),
+                          color: accent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(15),
                         ),
                         child: Icon(campaignChannelIcon(c.channel), color: accent, size: 22),
                       ),
@@ -394,7 +306,7 @@ class _CampaignTile extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       StatusBadge(label: campaignStatusLabel(l10n, c.status), tone: campaignStatusTone(c.status)),
-                      Icon(isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: colors.inkMuted),
+                      Icon(AppIcons.chevronForward, color: AppPalette.gold400),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),

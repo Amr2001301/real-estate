@@ -15661,6 +15661,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open receipt'**
   String get prOpenProof;
+
+  /// No description provided for @campaignsFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter campaigns'**
+  String get campaignsFilterTitle;
+
+  /// No description provided for @campaignsFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show campaigns'**
+  String get campaignsFilterApply;
+
+  /// No description provided for @campaignsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no campaigns} =1{1 campaign} other{{n} campaigns}}'**
+  String campaignsCountN(int n);
+
+  /// No description provided for @duplicatesCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no duplicates} =1{1 customer with duplicates} other{{n} customers with duplicates}}'**
+  String duplicatesCountN(int n);
 }
 
 class _AppLocalizationsDelegate

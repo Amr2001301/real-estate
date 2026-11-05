@@ -1,8 +1,9 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/campaign.dart';
 import 'campaigns_cubit.dart';
@@ -40,30 +41,31 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<CampaignDetailCubit>();
-    return Scaffold(
-      body: BlocBuilder<CampaignDetailCubit, CampaignDetailState>(
-        builder: (context, state) {
-          final c = state.campaign ?? widget.row;
-          return Column(
-            children: [
-              AppNavHeader(
-                title: c?.name ?? l10n.campaignsTitle,
-                compact: true,
-                leadingAction: NavHeaderAction(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  onTap: () => context.canPop() ? context.pop() : context.go('/campaigns'),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocBuilder<CampaignDetailCubit, CampaignDetailState>(
+          builder: (context, state) {
+            final c = state.campaign ?? widget.row;
+            return Column(
+              children: [
+                HomeListHero(
+                  back: true,
+                  title: c?.name ?? l10n.campaignsTitle,
+                  subtitle: c == null ? null : '${campaignChannelLabel(l10n, c.channel)} · ${campaignStatusLabel(l10n, c.status)}',
                 ),
-              ),
-              Expanded(
-                child: state.status == DataStatus.failure && c == null
-                    ? ErrorState(failure: state.failure, onRetry: cubit.load)
-                    : c == null
-                        ? const Center(child: CircularProgressIndicator())
-                        : RefreshIndicator(onRefresh: cubit.load, child: _Body(campaign: c, full: state.campaign != null)),
-              ),
-            ],
-          );
-        },
+                Expanded(
+                  child: state.status == DataStatus.failure && c == null
+                      ? ErrorState(failure: state.failure, onRetry: cubit.load)
+                      : c == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : RefreshIndicator(onRefresh: cubit.load, child: _Body(campaign: c, full: state.campaign != null)),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -116,7 +118,7 @@ class _Body extends StatelessWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)),
                     child: Icon(campaignChannelIcon(c.channel), color: accent, size: 20),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -264,7 +266,7 @@ class _Stat extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(AppRadii.sm)),
+      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -274,7 +276,7 @@ class _Stat extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
-            child: Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: color ?? colors.inkStrong)),
+            child: Text(value, style: homeDisplay(16, color ?? colors.inkStrong)),
           ),
         ],
       ),
@@ -288,15 +290,9 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.card,
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
+      decoration: homeCard(context, radius: 24),
       child: child,
     );
   }

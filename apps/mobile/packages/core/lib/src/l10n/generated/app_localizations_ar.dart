@@ -8862,4 +8862,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get prOpenProof => 'فتح الإيصال';
+
+  @override
+  String get campaignsFilterTitle => 'تصفية الحملات';
+
+  @override
+  String get campaignsFilterApply => 'عرض الحملات';
+
+  @override
+  String campaignsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حملة',
+      few: '$n حملات',
+      two: 'حملتان',
+      one: 'حملة واحدة',
+      zero: 'لا حملات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String duplicatesCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n عميلًا بفرص مكررة',
+      few: '$n عملاء بفرص مكررة',
+      two: 'عميلان بفرص مكررة',
+      one: 'عميل واحد بفرص مكررة',
+      zero: 'لا عملاء مكررون',
+    );
+    return '$_temp0';
+  }
 }
