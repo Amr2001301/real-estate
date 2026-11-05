@@ -16795,6 +16795,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Against the period before'**
   String get frCompareOn;
+
+  /// No description provided for @brkConfirmHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Do you want to do this?'**
+  String get brkConfirmHint;
 }
 
 class _AppLocalizationsDelegate

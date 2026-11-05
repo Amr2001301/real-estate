@@ -192,7 +192,7 @@ class ClientCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                ClientPill(text: client.owner ? l10n.clOwner : l10n.clBrowser, color: client.owner ? colors.success : AppPalette.navy600),
+                ClientPill(text: client.owner ? l10n.clOwner : l10n.clBrowser, color: client.owner ? colors.success : colors.inkStrong),
                 if (!client.active) ...[
                   const SizedBox(height: 4),
                   ClientPill(text: l10n.clSuspended, color: colors.error),

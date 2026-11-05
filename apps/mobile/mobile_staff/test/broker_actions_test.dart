@@ -101,10 +101,13 @@ void main() {
     await t.tap(find.byKey(const Key('broker-act-reject')));
     await t.pumpAndSettle();
     // The reason is required: the confirm button waits for text.
-    expect(t.widget<TextButton>(find.byKey(const Key('broker-reason-ok'))).onPressed, isNull);
+    final okBtn = find.byKey(const Key('broker-question-ok'));
+    await t.tap(okBtn);
+    await t.pump();
+    expect(adapter.calls, isEmpty); // nothing is sent without the reason
     await t.enterText(find.byKey(const Key('broker-reason')), 'مخالف');
     await t.pump();
-    await t.tap(find.byKey(const Key('broker-reason-ok')));
+    await t.tap(find.byKey(const Key('broker-question-ok')));
     await t.pumpAndSettle();
     expect(adapter.calls, ['PATCH /broker-commissions/c1/reject']);
   });

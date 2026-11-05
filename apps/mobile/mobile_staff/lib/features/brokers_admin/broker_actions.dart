@@ -273,13 +273,12 @@ class _DetailSheetState extends State<_DetailSheet> {
       method = picked.$1;
       reference = picked.$2;
     } else {
-      final ok = await showAdaptiveConfirm(
+      final ok = await _askConfirm(
         context,
+        icon: _actionIcon(a),
         title: brokerActionLabel(l10n, a),
-        message: widget.row.title,
-        confirmLabel: brokerActionLabel(l10n, a),
-        cancelLabel: l10n.actionCancel,
-        destructive: brokerActionDestructive(a),
+        subject: widget.row.title,
+        danger: brokerActionDestructive(a),
       );
       if (!ok) return;
     }
@@ -455,26 +454,140 @@ class _SecondaryAction extends StatelessWidget {
   }
 }
 
-/// A short typed reason; null when cancelled.
-Future<String?> _askText(BuildContext context, {required String title, required String hint, required bool required}) {
+/// The look every question of this page shares: a rounded sheet with an icon
+/// and a title, what to fill, then the main button and cancel.
+Future<T?> _showQuestion<T>(
+  BuildContext context, {
+  required IconData icon,
+  required String title,
+  String? subject,
+  required Widget Function(BuildContext, StateSetter) body,
+  required String confirmLabel,
+  required bool Function() canConfirm,
+  required T Function() result,
+  bool danger = false,
+}) {
   final l10n = context.l10n;
-  final ctrl = TextEditingController();
-  return showDialog<String>(
+  return showModalBottomSheet<T>(
     context: context,
-    builder: (dctx) => StatefulBuilder(
-      builder: (dctx, setS) => AlertDialog(
-        title: Text(title),
-        content: TextField(key: const Key('broker-reason'), controller: ctrl, maxLines: 3, autofocus: true, decoration: InputDecoration(hintText: hint), onChanged: (_) => setS(() {})),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dctx).pop(), child: Text(l10n.actionCancel)),
-          TextButton(
-            key: const Key('broker-reason-ok'),
-            onPressed: required && ctrl.text.trim().isEmpty ? null : () => Navigator.of(dctx).pop(ctrl.text.trim()),
-            child: Text(title),
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => StatefulBuilder(builder: (sheetContext, setS) {
+      final colors = sheetContext.appColors;
+      final accent = danger ? colors.error : AppPalette.gold500;
+      return Container(
+        key: const Key('broker-question'),
+        padding: EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, MediaQuery.viewInsetsOf(sheetContext).bottom + MediaQuery.paddingOf(sheetContext).bottom + 18),
+        decoration: BoxDecoration(color: colors.canvas, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: colors.hairline, borderRadius: BorderRadius.circular(4)))),
+          const SizedBox(height: 16),
+          Row(children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(15)),
+              child: Icon(icon, size: 23, color: accent),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: homeDisplay(19, colors.inkStrong)),
+                if (subject != null && subject.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(subject, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+                ],
+              ]),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          body(sheetContext, setS),
+          const SizedBox(height: 18),
+          if (danger)
+            _DangerButton(
+              key: const Key('broker-question-ok'),
+              label: confirmLabel,
+              onTap: canConfirm() ? () => Navigator.of(sheetContext).pop(result()) : null,
+            )
+          else
+            AppButton(
+              key: const Key('broker-question-ok'),
+              label: confirmLabel,
+              variant: AppButtonVariant.gold,
+              expand: true,
+              onPressed: canConfirm() ? () => Navigator.of(sheetContext).pop(result()) : null,
+            ),
+          const SizedBox(height: 8),
+          AppButton(
+            key: const Key('broker-question-cancel'),
+            label: l10n.actionCancel,
+            variant: AppButtonVariant.outline,
+            expand: true,
+            onPressed: () => Navigator.of(sheetContext).pop(),
           ),
-        ],
+        ]),
+      );
+    }),
+  );
+}
+
+class _DangerButton extends StatelessWidget {
+  const _DangerButton({super.key, required this.label, required this.onTap});
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Opacity(
+      opacity: onTap == null ? 0.45 : 1,
+      child: Material(
+        color: colors.error,
+        borderRadius: BorderRadius.circular(26),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(26),
+          onTap: onTap,
+          child: SizedBox(height: 52, child: Center(child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)))),
+        ),
       ),
+    );
+  }
+}
+
+/// A plain «are you sure»; true when confirmed.
+Future<bool> _askConfirm(BuildContext context, {required IconData icon, required String title, required String subject, required bool danger}) async {
+  final ok = await _showQuestion<bool>(
+    context,
+    icon: icon,
+    title: title,
+    subject: subject,
+    body: (_, _) => Text(context.l10n.brkConfirmHint, style: TextStyle(fontSize: 13.5, height: 1.6, color: context.appColors.ink)),
+    confirmLabel: title,
+    canConfirm: () => true,
+    result: () => true,
+    danger: danger,
+  );
+  return ok ?? false;
+}
+
+/// A short typed reason; null when cancelled.
+Future<String?> _askText(BuildContext context, {required String title, required String hint, required bool required, bool danger = true}) {
+  final ctrl = TextEditingController();
+  return _showQuestion<String>(
+    context,
+    icon: Icons.edit_note_rounded,
+    title: title,
+    body: (ctx, setS) => AppTextField(
+      key: const Key('broker-reason'),
+      controller: ctrl,
+      hint: hint,
+      maxLines: 3,
+      onChanged: (_) => setS(() {}),
     ),
+    confirmLabel: title,
+    canConfirm: () => !required || ctrl.text.trim().isNotEmpty,
+    result: () => ctrl.text.trim(),
+    danger: danger,
   );
 }
 
@@ -483,24 +596,29 @@ Future<(String, String)?> _askPayment(BuildContext context) {
   final l10n = context.l10n;
   final ref = TextEditingController();
   var method = 'BANK_TRANSFER';
-  return showDialog<(String, String)>(
-    context: context,
-    builder: (dctx) => StatefulBuilder(
-      builder: (dctx, setS) => AlertDialog(
-        title: Text(l10n.brkActMarkPaid),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final m in kPayoutMethods)
-              ChoiceChip(key: Key('broker-pm-$m'), label: Text(payoutMethodLabel(l10n, m)), selected: method == m, onSelected: (_) => setS(() => method = m)),
-          ]),
-          const SizedBox(height: 12),
-          TextField(key: const Key('broker-pay-ref'), controller: ref, decoration: InputDecoration(hintText: l10n.brkFReference)),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dctx).pop(), child: Text(l10n.actionCancel)),
-          TextButton(key: const Key('broker-pay-ok'), onPressed: () => Navigator.of(dctx).pop((method, ref.text.trim())), child: Text(l10n.brkActMarkPaid)),
-        ],
-      ),
-    ),
+  return _showQuestion<(String, String)>(
+    context,
+    icon: Icons.payments_rounded,
+    title: l10n.brkActMarkPaid,
+    body: (ctx, setS) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(l10n.brkFMethod, style: TextStyle(fontSize: 12.5, color: ctx.appColors.inkMuted)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final m in kPayoutMethods)
+          ChoiceChip(
+            key: Key('broker-pm-$m'),
+            label: Text(payoutMethodLabel(l10n, m)),
+            selected: method == m,
+            showCheckmark: false,
+            selectedColor: AppPalette.gold100,
+            onSelected: (_) => setS(() => method = m),
+          ),
+      ]),
+      const SizedBox(height: 14),
+      AppTextField(key: const Key('broker-pay-ref'), controller: ref, label: l10n.brkFReference),
+    ]),
+    confirmLabel: l10n.brkActMarkPaid,
+    canConfirm: () => true,
+    result: () => (method, ref.text.trim()),
   );
 }

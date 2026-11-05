@@ -3137,5 +3137,6 @@
   "@frVsBefore": {"placeholders": {"value": {"type": "String"}}},
   "frCompare": "Comparison",
   "frCompareOff": "No comparison",
-  "frCompareOn": "Against the period before"
+  "frCompareOn": "Against the period before",
+  "brkConfirmHint": "Do you want to do this?"
 }

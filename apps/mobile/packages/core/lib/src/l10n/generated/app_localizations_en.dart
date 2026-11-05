@@ -9461,4 +9461,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get frCompareOn => 'Against the period before';
+
+  @override
+  String get brkConfirmHint => 'Do you want to do this?';
 }
