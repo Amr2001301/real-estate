@@ -117,7 +117,6 @@ class BrokerRow extends Equatable {
           title: s(j['commercialName']).isNotEmpty ? s(j['commercialName']) : s(j['companyName']),
           subtitle: '',
           details: [
-            if (s(j['code']).isNotEmpty) (Icons.tag_rounded, ltr(s(j['code']))),
             if (s(j['city']).isNotEmpty) (Icons.place_outlined, s(j['city'])),
             if (s(j['phone']).isNotEmpty) (Icons.phone_outlined, ltr(s(j['phone']))),
           ],
@@ -375,8 +374,6 @@ class _BrokerCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          // The state as a coloured edge, so a list reads at a glance.
-          Container(width: 5, color: color),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
