@@ -26,6 +26,7 @@ import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/clients/client_detail_screen.dart';
+import '../features/brokers_admin/brokers_hub_screen.dart';
 import '../features/inquiries/inquiries_screen.dart';
 import '../features/reports/reports_screen.dart';
 import '../features/clients/clients_data.dart';
@@ -615,6 +616,24 @@ GoRouter createStaffRouter(
         builder: (context, state) => StaffAccessGate(
           allows: StaffAccess.reports,
           child: Builder(builder: (ctx) => ReportsScreen(repository: ReportsRepository(ctx.read<Dio>()))),
+        ),
+      ),
+
+      // ── Brokers' pages for the company (a tab per code) ─────────────────
+      GoRoute(
+        path: '/company-brokers',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.brokers,
+          child: Builder(builder: (ctx) {
+            final perms = ctx.watch<StaffPermissionsCubit>().state;
+            final role = ctx.read<SessionCubit>().state.role;
+            final tab = BrokerTab.values.where((t) => t.name == state.uri.queryParameters['tab']).firstOrNull;
+            return BrokersHubScreen(
+              repository: BrokersAdminRepository(ctx.read<Dio>()),
+              tabs: brokerTabsFor(role, perms),
+              initial: tab,
+            );
+          }),
         ),
       ),
 

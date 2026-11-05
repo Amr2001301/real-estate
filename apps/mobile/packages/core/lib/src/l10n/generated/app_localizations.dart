@@ -16153,6 +16153,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No sales in this period.'**
   String get rpNoSales;
+
+  /// No description provided for @brkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers'**
+  String get brkTitle;
+
+  /// No description provided for @brkProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The firms, their leads, bookings and commissions'**
+  String get brkProfileDesc;
+
+  /// No description provided for @brkCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No results} =1{1 result} other{{n} results}}'**
+  String brkCountN(int n);
+
+  /// No description provided for @brkTabFirms.
+  ///
+  /// In en, this message translates to:
+  /// **'Firms'**
+  String get brkTabFirms;
+
+  /// No description provided for @brkTabLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get brkTabLeads;
+
+  /// No description provided for @brkTabReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get brkTabReservations;
+
+  /// No description provided for @brkTabContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get brkTabContracts;
+
+  /// No description provided for @brkTabCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions'**
+  String get brkTabCommissions;
+
+  /// No description provided for @brkTabPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Payouts'**
+  String get brkTabPayouts;
+
+  /// No description provided for @brkFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter the list'**
+  String get brkFilterTitle;
+
+  /// No description provided for @brkFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show results'**
+  String get brkFilterApply;
+
+  /// No description provided for @brkEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here in this state.'**
+  String get brkEmpty;
+
+  /// No description provided for @brkCommissionWord.
+  ///
+  /// In en, this message translates to:
+  /// **'default commission'**
+  String get brkCommissionWord;
+
+  /// No description provided for @brkPayoutHold.
+  ///
+  /// In en, this message translates to:
+  /// **'Payouts on hold'**
+  String get brkPayoutHold;
+
+  /// No description provided for @brkStPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get brkStPending;
+
+  /// No description provided for @brkStActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get brkStActive;
+
+  /// No description provided for @brkStSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get brkStSuspended;
+
+  /// No description provided for @brkStTerminated.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminated'**
+  String get brkStTerminated;
+
+  /// No description provided for @brkStApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get brkStApproved;
+
+  /// No description provided for @brkStRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get brkStRejected;
+
+  /// No description provided for @brkStDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get brkStDuplicate;
+
+  /// No description provided for @brkStExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get brkStExpired;
+
+  /// No description provided for @brkStConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get brkStConfirmed;
+
+  /// No description provided for @brkStConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get brkStConverted;
+
+  /// No description provided for @brkStCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get brkStCancelled;
+
+  /// No description provided for @brkStDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get brkStDraft;
+
+  /// No description provided for @brkStProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get brkStProcessing;
+
+  /// No description provided for @brkStPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get brkStPaid;
+
+  /// No description provided for @brkStSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed'**
+  String get brkStSigned;
+
+  /// No description provided for @brkStUnsigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting signature'**
+  String get brkStUnsigned;
 }
 
 class _AppLocalizationsDelegate

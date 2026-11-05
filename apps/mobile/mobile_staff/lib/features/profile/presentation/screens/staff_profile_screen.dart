@@ -173,6 +173,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                     label: l10n.rpTitle,
                     subtitle: l10n.rpProfileDesc,
                     onTap: () => context.push('/reports')),
+              if (StaffAccess.brokers(role, perms))
+                ProfileItem(
+                    id: 'brokers-hub',
+                    icon: Icons.storefront_rounded,
+                    label: l10n.brkTitle,
+                    subtitle: l10n.brkProfileDesc,
+                    onTap: () => context.push('/company-brokers')),
               if (role == AppRole.admin)
                 ProfileItem(id: 'brokers', icon: Icons.handshake_rounded, label: l10n.bpTitle, onTap: () => context.push('/performance/brokers')),
             ],

@@ -36,6 +36,11 @@ void main() {
       expect(staffRedirect(broker, '/visits'), '/broker/home');
     });
 
+    test('the company\'s brokers page is not mistaken for the broker workspace', () {
+      expect(staffRedirect(sales, '/company-brokers'), isNull);
+      expect(staffRedirect(sales, '/performance/brokers'), isNull);
+    });
+
     test('sales is bounced out of the broker workspace', () {
       expect(staffRedirect(sales, '/broker/home'), '/home');
       expect(staffRedirect(sales, '/broker/commissions'), '/home');
