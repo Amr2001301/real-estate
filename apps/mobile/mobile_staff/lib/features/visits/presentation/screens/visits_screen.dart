@@ -8,6 +8,7 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../../../common/visit_status_label.dart';
 import '../../../dashboard/home_kit/filter_kit.dart';
 import '../../../dashboard/home_kit/home_kit.dart';
+import '../../../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import '../../domain/entities/visit.dart';
 import '../cubit/visits_cubit.dart';
 
@@ -191,227 +192,88 @@ class _StatusSheetState extends State<_StatusSheet> {
 
 // ── Visit tile ────────────────────────────────────────────────────────────────
 
-class _VisitTile extends StatefulWidget {
+/// A visit as the app's other cards: the person's initials on navy, their
+/// name and the project, the state, then the date and where it opens.
+class _VisitTile extends StatelessWidget {
   const _VisitTile({required this.visit});
   final Visit visit;
 
-  @override
-  State<_VisitTile> createState() => _VisitTileState();
-}
-
-class _VisitTileState extends State<_VisitTile> {
-  bool _pressed = false;
-  Visit get visit => widget.visit;
-
   static Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
-    BadgeTone.success => c.success,
-    BadgeTone.warning => c.warning,
-    BadgeTone.error => c.error,
-    BadgeTone.info => c.info,
-    BadgeTone.gold => c.brandGold,
-    _ => c.inkMuted,
-  };
-
-  static IconData _statusIcon(String status) => switch (status) {
-    'SCHEDULED' => Icons.event_available_rounded,
-    'CONFIRMED' => Icons.verified_rounded,
-    'PENDING_RESCHEDULE' => Icons.pending_actions_rounded,
-    'COMPLETED' => Icons.check_circle_rounded,
-    'CANCELLED' => Icons.cancel_rounded,
-    'NO_SHOW' => Icons.person_off_rounded,
-    _ => Icons.event_rounded,
-  };
+        BadgeTone.success => c.success,
+        BadgeTone.warning => c.warning,
+        BadgeTone.error => c.error,
+        BadgeTone.info => c.info,
+        BadgeTone.gold => c.brandGold,
+        _ => c.inkMuted,
+      };
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = context.read<LocaleCubit>().isRtl;
     final tone = visitStatusTone(visit.status);
     final accent = _toneColor(tone, colors);
-    final hasDate = visit.scheduledAt != null;
-    final hasUnit = visit.unitCode != null;
-    final hasProject = visit.projectName != null;
-    final primaryName = visit.clientName ?? visit.projectName ?? l10n.navVisits;
-    final showProject = visit.clientName != null && hasProject;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/visits/${visit.id}', extra: visit),
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
+    final name = visit.clientName ?? visit.projectName ?? l10n.navVisits;
+    final where = [
+      if (visit.clientName != null && visit.projectName != null) visit.projectName!,
+      if (visit.unitCode != null) ltr(visit.unitCode!),
+    ].join(' · ');
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: Key('visit-${visit.id}'),
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => context.push('/visits/${visit.id}', extra: visit),
         child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: colors.hairline),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Top gradient accent strip ──────────────────────────────
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                    colors: [accent, accent.withValues(alpha: 0.0)],
-                  ),
-                ),
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                child: Text(homeInitials(name), style: homeDisplay(14, AppPalette.gold300)),
               ),
-              // ── Card body ─────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  13,
-                  AppSpacing.md,
-                  13,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Main row: icon · content · badge · arrow ───────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Status icon circle
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Icon(
-                            _statusIcon(visit.status),
-                            color: accent,
-                            size: 22,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        // Name + project
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                primaryName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              if (showProject) ...[
-                                const SizedBox(height: 3),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.apartment_rounded,
-                                      size: 11,
-                                      color: colors.inkMuted,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Expanded(
-                                      child: Text(
-                                        visit.projectName!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colors.inkMuted,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Status badge + disclosure
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            StatusBadge(
-                              label: visitStatusLabel(l10n, visit.status),
-                              tone: tone,
-                            ),
-                            const SizedBox(height: 4),
-                            const Icon(
-                              AppIcons.chevronForward,
-                              size: 18,
-                              color: AppPalette.gold400,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    // ── Date / unit chips ─────────────────────────────
-                    if (hasDate || hasUnit) ...[
-                      const SizedBox(height: 10),
-                      Container(height: 0.5, color: colors.hairline),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          if (hasDate)
-                            _InfoChip(
-                              icon: Icons.schedule_rounded,
-                              label: DateFormatter.shortDate(
-                                visit.scheduledAt!,
-                                languageCode: lang,
-                              ),
-                              color: colors.brandNavy,
-                            ),
-                          if (hasDate && hasUnit) const SizedBox(width: 6),
-                          if (hasUnit)
-                            _InfoChip(
-                              icon: Icons.apartment_rounded,
-                              label: visit.unitCode!,
-                              color: colors.brandGold,
-                            ),
-                        ],
-                      ),
-                    ],
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                  if (where.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Icon(Icons.apartment_rounded, size: 14, color: colors.inkMuted),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
+                    ]),
                   ],
+                ]),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                child: Text(visitStatusLabel(l10n, visit.status), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Divider(height: 1, color: colors.hairline),
+            const SizedBox(height: 10),
+            Row(children: [
+              Icon(Icons.event_rounded, size: 15, color: colors.inkMuted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  visit.scheduledAt == null ? '—' : leadWhen(context, visit.scheduledAt!),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.ink),
                 ),
               ),
-            ],
-          ),
+              const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+            ]),
+          ]),
         ),
       ),
     );
-  }
-}
-
-// ── Shared info chip ──────────────────────────────────────────────────────────
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppInfoChip(icon: icon, label: label, color: color);
   }
 }
