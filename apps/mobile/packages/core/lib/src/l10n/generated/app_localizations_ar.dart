@@ -8355,4 +8355,146 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get cqCovers => 'الدفعات التي يغطيها';
+
+  @override
+  String get bpTitle => 'أداء الوسطاء';
+
+  @override
+  String get bpSubtitle => 'كل الفترة';
+
+  @override
+  String get bpBrokersSales => 'مبيعات الوسطاء';
+
+  @override
+  String get bpCommissions => 'عمولات';
+
+  @override
+  String bpPendingOf(String amount) {
+    return '$amount معلّقة';
+  }
+
+  @override
+  String get bpActive => 'وسطاء نشطون';
+
+  @override
+  String bpActiveOf(int n) {
+    return 'من $n';
+  }
+
+  @override
+  String get bpFunnel => 'مسار الوسطاء';
+
+  @override
+  String get bpFunnelMine => 'مسار عملائك';
+
+  @override
+  String get bpLeadsSent => 'فرص مُرسلة';
+
+  @override
+  String get bpLeadsApproved => 'فرص معتمدة';
+
+  @override
+  String get bpBookings => 'حجوزات';
+
+  @override
+  String get bpSigned => 'عقود موقّعة';
+
+  @override
+  String get bpPaidCom => 'عمولة مدفوعة';
+
+  @override
+  String get bpTrend => 'الاتجاه الشهري';
+
+  @override
+  String get bpTrendMine => 'عمولتك شهريًا';
+
+  @override
+  String get bpTrendNote => 'صافي العمولات شهريًا';
+
+  @override
+  String get bpTop => 'أفضل الوسطاء';
+
+  @override
+  String get bpByProject => 'حسب المشروع';
+
+  @override
+  String get bpSalesLbl => 'المبيعات';
+
+  @override
+  String get bpCommissionLbl => 'العمولة';
+
+  @override
+  String get bpPaidLbl => 'المصروف';
+
+  @override
+  String bpConv(String pct) {
+    return 'تحويل $pct';
+  }
+
+  @override
+  String bpBrokerLine(int leads, int res, int con) {
+    return '$leads فرص · $res حجوزات · $con عقود';
+  }
+
+  @override
+  String get bpActiveBadge => 'نشط';
+
+  @override
+  String get bpMineTitle => 'أدائي';
+
+  @override
+  String get bpMineSales => 'مبيعاتك';
+
+  @override
+  String get bpMineCom => 'عمولتك';
+
+  @override
+  String bpMineContractsHint(int n) {
+    return 'من $n حجوزات';
+  }
+
+  @override
+  String get bpCommissionsBlock => 'العمولات والمدفوعات';
+
+  @override
+  String get bpNetCommissions => 'صافي العمولات';
+
+  @override
+  String get bpNetHint => 'إجمالي ما استحققته';
+
+  @override
+  String get bpPendingLbl => 'معلّقة';
+
+  @override
+  String get bpPendingNote => 'تُصرف بعد التعاقد';
+
+  @override
+  String get bpPaidOutLbl => 'صُرف لك';
+
+  @override
+  String get bpMyCommissions => 'عمولاتي وكشف الصرف';
+
+  @override
+  String get bpTeam => 'فريقك';
+
+  @override
+  String bpProjectLine(String city, int n) {
+    return '$city · $n عقود';
+  }
+
+  @override
+  String bpContractsN(int n) {
+    return '$n عقود موقّعة';
+  }
+
+  @override
+  String bpAgentLine(int leads, int con) {
+    return '$leads فرص · $con عقود';
+  }
+
+  @override
+  String get bpEmpty => 'لا توجد بيانات بعد';
+
+  @override
+  String get bpEmptyMsg => 'ستظهر هنا أرقام الوسطاء بعد أول عملياتهم.';
 }

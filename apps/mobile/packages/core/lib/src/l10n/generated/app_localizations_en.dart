@@ -8328,4 +8328,146 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cqCovers => 'Payments it covers';
+
+  @override
+  String get bpTitle => 'Brokers\' performance';
+
+  @override
+  String get bpSubtitle => 'All time';
+
+  @override
+  String get bpBrokersSales => 'Brokers\' sales';
+
+  @override
+  String get bpCommissions => 'Commissions';
+
+  @override
+  String bpPendingOf(String amount) {
+    return '$amount pending';
+  }
+
+  @override
+  String get bpActive => 'Active brokers';
+
+  @override
+  String bpActiveOf(int n) {
+    return 'of $n';
+  }
+
+  @override
+  String get bpFunnel => 'Brokers\' funnel';
+
+  @override
+  String get bpFunnelMine => 'Your clients\' funnel';
+
+  @override
+  String get bpLeadsSent => 'Leads sent';
+
+  @override
+  String get bpLeadsApproved => 'Leads approved';
+
+  @override
+  String get bpBookings => 'Bookings';
+
+  @override
+  String get bpSigned => 'Signed contracts';
+
+  @override
+  String get bpPaidCom => 'Commission paid';
+
+  @override
+  String get bpTrend => 'Monthly trend';
+
+  @override
+  String get bpTrendMine => 'Your commission by month';
+
+  @override
+  String get bpTrendNote => 'Net commissions per month';
+
+  @override
+  String get bpTop => 'Top brokers';
+
+  @override
+  String get bpByProject => 'By project';
+
+  @override
+  String get bpSalesLbl => 'Sales';
+
+  @override
+  String get bpCommissionLbl => 'Commission';
+
+  @override
+  String get bpPaidLbl => 'Paid out';
+
+  @override
+  String bpConv(String pct) {
+    return 'Conversion $pct';
+  }
+
+  @override
+  String bpBrokerLine(int leads, int res, int con) {
+    return '$leads leads · $res bookings · $con contracts';
+  }
+
+  @override
+  String get bpActiveBadge => 'Active';
+
+  @override
+  String get bpMineTitle => 'My performance';
+
+  @override
+  String get bpMineSales => 'Your sales';
+
+  @override
+  String get bpMineCom => 'Your commission';
+
+  @override
+  String bpMineContractsHint(int n) {
+    return 'of $n bookings';
+  }
+
+  @override
+  String get bpCommissionsBlock => 'Commissions and payouts';
+
+  @override
+  String get bpNetCommissions => 'Net commissions';
+
+  @override
+  String get bpNetHint => 'All you earned';
+
+  @override
+  String get bpPendingLbl => 'Pending';
+
+  @override
+  String get bpPendingNote => 'Paid after the contract';
+
+  @override
+  String get bpPaidOutLbl => 'Paid to you';
+
+  @override
+  String get bpMyCommissions => 'My commissions and payouts';
+
+  @override
+  String get bpTeam => 'Your team';
+
+  @override
+  String bpProjectLine(String city, int n) {
+    return '$city · $n contracts';
+  }
+
+  @override
+  String bpContractsN(int n) {
+    return '$n signed contracts';
+  }
+
+  @override
+  String bpAgentLine(int leads, int con) {
+    return '$leads leads · $con contracts';
+  }
+
+  @override
+  String get bpEmpty => 'No data yet';
+
+  @override
+  String get bpEmptyMsg => 'Figures appear after the brokers\' first activity.';
 }

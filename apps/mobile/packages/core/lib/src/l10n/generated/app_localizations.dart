@@ -14767,6 +14767,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payments it covers'**
   String get cqCovers;
+
+  /// No description provided for @bpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' performance'**
+  String get bpTitle;
+
+  /// No description provided for @bpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get bpSubtitle;
+
+  /// No description provided for @bpBrokersSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' sales'**
+  String get bpBrokersSales;
+
+  /// No description provided for @bpCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions'**
+  String get bpCommissions;
+
+  /// No description provided for @bpPendingOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} pending'**
+  String bpPendingOf(String amount);
+
+  /// No description provided for @bpActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active brokers'**
+  String get bpActive;
+
+  /// No description provided for @bpActiveOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n}'**
+  String bpActiveOf(int n);
+
+  /// No description provided for @bpFunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' funnel'**
+  String get bpFunnel;
+
+  /// No description provided for @bpFunnelMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clients\' funnel'**
+  String get bpFunnelMine;
+
+  /// No description provided for @bpLeadsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads sent'**
+  String get bpLeadsSent;
+
+  /// No description provided for @bpLeadsApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads approved'**
+  String get bpLeadsApproved;
+
+  /// No description provided for @bpBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get bpBookings;
+
+  /// No description provided for @bpSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get bpSigned;
+
+  /// No description provided for @bpPaidCom.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission paid'**
+  String get bpPaidCom;
+
+  /// No description provided for @bpTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly trend'**
+  String get bpTrend;
+
+  /// No description provided for @bpTrendMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission by month'**
+  String get bpTrendMine;
+
+  /// No description provided for @bpTrendNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Net commissions per month'**
+  String get bpTrendNote;
+
+  /// No description provided for @bpTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Top brokers'**
+  String get bpTop;
+
+  /// No description provided for @bpByProject.
+  ///
+  /// In en, this message translates to:
+  /// **'By project'**
+  String get bpByProject;
+
+  /// No description provided for @bpSalesLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get bpSalesLbl;
+
+  /// No description provided for @bpCommissionLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get bpCommissionLbl;
+
+  /// No description provided for @bpPaidLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid out'**
+  String get bpPaidLbl;
+
+  /// No description provided for @bpConv.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion {pct}'**
+  String bpConv(String pct);
+
+  /// No description provided for @bpBrokerLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{leads} leads · {res} bookings · {con} contracts'**
+  String bpBrokerLine(int leads, int res, int con);
+
+  /// No description provided for @bpActiveBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get bpActiveBadge;
+
+  /// No description provided for @bpMineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My performance'**
+  String get bpMineTitle;
+
+  /// No description provided for @bpMineSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sales'**
+  String get bpMineSales;
+
+  /// No description provided for @bpMineCom.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get bpMineCom;
+
+  /// No description provided for @bpMineContractsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n} bookings'**
+  String bpMineContractsHint(int n);
+
+  /// No description provided for @bpCommissionsBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions and payouts'**
+  String get bpCommissionsBlock;
+
+  /// No description provided for @bpNetCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Net commissions'**
+  String get bpNetCommissions;
+
+  /// No description provided for @bpNetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All you earned'**
+  String get bpNetHint;
+
+  /// No description provided for @bpPendingLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bpPendingLbl;
+
+  /// No description provided for @bpPendingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid after the contract'**
+  String get bpPendingNote;
+
+  /// No description provided for @bpPaidOutLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid to you'**
+  String get bpPaidOutLbl;
+
+  /// No description provided for @bpMyCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'My commissions and payouts'**
+  String get bpMyCommissions;
+
+  /// No description provided for @bpTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Your team'**
+  String get bpTeam;
+
+  /// No description provided for @bpProjectLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{city} · {n} contracts'**
+  String bpProjectLine(String city, int n);
+
+  /// No description provided for @bpContractsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} signed contracts'**
+  String bpContractsN(int n);
+
+  /// No description provided for @bpAgentLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{leads} leads · {con} contracts'**
+  String bpAgentLine(int leads, int con);
+
+  /// No description provided for @bpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No data yet'**
+  String get bpEmpty;
+
+  /// No description provided for @bpEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Figures appear after the brokers\' first activity.'**
+  String get bpEmptyMsg;
 }
 
 class _AppLocalizationsDelegate

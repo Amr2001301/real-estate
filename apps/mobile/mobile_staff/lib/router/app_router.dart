@@ -135,6 +135,8 @@ import '../features/reservations/presentation/cubit/create_reservation_cubit.dar
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
 import '../features/deposits/view/payments_data.dart';
+import '../features/performance/brokers/brokers_perf_data.dart';
+import '../features/performance/brokers/brokers_perf_screens.dart';
 import '../features/notifications/view/broadcast_data.dart';
 import '../features/notifications/view/broadcast_screen.dart';
 import '../features/deposits/view/payments_screens.dart';
@@ -352,6 +354,21 @@ GoRouter createStaffRouter(
           key: ValueKey('broker-contract-${state.pathParameters['id']}'),
           create: (ctx) => BrokerContractCubit(BrokerContractsRepository(ctx.read<Dio>()), contractId: state.pathParameters['id']!),
           child: const BrokerContractScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/broker/performance',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).mine),
+          child: const BrokerOwnPerformanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/performance/brokers',
+        // The admin's report (the API refuses anyone else).
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).all),
+          child: const BrokersPerformanceScreen(),
         ),
       ),
       GoRoute(
