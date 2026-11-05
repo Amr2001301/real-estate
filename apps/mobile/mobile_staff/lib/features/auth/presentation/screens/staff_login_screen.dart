@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/tenant_mismatch_notifier.dart';
 import '../cubit/staff_auth_cubit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import 'staff_two_factor_panel.dart';
 
 class StaffLoginScreen extends StatefulWidget {
@@ -89,7 +90,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
           child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: AuthHeader(
+                child: StaffAuthHero(
                   title: l10n.authWelcomeBack,
                   subtitle: l10n.staffLoginSubtitle,
                 ),
@@ -174,6 +175,36 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The sign-in pages' header, in the look of the redesigned pages: the shared
+/// hero with the company mark under the title.
+class StaffAuthHero extends StatelessWidget {
+  const StaffAuthHero({super.key, required this.title, required this.subtitle, this.onBack});
+  final String title;
+  final String subtitle;
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return HomeListHero(
+      back: onBack != null,
+      title: title,
+      subtitle: subtitle,
+      bottom: Center(
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
+          ),
+          child: const Icon(Icons.apartment_rounded, size: 32, color: AppPalette.navy),
         ),
       ),
     );
