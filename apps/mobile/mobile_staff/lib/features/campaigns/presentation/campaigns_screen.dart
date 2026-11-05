@@ -306,7 +306,7 @@ class _CampaignTile extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.xs),
                       StatusBadge(label: campaignStatusLabel(l10n, c.status), tone: campaignStatusTone(c.status)),
-                      Icon(isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: colors.inkMuted),
+                      Icon(AppIcons.chevronForward, color: AppPalette.gold400),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
