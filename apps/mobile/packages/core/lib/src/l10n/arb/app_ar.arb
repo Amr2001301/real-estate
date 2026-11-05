@@ -2922,5 +2922,10 @@
   "@ledgerNoItemsIn": {"placeholders": {"names": {"type": "String"}}},
   "ledgerFilterTitle": "تصفية الأرصدة",
   "ledgerFilterPeriod": "الفترة",
-  "ledgerFilterApply": "عرض النتائج"
+  "ledgerFilterApply": "عرض النتائج",
+  "prFigPending": "بانتظار المراجعة",
+  "prFigTotal": "إجمالي المبالغ",
+  "prFigItems": "{n, plural, =0{لا إيصالات} =1{إيصال واحد} =2{إيصالان} few{{n} إيصالات} other{{n} إيصالًا}}",
+  "@prFigItems": {"placeholders": {"n": {"type": "int"}}},
+  "prOpenProof": "فتح الإيصال"
 }

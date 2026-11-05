@@ -1,9 +1,10 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/payment_review_item.dart';
 import '../cubit/payments_review_cubit.dart';
 import '../cubit/proof_download_cubit.dart';
@@ -124,70 +125,88 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
     final l10n = context.l10n;
     final cubit = context.read<PaymentsReviewCubit>();
     final canReview = _canReview;
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.paymentReviewTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.pop(),
-            ),
-          ),
-          Expanded(
-            child: BlocListener<ProofDownloadCubit, ProofDownloadState>(
-              listenWhen: (a, b) => b.openingId == null && (b.failure != null || b.launchFailed),
-              listener: _onProofDownload,
-              child: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
-          listenWhen: (a, b) => a.actionEpoch != b.actionEpoch,
-          listener: _onAction,
-          builder: (context, state) {
-            switch (state.status) {
-              case DataStatus.initial:
-              case DataStatus.loading:
-                return const StaffListSkeleton();
-              case DataStatus.failure:
-                return ErrorState(failure: state.failure, onRetry: cubit.load);
-              case DataStatus.empty:
-                return EmptyState(
-                  icon: Icons.receipt_long_outlined,
-                  title: l10n.paymentReviewEmptyTitle,
-                  message: l10n.paymentReviewEmptyMessage,
-                );
-              case DataStatus.success:
-                // Re-reads the proof-open progress so the tapped tile shows a
-                // spinner while its signed URL is minted.
-                final openingId = context.watch<ProofDownloadCubit>().state.openingId;
-                return RefreshIndicator(
-                  onRefresh: cubit.load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: state.items.length + (canReview ? 0 : 1),
-                    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, i) {
-                      if (!canReview && i == 0) return const _ReadOnlyBanner();
-                      final item = state.items[canReview ? i : i - 1];
-                      return PaymentReviewTile(
-                        item: item,
-                        canReview: canReview,
-                        busy: state.workingId == item.id,
-                        onApprove: () => _approve(item),
-                        onReject: () => _reject(item),
-                        // Open-proof is available to every queue viewer (ADMIN +
-                        // SALES_MANAGER), independent of approve/reject rights.
-                        onOpenProof: item.hasProof ? () => _openProof(item) : null,
-                        openBusy: openingId == item.id,
-                      );
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocListener<ProofDownloadCubit, ProofDownloadState>(
+          listenWhen: (a, b) => b.openingId == null && (b.failure != null || b.launchFailed),
+          listener: _onProofDownload,
+          child: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
+            listenWhen: (a, b) => a.actionEpoch != b.actionEpoch,
+            listener: _onAction,
+            builder: (context, state) {
+              final ready = state.status == DataStatus.success;
+              // Re-reads the proof-open progress so the tapped tile shows a
+              // spinner while its signed URL is minted.
+              final openingId = context.watch<ProofDownloadCubit>().state.openingId;
+              final total = state.items.fold<double>(0, (a, i) => a + (double.tryParse(i.amount) ?? 0));
+              return RefreshIndicator(
+                onRefresh: cubit.load,
+                child: ListView(
+                  key: const Key('payments-review'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
+                  children: [
+                    HomeListHero(back: true, title: l10n.paymentReviewTitle, subtitle: l10n.paymentReviewSubtitle),
+                    if (ready)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                        child: HomeBand(figures: [
+                          HomeFigure(
+                            id: 'pending',
+                            value: '${state.items.length}',
+                            label: l10n.prFigPending,
+                            hint: l10n.prFigItems(state.items.length),
+                            warn: state.items.isNotEmpty,
+                          ),
+                          () {
+                            final (n, u) = homeCompact(total, l10n);
+                            return HomeFigure(
+                              id: 'total',
+                              value: ltr(n),
+                              label: u.isEmpty ? l10n.prFigTotal : '${l10n.prFigTotal} · $u',
+                              hint: PriceFormatter.symbol(Localizations.localeOf(context).languageCode),
+                            );
+                          }(),
+                        ]),
+                      ),
+                    if (ready && !canReview)
+                      const Padding(padding: EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0), child: _ReadOnlyBanner()),
+                    ...switch (state.status) {
+                      DataStatus.initial || DataStatus.loading => [const SizedBox(height: 480, child: StaffListSkeleton())],
+                      DataStatus.failure => [ErrorState(failure: state.failure, onRetry: cubit.load)],
+                      DataStatus.empty => [
+                          EmptyState(
+                            icon: Icons.receipt_long_outlined,
+                            title: l10n.paymentReviewEmptyTitle,
+                            message: l10n.paymentReviewEmptyMessage,
+                          ),
+                        ],
+                      DataStatus.success => [
+                          for (final item in state.items)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                              child: PaymentReviewTile(
+                                item: item,
+                                canReview: canReview,
+                                busy: state.workingId == item.id,
+                                onApprove: () => _approve(item),
+                                onReject: () => _reject(item),
+                                // Open-proof is available to every queue viewer (ADMIN +
+                                // SALES_MANAGER), independent of approve/reject rights.
+                                onOpenProof: item.hasProof ? () => _openProof(item) : null,
+                                openBusy: openingId == item.id,
+                              ),
+                            ),
+                        ],
                     },
-                  ),
-                );
-            }
-          },
-        ),
-      ),
+                  ],
+                ),
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }
@@ -201,17 +220,15 @@ class _ReadOnlyBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    return AppCard(
-      elevation: AppCardElevation.none,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: homeCard(context, radius: 18),
       child: Row(
         children: [
           Icon(Icons.info_outline_rounded, size: 18, color: colors.inkMuted),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              l10n.paymentReviewReadOnly,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-            ),
+            child: Text(l10n.paymentReviewReadOnly, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           ),
         ],
       ),

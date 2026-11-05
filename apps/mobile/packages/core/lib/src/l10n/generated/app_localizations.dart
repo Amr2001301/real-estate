@@ -15637,6 +15637,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show results'**
   String get ledgerFilterApply;
+
+  /// No description provided for @prFigPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting review'**
+  String get prFigPending;
+
+  /// No description provided for @prFigTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total amount'**
+  String get prFigTotal;
+
+  /// No description provided for @prFigItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no receipts} =1{1 receipt} other{{n} receipts}}'**
+  String prFigItems(int n);
+
+  /// No description provided for @prOpenProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Open receipt'**
+  String get prOpenProof;
 }
 
 class _AppLocalizationsDelegate

@@ -8839,4 +8839,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ledgerFilterApply => 'عرض النتائج';
+
+  @override
+  String get prFigPending => 'بانتظار المراجعة';
+
+  @override
+  String get prFigTotal => 'إجمالي المبالغ';
+
+  @override
+  String prFigItems(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n إيصالًا',
+      few: '$n إيصالات',
+      two: 'إيصالان',
+      one: 'إيصال واحد',
+      zero: 'لا إيصالات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get prOpenProof => 'فتح الإيصال';
 }
