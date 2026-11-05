@@ -9162,4 +9162,105 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rpNoSales => 'لا مبيعات في هذه الفترة.';
+
+  @override
+  String get brkTitle => 'الوسطاء';
+
+  @override
+  String get brkProfileDesc => 'الشركات وفرصها وحجوزاتها وعمولاتها';
+
+  @override
+  String brkCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n نتيجةً',
+      few: '$n نتائج',
+      two: 'نتيجتان',
+      one: 'نتيجة واحدة',
+      zero: 'لا نتائج',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brkTabFirms => 'الشركات';
+
+  @override
+  String get brkTabLeads => 'الفرص';
+
+  @override
+  String get brkTabReservations => 'الحجوزات';
+
+  @override
+  String get brkTabContracts => 'العقود';
+
+  @override
+  String get brkTabCommissions => 'العمولات';
+
+  @override
+  String get brkTabPayouts => 'المدفوعات';
+
+  @override
+  String get brkFilterTitle => 'تصفية القائمة';
+
+  @override
+  String get brkFilterApply => 'عرض النتائج';
+
+  @override
+  String get brkEmpty => 'لا شيء هنا بهذه الحالة.';
+
+  @override
+  String get brkCommissionWord => 'عمولة افتراضية';
+
+  @override
+  String get brkPayoutHold => 'مدفوعاتها موقوفة';
+
+  @override
+  String get brkStPending => 'قيد الانتظار';
+
+  @override
+  String get brkStActive => 'نشطة';
+
+  @override
+  String get brkStSuspended => 'موقوفة';
+
+  @override
+  String get brkStTerminated => 'منتهية';
+
+  @override
+  String get brkStApproved => 'معتمد';
+
+  @override
+  String get brkStRejected => 'مرفوض';
+
+  @override
+  String get brkStDuplicate => 'مكرّر';
+
+  @override
+  String get brkStExpired => 'منتهٍ';
+
+  @override
+  String get brkStConfirmed => 'مؤكَّد';
+
+  @override
+  String get brkStConverted => 'تحوّل إلى عقد';
+
+  @override
+  String get brkStCancelled => 'ملغى';
+
+  @override
+  String get brkStDraft => 'مسوّدة';
+
+  @override
+  String get brkStProcessing => 'قيد الصرف';
+
+  @override
+  String get brkStPaid => 'مدفوع';
+
+  @override
+  String get brkStSigned => 'موقَّع';
+
+  @override
+  String get brkStUnsigned => 'بانتظار التوقيع';
 }

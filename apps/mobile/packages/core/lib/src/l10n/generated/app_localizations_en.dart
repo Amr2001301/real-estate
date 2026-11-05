@@ -9124,4 +9124,104 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rpNoSales => 'No sales in this period.';
+
+  @override
+  String get brkTitle => 'Brokers';
+
+  @override
+  String get brkProfileDesc =>
+      'The firms, their leads, bookings and commissions';
+
+  @override
+  String brkCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n results',
+      one: '1 result',
+      zero: 'No results',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brkTabFirms => 'Firms';
+
+  @override
+  String get brkTabLeads => 'Leads';
+
+  @override
+  String get brkTabReservations => 'Bookings';
+
+  @override
+  String get brkTabContracts => 'Contracts';
+
+  @override
+  String get brkTabCommissions => 'Commissions';
+
+  @override
+  String get brkTabPayouts => 'Payouts';
+
+  @override
+  String get brkFilterTitle => 'Filter the list';
+
+  @override
+  String get brkFilterApply => 'Show results';
+
+  @override
+  String get brkEmpty => 'Nothing here in this state.';
+
+  @override
+  String get brkCommissionWord => 'default commission';
+
+  @override
+  String get brkPayoutHold => 'Payouts on hold';
+
+  @override
+  String get brkStPending => 'Pending';
+
+  @override
+  String get brkStActive => 'Active';
+
+  @override
+  String get brkStSuspended => 'Suspended';
+
+  @override
+  String get brkStTerminated => 'Terminated';
+
+  @override
+  String get brkStApproved => 'Approved';
+
+  @override
+  String get brkStRejected => 'Rejected';
+
+  @override
+  String get brkStDuplicate => 'Duplicate';
+
+  @override
+  String get brkStExpired => 'Expired';
+
+  @override
+  String get brkStConfirmed => 'Confirmed';
+
+  @override
+  String get brkStConverted => 'Converted';
+
+  @override
+  String get brkStCancelled => 'Cancelled';
+
+  @override
+  String get brkStDraft => 'Draft';
+
+  @override
+  String get brkStProcessing => 'Processing';
+
+  @override
+  String get brkStPaid => 'Paid';
+
+  @override
+  String get brkStSigned => 'Signed';
+
+  @override
+  String get brkStUnsigned => 'Awaiting signature';
 }
