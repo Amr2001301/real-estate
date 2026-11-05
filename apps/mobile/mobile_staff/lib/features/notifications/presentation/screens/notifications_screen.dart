@@ -1,12 +1,39 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/app_notification.dart';
 import '../cubit/notifications_cubit.dart';
 import '../cubit/unread_count_cubit.dart';
 import '../notification_route.dart';
+
+enum _Filter { all, unread, finance, sales }
+
+/// The notification's family: what the filters tell apart.
+_Filter _familyOf(String code) {
+  const finance = ['deposit_', 'installment_', 'cheque_', 'payment_', 'booking_payment_', 'bonus_', 'refund_', 'broker_commission_', 'broker_payout_'];
+  const sales = ['lead_', 'broker_lead_', 'visit_', 'reservation_', 'contract_', 'follow_up'];
+  if (finance.any(code.startsWith)) return _Filter.finance;
+  if (sales.any(code.startsWith)) return _Filter.sales;
+  return _Filter.all;
+}
+
+/// The icon and tint of a notification (design n1, owner-approved 2026-11-05).
+({IconData icon, Color color}) _style(String code) {
+  if (code.startsWith('visit_')) return (icon: Icons.event_rounded, color: const Color(0xFF26405F));
+  if (code.startsWith('reservation_')) return (icon: Icons.bookmark_rounded, color: const Color(0xFF2F6B4A));
+  if (code.startsWith('maintenance_')) return (icon: Icons.build_rounded, color: const Color(0xFF8A5A12));
+  if (code.startsWith('payment_') || code.startsWith('booking_payment_') || code.startsWith('deposit_')) return (icon: Icons.payments_rounded, color: AppPalette.gold600);
+  if (code.startsWith('cheque_')) return (icon: Icons.receipt_long_rounded, color: const Color(0xFFB3261E));
+  if (code.startsWith('installment_')) return (icon: Icons.calendar_month_rounded, color: const Color(0xFF8A5A12));
+  if (code.startsWith('bonus_') || code.startsWith('broker_commission_') || code.startsWith('broker_payout_')) return (icon: Icons.savings_rounded, color: const Color(0xFF2F6B4A));
+  if (code.startsWith('lead_') || code.startsWith('broker_lead_')) return (icon: Icons.person_add_alt_1_rounded, color: const Color(0xFF26405F));
+  if (code.startsWith('contract_')) return (icon: Icons.description_rounded, color: AppPalette.gold600);
+  return (icon: Icons.campaign_rounded, color: AppPalette.gold600);
+}
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -16,309 +43,185 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  _Filter _filter = _Filter.all;
+
   @override
   void initState() {
     super.initState();
     context.read<NotificationsCubit>().load();
   }
 
+  bool _matches(AppNotification n) => switch (_filter) {
+        _Filter.all => true,
+        _Filter.unread => !n.read,
+        _ => _familyOf(n.templateCode) == _filter,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.accountNotifications,
-            compact: true,
-            leadingAction: const NavHeaderBack(),
-            actions: [
-              NavHeaderAction(
-                icon: Icons.tune_rounded,
-                tooltip: Localizations.localeOf(context).languageCode == 'ar'
-                    ? 'تفضيلات الإشعارات'
-                    : 'Notification preferences',
-                onTap: () => context.push('/notifications/preferences'),
-              ),
-              BlocBuilder<NotificationsCubit, NotificationsState>(
-                builder: (context, state) => state.status == DataStatus.success
-                    ? NavHeaderAction(
-                        icon: Icons.done_all_rounded,
-                        tooltip: l10n.markAllRead,
-                        onTap: () =>
-                            context.read<NotificationsCubit>().markAllRead(),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          ),
-          Expanded(
-            child: BlocConsumer<NotificationsCubit, NotificationsState>(
-              listenWhen: (a, b) =>
-                  b.status == DataStatus.success ||
-                  b.status == DataStatus.empty,
-              listener: (context, _) =>
-                  context.read<UnreadCountCubit>().load(),
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const _NotificationsSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(
-                      failure: state.failure,
-                      onRetry: () =>
-                          context.read<NotificationsCubit>().load(),
-                    );
-                  case DataStatus.empty:
-                    return RefreshIndicator(
-                      onRefresh: () =>
-                          context.read<NotificationsCubit>().load(),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                              height:
-                                  MediaQuery.of(context).size.height * 0.15),
-                          EmptyState(
-                            icon: Icons.notifications_none_rounded,
-                            title: l10n.notificationsEmptyTitle,
-                            message: l10n.notificationsEmptyMessage,
-                          ),
-                        ],
+    final cubit = context.read<NotificationsCubit>();
+    final isAdmin = context.read<SessionCubit>().state.role == AppRole.admin;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocConsumer<NotificationsCubit, NotificationsState>(
+          listenWhen: (a, b) => b.status == DataStatus.success || b.status == DataStatus.empty,
+          listener: (context, _) => context.read<UnreadCountCubit>().load(),
+          builder: (context, state) {
+            final all = state.data ?? const <AppNotification>[];
+            final ready = state.status == DataStatus.success || state.status == DataStatus.empty;
+            final unread = all.where((n) => !n.read).length;
+            final shown = all.where(_matches).toList();
+            int count(_Filter f) => all.where((n) => f == _Filter.unread ? !n.read : _familyOf(n.templateCode) == f).length;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.accountNotifications,
+                      subtitle: ready ? (unread == 0 ? l10n.ntAllRead : l10n.ntUnreadN(unread)) : null,
+                      back: true,
+                      actions: [
+                        if (isAdmin) HomeHeroButton(key: const Key('notifications-send'), icon: Icons.campaign_rounded, tooltip: l10n.ntSend, onTap: () => context.push('/notifications/send')),
+                        HomeHeroButton(key: const Key('notifications-prefs'), icon: Icons.tune_rounded, tooltip: l10n.ntPrefs, onTap: () => context.push('/notifications/preferences')),
+                        if (unread > 0) HomeHeroButton(key: const Key('notifications-read-all'), icon: Icons.done_all_rounded, tooltip: l10n.markAllRead, onTap: cubit.markAllRead),
+                      ],
+                    ),
+                  ),
+                  if (ready && all.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: HomePills(pills: [
+                          HomePill(id: 'all', label: l10n.ntAll, count: all.length, selected: _filter == _Filter.all, onTap: () => setState(() => _filter = _Filter.all)),
+                          HomePill(id: 'unread', label: l10n.ntUnread, count: unread, dot: AppPalette.gold500, selected: _filter == _Filter.unread, onTap: () => setState(() => _filter = _filter == _Filter.unread ? _Filter.all : _Filter.unread)),
+                          HomePill(id: 'finance', label: l10n.ntFinance, count: count(_Filter.finance), dot: const Color(0xFF3E7C5A), selected: _filter == _Filter.finance, onTap: () => setState(() => _filter = _filter == _Filter.finance ? _Filter.all : _Filter.finance)),
+                          HomePill(id: 'sales', label: l10n.ntSales, count: count(_Filter.sales), dot: const Color(0xFF26405F), selected: _filter == _Filter.sales, onTap: () => setState(() => _filter = _filter == _Filter.sales ? _Filter.all : _Filter.sales)),
+                        ]),
                       ),
-                    );
-                  case DataStatus.success:
-                    final items = state.data!;
-                    final hasMore = context.read<NotificationsCubit>().hasMore;
-                    return RefreshIndicator(
-                      color: AppPalette.gold400,
-                      onRefresh: () =>
-                          context.read<NotificationsCubit>().load(),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
-                        itemCount: items.length + (hasMore ? 1 : 0),
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) => i == items.length
-                            ? const _ShowMore()
-                            : _NotificationTile(items[i]),
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
+                    ),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading when all.isEmpty => [const SliverToBoxAdapter(child: _Skeleton())],
+                    DataStatus.failure when all.isEmpty => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                    DataStatus.empty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.notifications_none_rounded, title: l10n.notificationsEmptyTitle, message: l10n.notificationsEmptyMessage))],
+                    _ when shown.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.filter_list_off_rounded, title: l10n.ntNoMatch))],
+                    _ => [
+                        ..._days(context, shown),
+                        if (cubit.hasMore) SliverToBoxAdapter(child: Center(child: TextButton(onPressed: cubit.loadMore, child: Text(l10n.showMore)))),
+                      ],
+                  },
+                  SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24)),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
+
+  /// The list under «اليوم» / «أمس» / the date.
+  List<Widget> _days(BuildContext context, List<AppNotification> items) {
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
+    final colors = context.appColors;
+    final today = homeDay(DateTime.now());
+    String label(DateTime d) {
+      final diff = today.difference(homeDay(d)).inDays;
+      if (diff == 0) return l10n.ntToday;
+      if (diff == 1) return l10n.ntYesterday;
+      return DateFormatter.mediumDate(d, languageCode: lang);
+    }
+
+    final out = <Widget>[];
+    String? current;
+    for (final n in items) {
+      final at = n.createdAt?.toLocal();
+      final day = at == null ? '' : label(at);
+      if (day != current) {
+        current = day;
+        out.add(SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 14, AppSpacing.lg, 6),
+            child: Text(day, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.inkMuted)),
+          ),
+        ));
+      }
+      out.add(SliverPadding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 9),
+        sliver: SliverToBoxAdapter(child: _Tile(n)),
+      ));
+    }
+    return out;
+  }
 }
 
-/// "Show more" at the end of the list while older notifications remain.
-class _ShowMore extends StatelessWidget {
-  const _ShowMore();
+class _Tile extends StatelessWidget {
+  const _Tile(this.n);
+  final AppNotification n;
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: TextButton(
-        onPressed: () => context.read<NotificationsCubit>().loadMore(),
-        child: Text(context.l10n.showMore),
-      ),
-    );
+  String _ago(BuildContext context, DateTime at) {
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
+    final d = DateTime.now().difference(at);
+    if (d.inMinutes < 1) return l10n.bcNow;
+    if (d.inHours < 24) return DateFormatter.time(at.toLocal(), languageCode: lang);
+    return DateFormatter.dayMonth(at.toLocal(), languageCode: lang);
   }
-}
-
-/// Resolves the in-app navigation route for a staff notification (shared with
-/// push taps — see [staffNotificationRoute]).
-String? _resolveStaffRoute(AppNotification n, {bool isBroker = false}) =>
-    staffNotificationRoute(n.templateCode, n.payload, isBroker: isBroker);
-
-/// Maps a notification template code to a category icon and color.
-({IconData icon, Color color}) _categoryStyle(String code) {
-  if (code.startsWith('visit_')) {
-    return (icon: Icons.event_rounded, color: const Color(0xFF60A5FA));
-  }
-  if (code.startsWith('reservation_')) {
-    return (icon: Icons.bookmark_rounded, color: const Color(0xFF34C77B));
-  }
-  if (code.startsWith('maintenance_')) {
-    return (icon: Icons.build_rounded, color: const Color(0xFFFBBF24));
-  }
-  if (code.startsWith('payment_') || code.startsWith('booking_payment_')) {
-    return (icon: Icons.payment_rounded, color: AppPalette.gold400);
-  }
-  if (code.startsWith('broker_commission_') ||
-      code.startsWith('broker_payout_')) {
-    return (
-      icon: Icons.account_balance_wallet_rounded,
-      color: const Color(0xFFA78BFA)
-    );
-  }
-  if (code.startsWith('lead_')) {
-    return (icon: Icons.person_rounded, color: const Color(0xFF60A5FA));
-  }
-  return (icon: Icons.notifications_rounded, color: AppPalette.gold400);
-}
-
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile(this.notification);
-  final AppNotification notification;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final title = notification.title.isNotEmpty
-        ? notification.title
-        : l10n.notificationDefaultTitle;
-    final message = notification.payload['message'];
-    final subtitle = notification.body.isNotEmpty
-        ? notification.body
-        : (message is String ? message : null);
-
-    final style = _categoryStyle(notification.templateCode);
-    final isUnread = !notification.read;
-
+    final title = n.title.isNotEmpty ? n.title : l10n.notificationDefaultTitle;
+    final message = n.payload['message'];
+    final body = n.body.isNotEmpty ? n.body : (message is String ? message : null);
+    final s = _style(n.templateCode);
+    final unread = !n.read;
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(AppRadii.lg),
-      elevation: isUnread ? 3 : 1,
-      shadowColor: Colors.black.withValues(alpha: 0.07),
+      color: unread ? const Color(0xFFFFFCF5) : colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
+        key: Key('notification-${n.id}'),
         onTap: () {
-          if (isUnread) {
-            context.read<NotificationsCubit>().markRead(notification.id);
-          }
-          final isBroker =
-              context.read<SessionCubit>().state.role == AppRole.broker;
-          final route = _resolveStaffRoute(notification, isBroker: isBroker);
+          if (unread) context.read<NotificationsCubit>().markRead(n.id);
+          final isBroker = context.read<SessionCubit>().state.role == AppRole.broker;
+          final route = staffNotificationRoute(n.templateCode, n.payload, isBroker: isBroker);
           if (route != null) context.push(route);
         },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Gold unread indicator strip on start edge
-                if (isUnread)
-                  Container(
-                    width: 3,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppPalette.gold300,
-                          AppPalette.gold400,
-                          AppPalette.gold300,
-                        ],
-                      ),
-                    ),
-                  ),
-                // Content
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Category icon
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: style.color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(style.icon, size: 20, color: style.color),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        // Text
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: isUnread
-                                                ? FontWeight.w700
-                                                : FontWeight.w600,
-                                          ),
-                                    ),
-                                  ),
-                                  if (isUnread)
-                                    Container(
-                                      width: 7,
-                                      height: 7,
-                                      margin: const EdgeInsetsDirectional.only(
-                                          start: AppSpacing.xs),
-                                      decoration: const BoxDecoration(
-                                        color: AppPalette.gold400,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 3),
-                                Text(
-                                  subtitle,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: colors.inkMuted,
-                                        height: 1.4,
-                                      ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                              if (notification.createdAt != null) ...[
-                                const SizedBox(height: AppSpacing.xs),
-                                Text(
-                                  DateFormatter.shortDate(
-                                    notification.createdAt!,
-                                    languageCode: lang,
-                                  ),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: isUnread
-                                            ? AppPalette.gold500
-                                            : colors.inkMuted,
-                                        fontWeight: isUnread
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
-                                      ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? const Color(0xFFE7D6A8) : colors.hairline)),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(color: s.color.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
+                child: Icon(s.icon, size: 21, color: s.color),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text(title, style: TextStyle(fontSize: 13.5, fontWeight: unread ? FontWeight.w800 : FontWeight.w700, color: colors.inkStrong))),
+                    if (unread) Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: const BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
+                  ]),
+                  if (body != null) ...[
+                    const SizedBox(height: 2),
+                    Text(body, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, height: 1.55, color: colors.inkMuted)),
+                  ],
+                  if (n.createdAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(_ago(context, n.createdAt!), style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  ],
+                ]),
+              ),
+            ]),
           ),
         ),
       ),
@@ -326,56 +229,28 @@ class _NotificationTile extends StatelessWidget {
   }
 }
 
-class _NotificationsSkeleton extends StatelessWidget {
-  const _NotificationsSkeleton();
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
 
   @override
   Widget build(BuildContext context) {
-    return AppSkeletonizer(
-      enabled: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        itemCount: 6,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, _) => Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-          elevation: 1,
-          shadowColor: Colors.black.withValues(alpha: 0.07),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: context.appColors.surfaceSoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Notification title',
-                          style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 4),
-                      Text('Notification body text here',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(height: 6),
-                      Text('18 أغسطس 2026',
-                          style: Theme.of(context).textTheme.labelSmall),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    return SizedBox(
+      height: 520,
+      child: AppSkeletonizer(
+        enabled: true,
+        child: ListView.separated(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: 5,
+          separatorBuilder: (_, _) => const SizedBox(height: 9),
+          itemBuilder: (context, _) => Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: context.appColors.surface, borderRadius: BorderRadius.circular(20)),
+            child: Row(children: [
+              Container(width: 42, height: 42, decoration: BoxDecoration(color: context.appColors.surfaceSoft, borderRadius: BorderRadius.circular(14))),
+              const SizedBox(width: 11),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Notification title'), Text('Notification body text here')])),
+            ]),
           ),
         ),
       ),

@@ -135,6 +135,8 @@ import '../features/reservations/presentation/cubit/create_reservation_cubit.dar
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
 import '../features/deposits/view/payments_data.dart';
+import '../features/notifications/view/broadcast_data.dart';
+import '../features/notifications/view/broadcast_screen.dart';
 import '../features/deposits/view/payments_screens.dart';
 import '../features/deposits/presentation/cubit/record_deposit_cubit.dart';
 import '../features/deposits/presentation/screens/record_deposit_screen.dart';
@@ -906,6 +908,11 @@ GoRouter createStaffRouter(
         builder: (context, _) => NotificationPreferencesScreen(
           api: NotificationPreferencesApi(context.read<Dio>()),
         ),
+      ),
+      GoRoute(
+        path: '/notifications/send',
+        // The admin's manual send (the API refuses anyone else).
+        builder: (context, _) => BroadcastScreen(repository: BroadcastRepository(context.read<Dio>())),
       ),
       GoRoute(
         path: '/notifications',

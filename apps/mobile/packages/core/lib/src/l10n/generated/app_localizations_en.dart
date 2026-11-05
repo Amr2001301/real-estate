@@ -7911,4 +7911,279 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pmDecisionApproveBody =>
       'The amount will count towards the instalment.';
+
+  @override
+  String ntUnreadN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n unread',
+      one: '1 unread',
+      zero: 'No unread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ntAllRead => 'All caught up';
+
+  @override
+  String get ntAll => 'All';
+
+  @override
+  String get ntUnread => 'Unread';
+
+  @override
+  String get ntFinance => 'Finance';
+
+  @override
+  String get ntSales => 'Sales';
+
+  @override
+  String get ntToday => 'Today';
+
+  @override
+  String get ntYesterday => 'Yesterday';
+
+  @override
+  String get ntNoMatch => 'No notifications match';
+
+  @override
+  String get ntSend => 'Send a notification';
+
+  @override
+  String get ntPrefs => 'Notification preferences';
+
+  @override
+  String get npHint =>
+      'In-app notifications always arrive. Choose which also reach you by e-mail or on your phone.';
+
+  @override
+  String get npEmail => 'E-mail';
+
+  @override
+  String get npEmailHint => 'A summary with details';
+
+  @override
+  String get npPush => 'Phone notification';
+
+  @override
+  String get npPushHint => 'Reaches you at once';
+
+  @override
+  String get npSaveError => 'Could not save the change. Please try again.';
+
+  @override
+  String get npGroupSales => 'Sales';
+
+  @override
+  String get npGroupSalesHint => 'Leads · visits · bookings · contracts';
+
+  @override
+  String get npGroupFinance => 'Finance';
+
+  @override
+  String get npGroupFinanceHint => 'Instalments · payments · cheques · bonuses';
+
+  @override
+  String get npGroupMaintenance => 'Maintenance';
+
+  @override
+  String get npGroupMaintenanceHint => 'Maintenance and warranty requests';
+
+  @override
+  String get npGroupAccount => 'Account and team';
+
+  @override
+  String get npGroupAccountHint => 'Security · subscription · team';
+
+  @override
+  String get bcTitle => 'Send a notification';
+
+  @override
+  String get bcSubtitle => 'To one user or a whole group';
+
+  @override
+  String get bcAudience => 'Audience';
+
+  @override
+  String get bcAllCustomers => 'All customers';
+
+  @override
+  String get bcAllCustomersHint => 'Every active customer';
+
+  @override
+  String get bcAllBrokers => 'All brokers';
+
+  @override
+  String get bcAllSales => 'All the sales team';
+
+  @override
+  String get bcAllSupervisors => 'All maintenance supervisors';
+
+  @override
+  String get bcRole => 'A specific role';
+
+  @override
+  String get bcUser => 'A specific user';
+
+  @override
+  String get bcPickUser => 'Pick the user';
+
+  @override
+  String get bcSearchUser => 'Search by name';
+
+  @override
+  String get bcRoleCustomer => 'Customer';
+
+  @override
+  String get bcContent => 'Content';
+
+  @override
+  String get bcTitleAr => 'Title (Arabic)';
+
+  @override
+  String get bcTitleEn => 'Title (English)';
+
+  @override
+  String get bcBodyAr => 'Message (Arabic)';
+
+  @override
+  String get bcBodyEn => 'Message (English)';
+
+  @override
+  String get bcBothRequired =>
+      'Both versions are required: each user gets it in their language.';
+
+  @override
+  String get bcChannel => 'Channel';
+
+  @override
+  String get bcInApp => 'In the app';
+
+  @override
+  String get bcInAppHint => 'Shows in the notification list';
+
+  @override
+  String get bcPush => 'Phone only';
+
+  @override
+  String get bcPushHint => 'An alert on the user\'s phone';
+
+  @override
+  String get bcBoth => 'In the app and on the phone';
+
+  @override
+  String get bcBothHint => 'Best for important alerts';
+
+  @override
+  String get bcLink => 'Link to a page (optional)';
+
+  @override
+  String get bcLinkNone => 'None';
+
+  @override
+  String get bcEntityContract => 'Contract';
+
+  @override
+  String get bcEntityReservation => 'Booking';
+
+  @override
+  String get bcEntityLead => 'Lead';
+
+  @override
+  String get bcRecord => 'Record';
+
+  @override
+  String get bcRecordHint => 'Search by number or name…';
+
+  @override
+  String get bcLinkNote => 'What the user opens when tapping the notification.';
+
+  @override
+  String get bcPreview => 'Preview';
+
+  @override
+  String get bcNow => 'Now';
+
+  @override
+  String get bcEstimate => 'Estimate recipients';
+
+  @override
+  String get bcSend => 'Send';
+
+  @override
+  String bcSendN(int n) {
+    return 'Send to $n users';
+  }
+
+  @override
+  String get bcSummary => 'Summary';
+
+  @override
+  String get bcRecipients => 'Recipients';
+
+  @override
+  String bcRecipientsN(int n) {
+    return '$n users';
+  }
+
+  @override
+  String get bcDevices => 'Registered devices';
+
+  @override
+  String bcDevicesN(int d, int u) {
+    return '$d devices · $u without';
+  }
+
+  @override
+  String get bcPushReady => 'Phone notifications are ready';
+
+  @override
+  String get bcPushOff =>
+      'Phone notifications are not enabled on the server; phone sending is unavailable.';
+
+  @override
+  String get bcNoDevices => 'No recipient has a registered phone.';
+
+  @override
+  String bcConfirmMass(int n) {
+    return 'I confirm sending this to $n users. This cannot be undone.';
+  }
+
+  @override
+  String get bcNeedEstimate => 'Estimate the recipients first.';
+
+  @override
+  String get bcResult => 'Last send';
+
+  @override
+  String get bcResOk => 'The notification was sent';
+
+  @override
+  String get bcResPartial => 'Partly sent';
+
+  @override
+  String get bcResFail => 'Sending failed';
+
+  @override
+  String get bcResInApp => 'In-app notifications';
+
+  @override
+  String get bcResPush => 'Reached the phone';
+
+  @override
+  String get bcResNoDev => 'No device';
+
+  @override
+  String get bcResFailed => 'Failed';
+
+  @override
+  String get bcMissing => 'Fill the title and message in both languages.';
+
+  @override
+  String get bcNoRecipients => 'No recipients for this choice.';
+
+  @override
+  String get bcAllActiveUsers => 'All active users';
 }

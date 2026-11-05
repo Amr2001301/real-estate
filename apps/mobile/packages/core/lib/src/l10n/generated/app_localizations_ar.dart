@@ -7932,4 +7932,281 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pmDecisionApproveBody => 'سيُحتسب المبلغ على القسط.';
+
+  @override
+  String ntUnreadN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n إشعارًا غير مقروء',
+      few: '$n إشعارات غير مقروءة',
+      two: 'إشعاران غير مقروءان',
+      one: 'إشعار واحد غير مقروء',
+      zero: 'لا إشعارات غير مقروءة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ntAllRead => 'كل الإشعارات مقروءة';
+
+  @override
+  String get ntAll => 'الكل';
+
+  @override
+  String get ntUnread => 'غير مقروءة';
+
+  @override
+  String get ntFinance => 'المالية';
+
+  @override
+  String get ntSales => 'المبيعات';
+
+  @override
+  String get ntToday => 'اليوم';
+
+  @override
+  String get ntYesterday => 'أمس';
+
+  @override
+  String get ntNoMatch => 'لا توجد إشعارات بهذا الاختيار';
+
+  @override
+  String get ntSend => 'إرسال إشعار';
+
+  @override
+  String get ntPrefs => 'تفضيلات الإشعارات';
+
+  @override
+  String get npHint =>
+      'تصلك الإشعارات داخل التطبيق دائمًا. اختر ما يصلك منها أيضًا بالبريد أو كإشعار على الهاتف.';
+
+  @override
+  String get npEmail => 'البريد الإلكتروني';
+
+  @override
+  String get npEmailHint => 'ملخّص بالتفاصيل';
+
+  @override
+  String get npPush => 'إشعار على الهاتف';
+
+  @override
+  String get npPushHint => 'يصلك فورًا';
+
+  @override
+  String get npSaveError => 'تعذّر حفظ التغيير، حاول مرة أخرى.';
+
+  @override
+  String get npGroupSales => 'المبيعات';
+
+  @override
+  String get npGroupSalesHint => 'العملاء · الزيارات · الحجوزات · العقود';
+
+  @override
+  String get npGroupFinance => 'المالية';
+
+  @override
+  String get npGroupFinanceHint => 'الأقساط · الدفعات · الشيكات · المكافآت';
+
+  @override
+  String get npGroupMaintenance => 'الصيانة';
+
+  @override
+  String get npGroupMaintenanceHint => 'طلبات الصيانة والضمان';
+
+  @override
+  String get npGroupAccount => 'الحساب والفريق';
+
+  @override
+  String get npGroupAccountHint => 'الأمان · الاشتراك · الفريق';
+
+  @override
+  String get bcTitle => 'إرسال إشعار';
+
+  @override
+  String get bcSubtitle => 'لمستخدم أو لفئة كاملة';
+
+  @override
+  String get bcAudience => 'الجمهور';
+
+  @override
+  String get bcAllCustomers => 'كل العملاء';
+
+  @override
+  String get bcAllCustomersHint => 'تصل لكل عميل نشط';
+
+  @override
+  String get bcAllBrokers => 'كل الوسطاء';
+
+  @override
+  String get bcAllSales => 'كل فريق المبيعات';
+
+  @override
+  String get bcAllSupervisors => 'كل مشرفي الصيانة';
+
+  @override
+  String get bcRole => 'دور محدد';
+
+  @override
+  String get bcUser => 'مستخدم محدد';
+
+  @override
+  String get bcPickUser => 'اختر المستخدم';
+
+  @override
+  String get bcSearchUser => 'ابحث بالاسم';
+
+  @override
+  String get bcRoleCustomer => 'عميل';
+
+  @override
+  String get bcContent => 'المحتوى';
+
+  @override
+  String get bcTitleAr => 'العنوان (عربي)';
+
+  @override
+  String get bcTitleEn => 'العنوان (إنجليزي)';
+
+  @override
+  String get bcBodyAr => 'نص الرسالة (عربي)';
+
+  @override
+  String get bcBodyEn => 'نص الرسالة (إنجليزي)';
+
+  @override
+  String get bcBothRequired =>
+      'النسختان مطلوبتان: يصل كل مستخدم الإشعار بلغته.';
+
+  @override
+  String get bcChannel => 'قناة الإرسال';
+
+  @override
+  String get bcInApp => 'داخل التطبيق';
+
+  @override
+  String get bcInAppHint => 'يظهر في قائمة الإشعارات';
+
+  @override
+  String get bcPush => 'على الهاتف فقط';
+
+  @override
+  String get bcPushHint => 'تنبيه على هاتف المستخدم';
+
+  @override
+  String get bcBoth => 'داخل التطبيق وعلى الهاتف';
+
+  @override
+  String get bcBothHint => 'الأفضل للتنبيهات المهمة';
+
+  @override
+  String get bcLink => 'ربط بصفحة (اختياري)';
+
+  @override
+  String get bcLinkNone => 'بدون';
+
+  @override
+  String get bcEntityContract => 'عقد';
+
+  @override
+  String get bcEntityReservation => 'حجز';
+
+  @override
+  String get bcEntityLead => 'فرصة بيع';
+
+  @override
+  String get bcRecord => 'السجل';
+
+  @override
+  String get bcRecordHint => 'ابحث بالرقم أو الاسم…';
+
+  @override
+  String get bcLinkNote => 'ما يفتحه المستخدم عند الضغط على الإشعار.';
+
+  @override
+  String get bcPreview => 'معاينة';
+
+  @override
+  String get bcNow => 'الآن';
+
+  @override
+  String get bcEstimate => 'تقدير المستقبلين';
+
+  @override
+  String get bcSend => 'إرسال';
+
+  @override
+  String bcSendN(int n) {
+    return 'إرسال إلى $n مستخدمًا';
+  }
+
+  @override
+  String get bcSummary => 'ملخص الإرسال';
+
+  @override
+  String get bcRecipients => 'المستقبلون';
+
+  @override
+  String bcRecipientsN(int n) {
+    return '$n مستخدمًا';
+  }
+
+  @override
+  String get bcDevices => 'الأجهزة المسجّلة';
+
+  @override
+  String bcDevicesN(int d, int u) {
+    return '$d جهازًا · $u بدون جهاز';
+  }
+
+  @override
+  String get bcPushReady => 'إشعارات الهاتف جاهزة';
+
+  @override
+  String get bcPushOff =>
+      'إشعارات الهاتف غير مفعّلة على الخادم، فلا يمكن الإرسال للهاتف الآن.';
+
+  @override
+  String get bcNoDevices => 'لا يوجد هاتف مسجّل لدى المستقبلين.';
+
+  @override
+  String bcConfirmMass(int n) {
+    return 'أتأكد من أنني أريد إرسال هذا الإشعار إلى $n مستخدمًا. هذا الإجراء لا يمكن التراجع عنه.';
+  }
+
+  @override
+  String get bcNeedEstimate => 'اضغط «تقدير المستقبلين» أولًا قبل الإرسال.';
+
+  @override
+  String get bcResult => 'نتيجة آخر إرسال';
+
+  @override
+  String get bcResOk => 'وصل الإشعار';
+
+  @override
+  String get bcResPartial => 'اكتمل الإرسال جزئيًا';
+
+  @override
+  String get bcResFail => 'فشل الإرسال';
+
+  @override
+  String get bcResInApp => 'إشعارات داخل التطبيق';
+
+  @override
+  String get bcResPush => 'وصل للهاتف';
+
+  @override
+  String get bcResNoDev => 'بدون جهاز';
+
+  @override
+  String get bcResFailed => 'فشل';
+
+  @override
+  String get bcMissing => 'أكمل العنوان والنص بالنسختين.';
+
+  @override
+  String get bcNoRecipients => 'لا يوجد مستقبلون لهذا الاختيار.';
+
+  @override
+  String get bcAllActiveUsers => 'جميع المستخدمين النشطين';
 }

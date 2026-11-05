@@ -14047,6 +14047,516 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The amount will count towards the instalment.'**
   String get pmDecisionApproveBody;
+
+  /// No description provided for @ntUnreadN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No unread} =1{1 unread} other{{n} unread}}'**
+  String ntUnreadN(int n);
+
+  /// No description provided for @ntAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get ntAllRead;
+
+  /// No description provided for @ntAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ntAll;
+
+  /// No description provided for @ntUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get ntUnread;
+
+  /// No description provided for @ntFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get ntFinance;
+
+  /// No description provided for @ntSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get ntSales;
+
+  /// No description provided for @ntToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get ntToday;
+
+  /// No description provided for @ntYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get ntYesterday;
+
+  /// No description provided for @ntNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications match'**
+  String get ntNoMatch;
+
+  /// No description provided for @ntSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a notification'**
+  String get ntSend;
+
+  /// No description provided for @ntPrefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences'**
+  String get ntPrefs;
+
+  /// No description provided for @npHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications always arrive. Choose which also reach you by e-mail or on your phone.'**
+  String get npHint;
+
+  /// No description provided for @npEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'E-mail'**
+  String get npEmail;
+
+  /// No description provided for @npEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A summary with details'**
+  String get npEmailHint;
+
+  /// No description provided for @npPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notification'**
+  String get npPush;
+
+  /// No description provided for @npPushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaches you at once'**
+  String get npPushHint;
+
+  /// No description provided for @npSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the change. Please try again.'**
+  String get npSaveError;
+
+  /// No description provided for @npGroupSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get npGroupSales;
+
+  /// No description provided for @npGroupSalesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads · visits · bookings · contracts'**
+  String get npGroupSalesHint;
+
+  /// No description provided for @npGroupFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get npGroupFinance;
+
+  /// No description provided for @npGroupFinanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments · payments · cheques · bonuses'**
+  String get npGroupFinanceHint;
+
+  /// No description provided for @npGroupMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get npGroupMaintenance;
+
+  /// No description provided for @npGroupMaintenanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance and warranty requests'**
+  String get npGroupMaintenanceHint;
+
+  /// No description provided for @npGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and team'**
+  String get npGroupAccount;
+
+  /// No description provided for @npGroupAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Security · subscription · team'**
+  String get npGroupAccountHint;
+
+  /// No description provided for @bcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a notification'**
+  String get bcTitle;
+
+  /// No description provided for @bcSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'To one user or a whole group'**
+  String get bcSubtitle;
+
+  /// No description provided for @bcAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience'**
+  String get bcAudience;
+
+  /// No description provided for @bcAllCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'All customers'**
+  String get bcAllCustomers;
+
+  /// No description provided for @bcAllCustomersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Every active customer'**
+  String get bcAllCustomersHint;
+
+  /// No description provided for @bcAllBrokers.
+  ///
+  /// In en, this message translates to:
+  /// **'All brokers'**
+  String get bcAllBrokers;
+
+  /// No description provided for @bcAllSales.
+  ///
+  /// In en, this message translates to:
+  /// **'All the sales team'**
+  String get bcAllSales;
+
+  /// No description provided for @bcAllSupervisors.
+  ///
+  /// In en, this message translates to:
+  /// **'All maintenance supervisors'**
+  String get bcAllSupervisors;
+
+  /// No description provided for @bcRole.
+  ///
+  /// In en, this message translates to:
+  /// **'A specific role'**
+  String get bcRole;
+
+  /// No description provided for @bcUser.
+  ///
+  /// In en, this message translates to:
+  /// **'A specific user'**
+  String get bcUser;
+
+  /// No description provided for @bcPickUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the user'**
+  String get bcPickUser;
+
+  /// No description provided for @bcSearchUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name'**
+  String get bcSearchUser;
+
+  /// No description provided for @bcRoleCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get bcRoleCustomer;
+
+  /// No description provided for @bcContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get bcContent;
+
+  /// No description provided for @bcTitleAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (Arabic)'**
+  String get bcTitleAr;
+
+  /// No description provided for @bcTitleEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (English)'**
+  String get bcTitleEn;
+
+  /// No description provided for @bcBodyAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (Arabic)'**
+  String get bcBodyAr;
+
+  /// No description provided for @bcBodyEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (English)'**
+  String get bcBodyEn;
+
+  /// No description provided for @bcBothRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Both versions are required: each user gets it in their language.'**
+  String get bcBothRequired;
+
+  /// No description provided for @bcChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel'**
+  String get bcChannel;
+
+  /// No description provided for @bcInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app'**
+  String get bcInApp;
+
+  /// No description provided for @bcInAppHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows in the notification list'**
+  String get bcInAppHint;
+
+  /// No description provided for @bcPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone only'**
+  String get bcPush;
+
+  /// No description provided for @bcPushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'An alert on the user\'s phone'**
+  String get bcPushHint;
+
+  /// No description provided for @bcBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app and on the phone'**
+  String get bcBoth;
+
+  /// No description provided for @bcBothHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Best for important alerts'**
+  String get bcBothHint;
+
+  /// No description provided for @bcLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to a page (optional)'**
+  String get bcLink;
+
+  /// No description provided for @bcLinkNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get bcLinkNone;
+
+  /// No description provided for @bcEntityContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get bcEntityContract;
+
+  /// No description provided for @bcEntityReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get bcEntityReservation;
+
+  /// No description provided for @bcEntityLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get bcEntityLead;
+
+  /// No description provided for @bcRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get bcRecord;
+
+  /// No description provided for @bcRecordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by number or name…'**
+  String get bcRecordHint;
+
+  /// No description provided for @bcLinkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'What the user opens when tapping the notification.'**
+  String get bcLinkNote;
+
+  /// No description provided for @bcPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get bcPreview;
+
+  /// No description provided for @bcNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get bcNow;
+
+  /// No description provided for @bcEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate recipients'**
+  String get bcEstimate;
+
+  /// No description provided for @bcSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get bcSend;
+
+  /// No description provided for @bcSendN.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {n} users'**
+  String bcSendN(int n);
+
+  /// No description provided for @bcSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get bcSummary;
+
+  /// No description provided for @bcRecipients.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipients'**
+  String get bcRecipients;
+
+  /// No description provided for @bcRecipientsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} users'**
+  String bcRecipientsN(int n);
+
+  /// No description provided for @bcDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered devices'**
+  String get bcDevices;
+
+  /// No description provided for @bcDevicesN.
+  ///
+  /// In en, this message translates to:
+  /// **'{d} devices · {u} without'**
+  String bcDevicesN(int d, int u);
+
+  /// No description provided for @bcPushReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notifications are ready'**
+  String get bcPushReady;
+
+  /// No description provided for @bcPushOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notifications are not enabled on the server; phone sending is unavailable.'**
+  String get bcPushOff;
+
+  /// No description provided for @bcNoDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipient has a registered phone.'**
+  String get bcNoDevices;
+
+  /// No description provided for @bcConfirmMass.
+  ///
+  /// In en, this message translates to:
+  /// **'I confirm sending this to {n} users. This cannot be undone.'**
+  String bcConfirmMass(int n);
+
+  /// No description provided for @bcNeedEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate the recipients first.'**
+  String get bcNeedEstimate;
+
+  /// No description provided for @bcResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Last send'**
+  String get bcResult;
+
+  /// No description provided for @bcResOk.
+  ///
+  /// In en, this message translates to:
+  /// **'The notification was sent'**
+  String get bcResOk;
+
+  /// No description provided for @bcResPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly sent'**
+  String get bcResPartial;
+
+  /// No description provided for @bcResFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending failed'**
+  String get bcResFail;
+
+  /// No description provided for @bcResInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications'**
+  String get bcResInApp;
+
+  /// No description provided for @bcResPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached the phone'**
+  String get bcResPush;
+
+  /// No description provided for @bcResNoDev.
+  ///
+  /// In en, this message translates to:
+  /// **'No device'**
+  String get bcResNoDev;
+
+  /// No description provided for @bcResFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get bcResFailed;
+
+  /// No description provided for @bcMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill the title and message in both languages.'**
+  String get bcMissing;
+
+  /// No description provided for @bcNoRecipients.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipients for this choice.'**
+  String get bcNoRecipients;
+
+  /// No description provided for @bcAllActiveUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'All active users'**
+  String get bcAllActiveUsers;
 }
 
 class _AppLocalizationsDelegate
