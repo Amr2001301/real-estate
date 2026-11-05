@@ -7624,4 +7624,123 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rvNew => 'حجز جديد';
+
+  @override
+  String get rnSub => 'يُرسل للمراجعة بعد الحفظ';
+
+  @override
+  String get rnStepClient => 'العميل';
+
+  @override
+  String get rnStepUnit => 'الوحدة';
+
+  @override
+  String get rnStepPlan => 'خطة السداد';
+
+  @override
+  String get rnStepBooking => 'العربون';
+
+  @override
+  String get rnChange => 'تغيير';
+
+  @override
+  String get rnPickClient => 'اختر العميل';
+
+  @override
+  String get rnSearchClient => 'ابحث باسم العميل أو هاتفه';
+
+  @override
+  String get rnPickProject => 'اختر المشروع';
+
+  @override
+  String get rnPickUnit => 'اختر الوحدة';
+
+  @override
+  String get rnSearchUnit => 'ابحث بكود الوحدة';
+
+  @override
+  String get rnNoUnitsFree => 'لا توجد وحدات متاحة';
+
+  @override
+  String get rnUnitFixed => 'الوحدة محددة';
+
+  @override
+  String get rnNoPlan => 'بدون خطة';
+
+  @override
+  String get rnNoPlanSub => 'يُحسب السعر بدون خطة سداد';
+
+  @override
+  String get rnCashSub => 'دفعة واحدة';
+
+  @override
+  String rnTermsSub(String months) {
+    return '$months شهرًا';
+  }
+
+  @override
+  String rnPlanDown(String pct) {
+    return 'مقدم $pct';
+  }
+
+  @override
+  String rnPerMonthFrom(String amount) {
+    return 'من $amount شهريًا';
+  }
+
+  @override
+  String get rnPlansHint => 'الخطط المتاحة لهذه الوحدة';
+
+  @override
+  String get rnPickUnitFirst => 'اختر الوحدة أولًا لتظهر خطط السداد';
+
+  @override
+  String get rnSummary => 'ملخص الحجز';
+
+  @override
+  String get rnSumPrice => 'سعر الوحدة';
+
+  @override
+  String get rnSumBooking => 'العربون';
+
+  @override
+  String get rnSumDown => 'المقدم';
+
+  @override
+  String get rnSumMonthly => 'القسط الشهري';
+
+  @override
+  String get rnBookingFromPlan => 'من الخطة';
+
+  @override
+  String get rnMonthlyShort => 'شهريًا';
+
+  @override
+  String get rnExp24 => 'يوم';
+
+  @override
+  String get rnExp72 => '3 أيام';
+
+  @override
+  String get rnExp168 => 'أسبوع';
+
+  @override
+  String get rnExp336 => 'أسبوعان';
+
+  @override
+  String get rnModePlanSub => 'يُحسب من خطة التقسيط المختارة';
+
+  @override
+  String get rnModeFixedSub => 'تدخل المبلغ بنفسك';
+
+  @override
+  String get rnModePercentSub => 'نسبة مئوية من سعر الوحدة';
+
+  @override
+  String rnHoldUntil(String date) {
+    return 'ينتهي الحجز $date إن لم يُراجَع';
+  }
+
+  @override
+  String get rnHoldLabel => 'مدة الحجز';
 }

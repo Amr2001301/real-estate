@@ -50,6 +50,7 @@ import '../features/contracts/create/contract_create_data.dart';
 import '../features/contracts/create/convert_reservation_screen.dart';
 import '../features/contracts/create/manual_contract_screen.dart';
 import '../features/contracts/view/contract_page_screen.dart';
+import '../features/reservations/view/new_reservation_screen.dart';
 import '../features/reservations/view/reservation_page_screen.dart';
 import '../features/reservations/view/reservations_data.dart';
 import '../features/reservations/view/reservations_list_screen.dart';
@@ -132,7 +133,6 @@ import '../features/installments/presentation/screens/installment_plans_screen.d
 import '../features/reservations/domain/repositories/reservations_repository.dart';
 import '../features/reservations/domain/usecases/reservation_use_cases.dart';
 import '../features/reservations/presentation/cubit/create_reservation_cubit.dart';
-import '../features/reservations/presentation/screens/create_reservation_screen.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
 import '../features/deposits/presentation/cubit/deposits_cubit.dart';
@@ -699,7 +699,7 @@ GoRouter createStaffRouter(
                 clientId: args['clientId'] as String?,
               );
             },
-            child: const CreateReservationScreen(),
+            child: const NewReservationScreen(),
           );
         },
       ),
