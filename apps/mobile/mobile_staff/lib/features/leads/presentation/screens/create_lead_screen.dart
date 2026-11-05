@@ -10,6 +10,7 @@ import '../../../campaigns/presentation/campaigns_screen.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../cubit/create_lead_cubit.dart';
 import 'open_lead_sheet.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 class CreateLeadScreen extends StatefulWidget {
   const CreateLeadScreen({super.key, this.interestContext});
@@ -88,14 +89,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         backgroundColor: colors.canvas,
         body: Column(
           children: [
-            AppNavHeader(
-              title: l10n.leadNew,
-              compact: true,
-              leadingAction: NavHeaderAction(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () => context.pop(),
-              ),
-            ),
+            HomeListHero(back: true, title: l10n.leadNew),
             Expanded(
               child: BlocBuilder<CreateLeadCubit, CreateLeadState>(
                 builder: (context, state) => ListView(

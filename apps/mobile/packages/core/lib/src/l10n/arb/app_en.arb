@@ -2941,5 +2941,11 @@
   "campaignsCountN": "{n, plural, =0{no campaigns} =1{1 campaign} other{{n} campaigns}}",
   "@campaignsCountN": {"placeholders": {"n": {"type": "int"}}},
   "duplicatesCountN": "{n, plural, =0{no duplicates} =1{1 customer with duplicates} other{{n} customers with duplicates}}",
-  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}}
+  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}},
+  "visitsFilterTitle": "Filter visits",
+  "visitsFilterApply": "Show visits",
+  "visitsCountN": "{n, plural, =0{no visits} =1{1 visit} other{{n} visits}}",
+  "@visitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "maintenanceFilterTitle": "Filter requests",
+  "maintenanceFilterApply": "Show requests"
 }

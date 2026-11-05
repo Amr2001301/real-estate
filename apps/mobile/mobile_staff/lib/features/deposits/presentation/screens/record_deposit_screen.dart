@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../cubit/record_deposit_cubit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 /// Arguments passed via GoRouter `extra`:
 /// ```dart
@@ -94,13 +95,7 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
           builder: (context) {
             return Column(
               children: [
-                AppNavHeader(
-                  title: l10n.recordDeposit,
-                  leadingAction: NavHeaderAction(
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: () => context.pop(),
-                  ),
-                ),
+                HomeListHero(back: true, title: l10n.recordDeposit),
                 Expanded(
                   child: Form(
                     key: _formKey,

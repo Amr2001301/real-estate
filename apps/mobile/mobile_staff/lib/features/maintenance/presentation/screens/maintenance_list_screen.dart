@@ -1,14 +1,16 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../auth/presentation/cubit/staff_auth_cubit.dart';
-import '../../../notifications/presentation/widgets/notifications_bell.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_list_cubit.dart';
 import '../maintenance_format.dart';
+import '../../../dashboard/home_kit/filter_kit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 
 // ── Color palette (mirrors Customer App) ─────────────────────────────────────
 
@@ -75,107 +77,140 @@ class _MaintenanceListScreenState extends State<MaintenanceListScreen> {
         .sessionOrNull
         ?.displayName;
 
-    return Scaffold(
-      backgroundColor: context.appColors.canvas,
-      body: Column(
-        children: [
-          // ── Header ──────────────────────────────────────────────────────
-          _SupervisorHeader(
-            displayName: displayName,
-            l10n: l10n,
-            onLogout: () async {
-              final ok = await showAdaptiveConfirm(
-                context,
-                title: l10n.actionLogout,
-                message: l10n.logoutConfirmMessage,
-                confirmLabel: l10n.actionLogout,
-                cancelLabel: l10n.actionCancel,
-                destructive: true,
-              );
-              if (ok && context.mounted) {
-                context.read<StaffAuthCubit>().logout();
-              }
-            },
-          ),
-
-          // ── Body ────────────────────────────────────────────────────────
-          Expanded(
-            child: BlocBuilder<MaintenanceListCubit, MaintenanceListState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-
-                  case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
-
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.engineering_outlined,
-                      title: l10n.supervisorNoAssignedTitle,
-                      message: l10n.supervisorNoAssignedMessage,
-                    );
-
-                  case DataStatus.success:
-                    final all     = state.requests;
-                    final visible = _applyFilter(all);
-                    return Column(
-                      children: [
-                        // Fixed filter row
-                        _FilterRow(
-                          all: all,
-                          selected: _filter,
-                          onSelect: (k) => setState(() => _filter = k),
-                          l10n: l10n,
-                        ),
-                        // Scrollable list (summary card + request cards)
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: cubit.load,
-                            child: visible.isEmpty
-                                ? ListView(
-                                    padding: const EdgeInsets.all(AppSpacing.lg),
-                                    children: [
-                                      _SummaryCard(requests: all, l10n: l10n),
-                                      const SizedBox(height: AppSpacing.xl),
-                                      EmptyState(
-                                        icon: Icons.filter_list_off_rounded,
-                                        title: l10n.supervisorFilterEmptyTitle,
-                                        message: l10n.supervisorFilterEmptyMessage,
-                                      ),
-                                    ],
-                                  )
-                                : ListView.separated(
-                                    padding: EdgeInsets.fromLTRB(
-                                      AppSpacing.lg,
-                                      AppSpacing.md,
-                                      AppSpacing.lg,
-                                      96 + MediaQuery.of(context).padding.bottom,
-                                    ),
-                                    itemCount: visible.length + 1,
-                                    separatorBuilder: (_, _) =>
-                                        const SizedBox(height: AppSpacing.md),
-                                    itemBuilder: (context, i) {
-                                      if (i == 0) {
-                                        return _SummaryCard(requests: all, l10n: l10n);
-                                      }
-                                      return _RequestCard(
-                                        request: visible[i - 1],
-                                        l10n: l10n,
-                                      );
-                                    },
-                                  ),
-                          ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocBuilder<MaintenanceListCubit, MaintenanceListState>(
+          builder: (context, state) {
+            final ready = state.status == DataStatus.success;
+            final all = state.requests;
+            final visible = ready ? _applyFilter(all) : const <MaintenanceRequest>[];
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: ListView(
+                key: const Key('maintenance-list'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(bottom: 96 + MediaQuery.paddingOf(context).bottom),
+                children: [
+                  _SupervisorHeader(
+                    displayName: displayName,
+                    l10n: l10n,
+                    filtered: _filter != _FilterKey.all,
+                    onFilter: ready ? () => _filters(all) : null,
+                    onLogout: () async {
+                      final ok = await showAdaptiveConfirm(
+                        context,
+                        title: l10n.actionLogout,
+                        message: l10n.logoutConfirmMessage,
+                        confirmLabel: l10n.actionLogout,
+                        cancelLabel: l10n.actionCancel,
+                        destructive: true,
+                      );
+                      if (ok && context.mounted) {
+                        context.read<StaffAuthCubit>().logout();
+                      }
+                    },
+                  ),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SizedBox(height: 480, child: StaffListSkeleton())],
+                    DataStatus.failure => [ErrorState(failure: state.failure, onRetry: cubit.load)],
+                    DataStatus.empty => [
+                        EmptyState(
+                          icon: Icons.engineering_outlined,
+                          title: l10n.supervisorNoAssignedTitle,
+                          message: l10n.supervisorNoAssignedMessage,
                         ),
                       ],
-                    );
-                }
-              },
-            ),
-          ),
-        ],
+                    DataStatus.success => [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                          child: _SummaryCard(requests: all, l10n: l10n),
+                        ),
+                        if (visible.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.xl),
+                            child: EmptyState(
+                              icon: Icons.filter_list_off_rounded,
+                              title: l10n.supervisorFilterEmptyTitle,
+                              message: l10n.supervisorFilterEmptyMessage,
+                            ),
+                          )
+                        else
+                          for (final r in visible)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                              child: _RequestCard(request: r, l10n: l10n),
+                            ),
+                      ],
+                  },
+                ],
+              ),
+            );
+          },
+        ),
       ),
+    );
+  }
+
+  void _filters(List<MaintenanceRequest> all) {
+    showFilterSheet(
+      context,
+      (_) => _FilterSheet(all: all, selected: _filter, onApply: (k) => setState(() => _filter = k)),
+    );
+  }
+}
+
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.all, required this.selected, required this.onApply});
+  final List<MaintenanceRequest> all;
+  final _FilterKey selected;
+  final ValueChanged<_FilterKey> onApply;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late _FilterKey _k = widget.selected;
+
+  int _count(_FilterKey k) => switch (k) {
+        _FilterKey.all => widget.all.length,
+        _FilterKey.active => widget.all
+            .where((r) => r.status == MaintenanceStatus.open || r.status == MaintenanceStatus.assigned || r.status == MaintenanceStatus.inProgress)
+            .length,
+        _FilterKey.closed => widget.all.where((r) => r.status == MaintenanceStatus.resolved || r.status == MaintenanceStatus.closed).length,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    String label(_FilterKey k) => switch (k) {
+          _FilterKey.all => l10n.supervisorFilterAll,
+          _FilterKey.active => l10n.supervisorFilterActive,
+          _FilterKey.closed => l10n.supervisorFilterClosed,
+        };
+    return FilterSheet(
+      title: l10n.maintenanceFilterTitle,
+      active: _k == _FilterKey.all ? 0 : 1,
+      onClear: () => setState(() => _k = _FilterKey.all),
+      applyLabel: l10n.maintenanceFilterApply,
+      onApply: () {
+        widget.onApply(_k);
+        Navigator.of(context).pop();
+      },
+      sections: [
+        FilterSection(
+          icon: Icons.flag_outlined,
+          title: l10n.kcStatus,
+          child: FilterRadioList<_FilterKey>(
+            keyPrefix: 'maintenance-filter',
+            selected: _k,
+            onSelect: (v) => setState(() => _k = v),
+            options: [for (final k in _FilterKey.values) FilterOption(k, label(k), sub: '${_count(k)}')],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -193,24 +228,35 @@ class _SupervisorHeader extends StatelessWidget {
     required this.displayName,
     required this.l10n,
     required this.onLogout,
+    required this.filtered,
+    this.onFilter,
   });
 
   final String?          displayName;
   final AppLocalizations l10n;
   final VoidCallback     onLogout;
+  final bool             filtered;
+  final VoidCallback?    onFilter;
 
   @override
   Widget build(BuildContext context) {
     final greeting = (displayName?.isNotEmpty == true)
         ? l10n.maintenanceWelcomeUser(displayName!)
         : l10n.maintenanceWelcomeFallback;
-    return AppHomeHeader(
-      title: l10n.navDashboard,
-      greeting: greeting,
-      chips: [HeaderRoleChip(label: l10n.maintenanceSupervisorRole), const HeaderDateChip()],
+    return HomeListHero(
+      title: greeting,
+      subtitle: l10n.maintenanceSupervisorRole,
       actions: [
-        const NotificationsBell(),
-        NavHeaderAction(icon: Icons.logout_rounded, tooltip: l10n.actionLogout, onTap: onLogout),
+        if (onFilter != null)
+          HomeHeroButton(
+            key: const Key('maintenance-filters'),
+            icon: Icons.tune_rounded,
+            dot: filtered,
+            tooltip: l10n.maintenanceFilterTitle,
+            onTap: onFilter!,
+          ),
+        HomeHeroButton(icon: Icons.notifications_none_rounded, tooltip: l10n.accountNotifications, onTap: () => context.push('/notifications')),
+        HomeHeroButton(icon: Icons.logout_rounded, tooltip: l10n.actionLogout, onTap: onLogout),
       ],
     );
   }
@@ -227,254 +273,14 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeCount = requests
-        .where((r) =>
-            r.status == MaintenanceStatus.open ||
-            r.status == MaintenanceStatus.assigned)
-        .length;
-    final inProgressCount =
-        requests.where((r) => r.status == MaintenanceStatus.inProgress).length;
-    final closedCount = requests
-        .where((r) =>
-            r.status == MaintenanceStatus.resolved ||
-            r.status == MaintenanceStatus.closed)
-        .length;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_navyLight, _navyDeep],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: _navyDeep.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.08),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: AppPalette.gold300.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(
-                          color: AppPalette.gold300.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: const Icon(Icons.handyman_rounded,
-                          color: AppPalette.gold300, size: 17),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      l10n.supervisorSummaryTotalLabel,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.75),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${requests.length}',
-                      style: const TextStyle(
-                        color: AppPalette.gold300,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Container(height: 0.5, color: Colors.white.withValues(alpha: 0.12)),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    _SummaryCell(
-                      label: l10n.supervisorFilterActive,
-                      count: activeCount,
-                      color: _activeAccent,
-                    ),
-                    _SummaryDivider(),
-                    _SummaryCell(
-                      label: l10n.supervisorStatInProgress,
-                      count: inProgressCount,
-                      color: _inProgressAccent,
-                    ),
-                    _SummaryDivider(),
-                    _SummaryCell(
-                      label: l10n.supervisorFilterClosed,
-                      count: closedCount,
-                      color: _closedAccent,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryCell extends StatelessWidget {
-  const _SummaryCell({
-    required this.label,
-    required this.count,
-    required this.color,
-  });
-  final String label;
-  final int    count;
-  final Color  color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$count',
-            style: TextStyle(
-              color: color,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.65),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 0.5,
-      height: 36,
-      color: Colors.white.withValues(alpha: 0.15),
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-    );
-  }
-}
-
-// ── Filter row ────────────────────────────────────────────────────────────────
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.all,
-    required this.selected,
-    required this.onSelect,
-    required this.l10n,
-  });
-  final List<MaintenanceRequest> all;
-  final _FilterKey selected;
-  final ValueChanged<_FilterKey> onSelect;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final activeCount = all
-        .where((r) =>
-            r.status == MaintenanceStatus.open ||
-            r.status == MaintenanceStatus.assigned ||
-            r.status == MaintenanceStatus.inProgress)
-        .length;
-    final closedCount = all
-        .where((r) =>
-            r.status == MaintenanceStatus.resolved ||
-            r.status == MaintenanceStatus.closed)
-        .length;
-
-    return Container(
-      color: context.appColors.canvas,
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 10, 0, 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(right: AppSpacing.lg),
-        child: Row(
-          children: [
-            _FilterChip(
-              label: l10n.supervisorFilterAll,
-              dot: Colors.white,
-              count: all.length,
-              selected: selected == _FilterKey.all,
-              onTap: () => onSelect(_FilterKey.all),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            _FilterChip(
-              label: l10n.supervisorFilterActive,
-              dot: _activeAccent,
-              count: activeCount,
-              selected: selected == _FilterKey.active,
-              onTap: () => onSelect(_FilterKey.active),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            _FilterChip(
-              label: l10n.supervisorFilterClosed,
-              dot: _closedAccent,
-              count: closedCount,
-              selected: selected == _FilterKey.closed,
-              onTap: () => onSelect(_FilterKey.closed),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.dot,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-  });
-  final String       label;
-  final Color        dot;
-  final int          count;
-  final bool         selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppFilterChip(label: label, count: count, selected: selected, onTap: onTap, dotColor: dot);
+    final activeCount = requests.where((r) => r.status == MaintenanceStatus.open || r.status == MaintenanceStatus.assigned).length;
+    final inProgressCount = requests.where((r) => r.status == MaintenanceStatus.inProgress).length;
+    final closedCount = requests.where((r) => r.status == MaintenanceStatus.resolved || r.status == MaintenanceStatus.closed).length;
+    return HomeBand(figures: [
+      HomeFigure(id: 'active', value: '$activeCount', label: l10n.supervisorFilterActive, hint: '${l10n.supervisorSummaryTotalLabel} ${requests.length}', warn: activeCount > 0),
+      HomeFigure(id: 'progress', value: '$inProgressCount', label: l10n.supervisorStatInProgress, hint: ltr('${homePercent(inProgressCount, requests.length) ?? 0}%')),
+      HomeFigure(id: 'closed', value: '$closedCount', label: l10n.supervisorFilterClosed, hint: ltr('${homePercent(closedCount, requests.length) ?? 0}%')),
+    ]);
   }
 }
 
@@ -533,15 +339,8 @@ class _RequestCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 20,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colors.hairline),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(

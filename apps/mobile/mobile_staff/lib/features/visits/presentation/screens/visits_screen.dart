@@ -1,10 +1,13 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../../common/visit_status_label.dart';
+import '../../../dashboard/home_kit/filter_kit.dart';
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/visit.dart';
 import '../cubit/visits_cubit.dart';
 
@@ -43,98 +46,96 @@ class _VisitsScreenState extends State<VisitsScreen> {
     if (created == true && mounted) context.read<VisitsCubit>().load();
   }
 
+  void _filters() {
+    final cubit = context.read<VisitsCubit>();
+    showFilterSheet(context, (_) => _StatusSheet(selected: cubit.state.statusFilter, onApply: cubit.setStatus));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<VisitsCubit>();
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          BlocBuilder<VisitsCubit, VisitsListState>(
-            buildWhen: (a, b) => a.today != b.today,
-            builder: (context, state) => AppNavHeader(
-              title: l10n.navVisits,
-              compact: true,
-              leadingAction: NavHeaderAction(
-                icon: Icons.arrow_back_ios_new_rounded,
-                onTap: () => context.pop(),
-              ),
-              actions: [
-                NavHeaderAction(
-                  icon: state.today
-                      ? Icons.today_rounded
-                      : Icons.today_outlined,
-                  tooltip: l10n.visitsToday,
-                  onTap: cubit.toggleToday,
-                ),
-              ],
-            ),
-          ),
-          _StatusFilter(),
-          Expanded(
-            child: BlocBuilder<VisitsCubit, VisitsListState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(
-                      failure: state.failure,
-                      onRetry: cubit.load,
-                    );
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.event_busy_outlined,
-                      title: l10n.visitsEmptyTitle,
-                      message: l10n.visitsEmptyMessage,
-                    );
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: ListView.separated(
-                        controller: _scrollCtrl,
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.md,
-                          AppSpacing.sm,
-                          AppSpacing.md,
-                          bottomPad + 100,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: BlocBuilder<VisitsCubit, VisitsListState>(
+          builder: (context, state) {
+            final ready = state.status == DataStatus.success;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                key: const Key('visits'),
+                controller: _scrollCtrl,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      back: true,
+                      title: l10n.navVisits,
+                      subtitle: ready ? l10n.visitsCountN(state.visits.length) : null,
+                      actions: [
+                        HomeHeroButton(
+                          key: const Key('visits-today'),
+                          icon: Icons.today_rounded,
+                          active: state.today,
+                          tooltip: l10n.visitsToday,
+                          onTap: cubit.toggleToday,
                         ),
-                        itemCount:
-                            state.visits.length + (state.isLoadingMore ? 1 : 0),
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          if (i == state.visits.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSpacing.md,
-                              ),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          return _VisitTile(visit: state.visits[i]);
-                        },
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _create,
-        tooltip: l10n.visitNew,
-        child: const Icon(Icons.add_rounded),
+                        HomeHeroButton(
+                          key: const Key('visits-filters'),
+                          icon: Icons.tune_rounded,
+                          dot: state.statusFilter != null,
+                          tooltip: l10n.visitsFilterTitle,
+                          onTap: _filters,
+                        ),
+                      ],
+                    ),
+                  ),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SliverToBoxAdapter(child: SizedBox(height: 480, child: StaffListSkeleton()))],
+                    DataStatus.failure => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                    DataStatus.empty => [
+                        SliverToBoxAdapter(
+                          child: EmptyState(icon: Icons.event_busy_outlined, title: l10n.visitsEmptyTitle, message: l10n.visitsEmptyMessage),
+                        ),
+                      ],
+                    DataStatus.success => [
+                        SliverPadding(
+                          padding: EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, bottomPad + 100),
+                          sliver: SliverList.separated(
+                            itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              if (i == state.visits.length) {
+                                return const Padding(padding: EdgeInsets.symmetric(vertical: AppSpacing.md), child: Center(child: CircularProgressIndicator()));
+                              }
+                              return _VisitTile(visit: state.visits[i]);
+                            },
+                          ),
+                        ),
+                      ],
+                  },
+                ],
+              ),
+            );
+          },
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _create,
+          tooltip: l10n.visitNew,
+          backgroundColor: AppPalette.gold400,
+          foregroundColor: AppPalette.navy,
+          child: const Icon(Icons.add_rounded),
+        ),
       ),
     );
   }
 }
 
-// ── Status filter ─────────────────────────────────────────────────────────────
+// ── Status filter sheet ───────────────────────────────────────────────────────
 
 const _kVisitDotColors = <String, Color>{
   'SCHEDULED': Color(0xFF60A5FA), // blue
@@ -145,109 +146,45 @@ const _kVisitDotColors = <String, Color>{
   'NO_SHOW': Color(0xFF9CA3AF), // muted gray
 };
 
-class _StatusFilter extends StatelessWidget {
+class _StatusSheet extends StatefulWidget {
+  const _StatusSheet({required this.selected, required this.onApply});
+  final String? selected;
+  final ValueChanged<String?> onApply;
+
+  @override
+  State<_StatusSheet> createState() => _StatusSheetState();
+}
+
+class _StatusSheetState extends State<_StatusSheet> {
+  late String? _s = widget.selected;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final cubit = context.read<VisitsCubit>();
-    final colors = context.appColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: BlocBuilder<VisitsCubit, VisitsListState>(
-        buildWhen: (a, b) => a.statusFilter != b.statusFilter,
-        builder: (context, state) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: 6,
-          ),
-          child: Row(
-            children: [
-              _StatusChip(
-                label: l10n.leadsFilterAll,
-                active: state.statusFilter == null,
-                onTap: () => cubit.setStatus(null),
-              ),
-              for (final s in kVisitStatuses) ...[
-                const SizedBox(width: AppSpacing.xs),
-                _StatusChip(
-                  label: visitStatusLabel(l10n, s),
-                  active: state.statusFilter == s,
-                  dotColor: _kVisitDotColors[s],
-                  onTap: () => cubit.setStatus(s),
-                ),
-              ],
+    return FilterSheet(
+      title: l10n.visitsFilterTitle,
+      active: _s == null ? 0 : 1,
+      onClear: () => setState(() => _s = null),
+      applyLabel: l10n.visitsFilterApply,
+      onApply: () {
+        widget.onApply(_s);
+        Navigator.of(context).pop();
+      },
+      sections: [
+        FilterSection(
+          icon: Icons.flag_outlined,
+          title: l10n.kcStatus,
+          child: FilterRadioList<String?>(
+            keyPrefix: 'visit-filter',
+            selected: _s,
+            onSelect: (v) => setState(() => _s = v),
+            options: [
+              FilterOption<String?>(null, l10n.leadsFilterAll),
+              for (final st in kVisitStatuses) FilterOption<String?>(st, visitStatusLabel(l10n, st), color: _kVisitDotColors[st]),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Filter chip ───────────────────────────────────────────────────────────────
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    this.dotColor,
-  });
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final Color? dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm + 4,
-          vertical: 11,
-        ),
-        decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
-          borderRadius: AppRadii.pillAll,
-          border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
-            width: active ? 0 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (!active && dotColor != null) ...[
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xxs + 2),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                color: active ? Colors.white : colors.inkStrong,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 }
@@ -311,23 +248,8 @@ class _VisitTileState extends State<_VisitTile> {
         child: Container(
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(
-              color: accent.withValues(alpha: 0.16),
-              width: 0.9,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colors.hairline),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -365,12 +287,8 @@ class _VisitTileState extends State<_VisitTile> {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.10),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: accent.withValues(alpha: 0.28),
-                              width: 1.2,
-                            ),
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                           child: Icon(
                             _statusIcon(visit.status),
@@ -434,10 +352,10 @@ class _VisitTileState extends State<_VisitTile> {
                               tone: tone,
                             ),
                             const SizedBox(height: 4),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: 16,
-                              color: colors.inkMuted.withValues(alpha: 0.5),
+                            const Icon(
+                              AppIcons.chevronForward,
+                              size: 18,
+                              color: AppPalette.gold400,
                             ),
                           ],
                         ),

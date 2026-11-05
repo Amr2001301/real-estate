@@ -15685,6 +15685,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n, plural, =0{no duplicates} =1{1 customer with duplicates} other{{n} customers with duplicates}}'**
   String duplicatesCountN(int n);
+
+  /// No description provided for @visitsFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter visits'**
+  String get visitsFilterTitle;
+
+  /// No description provided for @visitsFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show visits'**
+  String get visitsFilterApply;
+
+  /// No description provided for @visitsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{no visits} =1{1 visit} other{{n} visits}}'**
+  String visitsCountN(int n);
+
+  /// No description provided for @maintenanceFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter requests'**
+  String get maintenanceFilterTitle;
+
+  /// No description provided for @maintenanceFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show requests'**
+  String get maintenanceFilterApply;
 }
 
 class _AppLocalizationsDelegate

@@ -2933,5 +2933,11 @@
   "campaignsCountN": "{n, plural, =0{لا حملات} =1{حملة واحدة} =2{حملتان} few{{n} حملات} other{{n} حملة}}",
   "@campaignsCountN": {"placeholders": {"n": {"type": "int"}}},
   "duplicatesCountN": "{n, plural, =0{لا عملاء مكررون} =1{عميل واحد بفرص مكررة} =2{عميلان بفرص مكررة} few{{n} عملاء بفرص مكررة} other{{n} عميلًا بفرص مكررة}}",
-  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}}
+  "@duplicatesCountN": {"placeholders": {"n": {"type": "int"}}},
+  "visitsFilterTitle": "تصفية الزيارات",
+  "visitsFilterApply": "عرض الزيارات",
+  "visitsCountN": "{n, plural, =0{لا زيارات} =1{زيارة واحدة} =2{زيارتان} few{{n} زيارات} other{{n} زيارة}}",
+  "@visitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "maintenanceFilterTitle": "تصفية الطلبات",
+  "maintenanceFilterApply": "عرض الطلبات"
 }
