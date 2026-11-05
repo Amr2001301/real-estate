@@ -242,7 +242,7 @@ class ProjectCard extends StatelessWidget {
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(place,
-                            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: Color(0xFFDCE3EC))),
+                            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                       ),
                     ]),
                 ]),
@@ -259,7 +259,7 @@ class ProjectCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
-                        child: Text(t, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+                        child: Text(t, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkMuted)),
                       ),
                   ]),
                 ],
@@ -314,12 +314,12 @@ class _Money extends StatelessWidget {
     final colors = context.appColors;
     final (n, unit) = homeCompact(value, context.l10n);
     return Column(crossAxisAlignment: end ? CrossAxisAlignment.end : CrossAxisAlignment.start, children: [
-      Text(label, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+      Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
       Text.rich(
         key: valueKey,
         TextSpan(children: [
           TextSpan(text: ltr(n), style: homeDisplay(19, color)),
-          TextSpan(text: ' ${'$unit $currency'.trim()}', style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          TextSpan(text: ' ${'$unit $currency'.trim()}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ]),
       ),
     ]);

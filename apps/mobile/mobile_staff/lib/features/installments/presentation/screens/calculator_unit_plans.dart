@@ -316,7 +316,7 @@ class _PickRow extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: colors.inkMuted,
                       ),
@@ -402,7 +402,7 @@ class _PlanCard extends StatelessWidget {
                       offer.isCash
                           ? l10n.calculatorCashPlan
                           : l10n.calculatorPlanUpfront(money(offer.upfront)),
-                      style: TextStyle(fontSize: 11.5, color: colors.inkMuted),
+                      style: TextStyle(fontSize: 12, color: colors.inkMuted),
                     ),
                   ],
                 ),
@@ -489,7 +489,7 @@ class _Durations extends StatelessWidget {
                                 child: Text(
                                   '\u2066+${percentText(o.increasePercentage)}%\u2069',
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w800,
                                     color: on
                                         ? AppPalette.navy

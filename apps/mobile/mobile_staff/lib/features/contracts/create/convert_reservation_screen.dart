@@ -114,7 +114,7 @@ class _ConvertReservationScreenState extends State<ConvertReservationScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(l10n.cvClient, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    Text(l10n.cvClient, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     Text(s.clientName ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                   ]),
                 ),
@@ -131,7 +131,7 @@ class _ConvertReservationScreenState extends State<ConvertReservationScreen> {
                   FractionallySizedBox(
                     widthFactor: 0.5,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                      Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       Text(v, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                     ]),
                   ),

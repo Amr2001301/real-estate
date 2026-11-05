@@ -251,12 +251,12 @@ class UnitPriceCard extends StatelessWidget {
               else
                 Text(l10n.priceOnRequest, style: homeDisplay(19, colors.inkMuted)),
               if (monthly != null)
-                Text(monthly, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: catalogAvailable)),
+                Text(monthly, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: catalogAvailable)),
             ]),
           ),
           if (pricePerMeter != null)
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(l10n.upPerMeter, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+              Text(l10n.upPerMeter, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(ltr(catalogGrouped(pricePerMeter!)), style: homeDisplay(15, colors.inkStrong)),
             ]),
         ]),
@@ -274,7 +274,7 @@ class UnitPriceCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(k, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                    Text(k, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     Text(v, maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                   ]),
@@ -344,7 +344,7 @@ class UnitFacts extends StatelessWidget {
                   Icon(icon, size: 20, color: AppPalette.gold500),
                   const SizedBox(height: 3),
                   Text(value, style: homeDisplay(value.length > 7 ? 15 : 18, colors.inkStrong)),
-                  Text(label, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
             ),
@@ -394,7 +394,7 @@ class UnitSpecTable extends StatelessWidget {
                 ),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const SizedBox(height: 2),
                 Text(v, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
               ]),
@@ -447,7 +447,7 @@ class _Reservation extends StatelessWidget {
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(l10n.upActiveReservation, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                      if (r.number != null) Text(ltr(r.number!), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      if (r.number != null) Text(ltr(r.number!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ),
                   StatusBadge(label: reservationStatusLabel(l10n, r.status), tone: reservationStatusTone(r.status)),
@@ -465,7 +465,7 @@ class _Reservation extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                         decoration: BoxDecoration(color: colors.surface.withValues(alpha: 0.75), borderRadius: BorderRadius.circular(12)),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(k, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                          Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                           Text(v, maxLines: 1, overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                         ]),
@@ -517,7 +517,7 @@ class _Reservation extends StatelessWidget {
                 title: Text(p.client ?? '—', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                 subtitle: Text(
                   [if (p.number != null) ltr(p.number!), if (p.createdAt != null) DateFormatter.dayMonth(p.createdAt!, languageCode: lang)].join(' · '),
-                  style: TextStyle(fontSize: 11, color: colors.inkMuted),
+                  style: TextStyle(fontSize: 12, color: colors.inkMuted),
                 ),
                 trailing: StatusBadge(label: reservationStatusLabel(l10n, p.status), tone: reservationStatusTone(p.status)),
               ),
@@ -545,7 +545,7 @@ class _Where extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text((v ?? '').isEmpty ? '—' : v!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
             ]),
           ),
@@ -571,7 +571,7 @@ class _Where extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(l10n.upProject, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  Text(l10n.upProject, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   Text(u.projectName?.resolve(lang) ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                 ]),
               ),
@@ -614,7 +614,7 @@ class _Maintenance extends StatelessWidget {
                 if (m.categoryName != null) m.categoryName!.resolve(lang),
                 if (m.warrantyEnd != null) l10n.upWarrantyUntil(DateFormatter.shortDate(m.warrantyEnd!, languageCode: lang)),
               ].join(' · '),
-              style: TextStyle(fontSize: 11, color: colors.inkMuted),
+              style: TextStyle(fontSize: 12, color: colors.inkMuted),
             ),
           ),
         ],
@@ -662,7 +662,7 @@ class _History extends StatelessWidget {
                       if (h.by != null) l10n.upBy(h.by!),
                       if (h.at != null) '${DateFormatter.dayMonth(h.at!, languageCode: lang)} ${DateFormatter.time(h.at!, languageCode: lang)}',
                     ].join(' · '),
-                    style: TextStyle(fontSize: 11, color: colors.inkMuted),
+                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
                   ),
                 ]),
               ),

@@ -282,7 +282,7 @@ class _Field extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: colors.inkMuted),
+                  style: TextStyle(fontSize: 12, color: colors.inkMuted),
                 ),
               ),
             ],
@@ -426,7 +426,7 @@ class _Result extends StatelessWidget {
                               ltr('${(p.$2 / total * 100).round()}%'),
                               style: const TextStyle(
                                 color: Color(0xFFDCE3EC),
-                                fontSize: 11,
+                                fontSize: 12,
                               ),
                             ),
                           ],

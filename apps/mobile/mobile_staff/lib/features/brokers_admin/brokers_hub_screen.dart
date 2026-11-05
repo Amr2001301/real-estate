@@ -458,7 +458,7 @@ class _BrokerCard extends StatelessWidget {
                       Text(figure, style: homeDisplay(16, colors.inkStrong)),
                       if (firm) ...[
                         const SizedBox(width: 6),
-                        Text(l10n.brkCommissionWord, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        Text(l10n.brkCommissionWord, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ],
                     ],
                     if (note != null && note.isNotEmpty) ...[
@@ -471,7 +471,7 @@ class _BrokerCard extends StatelessWidget {
                     if (row.at != null) ...[
                       Icon(Icons.calendar_today_rounded, size: 12, color: colors.inkMuted),
                       const SizedBox(width: 4),
-                      Text(leadWhen(context, row.at!, withTime: false), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      Text(leadWhen(context, row.at!, withTime: false), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ],
                   ]),
                 ],
@@ -495,7 +495,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-        child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
       );
 }
 

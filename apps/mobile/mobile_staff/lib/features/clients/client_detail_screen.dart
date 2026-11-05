@@ -460,7 +460,7 @@ class _Row extends StatelessWidget {
                 Text(sub,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11.5, color: subColor ?? colors.inkMuted, fontWeight: subColor == null ? FontWeight.w400 : FontWeight.w700)),
+                    style: TextStyle(fontSize: 12, color: subColor ?? colors.inkMuted, fontWeight: subColor == null ? FontWeight.w400 : FontWeight.w700)),
             ]),
           ),
           const SizedBox(width: 6),

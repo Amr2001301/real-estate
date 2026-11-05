@@ -106,6 +106,9 @@ import 'router/app_router.dart';
 /// Root of the Staff App (Sales / Broker). Provides feature repositories (data→
 /// domain contracts) + the app-wide StaffAuthCubit, wires the 401→refresh
 /// handler, then builds the router. Shares design/theme/l10n with core.
+/// How much bigger the staff app's text is than the design sizes.
+const double kStaffTextBoost = 1.1;
+
 class StaffApp extends StatelessWidget {
   const StaffApp({super.key});
 
@@ -463,12 +466,22 @@ class _StaffRootState extends State<_StaffRoot> {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         routerConfig: router,
-        builder: (context, child) => Column(
-          children: [
-            const OfflineBanner(),
-            Expanded(child: child ?? const SizedBox.shrink()),
-          ],
-        ),
+        // The text was too small to read on a phone: every size is scaled up a
+        // tenth on top of the system's own text size (capped so a very large
+        // setting still lays out).
+        builder: (context, child) {
+          final mq = MediaQuery.of(context);
+          final system = mq.textScaler.scale(100) / 100;
+          return MediaQuery(
+            data: mq.copyWith(textScaler: TextScaler.linear((system * kStaffTextBoost).clamp(1.0, 1.6))),
+            child: Column(
+              children: [
+                const OfflineBanner(),
+                Expanded(child: child ?? const SizedBox.shrink()),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

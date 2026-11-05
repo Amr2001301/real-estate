@@ -214,7 +214,7 @@ class _ManualContractScreenState extends State<ManualContractScreen> {
                       onChanged: (v) => setState(() => _preSystem = v),
                       activeThumbColor: AppPalette.navy,
                       title: Text(l10n.mcPreSystem, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                      subtitle: Text(l10n.mcPreSystemHint, style: TextStyle(fontSize: 11, height: 1.4, color: colors.inkMuted)),
+                      subtitle: Text(l10n.mcPreSystemHint, style: TextStyle(fontSize: 12, height: 1.4, color: colors.inkMuted)),
                     ),
                   ),
                   FormDateField(
@@ -232,7 +232,7 @@ class _ManualContractScreenState extends State<ManualContractScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                child: Text(l10n.mcPlanLater, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                child: Text(l10n.mcPlanLater, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               ),
             ]),
           ),
@@ -359,7 +359,7 @@ class _PickSheetState extends State<PickSheet> {
                               key: Key('${widget.keyPrefix}-${h.id}'),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               title: Text(ltrRuns(h.title), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                              subtitle: h.subtitle == null ? null : Text(ltrRuns(h.subtitle!), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                              subtitle: h.subtitle == null ? null : Text(ltrRuns(h.subtitle!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                               trailing: h.amount == null
                                   ? null
                                   : Text('${ltr(catalogGrouped(h.amount!))} $currency', style: homeDisplay(13, colors.inkStrong)),

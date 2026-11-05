@@ -159,13 +159,13 @@ class BonusCard extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text.rich(TextSpan(children: [
                         TextSpan(text: contractMoney(amount), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ])),
                     ]),
                     if (basis != null && pct != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Text(l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%')), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        child: Text(l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%')), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ),
                     const SizedBox(height: 5),
                     CatalogBadge.status(label, tone, icon: icon),
@@ -177,9 +177,9 @@ class BonusCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
               child: Row(children: [
-                Text(l10n.bnPeriodLine(ltr(e.period)), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                Text(l10n.bnPeriodLine(ltr(e.period)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 const Spacer(),
-                Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: e.status == 'PENDING' ? const Color(0xFF8A5A12) : colors.inkMuted))),
+                Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: e.status == 'PENDING' ? const Color(0xFF8A5A12) : colors.inkMuted))),
               ]),
             ),
           ]),

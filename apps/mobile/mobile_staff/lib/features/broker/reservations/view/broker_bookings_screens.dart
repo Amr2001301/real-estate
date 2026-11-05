@@ -282,7 +282,7 @@ class _Tile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: small ? TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong) : homeDisplay(15, colors.inkStrong)),
         ]),
       ),

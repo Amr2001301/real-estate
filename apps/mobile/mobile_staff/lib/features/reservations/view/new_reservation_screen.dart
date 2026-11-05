@@ -458,7 +458,7 @@ class _Progress extends StatelessWidget {
             if (i > 0) const SizedBox(width: 6),
             Expanded(
               child: Text(label,
-                  style: TextStyle(fontSize: 10.5, fontWeight: done ? FontWeight.w800 : FontWeight.w500, color: done ? colors.inkStrong : colors.inkMuted)),
+                  style: TextStyle(fontSize: 12, fontWeight: done ? FontWeight.w800 : FontWeight.w500, color: done ? colors.inkStrong : colors.inkMuted)),
             ),
           ],
         ]),
@@ -493,7 +493,7 @@ class _Picked extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-            if (subtitle != null) Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            if (subtitle != null) Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           ]),
         ),
         if (onChange != null)
@@ -542,13 +542,13 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  Text(subtitle, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
               if (price != null)
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   Text(price!, style: homeDisplay(15, colors.inkStrong)),
-                  if (perMonth != null) Text(perMonth!, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                  if (perMonth != null) Text(perMonth!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
             ]),
           ),

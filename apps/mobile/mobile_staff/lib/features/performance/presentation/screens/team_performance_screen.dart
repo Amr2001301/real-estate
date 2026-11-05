@@ -106,7 +106,7 @@ class _MemberCard extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 13, color: fg),
             const SizedBox(width: 4),
-            Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
+            Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
           ]),
         );
     return Container(
@@ -127,12 +127,12 @@ class _MemberCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(member.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
               if (p.hasTarget && p.targetAmount != null)
-                Text.rich(TextSpan(style: TextStyle(fontSize: 11.5, color: colors.inkMuted), children: [
+                Text.rich(TextSpan(style: TextStyle(fontSize: 12, color: colors.inkMuted), children: [
                   TextSpan(text: contractMoney(p.achievedAmount), style: TextStyle(fontWeight: FontWeight.w800, color: colors.inkStrong)),
                   TextSpan(text: ' / ${contractMoney(p.targetAmount!)} $currency'),
                 ]))
               else
-                Text(l10n.teamTargetNoTarget, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                Text(l10n.teamTargetNoTarget, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
           if (p.targetAmountPercent != null)

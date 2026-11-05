@@ -102,7 +102,7 @@ class _BrokerOwnPerformanceScreenState extends State<BrokerOwnPerformanceScreen>
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(t, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                    Text(sub, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                    Text(sub, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ]),
                 ),
                 Text(contractMoney(v), style: homeDisplay(15, color ?? colors.inkStrong)),
@@ -165,7 +165,7 @@ class _BrokerOwnPerformanceScreenState extends State<BrokerOwnPerformanceScreen>
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(a.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                            Text(l10n.bpAgentLine(a.leads, a.contracts), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                            Text(l10n.bpAgentLine(a.leads, a.contracts), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                           ]),
                         ),
                         Text(homeCompactText(a.salesGross, l10n), style: homeDisplay(14, colors.inkStrong)),
@@ -245,7 +245,7 @@ class PerfFunnel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
-              SizedBox(width: 92, child: Text(label, style: TextStyle(fontSize: 11.5, color: colors.inkMuted))),
+              SizedBox(width: 92, child: Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, box) => Container(
@@ -308,12 +308,12 @@ class PerfTrend extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(month(b.label), style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                  Text(month(b.label), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
           ]),
         ),
-        Padding(padding: const EdgeInsets.only(top: 4), child: Text(l10n.bpTrendNote, style: TextStyle(fontSize: 11, color: colors.inkMuted))),
+        Padding(padding: const EdgeInsets.only(top: 4), child: Text(l10n.bpTrendNote, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
       ]),
     );
   }
@@ -339,7 +339,7 @@ class PerfProjects extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(p.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  Text(l10n.bpProjectLine(p.city ?? '—', p.contractsSigned), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                  Text(l10n.bpProjectLine(p.city ?? '—', p.contractsSigned), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
               ),
               Text(homeCompactText(p.salesGross, l10n), style: homeDisplay(14, colors.inkStrong)),
@@ -367,7 +367,7 @@ class BrokerPerfCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v == 0 ? '0' : homeCompactText(v, l10n), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(13.5, colors.inkStrong)),
             ]),
           ),
@@ -391,8 +391,8 @@ class BrokerPerfCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 Text.rich(TextSpan(children: [
-                  if (b.code != null) TextSpan(text: ltr(b.code!), style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                  if (b.conversionRate != null) TextSpan(text: ' · ${l10n.bpConv(ltr('${(b.conversionRate! * 100).round()}%'))}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                  if (b.code != null) TextSpan(text: ltr(b.code!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                  if (b.conversionRate != null) TextSpan(text: ' · ${l10n.bpConv(ltr('${(b.conversionRate! * 100).round()}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ])),
               ]),
             ),
@@ -400,7 +400,7 @@ class BrokerPerfCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(color: const Color(0xFFE6F2EA), borderRadius: BorderRadius.circular(99)),
-                child: Text(l10n.bpActiveBadge, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF2F6B4A))),
+                child: Text(l10n.bpActiveBadge, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2F6B4A))),
               ),
           ]),
         ),
@@ -417,7 +417,7 @@ class BrokerPerfCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
           decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline)), borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22))),
-          child: Text(l10n.bpBrokerLine(b.leads, b.reservations, b.contracts), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          child: Text(l10n.bpBrokerLine(b.leads, b.reservations, b.contracts), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ),
       ]),
     );

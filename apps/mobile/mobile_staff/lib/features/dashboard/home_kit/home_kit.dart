@@ -416,7 +416,7 @@ class HomePills extends StatelessWidget {
                         borderRadius: BorderRadius.circular(99),
                       ),
                       child: Text(ltr('${p.count}'),
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: p.selected ? AppPalette.navy : colors.inkMuted)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: p.selected ? AppPalette.navy : colors.inkMuted)),
                     ),
                   ],
                 ]),
@@ -468,7 +468,7 @@ class _HeroTag extends StatelessWidget {
             Icon(icon, size: 14, color: gold ? AppPalette.navy : const Color(0xFFDCE3EC)),
             const SizedBox(width: 5),
             Text(label,
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: gold ? AppPalette.navy : const Color(0xFFDCE3EC))),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: gold ? AppPalette.navy : const Color(0xFFDCE3EC))),
           ],
         ),
       );
@@ -586,7 +586,7 @@ class HomeGoalCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(ltr('${percent ?? 0}%'), style: homeDisplay(24, colors.inkStrong)),
-                          Text(percentLabel, textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+                          Text(percentLabel, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         ],
                       ),
                     ),
@@ -649,7 +649,7 @@ class _MiniStat extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: context.appColors.inkMuted)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
             Text(value, maxLines: 1, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppPalette.navy)),
           ],
         ),
@@ -737,7 +737,7 @@ class HomeActions extends StatelessWidget {
                       const SizedBox(height: 7),
                       Text(actions[i].label,
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: context.appColors.inkStrong)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appColors.inkStrong)),
                     ],
                   ),
                 ),
@@ -829,7 +829,7 @@ class HomeBand extends StatelessWidget {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFC9D2DE))),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFFC9D2DE))),
                     const SizedBox(height: 5),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -840,7 +840,7 @@ class HomeBand extends StatelessWidget {
                       child: Text(figures[i].hint,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10.5, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
+                          style: TextStyle(fontSize: 12, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
                     ),
                   ],
                 ),
@@ -880,7 +880,7 @@ class HomeTiles extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(tiles[i].label, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: context.appColors.inkMuted)),
+                          style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
                       const SizedBox(height: 3),
                       FittedBox(
                         fit: BoxFit.scaleDown,
@@ -888,11 +888,11 @@ class HomeTiles extends StatelessWidget {
                         child: Text.rich(TextSpan(children: [
                           TextSpan(text: ltr(tiles[i].value), style: homeDisplay(21, context.appColors.inkStrong)),
                           if (tiles[i].unit.isNotEmpty)
-                            TextSpan(text: ' ${tiles[i].unit}', style: TextStyle(fontSize: 11, color: context.appColors.inkMuted)),
+                            TextSpan(text: ' ${tiles[i].unit}', style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
                         ])),
                       ),
                       Text(tiles[i].sub, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 10.5, color: context.appColors.inkMuted)),
+                          style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
                     ],
                   ),
                 ),
@@ -979,7 +979,7 @@ class HomeAttentionGrid extends StatelessWidget {
               const SizedBox(height: 8),
               Text(ltr('${a.count}'), style: homeDisplay(26, hot ? const Color(0xFF8A5A12) : context.appColors.inkStrong)),
               const SizedBox(height: 4),
-              Text(a.label, style: TextStyle(fontSize: 11, height: 1.35, color: context.appColors.inkMuted)),
+              Text(a.label, style: TextStyle(fontSize: 12, height: 1.35, color: context.appColors.inkMuted)),
             ],
           ),
         ),
@@ -1098,7 +1098,7 @@ class HomeRankList extends StatelessWidget {
                           Text(rows[i].title, maxLines: 1, overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                           Text(rows[i].subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                              style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                           if (rows[i].percent != null) ...[
                             const SizedBox(height: 6),
                             ClipRRect(
@@ -1129,7 +1129,7 @@ class HomeRankList extends StatelessWidget {
                       children: [
                         Text(ltr(rows[i].value), style: homeDisplay(16, colors.inkStrong)),
                         if (rows[i].unit.isNotEmpty)
-                          Text(rows[i].unit, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                          Text(rows[i].unit, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ],
                     ),
                   ],
@@ -1206,7 +1206,7 @@ class HomeFunnel extends StatelessWidget {
                     child: Text(
                       i == 0 ? '' : ltr('${homePercent(steps[i].value, steps[i - 1].value) ?? 0}%'),
                       textAlign: TextAlign.end,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.gold600),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
                     ),
                   ),
               ]),
@@ -1255,7 +1255,7 @@ class HomeBars extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(bars[i].$1, maxLines: 1, overflow: TextOverflow.clip,
-                      style: TextStyle(fontSize: 10.5, color: context.appColors.inkMuted)),
+                      style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
                 ],
               ),
             ),
@@ -1312,11 +1312,11 @@ class HomeActivityList extends StatelessWidget {
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                           if (items[i].subtitle.isNotEmpty)
                             Text(items[i].subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         ]),
                       ),
                       const SizedBox(width: 8),
-                      Text(items[i].when, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                      Text(items[i].when, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ),
               ],

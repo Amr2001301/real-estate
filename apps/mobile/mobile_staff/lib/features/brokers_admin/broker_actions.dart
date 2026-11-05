@@ -340,7 +340,7 @@ class _DetailSheetState extends State<_DetailSheet> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
-                    child: Text(brokerStatusLabel(l10n, widget.row.status), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+                    child: Text(brokerStatusLabel(l10n, widget.row.status), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
                   ),
                 ]),
               ),

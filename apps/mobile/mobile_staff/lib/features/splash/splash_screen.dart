@@ -257,7 +257,7 @@ class _Wordmark extends StatelessWidget {
           'STAFF',
           style: TextStyle(
             color: AppPalette.gold300,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 4,
           ),

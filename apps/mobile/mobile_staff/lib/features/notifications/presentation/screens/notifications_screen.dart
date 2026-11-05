@@ -217,7 +217,7 @@ class _Tile extends StatelessWidget {
                   ],
                   if (n.createdAt != null) ...[
                     const SizedBox(height: 4),
-                    Text(_ago(context, n.createdAt!), style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                    Text(_ago(context, n.createdAt!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ],
                 ]),
               ),

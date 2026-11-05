@@ -276,7 +276,7 @@ class _Figures extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+              Text(k, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15, colors.inkStrong)),
             ]),
           ),
@@ -300,7 +300,7 @@ class _Figures extends StatelessWidget {
           ]),
         ),
         if ((r.downPayment ?? 0) > 0)
-          Text(l10n.kcDown('${contractMoney(r.downPayment!)} $currency'), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+          Text(l10n.kcDown('${contractMoney(r.downPayment!)} $currency'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         if (com != null) ...[
           const SizedBox(height: 12),
           Row(key: const Key('broker-contract-commission'), children: [

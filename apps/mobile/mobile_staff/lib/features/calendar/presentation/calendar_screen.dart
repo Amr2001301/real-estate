@@ -162,7 +162,7 @@ class _DayCell extends StatelessWidget {
           border: Border.all(color: selected ? AppPalette.navy : (today ? AppPalette.gold400 : colors.hairline), width: today && !selected ? 1.4 : 1),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(name, maxLines: 1, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: selected ? Colors.white70 : colors.inkMuted)),
+          Text(name, maxLines: 1, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: selected ? Colors.white70 : colors.inkMuted)),
           const SizedBox(height: 2),
           Text('$day', style: homeDisplay(17, selected ? Colors.white : colors.inkStrong)),
           const SizedBox(height: 4),
@@ -235,9 +235,9 @@ class _EventRow extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent)),
+                      Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
                       Text(e.customer ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      if (details.isNotEmpty || (note != null && note.isNotEmpty)) Text(note != null && note.isNotEmpty ? note : details, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                      if (details.isNotEmpty || (note != null && note.isNotEmpty)) Text(note != null && note.isNotEmpty ? note : details, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ),
                   if (badge != null) ...[const SizedBox(width: 6), StatusBadge(label: badge, tone: tone)],

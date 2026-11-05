@@ -252,7 +252,7 @@ class ReservationChip extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 4),
-          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color))),
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
         ]),
       );
 }
@@ -271,7 +271,7 @@ class ReservationLink extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
             const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
           ]),
         ),
@@ -323,9 +323,9 @@ class ReservationCardView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
             decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 10, color: colors.inkMuted)),
+              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              if (sub != null) Text(sub, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: subColor ?? colors.inkMuted)),
+              if (sub != null) Text(sub, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: subColor ?? colors.inkMuted)),
             ]),
           ),
         );
@@ -339,12 +339,12 @@ class ReservationCardView extends StatelessWidget {
                 ? ReservationChip(label: l10n.rvExpiredOn(day(row.expiresAt!)), icon: Icons.timer_off_rounded, color: colors.error)
                 : ReservationChip(label: '${l10n.rvExpiresInN(left)} · ${day(row.expiresAt!)}', icon: Icons.schedule_rounded, color: catalogReserved),
           const Spacer(),
-          if (row.createdAt != null) Text(l10n.rvCreatedOn(day(row.createdAt!)), style: TextStyle(fontSize: 10.5, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (row.createdAt != null) Text(l10n.rvCreatedOn(day(row.createdAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       'APPROVED' when !row.bookingSettled => [
           ReservationChip(label: l10n.rvUnpaidWarn, icon: Icons.payments_rounded, color: catalogReserved),
           const Spacer(),
-          if (row.expiresAt != null) Text(l10n.rvExpiresOn(day(row.expiresAt!)), style: TextStyle(fontSize: 10.5, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (row.expiresAt != null) Text(l10n.rvExpiresOn(day(row.expiresAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       'APPROVED' => [
           ReservationChip(label: l10n.rvReady, icon: Icons.task_alt_rounded, color: catalogAvailable),
@@ -354,7 +354,7 @@ class ReservationCardView extends StatelessWidget {
         ],
       'CONVERTED' => [
           Text(row.convertedAt == null ? l10n.rvStConverted : l10n.rvConvertedOn(day(row.convertedAt!)),
-              style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+              style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ],
       _ => [
           Expanded(
@@ -362,7 +362,7 @@ class ReservationCardView extends StatelessWidget {
               (row.reason ?? '').isNotEmpty ? l10n.rvReasonLine(row.reason!) : (row.closedAt == null ? '' : day(row.closedAt!)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: colors.inkMuted),
+              style: TextStyle(fontSize: 12, color: colors.inkMuted),
             ),
           ),
         ],
@@ -403,9 +403,9 @@ class ReservationCardView extends StatelessWidget {
                     Text.rich(
                       TextSpan(children: [
                         TextSpan(text: ltr(row.displayNumber), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (showConsultant && (row.salesName ?? '').isNotEmpty) TextSpan(text: ' · ${row.salesName}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        if (showConsultant && (row.salesName ?? '').isNotEmpty) TextSpan(text: ' · ${row.salesName}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         if (row.viaBroker && route == '/reservations')
-                          TextSpan(text: ' · ${l10n.rvByBroker}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                          TextSpan(text: ' · ${l10n.rvByBroker}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                       ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -414,7 +414,7 @@ class ReservationCardView extends StatelessWidget {
                       Row(children: [
                         Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
                         const SizedBox(width: 3),
-                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted))),
+                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
                       ]),
                   ]),
                 ),

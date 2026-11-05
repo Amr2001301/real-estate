@@ -964,7 +964,7 @@ class _TimelineItem extends StatelessWidget {
                             languageCode: lang),
                       ].join(' · '),
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: colors.inkMuted.withValues(alpha: 0.75),
                       ),
                     ),

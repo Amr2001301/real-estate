@@ -271,7 +271,7 @@ class _Chip extends StatelessWidget {
           if (icon != null) ...[Icon(icon, size: 12, color: color), const SizedBox(width: 4)],
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 190),
-            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
           ),
         ]),
       );
@@ -348,7 +348,7 @@ class _LostBox extends StatelessWidget {
             style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.error)),
         if (detail.lostAt != null)
           Text(l10n.ldLostOn(DateFormatter.mediumDate(detail.lostAt!, languageCode: lang)),
-              style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         if ((detail.lostNote ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(detail.lostNote!.trim(), style: TextStyle(fontSize: 12.5, color: colors.inkStrong, height: 1.4)),
@@ -410,7 +410,7 @@ class _NextFollowUp extends StatelessWidget {
                         key: Key('lead-next-state-${state!.name}'),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: tone, borderRadius: BorderRadius.circular(99)),
-                        child: Text(badge, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Colors.white)),
+                        child: Text(badge, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -536,7 +536,7 @@ class _NotesLog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(99)),
                       child: Text('${l10n.leadNextAction}: ${followUpWhen(notes[i].nextActionAt!, l10n, lang)}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                     ),
                   ],
                   const SizedBox(height: 4),
@@ -545,7 +545,7 @@ class _NotesLog extends StatelessWidget {
                       if ((notes[i].authorName ?? '').isNotEmpty) notes[i].authorName!,
                       if (notes[i].createdAt != null) leadWhen(context, notes[i].createdAt!),
                     ].join(' · '),
-                    style: TextStyle(fontSize: 11, color: colors.inkMuted),
+                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
                   ),
                   for (final r in notes[i].replies)
                     Container(
@@ -685,7 +685,7 @@ class _LinkRow extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
           _Chip(text: status, color: tone),

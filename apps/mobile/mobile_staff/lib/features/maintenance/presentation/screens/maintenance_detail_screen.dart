@@ -366,7 +366,7 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
                     dueFmt,
                     style: TextStyle(
                       color: accent.withValues(alpha: 0.55),
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -418,7 +418,7 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
                         : context.l10n.maintenanceDeadlineUsed((progress * 100).toStringAsFixed(0)),
                     style: TextStyle(
                       color: accent.withValues(alpha: 0.50),
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -479,7 +479,7 @@ class _TimerBox extends StatelessWidget {
             unit,
             style: TextStyle(
               color: accent.withValues(alpha: 0.65),
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -619,7 +619,7 @@ class _IssueCard extends StatelessWidget {
                 Text(
                   l10n.maintenanceIssueDescription,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF9CA3AF),
                     letterSpacing: 0.4,
@@ -905,7 +905,7 @@ class _LocationCard extends StatelessWidget {
                     '${r.unitLng!.toStringAsFixed(5)}',
                     textDirection: TextDirection.ltr,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Color(0xFF9CA3AF),
                     ),
                   ),
@@ -1904,7 +1904,7 @@ class _FileTile extends StatelessWidget {
                   Text(
                     subTitle,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Color(0xFF9CA3AF),
                     ),
                     maxLines: 1,
@@ -2046,7 +2046,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF9CA3AF),
                   ),

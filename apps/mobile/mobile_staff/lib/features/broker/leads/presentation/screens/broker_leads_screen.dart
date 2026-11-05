@@ -353,7 +353,7 @@ class BrokerLeadCard extends StatelessWidget {
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: approval)),
                       if (lead.sentAt != null)
                         Text(l10n.blSent(leadWhen(context, lead.sentAt!, withTime: false)),
-                            style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                            style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ]),
                   ),
                   if ((lead.phone ?? '').isNotEmpty) ...[
@@ -398,7 +398,7 @@ class _Tag extends StatelessWidget {
         const SizedBox(width: 4),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 170),
-          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: c)),
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c)),
         ),
       ]),
     );
@@ -432,6 +432,6 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
-        child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
       );
 }

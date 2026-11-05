@@ -623,7 +623,7 @@ class _ClientResultTile extends StatelessWidget {
                 child: Text(
                   isCustomer ? context.l10n.clientTagOwner : context.l10n.clientTagClient,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: isCustomer
                         ? const Color(0xFF1E3A5F)

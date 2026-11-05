@@ -327,7 +327,7 @@ class _InquiryCard extends StatelessWidget {
                 if (row.createdAt != null) ...[
                   const SizedBox(width: 8),
                   Flexible(
-                    child: Text(leadWhen(context, row.createdAt!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                    child: Text(leadWhen(context, row.createdAt!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                   ),
                 ],
               ]),
@@ -389,7 +389,7 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-        child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
       );
 }
 

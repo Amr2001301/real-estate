@@ -406,7 +406,7 @@ class _States extends StatelessWidget {
               Container(width: 9, height: 9, decoration: BoxDecoration(color: _statusColor(r.$1, colors), shape: BoxShape.circle)),
               const SizedBox(width: 8),
               Expanded(child: Text(_statusLabel(l10n, r.$1), style: TextStyle(fontSize: 13, color: colors.ink))),
-              Text(total > 0 ? '${(r.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+              Text(total > 0 ? '${(r.$2 / total * 100).round()}%' : '—', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               const SizedBox(width: 10),
               Text(ltr('${r.$2}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
             ]),

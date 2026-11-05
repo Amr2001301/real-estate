@@ -28,7 +28,7 @@ class HomeFollowUps extends StatelessWidget {
 
     Widget seg(FollowUpBucket b, String label, int n) {
       final on = state.followUpBucket == b;
-      return InkWell(
+      return Expanded(child: InkWell(
         key: Key('sales-home-fu-${b.name}'),
         borderRadius: BorderRadius.circular(9),
         onTap: () => cubit.showFollowUps(b),
@@ -39,18 +39,18 @@ class HomeFollowUps extends StatelessWidget {
             borderRadius: BorderRadius.circular(9),
             boxShadow: on ? [BoxShadow(color: AppPalette.navy.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))] : null,
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                color: on ? context.appColors.inkStrong : context.appColors.inkMuted)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                color: on ? context.appColors.inkStrong : context.appColors.inkMuted))),
             const SizedBox(width: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(color: AppPalette.gold100, borderRadius: BorderRadius.circular(6)),
-              child: Text(ltr('$n'), style: const TextStyle(fontSize: 11, color: AppPalette.gold600)),
+              child: Text(ltr('$n'), style: const TextStyle(fontSize: 12, color: AppPalette.gold600)),
             ),
           ]),
         ),
-      );
+      ));
     }
 
     return HomeSection(
@@ -64,7 +64,7 @@ class HomeFollowUps extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(color: context.appColors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
+            child: Row(children: [
               seg(FollowUpBucket.overdue, l10n.shOverdue, s.overdue),
               seg(FollowUpBucket.today, l10n.shToday, s.today),
               seg(FollowUpBucket.upcoming, l10n.shUpcoming, s.upcoming),
@@ -152,7 +152,7 @@ class _FollowUpTile extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11.5, color: context.appColors.inkMuted)),
+                              style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
                         ),
                       ]),
                     ],
@@ -256,7 +256,7 @@ class HomeAgenda extends StatelessWidget {
                           child: Column(children: [
                             Text(DateFormatter.weekdayShort(d, languageCode: lang),
                                 maxLines: 1,
-                                style: TextStyle(fontSize: 10, color: d == selected ? const Color(0xFFC9D2DE) : context.appColors.inkMuted)),
+                                style: TextStyle(fontSize: 12, color: d == selected ? const Color(0xFFC9D2DE) : context.appColors.inkMuted)),
                             Text(ltr('${d.day}'), style: homeDisplay(18, d == selected ? Colors.white : context.appColors.inkStrong)),
                             const SizedBox(height: 2),
                             Container(
@@ -331,7 +331,7 @@ class _EventTile extends StatelessWidget {
             width: 54,
             child: Column(children: [
               Text(ltr(time.first), style: homeDisplay(18, context.appColors.inkStrong)),
-              if (time.length > 1) Text(time.last, style: TextStyle(fontSize: 10.5, color: context.appColors.inkMuted)),
+              if (time.length > 1) Text(time.last, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
             ]),
           ),
           const SizedBox(width: 10),
@@ -358,7 +358,7 @@ class _EventTile extends StatelessWidget {
                       ),
                       child: Text(
                         visit ? (e.confirmed ? '${l10n.shTagVisit} · ${l10n.shConfirmed}' : l10n.shTagVisit) : l10n.shTagExpiry,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: visit ? AppPalette.navy : Colors.white),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: visit ? AppPalette.navy : Colors.white),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -377,7 +377,7 @@ class _EventTile extends StatelessWidget {
                           const SizedBox(width: 5),
                           Expanded(
                             child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11.5, color: visit ? const Color(0xFFC9D2DE) : context.appColors.inkMuted)),
+                                style: TextStyle(fontSize: 12, color: visit ? const Color(0xFFC9D2DE) : context.appColors.inkMuted)),
                           ),
                         ]),
                       ),
