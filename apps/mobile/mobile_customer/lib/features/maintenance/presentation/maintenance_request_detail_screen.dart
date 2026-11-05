@@ -65,7 +65,7 @@ class MaintenanceRequestDetailScreen extends StatelessWidget {
           final icon     = _statusIcon(request.status);
 
           return Scaffold(
-            backgroundColor: const Color(0xFFF5F7FA),
+            backgroundColor: context.appColors.canvas,
             body: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -157,137 +157,117 @@ class _SummaryCard extends StatelessWidget {
         ? DateFormatter.mediumDate(request.createdAt!, languageCode: lang)
         : null;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final tileAccent = dark ? accent : _lightAccent(request.status);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Gradient strip
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradient,
-              ),
-            ),
-            child: Stack(
-              children: [
-                const Positioned.fill(child: _DotTexture()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: accent.withValues(alpha: 0.35)),
-                        ),
-                        child: Icon(icon, color: accent, size: 26),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              category?.isNotEmpty == true ? category! : context.l10n.maintenanceFallbackTitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (request.unitCode != null)
-                              Text(
-                                context.l10n.unitTitle(request.unitCode!),
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: tileAccent.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-              ],
-            ),
-          ),
-          // White body
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Icon(icon, color: tileAccent, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: priorityColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: priorityColor.withValues(alpha: 0.35)),
-                      ),
-                      child: Text(
-                        priorityLabel,
-                        style: TextStyle(
-                          color: priorityColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    Text(
+                      category?.isNotEmpty == true
+                          ? category!
+                          : context.l10n.maintenanceFallbackTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const Spacer(),
-                    if (date != null) ...[
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        size: 13,
-                        color: Colors.black.withValues(alpha: 0.35),
-                      ),
-                      const SizedBox(width: 4),
+                    if (request.unitCode != null)
                       Text(
-                        date,
-                        style: TextStyle(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                        context.l10n.unitTitle(request.unitCode!),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.inkMuted,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  request.description,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.6,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: priorityColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  priorityLabel,
+                  style: TextStyle(
+                    color: priorityColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
                   ),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.hairline),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            request.description,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              height: 1.6,
+            ),
+          ),
+          if (date != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Icon(AppIcons.calendar, size: 14, color: colors.inkMuted),
+                const SizedBox(width: 4),
+                Text(
+                  date,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+
+Color _lightAccent(MaintenanceStatus s) => switch (s) {
+      MaintenanceStatus.inProgress => const Color(0xFF1D4ED8),
+      MaintenanceStatus.open || MaintenanceStatus.assigned =>
+        const Color(0xFF9A6F1E),
+      _ => const Color(0xFF15803D),
+    };
 
 // ─── resolution card ──────────────────────────────────────────────────────────
 class _ResolutionCard extends StatelessWidget {
@@ -323,15 +303,15 @@ class _ResolutionCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        color: Colors.white,
+        color: context.appColors.surface,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Card header
             Container(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: context.appColors.hairline)),
               ),
               child: Row(
                 children: [
@@ -350,7 +330,7 @@ class _ResolutionCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      color: context.appColors.inkStrong,
                     ),
                   ),
                 ],
@@ -442,7 +422,7 @@ class _ResolutionCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+                        color: context.appColors.inkStrong,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -501,14 +481,14 @@ class _AttachmentsSection extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          color: Colors.white,
+          color: context.appColors.surface,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: context.appColors.hairline)),
                 ),
                 child: Row(
                   children: [
@@ -524,10 +504,10 @@ class _AttachmentsSection extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       l10n.maintenanceAttachmentsTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A2E),
+                        color: context.appColors.inkStrong,
                       ),
                     ),
                   ],
@@ -565,8 +545,8 @@ class _AttachmentsSection extends StatelessWidget {
                       child: Center(
                         child: Text(
                           l10n.maintenanceNoAttachments,
-                          style: const TextStyle(
-                              color: Color(0xFF9CA3AF), fontSize: 14),
+                          style: TextStyle(
+                              color: context.appColors.inkMuted, fontSize: 14),
                         ),
                       ),
                     ),
@@ -604,8 +584,8 @@ class _AttachmentTile extends StatelessWidget {
               : () => context.read<DocumentDownloadCubit>().open(document.id),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: context.appColors.hairline)),
             ),
             child: Row(
               children: [
@@ -637,10 +617,10 @@ class _AttachmentTile extends StatelessWidget {
                         document.title.isNotEmpty
                             ? document.title
                             : (document.fileName ?? ''),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A2E),
+                          color: context.appColors.inkStrong,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -649,8 +629,8 @@ class _AttachmentTile extends StatelessWidget {
                           document.fileName != document.title)
                         Text(
                           document.fileName!,
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF9CA3AF)),
+                          style: TextStyle(
+                              fontSize: 12, color: context.appColors.inkMuted),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -665,8 +645,8 @@ class _AttachmentTile extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 else
-                  const Icon(Icons.download_rounded,
-                      color: Color(0xFF9CA3AF), size: 20),
+                  Icon(Icons.download_rounded,
+                      color: context.appColors.inkMuted, size: 20),
               ],
             ),
           ),
@@ -745,19 +725,19 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF9CA3AF),
+                    color: context.appColors.inkMuted,
                   ),
                 ),
                 const SizedBox(height: 1),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
+                    color: context.appColors.inkStrong,
                   ),
                 ),
               ],
@@ -770,32 +750,6 @@ class _InfoRow extends StatelessWidget {
 }
 
 // ─── dot texture (mirrors list screen) ───────────────────────────────────────
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(painter: _DotPainter());
-}
-
-class _DotPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04)
-      ..style = PaintingStyle.fill;
-    const step = 18.0;
-    for (double x = 0; x < size.width; x += step) {
-      for (double y = 0; y < size.height; y += step) {
-        canvas.drawCircle(Offset(x, y), 1.5, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter old) => false;
-}
-
-// ─── _StarsReadOnly ───────────────────────────────────────────────────────────
 class _StarsReadOnly extends StatelessWidget {
   const _StarsReadOnly({required this.value});
   final int value;
