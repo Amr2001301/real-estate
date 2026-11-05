@@ -15733,6 +15733,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visit details'**
   String get visitInfoTitle;
+
+  /// No description provided for @ahProjectHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get ahProjectHealth;
+
+  /// No description provided for @ahProjectContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} contracts · {value}'**
+  String ahProjectContracts(int n, String value);
+
+  /// No description provided for @ahUnitsWord.
+  ///
+  /// In en, this message translates to:
+  /// **'units'**
+  String get ahUnitsWord;
+
+  /// No description provided for @ahProjectSold.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} sold'**
+  String ahProjectSold(int n);
+
+  /// No description provided for @ahProjectReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} booked'**
+  String ahProjectReserved(int n);
+
+  /// No description provided for @ahProjectAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} available'**
+  String ahProjectAvailable(int n);
+
+  /// No description provided for @ahFinanceHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial health'**
+  String get ahFinanceHealth;
+
+  /// No description provided for @ahPfPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get ahPfPaid;
+
+  /// No description provided for @ahPfAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting payment'**
+  String get ahPfAwaiting;
+
+  /// No description provided for @ahPfOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ahPfOverdue;
+
+  /// No description provided for @ahPfNotYetDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not due yet'**
+  String get ahPfNotYetDue;
+
+  /// No description provided for @ahPfUnscheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Unscheduled'**
+  String get ahPfUnscheduled;
+
+  /// No description provided for @ahFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees and penalties collected'**
+  String get ahFees;
+
+  /// No description provided for @ahCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected cash flow'**
+  String get ahCashFlow;
+
+  /// No description provided for @ahCfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total over 90 days plus overdue'**
+  String get ahCfTotal;
+
+  /// No description provided for @ahCfSlot30.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 30 days'**
+  String get ahCfSlot30;
+
+  /// No description provided for @ahCfSlot60.
+  ///
+  /// In en, this message translates to:
+  /// **'31 to 60 days'**
+  String get ahCfSlot60;
+
+  /// No description provided for @ahCfSlot90.
+  ///
+  /// In en, this message translates to:
+  /// **'61 to 90 days'**
+  String get ahCfSlot90;
+
+  /// No description provided for @ahCfOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ahCfOverdue;
+
+  /// No description provided for @ahLeadSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead sources'**
+  String get ahLeadSources;
+
+  /// No description provided for @ahSourcesOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get ahSourcesOther;
 }
 
 class _AppLocalizationsDelegate

@@ -34,6 +34,11 @@ class AdminHome {
     required this.topBrokers,
     required this.activity,
     this.overdueFollowUps = 0,
+    this.projects = const [],
+    this.leadSources = const [],
+    this.forecast = const [0, 0, 0],
+    this.fees = 0,
+    this.portfolio,
     this.companyName,
     this.companyLogoUrl,
   });
@@ -81,6 +86,21 @@ class AdminHome {
 
   /// The admin's own follow-ups past their date.
   final int overdueFollowUps;
+
+  /// The projects' stock and signed contracts (`topProjects`).
+  final List<AdminProject> projects;
+
+  /// Where the leads come from: (source, count), most first.
+  final List<(String, int)> leadSources;
+
+  /// What falls due in 30, 31–60 and 61–90 days.
+  final List<double> forecast;
+
+  /// Fees and penalties collected, kept apart from the price.
+  final double fees;
+
+  /// The signed contracts' value split by state.
+  final AdminPortfolio? portfolio;
   final String? companyName;
   final String? companyLogoUrl;
 
@@ -160,6 +180,38 @@ class AdminHome {
             ),
       ],
       overdueFollowUps: overdueFollowUps,
+      projects: [
+        for (final p in (j['topProjects'] as List? ?? const []).whereType<Map<String, dynamic>>())
+          AdminProject(
+            id: p['id'] as String? ?? '',
+            name: p['name'] as String? ?? '',
+            total: n(p, 'totalUnits'),
+            available: n(p, 'availableUnits'),
+            reserved: n(p, 'reservedUnits'),
+            sold: n(p, 'soldUnits'),
+            contracts: n(p, 'signedContracts'),
+            value: d(p, 'contractValue'),
+          ),
+      ],
+      leadSources: [
+        for (final l in (j['leadSources'] as List? ?? const []).whereType<Map<String, dynamic>>())
+          (l['source'] as String? ?? '', n(l, 'count')),
+      ]..sort((a, b) => b.$2.compareTo(a.$2)),
+      forecast: [
+        d(m(j['cashflowForecast']), 'next30'),
+        d(m(j['cashflowForecast']), 'next3160'),
+        d(m(j['cashflowForecast']), 'next6190'),
+      ],
+      fees: d(fin, 'feesCollected'),
+      portfolio: j['portfolio'] is Map<String, dynamic>
+          ? AdminPortfolio(
+              paid: d(m(j['portfolio']), 'paid'),
+              awaiting: d(m(j['portfolio']), 'awaiting'),
+              overdue: d(m(j['portfolio']), 'overdue'),
+              notYetDue: d(m(j['portfolio']), 'notYetDue'),
+              unscheduled: d(m(j['portfolio']), 'unscheduled'),
+            )
+          : null,
       companyName: brand?.displayName,
       companyLogoUrl: brand?.logoUrl,
     );
@@ -183,6 +235,7 @@ class AdminAlerts {
     this.openMaintenance = 0,
     this.infoRequestsOpen = 0,
     this.depositsPendingReview = 0,
+    this.contractsDueBeforeSigning = 0,
   });
 
   final int contractsAwaitingSignature;
@@ -190,6 +243,9 @@ class AdminAlerts {
   final int openMaintenance;
   final int infoRequestsOpen;
   final int depositsPendingReview;
+
+  /// Unsigned contracts whose first payment has already fallen due.
+  final int contractsDueBeforeSigning;
 
   factory AdminAlerts.fromJson(Map<String, dynamic> j) {
     int n(String k) => (j[k] as num?)?.toInt() ?? 0;
@@ -199,8 +255,49 @@ class AdminAlerts {
       openMaintenance: n('openMaintenance'),
       infoRequestsOpen: n('infoRequestsOpen'),
       depositsPendingReview: n('depositsPendingReview'),
+      contractsDueBeforeSigning: n('contractsDueBeforeSigning'),
     );
   }
+}
+
+/// One project's stock and contracts on the home.
+class AdminProject {
+  const AdminProject({
+    required this.id,
+    required this.name,
+    required this.total,
+    required this.available,
+    required this.reserved,
+    required this.sold,
+    required this.contracts,
+    required this.value,
+  });
+  final String id;
+  final String name;
+  final int total;
+  final int available;
+  final int reserved;
+  final int sold;
+  final int contracts;
+  final double value;
+}
+
+/// The signed contracts' value split: paid, awaiting, late, not due yet,
+/// not scheduled.
+class AdminPortfolio {
+  const AdminPortfolio({
+    required this.paid,
+    required this.awaiting,
+    required this.overdue,
+    required this.notYetDue,
+    required this.unscheduled,
+  });
+  final double paid;
+  final double awaiting;
+  final double overdue;
+  final double notYetDue;
+  final double unscheduled;
+  double get total => paid + awaiting + overdue + notYetDue + unscheduled;
 }
 
 /// A sales rep or a broker firm on the rankings.

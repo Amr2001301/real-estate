@@ -8895,4 +8895,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get visitInfoTitle => 'Visit details';
+
+  @override
+  String get ahProjectHealth => 'Projects';
+
+  @override
+  String ahProjectContracts(int n, String value) {
+    return '$n contracts · $value';
+  }
+
+  @override
+  String get ahUnitsWord => 'units';
+
+  @override
+  String ahProjectSold(int n) {
+    return '$n sold';
+  }
+
+  @override
+  String ahProjectReserved(int n) {
+    return '$n booked';
+  }
+
+  @override
+  String ahProjectAvailable(int n) {
+    return '$n available';
+  }
+
+  @override
+  String get ahFinanceHealth => 'Financial health';
+
+  @override
+  String get ahPfPaid => 'Paid';
+
+  @override
+  String get ahPfAwaiting => 'Awaiting payment';
+
+  @override
+  String get ahPfOverdue => 'Overdue';
+
+  @override
+  String get ahPfNotYetDue => 'Not due yet';
+
+  @override
+  String get ahPfUnscheduled => 'Unscheduled';
+
+  @override
+  String get ahFees => 'Fees and penalties collected';
+
+  @override
+  String get ahCashFlow => 'Expected cash flow';
+
+  @override
+  String get ahCfTotal => 'Total over 90 days plus overdue';
+
+  @override
+  String get ahCfSlot30 => 'Next 30 days';
+
+  @override
+  String get ahCfSlot60 => '31 to 60 days';
+
+  @override
+  String get ahCfSlot90 => '61 to 90 days';
+
+  @override
+  String get ahCfOverdue => 'Overdue';
+
+  @override
+  String get ahLeadSources => 'Lead sources';
+
+  @override
+  String get ahSourcesOther => 'Other';
 }

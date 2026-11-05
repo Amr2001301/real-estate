@@ -8931,4 +8931,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get visitInfoTitle => 'بيانات الزيارة';
+
+  @override
+  String get ahProjectHealth => 'حالة المشاريع';
+
+  @override
+  String ahProjectContracts(int n, String value) {
+    return '$n عقد · $value';
+  }
+
+  @override
+  String get ahUnitsWord => 'وحدة';
+
+  @override
+  String ahProjectSold(int n) {
+    return 'مباعة $n';
+  }
+
+  @override
+  String ahProjectReserved(int n) {
+    return 'محجوزة $n';
+  }
+
+  @override
+  String ahProjectAvailable(int n) {
+    return 'متاحة $n';
+  }
+
+  @override
+  String get ahFinanceHealth => 'الصحة المالية';
+
+  @override
+  String get ahPfPaid => 'مدفوع';
+
+  @override
+  String get ahPfAwaiting => 'بانتظار السداد';
+
+  @override
+  String get ahPfOverdue => 'متأخر';
+
+  @override
+  String get ahPfNotYetDue => 'لم يحن موعده';
+
+  @override
+  String get ahPfUnscheduled => 'غير مجدول';
+
+  @override
+  String get ahFees => 'رسوم وغرامات محصّلة';
+
+  @override
+  String get ahCashFlow => 'التدفق النقدي المتوقع';
+
+  @override
+  String get ahCfTotal => 'الإجمالي خلال ٩٠ يومًا والمتأخر';
+
+  @override
+  String get ahCfSlot30 => 'خلال ٣٠ يومًا';
+
+  @override
+  String get ahCfSlot60 => 'من ٣١ إلى ٦٠ يومًا';
+
+  @override
+  String get ahCfSlot90 => 'من ٦١ إلى ٩٠ يومًا';
+
+  @override
+  String get ahCfOverdue => 'متأخر';
+
+  @override
+  String get ahLeadSources => 'مصادر العملاء المحتملين';
+
+  @override
+  String get ahSourcesOther => 'أخرى';
 }
