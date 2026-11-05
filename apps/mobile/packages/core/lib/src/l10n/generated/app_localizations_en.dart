@@ -7367,6 +7367,1211 @@ class AppLocalizationsEn extends AppLocalizations {
       'Contracts of the clients you brought appear here once their bookings are converted.';
 
   @override
+  String rvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n bookings',
+      one: '1 booking',
+      zero: 'No bookings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvSearchHint => 'Search by client, booking number or unit';
+
+  @override
+  String get rvActive => 'Active';
+
+  @override
+  String rvOutOf(String what) {
+    return 'of $what';
+  }
+
+  @override
+  String get rvNeedsDecision => 'Need your decision';
+
+  @override
+  String get rvUnderReview => 'Under review';
+
+  @override
+  String get rvAwaitingPayment => 'Awaiting booking amount';
+
+  @override
+  String get rvApprovedHint => 'Approved';
+
+  @override
+  String get rvPillPending => 'Under review';
+
+  @override
+  String get rvPillApproved => 'Approved';
+
+  @override
+  String get rvPillConverted => 'Converted';
+
+  @override
+  String get rvPillClosed => 'Rejected & cancelled';
+
+  @override
+  String get rvStPending => 'Under review';
+
+  @override
+  String get rvStApproved => 'Approved';
+
+  @override
+  String get rvStConverted => 'Converted';
+
+  @override
+  String get rvStRejected => 'Rejected';
+
+  @override
+  String get rvStCancelled => 'Cancelled';
+
+  @override
+  String get rvStExpired => 'Expired';
+
+  @override
+  String get rvBooking => 'Booking amount';
+
+  @override
+  String get rvPaid => 'Paid';
+
+  @override
+  String get rvUnpaid => 'Unpaid';
+
+  @override
+  String get rvWaived => 'Waived';
+
+  @override
+  String get rvByBroker => 'Via a broker';
+
+  @override
+  String rvExpiresInN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Ends in $n days',
+      one: 'Ends tomorrow',
+      zero: 'Ends today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvExpiredOn(String date) {
+    return 'Lapsed $date';
+  }
+
+  @override
+  String rvCreatedOn(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String get rvUnpaidWarn => 'Booking amount not paid yet';
+
+  @override
+  String rvExpiresOn(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get rvReady => 'Ready to convert';
+
+  @override
+  String get rvConvert => 'Convert';
+
+  @override
+  String rvConvertedOn(String date) {
+    return 'Converted · $date';
+  }
+
+  @override
+  String get rvOpenContract => 'Open the contract';
+
+  @override
+  String rvReasonLine(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get rvJCreated => 'Created';
+
+  @override
+  String get rvJBooking => 'Booking';
+
+  @override
+  String get rvJApproved => 'Approval';
+
+  @override
+  String get rvJContract => 'Contract';
+
+  @override
+  String get rvJRejected => 'Rejected';
+
+  @override
+  String get rvJCancelled => 'Cancelled';
+
+  @override
+  String get rvJExpired => 'Lapsed';
+
+  @override
+  String get rvNextStep => 'Next step';
+
+  @override
+  String rvPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get rvPlanName => 'Plan';
+
+  @override
+  String get rvUnitPrice => 'Unit price';
+
+  @override
+  String rvContractN(String n) {
+    return 'Contract $n';
+  }
+
+  @override
+  String get rvHistory => 'History';
+
+  @override
+  String get rvCancel => 'Cancel booking';
+
+  @override
+  String get rvCancelReason => 'Reason for cancelling';
+
+  @override
+  String get rvRecordPayment => 'Record booking amount';
+
+  @override
+  String get rvPayDate => 'Paid on';
+
+  @override
+  String get rvPayMethod => 'Method';
+
+  @override
+  String get rvConfirm => 'Confirm';
+
+  @override
+  String get rvKeep => 'Back';
+
+  @override
+  String get rvApprovedMsg => 'Booking approved';
+
+  @override
+  String get rvRejectedMsg => 'Booking rejected';
+
+  @override
+  String get rvCancelledMsg => 'Booking cancelled';
+
+  @override
+  String get rvPaidMsg => 'Booking amount recorded';
+
+  @override
+  String get rvNoteAdded => 'Note added';
+
+  @override
+  String get rvFilters => 'Filter bookings';
+
+  @override
+  String rvShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $n bookings',
+      one: 'Show 1 booking',
+      zero: 'No bookings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConsultant => 'Consultant';
+
+  @override
+  String get rvAllConsultants => 'All consultants';
+
+  @override
+  String get rvEmpty => 'No bookings yet';
+
+  @override
+  String get rvEmptyMessage => 'Bookings appear here once they are made.';
+
+  @override
+  String get rvNew => 'New booking';
+
+  @override
+  String get rnSub => 'Goes for review once saved';
+
+  @override
+  String get rnStepClient => 'Client';
+
+  @override
+  String get rnStepUnit => 'Unit';
+
+  @override
+  String get rnStepPlan => 'Plan';
+
+  @override
+  String get rnStepBooking => 'Booking';
+
+  @override
+  String get rnChange => 'Change';
+
+  @override
+  String get rnPickClient => 'Choose the client';
+
+  @override
+  String get rnSearchClient => 'Search by name or phone';
+
+  @override
+  String get rnPickProject => 'Choose the project';
+
+  @override
+  String get rnPickUnit => 'Choose the unit';
+
+  @override
+  String get rnSearchUnit => 'Search by unit code';
+
+  @override
+  String get rnNoUnitsFree => 'No units available';
+
+  @override
+  String get rnUnitFixed => 'Unit chosen';
+
+  @override
+  String get rnNoPlan => 'No plan';
+
+  @override
+  String get rnNoPlanSub => 'Priced without a payment plan';
+
+  @override
+  String get rnCashSub => 'One payment';
+
+  @override
+  String rnTermsSub(String months) {
+    return '$months months';
+  }
+
+  @override
+  String rnPlanDown(String pct) {
+    return '$pct down';
+  }
+
+  @override
+  String rnPerMonthFrom(String amount) {
+    return 'From $amount a month';
+  }
+
+  @override
+  String get rnPlansHint => 'Plans available for this unit';
+
+  @override
+  String get rnPickUnitFirst => 'Choose the unit first to see its plans';
+
+  @override
+  String get rnSummary => 'Booking summary';
+
+  @override
+  String get rnSumPrice => 'Unit price';
+
+  @override
+  String get rnSumBooking => 'Booking amount';
+
+  @override
+  String get rnSumDown => 'Down payment';
+
+  @override
+  String get rnSumMonthly => 'Monthly instalment';
+
+  @override
+  String get rnBookingFromPlan => 'From the plan';
+
+  @override
+  String get rnMonthlyShort => 'a month';
+
+  @override
+  String get rnExp24 => '1 day';
+
+  @override
+  String get rnExp72 => '3 days';
+
+  @override
+  String get rnExp168 => '1 week';
+
+  @override
+  String get rnExp336 => '2 weeks';
+
+  @override
+  String get rnModePlanSub => 'Worked out from the chosen plan';
+
+  @override
+  String get rnModeFixedSub => 'You enter the amount';
+
+  @override
+  String get rnModePercentSub => 'A share of the unit price';
+
+  @override
+  String rnHoldUntil(String date) {
+    return 'Ends $date unless reviewed';
+  }
+
+  @override
+  String get rnHoldLabel => 'Hold the booking for';
+
+  @override
+  String get rbFromClients => 'From your clients';
+
+  @override
+  String get rbConvertedHint => 'Became contracts';
+
+  @override
+  String get rbAll => 'All';
+
+  @override
+  String get rbCommission => 'Your commission';
+
+  @override
+  String get rbCommissionTotalHint => 'Your total commission';
+
+  @override
+  String rbCommissionPct(String pct) {
+    return 'Your commission $pct';
+  }
+
+  @override
+  String get rbEmpty => 'No bookings yet';
+
+  @override
+  String get rbEmptyMessage =>
+      'Request a booking for your client from the projects tab or the client\'s page.';
+
+  @override
+  String get rbSearchHint => 'Search by client or booking number';
+
+  @override
+  String get rbOpenContract => 'Open the contract';
+
+  @override
+  String pmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n payments',
+      one: '1 payment',
+      zero: 'No payments',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pmSearchHint => 'Search by client, contract or unit';
+
+  @override
+  String get pmCollected => 'Collected';
+
+  @override
+  String pmCollectedHint(int n) {
+    return 'from $n payments';
+  }
+
+  @override
+  String get pmNeedReview => 'Need your review';
+
+  @override
+  String get pmNeedReviewHint => 'Client proofs';
+
+  @override
+  String get pmChequesWaiting => 'Uncleared cheques';
+
+  @override
+  String get pmChequesHint => 'Tap to open';
+
+  @override
+  String get pmPillReview => 'Under review';
+
+  @override
+  String get pmPillCheque => 'Cheques';
+
+  @override
+  String get pmPillCollected => 'Collected';
+
+  @override
+  String get pmPillClosed => 'Rejected / bounced';
+
+  @override
+  String get pmEmpty => 'No payments';
+
+  @override
+  String get pmEmptyMessage =>
+      'Payments appear here when recorded or when clients send proofs.';
+
+  @override
+  String get pmNoMatch => 'No payments match';
+
+  @override
+  String get pmMethodCash => 'Cash';
+
+  @override
+  String get pmMethodBank => 'Bank transfer';
+
+  @override
+  String get pmMethodCheque => 'Cheque';
+
+  @override
+  String pmChequeN(String no) {
+    return 'Cheque $no';
+  }
+
+  @override
+  String pmDueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String pmPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get pmProofAttached => 'Proof attached';
+
+  @override
+  String get pmViewProof => 'View proof';
+
+  @override
+  String get pmOpenCheque => 'Open the cheque';
+
+  @override
+  String pmReasonLine(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get pmNotCounted =>
+      'Not counted in the balance until the cheque clears.';
+
+  @override
+  String get pmStRecorded => 'Recorded';
+
+  @override
+  String get pmStReview => 'Review';
+
+  @override
+  String get pmStCleared => 'Clearing';
+
+  @override
+  String get pmStCollected => 'Collected';
+
+  @override
+  String get pmNow => 'Now';
+
+  @override
+  String get pmCheque => 'The cheque';
+
+  @override
+  String get pmChequeNo => 'Cheque number';
+
+  @override
+  String get pmChequeState => 'Cheque status';
+
+  @override
+  String get pmOpenChequePage => 'Open the cheque page';
+
+  @override
+  String get pmContractInstallment => 'Contract and instalment';
+
+  @override
+  String get pmContract => 'Contract';
+
+  @override
+  String get pmClient => 'Client';
+
+  @override
+  String get pmInstallmentDue => 'Instalment due';
+
+  @override
+  String get pmInstallmentAmount => 'Instalment amount';
+
+  @override
+  String get pmBooking => 'Booking';
+
+  @override
+  String pmReversedNote(String by) {
+    return 'This payment was reversed$by';
+  }
+
+  @override
+  String get pmDecisionTitleApprove => 'Approve this payment?';
+
+  @override
+  String get pmDecisionApproveBody =>
+      'The amount will count towards the instalment.';
+
+  @override
+  String ntUnreadN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n unread',
+      one: '1 unread',
+      zero: 'No unread',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ntAllRead => 'All caught up';
+
+  @override
+  String get ntAll => 'All';
+
+  @override
+  String get ntUnread => 'Unread';
+
+  @override
+  String get ntFinance => 'Finance';
+
+  @override
+  String get ntSales => 'Sales';
+
+  @override
+  String get ntToday => 'Today';
+
+  @override
+  String get ntYesterday => 'Yesterday';
+
+  @override
+  String get ntNoMatch => 'No notifications match';
+
+  @override
+  String get ntSend => 'Send a notification';
+
+  @override
+  String get ntPrefs => 'Notification preferences';
+
+  @override
+  String get npHint =>
+      'In-app notifications always arrive. Choose which also reach you by e-mail or on your phone.';
+
+  @override
+  String get npEmail => 'E-mail';
+
+  @override
+  String get npEmailHint => 'A summary with details';
+
+  @override
+  String get npPush => 'Phone notification';
+
+  @override
+  String get npPushHint => 'Reaches you at once';
+
+  @override
+  String get npSaveError => 'Could not save the change. Please try again.';
+
+  @override
+  String get npGroupSales => 'Sales';
+
+  @override
+  String get npGroupSalesHint => 'Leads · visits · bookings · contracts';
+
+  @override
+  String get npGroupFinance => 'Finance';
+
+  @override
+  String get npGroupFinanceHint => 'Instalments · payments · cheques · bonuses';
+
+  @override
+  String get npGroupMaintenance => 'Maintenance';
+
+  @override
+  String get npGroupMaintenanceHint => 'Maintenance and warranty requests';
+
+  @override
+  String get npGroupAccount => 'Account and team';
+
+  @override
+  String get npGroupAccountHint => 'Security · subscription · team';
+
+  @override
+  String get bcTitle => 'Send a notification';
+
+  @override
+  String get bcSubtitle => 'To one user or a whole group';
+
+  @override
+  String get bcAudience => 'Audience';
+
+  @override
+  String get bcAllCustomers => 'All customers';
+
+  @override
+  String get bcAllCustomersHint => 'Every active customer';
+
+  @override
+  String get bcAllBrokers => 'All brokers';
+
+  @override
+  String get bcAllSales => 'All the sales team';
+
+  @override
+  String get bcAllSupervisors => 'All maintenance supervisors';
+
+  @override
+  String get bcRole => 'A specific role';
+
+  @override
+  String get bcUser => 'A specific user';
+
+  @override
+  String get bcPickUser => 'Pick the user';
+
+  @override
+  String get bcSearchUser => 'Search by name';
+
+  @override
+  String get bcRoleCustomer => 'Customer';
+
+  @override
+  String get bcContent => 'Content';
+
+  @override
+  String get bcTitleAr => 'Title (Arabic)';
+
+  @override
+  String get bcTitleEn => 'Title (English)';
+
+  @override
+  String get bcBodyAr => 'Message (Arabic)';
+
+  @override
+  String get bcBodyEn => 'Message (English)';
+
+  @override
+  String get bcBothRequired =>
+      'Both versions are required: each user gets it in their language.';
+
+  @override
+  String get bcChannel => 'Channel';
+
+  @override
+  String get bcInApp => 'In the app';
+
+  @override
+  String get bcInAppHint => 'Shows in the notification list';
+
+  @override
+  String get bcPush => 'Phone only';
+
+  @override
+  String get bcPushHint => 'An alert on the user\'s phone';
+
+  @override
+  String get bcBoth => 'In the app and on the phone';
+
+  @override
+  String get bcBothHint => 'Best for important alerts';
+
+  @override
+  String get bcLink => 'Link to a page (optional)';
+
+  @override
+  String get bcLinkNone => 'None';
+
+  @override
+  String get bcEntityContract => 'Contract';
+
+  @override
+  String get bcEntityReservation => 'Booking';
+
+  @override
+  String get bcEntityLead => 'Lead';
+
+  @override
+  String get bcRecord => 'Record';
+
+  @override
+  String get bcRecordHint => 'Search by number or name…';
+
+  @override
+  String get bcLinkNote => 'What the user opens when tapping the notification.';
+
+  @override
+  String get bcPreview => 'Preview';
+
+  @override
+  String get bcNow => 'Now';
+
+  @override
+  String get bcEstimate => 'Estimate recipients';
+
+  @override
+  String get bcSend => 'Send';
+
+  @override
+  String bcSendN(int n) {
+    return 'Send to $n users';
+  }
+
+  @override
+  String get bcSummary => 'Summary';
+
+  @override
+  String get bcRecipients => 'Recipients';
+
+  @override
+  String bcRecipientsN(int n) {
+    return '$n users';
+  }
+
+  @override
+  String get bcDevices => 'Registered devices';
+
+  @override
+  String bcDevicesN(int d, int u) {
+    return '$d devices · $u without';
+  }
+
+  @override
+  String get bcPushReady => 'Phone notifications are ready';
+
+  @override
+  String get bcPushOff =>
+      'Phone notifications are not enabled on the server; phone sending is unavailable.';
+
+  @override
+  String get bcNoDevices => 'No recipient has a registered phone.';
+
+  @override
+  String bcConfirmMass(int n) {
+    return 'I confirm sending this to $n users. This cannot be undone.';
+  }
+
+  @override
+  String get bcNeedEstimate => 'Estimate the recipients first.';
+
+  @override
+  String get bcResult => 'Last send';
+
+  @override
+  String get bcResOk => 'The notification was sent';
+
+  @override
+  String get bcResPartial => 'Partly sent';
+
+  @override
+  String get bcResFail => 'Sending failed';
+
+  @override
+  String get bcResInApp => 'In-app notifications';
+
+  @override
+  String get bcResPush => 'Reached the phone';
+
+  @override
+  String get bcResNoDev => 'No device';
+
+  @override
+  String get bcResFailed => 'Failed';
+
+  @override
+  String get bcMissing => 'Fill the title and message in both languages.';
+
+  @override
+  String get bcNoRecipients => 'No recipients for this choice.';
+
+  @override
+  String get bcAllActiveUsers => 'All active users';
+
+  @override
+  String get bnSubtitle => 'My dues';
+
+  @override
+  String get bnTotal => 'Your total dues';
+
+  @override
+  String get bnPendingHint => 'Paid after the contract';
+
+  @override
+  String get bnPaidHint => 'Reached you';
+
+  @override
+  String bnBasisLine(String basis, String pct) {
+    return 'Basis $basis × $pct';
+  }
+
+  @override
+  String bnPeriodLine(String period) {
+    return 'Period $period';
+  }
+
+  @override
+  String get bnWhenSigned => 'Counted when the contract is signed';
+
+  @override
+  String get bnApprovedNote => 'Approved, awaiting payment';
+
+  @override
+  String bnPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get tgSales => 'Sales value';
+
+  @override
+  String tgOf(String amount) {
+    return 'of $amount';
+  }
+
+  @override
+  String get tgUnitsSold => 'Units sold';
+
+  @override
+  String tgUnitsOf(int a, int b) {
+    return '$a of $b';
+  }
+
+  @override
+  String get tgRemaining => 'Left to reach the target';
+
+  @override
+  String get tgNoTarget => 'No target for this period yet.';
+
+  @override
+  String get tgPeriodActivity => 'Your activity this period';
+
+  @override
+  String get tmPeriodPick => 'Pick the period';
+
+  @override
+  String get tmEditTitle => 'Edit the target';
+
+  @override
+  String get tmSheetNote =>
+      'Shows in the member\'s targets; progress is measured from their signed contracts.';
+
+  @override
+  String tmCreatedOn(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String tmUnitsLine(int n) {
+    return '$n units';
+  }
+
+  @override
+  String get tpFunnelLeads => 'Leads';
+
+  @override
+  String get tpVisits => 'Visits';
+
+  @override
+  String get tpBookings => 'Bookings';
+
+  @override
+  String get tpContracts => 'Contracts';
+
+  @override
+  String tmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n targets',
+      one: '1 target',
+      zero: 'No targets',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tmPeriodField => 'Period';
+
+  @override
+  String cqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n cheques',
+      one: '1 cheque',
+      zero: 'No cheques',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cqStReceived => 'Received';
+
+  @override
+  String get cqStDeposit => 'Deposit';
+
+  @override
+  String get cqStClear => 'Clearing';
+
+  @override
+  String cqDueIn(int n) {
+    return 'In $n days';
+  }
+
+  @override
+  String get cqDueToday => 'Due today';
+
+  @override
+  String cqOverdue(int n) {
+    return '$n days late';
+  }
+
+  @override
+  String get cqCovers => 'Payments it covers';
+
+  @override
+  String get bpTitle => 'Brokers\' performance';
+
+  @override
+  String get bpSubtitle => 'All time';
+
+  @override
+  String get bpBrokersSales => 'Brokers\' sales';
+
+  @override
+  String get bpCommissions => 'Commissions';
+
+  @override
+  String bpPendingOf(String amount) {
+    return '$amount pending';
+  }
+
+  @override
+  String get bpActive => 'Active brokers';
+
+  @override
+  String bpActiveOf(int n) {
+    return 'of $n';
+  }
+
+  @override
+  String get bpFunnel => 'Brokers\' funnel';
+
+  @override
+  String get bpFunnelMine => 'Your clients\' funnel';
+
+  @override
+  String get bpLeadsSent => 'Leads sent';
+
+  @override
+  String get bpLeadsApproved => 'Leads approved';
+
+  @override
+  String get bpBookings => 'Bookings';
+
+  @override
+  String get bpSigned => 'Signed contracts';
+
+  @override
+  String get bpPaidCom => 'Commission paid';
+
+  @override
+  String get bpTrend => 'Monthly trend';
+
+  @override
+  String get bpTrendMine => 'Your commission by month';
+
+  @override
+  String get bpTrendNote => 'Net commissions per month';
+
+  @override
+  String get bpTop => 'Top brokers';
+
+  @override
+  String get bpByProject => 'By project';
+
+  @override
+  String get bpSalesLbl => 'Sales';
+
+  @override
+  String get bpCommissionLbl => 'Commission';
+
+  @override
+  String get bpPaidLbl => 'Paid out';
+
+  @override
+  String bpConv(String pct) {
+    return 'Conversion $pct';
+  }
+
+  @override
+  String bpBrokerLine(int leads, int res, int con) {
+    return '$leads leads · $res bookings · $con contracts';
+  }
+
+  @override
+  String get bpActiveBadge => 'Active';
+
+  @override
+  String get bpMineTitle => 'My performance';
+
+  @override
+  String get bpMineSales => 'Your sales';
+
+  @override
+  String get bpMineCom => 'Your commission';
+
+  @override
+  String bpMineContractsHint(int n) {
+    return 'of $n bookings';
+  }
+
+  @override
+  String get bpCommissionsBlock => 'Commissions and payouts';
+
+  @override
+  String get bpNetCommissions => 'Net commissions';
+
+  @override
+  String get bpNetHint => 'All you earned';
+
+  @override
+  String get bpPendingLbl => 'Pending';
+
+  @override
+  String get bpPendingNote => 'Paid after the contract';
+
+  @override
+  String get bpPaidOutLbl => 'Paid to you';
+
+  @override
+  String get bpMyCommissions => 'My commissions and payouts';
+
+  @override
+  String get bpTeam => 'Your team';
+
+  @override
+  String bpProjectLine(String city, int n) {
+    return '$city · $n contracts';
+  }
+
+  @override
+  String bpContractsN(int n) {
+    return '$n signed contracts';
+  }
+
+  @override
+  String bpAgentLine(int leads, int con) {
+    return '$leads leads · $con contracts';
+  }
+
+  @override
+  String get bpEmpty => 'No data yet';
+
+  @override
+  String get bpEmptyMsg => 'Figures appear after the brokers\' first activity.';
+
+  @override
+  String get bkSubtitle => 'My commissions and payouts';
+
+  @override
+  String get bkNet => 'Your net commissions';
+
+  @override
+  String get bkNetHint => 'Pending and approved';
+
+  @override
+  String get bkPaidOutHint => 'Payouts paid';
+
+  @override
+  String get bkStRejected => 'Rejected';
+
+  @override
+  String get bkStCancelled => 'Cancelled';
+
+  @override
+  String get bkPayouts => 'Payout statements';
+
+  @override
+  String get bkPoDraft => 'Draft';
+
+  @override
+  String get bkPoApproved => 'Approved';
+
+  @override
+  String get bkPoProcessing => 'Processing';
+
+  @override
+  String get bkPoPaid => 'Paid';
+
+  @override
+  String get bkPoCancelled => 'Cancelled';
+
+  @override
+  String bkPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String bkEarnedOn(String date) {
+    return 'Earned $date';
+  }
+
+  @override
+  String get bkOnPayout => 'On a payout statement';
+
+  @override
+  String get bkWaitingPayout => 'Waiting for a payout statement';
+
+  @override
+  String get bkMethodBank => 'Bank transfer';
+
+  @override
+  String fuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n follow-ups',
+      one: '1 follow-up',
+      zero: 'No follow-ups',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fuOverdueHint => 'Need a call now';
+
+  @override
+  String get fuNoneToday => 'None today';
+
+  @override
+  String get fuNoneUpcoming => 'None coming';
+
+  @override
+  String get fuLogResult => 'Log a result';
+
+  @override
+  String get fuBandToday => 'Today';
+
+  @override
+  String get calBandDay => 'This day';
+
+  @override
+  String get calBandVisits => 'Visits';
+
+  @override
+  String get calBandFollowUps => 'Follow-ups';
+
+  @override
+  String get calBandContracts => 'Signed contracts';
+
+  @override
+  String get asSubtitle => 'Answers from your company\'s data only';
+
+  @override
+  String get asTryAlso => 'Try also';
+
+  @override
   String clOwnersN(int n) {
     return '$n unit owners';
   }

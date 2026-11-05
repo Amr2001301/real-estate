@@ -7,6 +7,8 @@ class BonusEntryDto {
     required this.status,
     this.ruleName,
     this.commissionPct,
+    this.basisAmount,
+    this.contractId,
     this.paidAt,
     this.createdAt,
   });
@@ -17,6 +19,8 @@ class BonusEntryDto {
   final String status;
   final String? ruleName;
   final String? commissionPct;
+  final String? basisAmount;
+  final String? contractId;
   final String? paidAt;
   final String? createdAt;
 
@@ -27,6 +31,8 @@ class BonusEntryDto {
         status: json['status'] as String? ?? 'PENDING',
         ruleName: (json['rule'] as Map<String, dynamic>?)?['name'] as String?,
         commissionPct: json['commissionPct']?.toString(),
+        basisAmount: json['basisAmount']?.toString(),
+        contractId: json['contractId'] as String?,
         paidAt: json['paidAt'] as String?,
         createdAt: json['createdAt'] as String?,
       );

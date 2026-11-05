@@ -7382,6 +7382,1225 @@ class AppLocalizationsAr extends AppLocalizations {
       'تظهر هنا عقود العملاء الذين أحضرتهم بعد تحويل حجوزاتهم إلى عقود.';
 
   @override
+  String rvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حجزًا',
+      few: '$n حجوزات',
+      two: 'حجزان',
+      one: 'حجز واحد',
+      zero: 'لا حجوزات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvSearchHint => 'ابحث بالعميل أو رقم الحجز أو الوحدة';
+
+  @override
+  String get rvActive => 'نشطة';
+
+  @override
+  String rvOutOf(String what) {
+    return 'من $what';
+  }
+
+  @override
+  String get rvNeedsDecision => 'تحتاج قرارك';
+
+  @override
+  String get rvUnderReview => 'قيد المراجعة';
+
+  @override
+  String get rvAwaitingPayment => 'بانتظار العربون';
+
+  @override
+  String get rvApprovedHint => 'معتمدة';
+
+  @override
+  String get rvPillPending => 'قيد المراجعة';
+
+  @override
+  String get rvPillApproved => 'معتمدة';
+
+  @override
+  String get rvPillConverted => 'محوّلة';
+
+  @override
+  String get rvPillClosed => 'مرفوضة وملغاة';
+
+  @override
+  String get rvStPending => 'قيد المراجعة';
+
+  @override
+  String get rvStApproved => 'معتمد';
+
+  @override
+  String get rvStConverted => 'تحوّل إلى عقد';
+
+  @override
+  String get rvStRejected => 'مرفوض';
+
+  @override
+  String get rvStCancelled => 'ملغى';
+
+  @override
+  String get rvStExpired => 'منتهٍ';
+
+  @override
+  String get rvBooking => 'العربون';
+
+  @override
+  String get rvPaid => 'مدفوع';
+
+  @override
+  String get rvUnpaid => 'غير مدفوع';
+
+  @override
+  String get rvWaived => 'معفى';
+
+  @override
+  String get rvByBroker => 'عن طريق وسيط';
+
+  @override
+  String rvExpiresInN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'تنتهي بعد $n يومًا',
+      few: 'تنتهي بعد $n أيام',
+      two: 'تنتهي بعد يومين',
+      one: 'تنتهي غدًا',
+      zero: 'تنتهي اليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvExpiredOn(String date) {
+    return 'انتهت مدته $date';
+  }
+
+  @override
+  String rvCreatedOn(String date) {
+    return 'أُنشئ $date';
+  }
+
+  @override
+  String get rvUnpaidWarn => 'العربون لم يُدفع بعد';
+
+  @override
+  String rvExpiresOn(String date) {
+    return 'تنتهي $date';
+  }
+
+  @override
+  String get rvReady => 'جاهز للتحويل إلى عقد';
+
+  @override
+  String get rvConvert => 'تحويل';
+
+  @override
+  String rvConvertedOn(String date) {
+    return 'تحوّل إلى عقد · $date';
+  }
+
+  @override
+  String get rvOpenContract => 'فتح العقد';
+
+  @override
+  String rvReasonLine(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get rvJCreated => 'أُنشئ';
+
+  @override
+  String get rvJBooking => 'العربون';
+
+  @override
+  String get rvJApproved => 'الاعتماد';
+
+  @override
+  String get rvJContract => 'العقد';
+
+  @override
+  String get rvJRejected => 'رُفض';
+
+  @override
+  String get rvJCancelled => 'أُلغي';
+
+  @override
+  String get rvJExpired => 'انتهى';
+
+  @override
+  String get rvNextStep => 'الخطوة التالية';
+
+  @override
+  String rvPaidOn(String date) {
+    return 'دُفع $date';
+  }
+
+  @override
+  String get rvPlanName => 'الخطة';
+
+  @override
+  String get rvUnitPrice => 'سعر الوحدة';
+
+  @override
+  String rvContractN(String n) {
+    return 'العقد $n';
+  }
+
+  @override
+  String get rvHistory => 'السجل';
+
+  @override
+  String get rvCancel => 'إلغاء الحجز';
+
+  @override
+  String get rvCancelReason => 'سبب الإلغاء';
+
+  @override
+  String get rvRecordPayment => 'تسجيل العربون';
+
+  @override
+  String get rvPayDate => 'تاريخ الدفع';
+
+  @override
+  String get rvPayMethod => 'طريقة الدفع';
+
+  @override
+  String get rvConfirm => 'تأكيد';
+
+  @override
+  String get rvKeep => 'تراجع';
+
+  @override
+  String get rvApprovedMsg => 'تمت الموافقة على الحجز';
+
+  @override
+  String get rvRejectedMsg => 'تم رفض الحجز';
+
+  @override
+  String get rvCancelledMsg => 'تم إلغاء الحجز';
+
+  @override
+  String get rvPaidMsg => 'تم تسجيل العربون';
+
+  @override
+  String get rvNoteAdded => 'أُضيفت الملاحظة';
+
+  @override
+  String get rvFilters => 'تصفية الحجوزات';
+
+  @override
+  String rvShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n حجزًا',
+      few: 'عرض $n حجوزات',
+      two: 'عرض حجزين',
+      one: 'عرض حجز واحد',
+      zero: 'لا حجوزات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConsultant => 'المستشار';
+
+  @override
+  String get rvAllConsultants => 'كل المستشارين';
+
+  @override
+  String get rvEmpty => 'لا توجد حجوزات';
+
+  @override
+  String get rvEmptyMessage => 'تظهر هنا الحجوزات بعد إنشائها.';
+
+  @override
+  String get rvNew => 'حجز جديد';
+
+  @override
+  String get rnSub => 'يُرسل للمراجعة بعد الحفظ';
+
+  @override
+  String get rnStepClient => 'العميل';
+
+  @override
+  String get rnStepUnit => 'الوحدة';
+
+  @override
+  String get rnStepPlan => 'خطة السداد';
+
+  @override
+  String get rnStepBooking => 'العربون';
+
+  @override
+  String get rnChange => 'تغيير';
+
+  @override
+  String get rnPickClient => 'اختر العميل';
+
+  @override
+  String get rnSearchClient => 'ابحث باسم العميل أو هاتفه';
+
+  @override
+  String get rnPickProject => 'اختر المشروع';
+
+  @override
+  String get rnPickUnit => 'اختر الوحدة';
+
+  @override
+  String get rnSearchUnit => 'ابحث بكود الوحدة';
+
+  @override
+  String get rnNoUnitsFree => 'لا توجد وحدات متاحة';
+
+  @override
+  String get rnUnitFixed => 'الوحدة محددة';
+
+  @override
+  String get rnNoPlan => 'بدون خطة';
+
+  @override
+  String get rnNoPlanSub => 'يُحسب السعر بدون خطة سداد';
+
+  @override
+  String get rnCashSub => 'دفعة واحدة';
+
+  @override
+  String rnTermsSub(String months) {
+    return '$months شهرًا';
+  }
+
+  @override
+  String rnPlanDown(String pct) {
+    return 'مقدم $pct';
+  }
+
+  @override
+  String rnPerMonthFrom(String amount) {
+    return 'من $amount شهريًا';
+  }
+
+  @override
+  String get rnPlansHint => 'الخطط المتاحة لهذه الوحدة';
+
+  @override
+  String get rnPickUnitFirst => 'اختر الوحدة أولًا لتظهر خطط السداد';
+
+  @override
+  String get rnSummary => 'ملخص الحجز';
+
+  @override
+  String get rnSumPrice => 'سعر الوحدة';
+
+  @override
+  String get rnSumBooking => 'العربون';
+
+  @override
+  String get rnSumDown => 'المقدم';
+
+  @override
+  String get rnSumMonthly => 'القسط الشهري';
+
+  @override
+  String get rnBookingFromPlan => 'من الخطة';
+
+  @override
+  String get rnMonthlyShort => 'شهريًا';
+
+  @override
+  String get rnExp24 => 'يوم';
+
+  @override
+  String get rnExp72 => '3 أيام';
+
+  @override
+  String get rnExp168 => 'أسبوع';
+
+  @override
+  String get rnExp336 => 'أسبوعان';
+
+  @override
+  String get rnModePlanSub => 'يُحسب من خطة التقسيط المختارة';
+
+  @override
+  String get rnModeFixedSub => 'تدخل المبلغ بنفسك';
+
+  @override
+  String get rnModePercentSub => 'نسبة مئوية من سعر الوحدة';
+
+  @override
+  String rnHoldUntil(String date) {
+    return 'ينتهي الحجز $date إن لم يُراجَع';
+  }
+
+  @override
+  String get rnHoldLabel => 'مدة الحجز';
+
+  @override
+  String get rbFromClients => 'من عملائك';
+
+  @override
+  String get rbConvertedHint => 'تحوّلت إلى عقود';
+
+  @override
+  String get rbAll => 'كلها';
+
+  @override
+  String get rbCommission => 'عمولتك';
+
+  @override
+  String get rbCommissionTotalHint => 'مجموع عمولتك';
+
+  @override
+  String rbCommissionPct(String pct) {
+    return 'عمولتك $pct';
+  }
+
+  @override
+  String get rbEmpty => 'لا توجد حجوزات بعد';
+
+  @override
+  String get rbEmptyMessage =>
+      'اطلب حجزًا لوحدة لعميلك من تاب المشاريع أو من صفحة العميل.';
+
+  @override
+  String get rbSearchHint => 'ابحث بالعميل أو رقم الحجز';
+
+  @override
+  String get rbOpenContract => 'فتح العقد';
+
+  @override
+  String pmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n دفعة',
+      few: '$n دفعات',
+      two: 'دفعتان',
+      one: 'دفعة واحدة',
+      zero: 'لا دفعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pmSearchHint => 'ابحث بالعميل أو رقم العقد أو الوحدة';
+
+  @override
+  String get pmCollected => 'المحصّل';
+
+  @override
+  String pmCollectedHint(int n) {
+    return 'من $n دفعة';
+  }
+
+  @override
+  String get pmNeedReview => 'تحتاج مراجعتك';
+
+  @override
+  String get pmNeedReviewHint => 'إيصالات العملاء';
+
+  @override
+  String get pmChequesWaiting => 'شيكات لم تُصرف';
+
+  @override
+  String get pmChequesHint => 'اضغط لفتحها';
+
+  @override
+  String get pmPillReview => 'قيد المراجعة';
+
+  @override
+  String get pmPillCheque => 'شيكات';
+
+  @override
+  String get pmPillCollected => 'محصّلة';
+
+  @override
+  String get pmPillClosed => 'مرفوضة ومرتدة';
+
+  @override
+  String get pmEmpty => 'لا توجد دفعات';
+
+  @override
+  String get pmEmptyMessage =>
+      'ستظهر هنا الدفعات عند تسجيلها أو إرسال العملاء إيصالاتهم.';
+
+  @override
+  String get pmNoMatch => 'لا توجد دفعات بهذا الاختيار';
+
+  @override
+  String get pmMethodCash => 'نقدًا';
+
+  @override
+  String get pmMethodBank => 'تحويل بنكي';
+
+  @override
+  String get pmMethodCheque => 'شيك';
+
+  @override
+  String pmChequeN(String no) {
+    return 'شيك $no';
+  }
+
+  @override
+  String pmDueOn(String date) {
+    return 'استحقاق $date';
+  }
+
+  @override
+  String pmPaidOn(String date) {
+    return 'دُفعت $date';
+  }
+
+  @override
+  String get pmProofAttached => 'إيصال مرفق';
+
+  @override
+  String get pmViewProof => 'عرض الإيصال';
+
+  @override
+  String get pmOpenCheque => 'فتح الشيك';
+
+  @override
+  String pmReasonLine(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get pmNotCounted => 'لا تُحسب في الرصيد حتى يُصرف الشيك.';
+
+  @override
+  String get pmStRecorded => 'سُجّلت';
+
+  @override
+  String get pmStReview => 'المراجعة';
+
+  @override
+  String get pmStCleared => 'الصرف';
+
+  @override
+  String get pmStCollected => 'التحصيل';
+
+  @override
+  String get pmNow => 'الآن';
+
+  @override
+  String get pmCheque => 'الشيك';
+
+  @override
+  String get pmChequeNo => 'رقم الشيك';
+
+  @override
+  String get pmChequeState => 'حالة الشيك';
+
+  @override
+  String get pmOpenChequePage => 'فتح صفحة الشيك';
+
+  @override
+  String get pmContractInstallment => 'العقد والقسط';
+
+  @override
+  String get pmContract => 'العقد';
+
+  @override
+  String get pmClient => 'العميل';
+
+  @override
+  String get pmInstallmentDue => 'القسط المستحق';
+
+  @override
+  String get pmInstallmentAmount => 'قيمة القسط';
+
+  @override
+  String get pmBooking => 'الحجز';
+
+  @override
+  String pmReversedNote(String by) {
+    return 'عُكست هذه الدفعة$by';
+  }
+
+  @override
+  String get pmDecisionTitleApprove => 'اعتماد الدفعة؟';
+
+  @override
+  String get pmDecisionApproveBody => 'سيُحتسب المبلغ على القسط.';
+
+  @override
+  String ntUnreadN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n إشعارًا غير مقروء',
+      few: '$n إشعارات غير مقروءة',
+      two: 'إشعاران غير مقروءان',
+      one: 'إشعار واحد غير مقروء',
+      zero: 'لا إشعارات غير مقروءة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ntAllRead => 'كل الإشعارات مقروءة';
+
+  @override
+  String get ntAll => 'الكل';
+
+  @override
+  String get ntUnread => 'غير مقروءة';
+
+  @override
+  String get ntFinance => 'المالية';
+
+  @override
+  String get ntSales => 'المبيعات';
+
+  @override
+  String get ntToday => 'اليوم';
+
+  @override
+  String get ntYesterday => 'أمس';
+
+  @override
+  String get ntNoMatch => 'لا توجد إشعارات بهذا الاختيار';
+
+  @override
+  String get ntSend => 'إرسال إشعار';
+
+  @override
+  String get ntPrefs => 'تفضيلات الإشعارات';
+
+  @override
+  String get npHint =>
+      'تصلك الإشعارات داخل التطبيق دائمًا. اختر ما يصلك منها أيضًا بالبريد أو كإشعار على الهاتف.';
+
+  @override
+  String get npEmail => 'البريد الإلكتروني';
+
+  @override
+  String get npEmailHint => 'ملخّص بالتفاصيل';
+
+  @override
+  String get npPush => 'إشعار على الهاتف';
+
+  @override
+  String get npPushHint => 'يصلك فورًا';
+
+  @override
+  String get npSaveError => 'تعذّر حفظ التغيير، حاول مرة أخرى.';
+
+  @override
+  String get npGroupSales => 'المبيعات';
+
+  @override
+  String get npGroupSalesHint => 'العملاء · الزيارات · الحجوزات · العقود';
+
+  @override
+  String get npGroupFinance => 'المالية';
+
+  @override
+  String get npGroupFinanceHint => 'الأقساط · الدفعات · الشيكات · المكافآت';
+
+  @override
+  String get npGroupMaintenance => 'الصيانة';
+
+  @override
+  String get npGroupMaintenanceHint => 'طلبات الصيانة والضمان';
+
+  @override
+  String get npGroupAccount => 'الحساب والفريق';
+
+  @override
+  String get npGroupAccountHint => 'الأمان · الاشتراك · الفريق';
+
+  @override
+  String get bcTitle => 'إرسال إشعار';
+
+  @override
+  String get bcSubtitle => 'لمستخدم أو لفئة كاملة';
+
+  @override
+  String get bcAudience => 'الجمهور';
+
+  @override
+  String get bcAllCustomers => 'كل العملاء';
+
+  @override
+  String get bcAllCustomersHint => 'تصل لكل عميل نشط';
+
+  @override
+  String get bcAllBrokers => 'كل الوسطاء';
+
+  @override
+  String get bcAllSales => 'كل فريق المبيعات';
+
+  @override
+  String get bcAllSupervisors => 'كل مشرفي الصيانة';
+
+  @override
+  String get bcRole => 'دور محدد';
+
+  @override
+  String get bcUser => 'مستخدم محدد';
+
+  @override
+  String get bcPickUser => 'اختر المستخدم';
+
+  @override
+  String get bcSearchUser => 'ابحث بالاسم';
+
+  @override
+  String get bcRoleCustomer => 'عميل';
+
+  @override
+  String get bcContent => 'المحتوى';
+
+  @override
+  String get bcTitleAr => 'العنوان (عربي)';
+
+  @override
+  String get bcTitleEn => 'العنوان (إنجليزي)';
+
+  @override
+  String get bcBodyAr => 'نص الرسالة (عربي)';
+
+  @override
+  String get bcBodyEn => 'نص الرسالة (إنجليزي)';
+
+  @override
+  String get bcBothRequired =>
+      'النسختان مطلوبتان: يصل كل مستخدم الإشعار بلغته.';
+
+  @override
+  String get bcChannel => 'قناة الإرسال';
+
+  @override
+  String get bcInApp => 'داخل التطبيق';
+
+  @override
+  String get bcInAppHint => 'يظهر في قائمة الإشعارات';
+
+  @override
+  String get bcPush => 'على الهاتف فقط';
+
+  @override
+  String get bcPushHint => 'تنبيه على هاتف المستخدم';
+
+  @override
+  String get bcBoth => 'داخل التطبيق وعلى الهاتف';
+
+  @override
+  String get bcBothHint => 'الأفضل للتنبيهات المهمة';
+
+  @override
+  String get bcLink => 'ربط بصفحة (اختياري)';
+
+  @override
+  String get bcLinkNone => 'بدون';
+
+  @override
+  String get bcEntityContract => 'عقد';
+
+  @override
+  String get bcEntityReservation => 'حجز';
+
+  @override
+  String get bcEntityLead => 'فرصة بيع';
+
+  @override
+  String get bcRecord => 'السجل';
+
+  @override
+  String get bcRecordHint => 'ابحث بالرقم أو الاسم…';
+
+  @override
+  String get bcLinkNote => 'ما يفتحه المستخدم عند الضغط على الإشعار.';
+
+  @override
+  String get bcPreview => 'معاينة';
+
+  @override
+  String get bcNow => 'الآن';
+
+  @override
+  String get bcEstimate => 'تقدير المستقبلين';
+
+  @override
+  String get bcSend => 'إرسال';
+
+  @override
+  String bcSendN(int n) {
+    return 'إرسال إلى $n مستخدمًا';
+  }
+
+  @override
+  String get bcSummary => 'ملخص الإرسال';
+
+  @override
+  String get bcRecipients => 'المستقبلون';
+
+  @override
+  String bcRecipientsN(int n) {
+    return '$n مستخدمًا';
+  }
+
+  @override
+  String get bcDevices => 'الأجهزة المسجّلة';
+
+  @override
+  String bcDevicesN(int d, int u) {
+    return '$d جهازًا · $u بدون جهاز';
+  }
+
+  @override
+  String get bcPushReady => 'إشعارات الهاتف جاهزة';
+
+  @override
+  String get bcPushOff =>
+      'إشعارات الهاتف غير مفعّلة على الخادم، فلا يمكن الإرسال للهاتف الآن.';
+
+  @override
+  String get bcNoDevices => 'لا يوجد هاتف مسجّل لدى المستقبلين.';
+
+  @override
+  String bcConfirmMass(int n) {
+    return 'أتأكد من أنني أريد إرسال هذا الإشعار إلى $n مستخدمًا. هذا الإجراء لا يمكن التراجع عنه.';
+  }
+
+  @override
+  String get bcNeedEstimate => 'اضغط «تقدير المستقبلين» أولًا قبل الإرسال.';
+
+  @override
+  String get bcResult => 'نتيجة آخر إرسال';
+
+  @override
+  String get bcResOk => 'وصل الإشعار';
+
+  @override
+  String get bcResPartial => 'اكتمل الإرسال جزئيًا';
+
+  @override
+  String get bcResFail => 'فشل الإرسال';
+
+  @override
+  String get bcResInApp => 'إشعارات داخل التطبيق';
+
+  @override
+  String get bcResPush => 'وصل للهاتف';
+
+  @override
+  String get bcResNoDev => 'بدون جهاز';
+
+  @override
+  String get bcResFailed => 'فشل';
+
+  @override
+  String get bcMissing => 'أكمل العنوان والنص بالنسختين.';
+
+  @override
+  String get bcNoRecipients => 'لا يوجد مستقبلون لهذا الاختيار.';
+
+  @override
+  String get bcAllActiveUsers => 'جميع المستخدمين النشطين';
+
+  @override
+  String get bnSubtitle => 'مستحقاتي';
+
+  @override
+  String get bnTotal => 'إجمالي مستحقاتك';
+
+  @override
+  String get bnPendingHint => 'يُصرف بعد التعاقد';
+
+  @override
+  String get bnPaidHint => 'وصل إليك';
+
+  @override
+  String bnBasisLine(String basis, String pct) {
+    return 'الأساس $basis × $pct';
+  }
+
+  @override
+  String bnPeriodLine(String period) {
+    return 'الفترة $period';
+  }
+
+  @override
+  String get bnWhenSigned => 'تُحتسب عند توقيع العقد';
+
+  @override
+  String get bnApprovedNote => 'معتمدة وبانتظار الصرف';
+
+  @override
+  String bnPaidOn(String date) {
+    return 'صُرفت $date';
+  }
+
+  @override
+  String get tgSales => 'قيمة المبيعات';
+
+  @override
+  String tgOf(String amount) {
+    return 'من $amount';
+  }
+
+  @override
+  String get tgUnitsSold => 'الوحدات المباعة';
+
+  @override
+  String tgUnitsOf(int a, int b) {
+    return '$a من $b';
+  }
+
+  @override
+  String get tgRemaining => 'المتبقي لبلوغ الهدف';
+
+  @override
+  String get tgNoTarget => 'لا يوجد هدف لهذه الفترة بعد.';
+
+  @override
+  String get tgPeriodActivity => 'نشاطك هذه الفترة';
+
+  @override
+  String get tmPeriodPick => 'اختر الفترة';
+
+  @override
+  String get tmEditTitle => 'تعديل الهدف';
+
+  @override
+  String get tmSheetNote =>
+      'يظهر للموظف في «أهدافي» وتُقاس نسبة الإنجاز تلقائيًا من عقوده الموقّعة.';
+
+  @override
+  String tmCreatedOn(String date) {
+    return 'أُنشئ $date';
+  }
+
+  @override
+  String tmUnitsLine(int n) {
+    return '$n وحدات';
+  }
+
+  @override
+  String get tpFunnelLeads => 'فرص';
+
+  @override
+  String get tpVisits => 'زيارات';
+
+  @override
+  String get tpBookings => 'حجوزات';
+
+  @override
+  String get tpContracts => 'عقود';
+
+  @override
+  String tmCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n هدفًا مسجّلًا',
+      few: '$n أهداف مسجّلة',
+      two: 'هدفان مسجّلان',
+      one: 'هدف واحد مسجّل',
+      zero: 'لا أهداف مسجّلة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tmPeriodField => 'الفترة';
+
+  @override
+  String cqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n شيكًا',
+      few: '$n شيكات',
+      two: 'شيكان',
+      one: 'شيك واحد',
+      zero: 'لا شيكات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cqStReceived => 'استُلم';
+
+  @override
+  String get cqStDeposit => 'الإيداع';
+
+  @override
+  String get cqStClear => 'الصرف';
+
+  @override
+  String cqDueIn(int n) {
+    return 'بعد $n أيام';
+  }
+
+  @override
+  String get cqDueToday => 'يستحق اليوم';
+
+  @override
+  String cqOverdue(int n) {
+    return 'متأخر $n أيام';
+  }
+
+  @override
+  String get cqCovers => 'الدفعات التي يغطيها';
+
+  @override
+  String get bpTitle => 'أداء الوسطاء';
+
+  @override
+  String get bpSubtitle => 'كل الفترة';
+
+  @override
+  String get bpBrokersSales => 'مبيعات الوسطاء';
+
+  @override
+  String get bpCommissions => 'عمولات';
+
+  @override
+  String bpPendingOf(String amount) {
+    return '$amount معلّقة';
+  }
+
+  @override
+  String get bpActive => 'وسطاء نشطون';
+
+  @override
+  String bpActiveOf(int n) {
+    return 'من $n';
+  }
+
+  @override
+  String get bpFunnel => 'مسار الوسطاء';
+
+  @override
+  String get bpFunnelMine => 'مسار عملائك';
+
+  @override
+  String get bpLeadsSent => 'فرص مُرسلة';
+
+  @override
+  String get bpLeadsApproved => 'فرص معتمدة';
+
+  @override
+  String get bpBookings => 'حجوزات';
+
+  @override
+  String get bpSigned => 'عقود موقّعة';
+
+  @override
+  String get bpPaidCom => 'عمولة مدفوعة';
+
+  @override
+  String get bpTrend => 'الاتجاه الشهري';
+
+  @override
+  String get bpTrendMine => 'عمولتك شهريًا';
+
+  @override
+  String get bpTrendNote => 'صافي العمولات شهريًا';
+
+  @override
+  String get bpTop => 'أفضل الوسطاء';
+
+  @override
+  String get bpByProject => 'حسب المشروع';
+
+  @override
+  String get bpSalesLbl => 'المبيعات';
+
+  @override
+  String get bpCommissionLbl => 'العمولة';
+
+  @override
+  String get bpPaidLbl => 'المصروف';
+
+  @override
+  String bpConv(String pct) {
+    return 'تحويل $pct';
+  }
+
+  @override
+  String bpBrokerLine(int leads, int res, int con) {
+    return '$leads فرص · $res حجوزات · $con عقود';
+  }
+
+  @override
+  String get bpActiveBadge => 'نشط';
+
+  @override
+  String get bpMineTitle => 'أدائي';
+
+  @override
+  String get bpMineSales => 'مبيعاتك';
+
+  @override
+  String get bpMineCom => 'عمولتك';
+
+  @override
+  String bpMineContractsHint(int n) {
+    return 'من $n حجوزات';
+  }
+
+  @override
+  String get bpCommissionsBlock => 'العمولات والمدفوعات';
+
+  @override
+  String get bpNetCommissions => 'صافي العمولات';
+
+  @override
+  String get bpNetHint => 'إجمالي ما استحققته';
+
+  @override
+  String get bpPendingLbl => 'معلّقة';
+
+  @override
+  String get bpPendingNote => 'تُصرف بعد التعاقد';
+
+  @override
+  String get bpPaidOutLbl => 'صُرف لك';
+
+  @override
+  String get bpMyCommissions => 'عمولاتي وكشف الصرف';
+
+  @override
+  String get bpTeam => 'فريقك';
+
+  @override
+  String bpProjectLine(String city, int n) {
+    return '$city · $n عقود';
+  }
+
+  @override
+  String bpContractsN(int n) {
+    return '$n عقود موقّعة';
+  }
+
+  @override
+  String bpAgentLine(int leads, int con) {
+    return '$leads فرص · $con عقود';
+  }
+
+  @override
+  String get bpEmpty => 'لا توجد بيانات بعد';
+
+  @override
+  String get bpEmptyMsg => 'ستظهر هنا أرقام الوسطاء بعد أول عملياتهم.';
+
+  @override
+  String get bkSubtitle => 'عمولاتي وكشوف الصرف';
+
+  @override
+  String get bkNet => 'صافي عمولاتك';
+
+  @override
+  String get bkNetHint => 'المعلّقة والمعتمدة';
+
+  @override
+  String get bkPaidOutHint => 'كشوف مصروفة';
+
+  @override
+  String get bkStRejected => 'مرفوضة';
+
+  @override
+  String get bkStCancelled => 'ملغاة';
+
+  @override
+  String get bkPayouts => 'كشوف الصرف';
+
+  @override
+  String get bkPoDraft => 'مسودة';
+
+  @override
+  String get bkPoApproved => 'معتمد';
+
+  @override
+  String get bkPoProcessing => 'قيد التحويل';
+
+  @override
+  String get bkPoPaid => 'تم الصرف';
+
+  @override
+  String get bkPoCancelled => 'ملغى';
+
+  @override
+  String bkPaidOn(String date) {
+    return 'صُرف $date';
+  }
+
+  @override
+  String bkEarnedOn(String date) {
+    return 'استحقت $date';
+  }
+
+  @override
+  String get bkOnPayout => 'ضمن كشف صرف';
+
+  @override
+  String get bkWaitingPayout => 'بانتظار كشف الصرف';
+
+  @override
+  String get bkMethodBank => 'تحويل بنكي';
+
+  @override
+  String fuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n متابعة',
+      few: '$n متابعات',
+      two: 'متابعتان',
+      one: 'متابعة واحدة',
+      zero: 'لا متابعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fuOverdueHint => 'تحتاج اتصالك الآن';
+
+  @override
+  String get fuNoneToday => 'لا موعد اليوم';
+
+  @override
+  String get fuNoneUpcoming => 'لا مواعيد قادمة';
+
+  @override
+  String get fuLogResult => 'تسجيل نتيجة';
+
+  @override
+  String get fuBandToday => 'اليوم';
+
+  @override
+  String get calBandDay => 'اليوم';
+
+  @override
+  String get calBandVisits => 'زيارات';
+
+  @override
+  String get calBandFollowUps => 'متابعات';
+
+  @override
+  String get calBandContracts => 'عقود موقّعة';
+
+  @override
+  String get asSubtitle => 'يجيب من بيانات شركتك فقط';
+
+  @override
+  String get asTryAlso => 'جرّب أيضًا';
+
+  @override
   String clOwnersN(int n) {
     return '$n مالك وحدة';
   }

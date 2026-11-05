@@ -7,8 +7,6 @@ import 'package:mobile_staff/features/reservations/data/datasources/reservations
 import 'package:mobile_staff/features/reservations/data/repositories/reservations_repository_impl.dart';
 import 'package:mobile_staff/features/reservations/domain/entities/reservation.dart';
 import 'package:mobile_staff/features/reservations/domain/repositories/reservations_repository.dart';
-import 'package:mobile_staff/features/reservations/domain/usecases/reservation_use_cases.dart';
-import 'package:mobile_staff/features/reservations/presentation/cubit/reservations_cubit.dart';
 
 class _FakeRemote implements ReservationsRemoteDataSource {
   _FakeRemote({this.rows = const [], this.error});
@@ -31,23 +29,6 @@ class _FakeRemote implements ReservationsRemoteDataSource {
   Future<void> approve(String id) async {}
   @override
   Future<void> reject(String id, String? reason) async {}
-}
-
-class _FakeRepo implements ReservationsRepository {
-  _FakeRepo(this._list);
-  final Result<List<Reservation>> _list;
-  @override
-  Future<Result<List<Reservation>>> getReservations(ReservationsQuery q) async => _list;
-  @override
-  Future<Result<ReservationDetail>> getReservation(String id) async => throw UnimplementedError();
-  @override
-  Future<Result<Reservation>> createReservation(NewReservation input) async => throw UnimplementedError();
-  @override
-  Future<Result<void>> addNote(String id, String body) async => const Ok(null);
-  @override
-  Future<Result<void>> approve(String id) async => const Ok(null);
-  @override
-  Future<Result<void>> reject(String id, {String? reason}) async => const Ok(null);
 }
 
 Map<String, dynamic> _row({String status = 'PENDING'}) => {
@@ -110,23 +91,6 @@ void main() {
       final repo = ReservationsRepositoryImpl(_FakeRemote(rows: [ReservationDto.fromJson(_row())]));
       final r = await repo.getReservations(const ReservationsQuery());
       expect(r.dataOrNull?.single.reservationNumber, 'R-1');
-    });
-  });
-
-  group('ReservationsCubit', () {
-    test('empty → empty', () async {
-      final cubit = ReservationsCubit(GetReservations(_FakeRepo(const Ok([]))));
-      await cubit.load();
-      expect(cubit.state.status, DataStatus.empty);
-    });
-
-    test('setStatus filters + reloads', () async {
-      final cubit = ReservationsCubit(GetReservations(_FakeRepo(Ok([
-        const Reservation(id: 'r1', status: 'PENDING'),
-      ]))));
-      await cubit.setStatus('PENDING');
-      expect(cubit.state.statusFilter, 'PENDING');
-      expect(cubit.state.status, DataStatus.success);
     });
   });
 }

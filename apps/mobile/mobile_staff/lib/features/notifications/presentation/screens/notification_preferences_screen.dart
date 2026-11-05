@@ -1,10 +1,12 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../data/notification_preferences_api.dart';
 
-/// Per-group e-mail / push switches. Each change is saved at once and put
-/// back if the save fails. In-app notifications are never switched off.
+/// Per-group e-mail / phone switches (design n2). Each change is saved at once
+/// and put back if the save fails. In-app notifications are never switched off.
 class NotificationPreferencesScreen extends StatefulWidget {
   const NotificationPreferencesScreen({super.key, required this.api});
 
@@ -49,105 +51,83 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
       if (failure != null) {
         _prefs = previous;
         AppLog.failure(failure);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_t(context).saveError)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.l10n.npSaveError)));
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = _t(context);
+    final l10n = context.l10n;
+    final colors = context.appColors;
     final prefs = _prefs;
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(title: t.title, compact: true, leadingAction: const NavHeaderBack()),
+    final groups = {
+      'sales': (l10n.npGroupSales, l10n.npGroupSalesHint),
+      'finance': (l10n.npGroupFinance, l10n.npGroupFinanceHint),
+      'maintenance': (l10n.npGroupMaintenance, l10n.npGroupMaintenanceHint),
+      'account': (l10n.npGroupAccount, l10n.npGroupAccountHint),
+    };
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: Column(children: [
+          HomeListHero(title: l10n.ntPrefs, back: true),
           Expanded(
             child: _failure != null
                 ? ErrorState(failure: _failure, onRetry: _load)
                 : prefs == null
-                ? const Center(child: CircularProgressIndicator())
-                : ListView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    children: [
-                      Text(t.hint, style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: AppSpacing.md),
-                      for (final group in prefGroups)
-                        Card(
-                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                  AppSpacing.md,
-                                  AppSpacing.md,
-                                  AppSpacing.md,
-                                  0,
-                                ),
-                                child: Text(t.groups[group]!, style: Theme.of(context).textTheme.titleSmall),
-                              ),
-                              for (final channel in prefChannels)
-                                SwitchListTile(
-                                  title: Text(channel == 'email' ? t.email : t.push),
-                                  value: prefs[channel]![group]!,
-                                  onChanged: _saving ? null : (v) => _toggle(channel, group, v),
-                                ),
-                            ],
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView(
+                        padding: EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 24),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+                            child: Text(l10n.npHint, style: TextStyle(fontSize: 12, height: 1.6, color: colors.inkMuted)),
                           ),
-                        ),
-                    ],
-                  ),
+                          for (final group in prefGroups)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: homeCard(context, radius: 22),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8, bottom: 2),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(groups[group]!.$1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                                    Text(groups[group]!.$2, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                  ]),
+                                ),
+                                for (final (i, channel) in prefChannels.indexed)
+                                  Container(
+                                    decoration: BoxDecoration(border: Border(top: i == 0 ? BorderSide.none : BorderSide(color: colors.hairline))),
+                                    child: Row(children: [
+                                      Icon(channel == 'email' ? Icons.mail_rounded : Icons.notifications_active_rounded, size: 20, color: const Color(0xFF26405F)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                            Text(channel == 'email' ? l10n.npEmail : l10n.npPush, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                                            Text(channel == 'email' ? l10n.npEmailHint : l10n.npPushHint, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                          ]),
+                                        ),
+                                      ),
+                                      Switch(
+                                        key: Key('pref-$channel-$group'),
+                                        value: prefs[channel]![group]!,
+                                        activeThumbColor: AppPalette.gold300,
+                                        activeTrackColor: AppPalette.navy,
+                                        onChanged: _saving ? null : (v) => _toggle(channel, group, v),
+                                      ),
+                                    ]),
+                                  ),
+                              ]),
+                            ),
+                        ],
+                      ),
           ),
-        ],
+        ]),
       ),
     );
   }
 }
-
-class _Texts {
-  const _Texts({
-    required this.title,
-    required this.hint,
-    required this.email,
-    required this.push,
-    required this.saveError,
-    required this.groups,
-  });
-
-  final String title;
-  final String hint;
-  final String email;
-  final String push;
-  final String saveError;
-  final Map<String, String> groups;
-}
-
-_Texts _t(BuildContext context) => Localizations.localeOf(context).languageCode == 'ar'
-    ? const _Texts(
-        title: 'تفضيلات الإشعارات',
-        hint: 'تصلك الإشعارات داخل التطبيق دائماً. اختر ما يصلك منها أيضاً بالبريد أو كإشعار على الهاتف.',
-        email: 'البريد الإلكتروني',
-        push: 'إشعار على الهاتف',
-        saveError: 'تعذّر حفظ التغيير، حاول مرة أخرى.',
-        groups: {
-          'sales': 'المبيعات — العملاء والزيارات والحجوزات والعقود',
-          'finance': 'المالية — الأقساط والدفعات والشيكات والمكافآت',
-          'maintenance': 'الصيانة',
-          'account': 'الحساب والاشتراك والفريق',
-        },
-      )
-    : const _Texts(
-        title: 'Notification preferences',
-        hint:
-            'In-app notifications always arrive. Choose which ones also reach you by e-mail or as a phone notification.',
-        email: 'E-mail',
-        push: 'Phone notification',
-        saveError: 'Could not save the change. Please try again.',
-        groups: {
-          'sales': 'Sales — leads, visits, reservations and contracts',
-          'finance': 'Finance — installments, payments, cheques and bonuses',
-          'maintenance': 'Maintenance',
-          'account': 'Account, subscription and team',
-        },
-      );

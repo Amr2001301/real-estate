@@ -13112,6 +13112,2088 @@ abstract class AppLocalizations {
   /// **'Contracts of the clients you brought appear here once their bookings are converted.'**
   String get kbEmptyMessage;
 
+  /// No description provided for @rvCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No bookings} =1{1 booking} other{{n} bookings}}'**
+  String rvCountN(int n);
+
+  /// No description provided for @rvSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client, booking number or unit'**
+  String get rvSearchHint;
+
+  /// No description provided for @rvActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get rvActive;
+
+  /// No description provided for @rvOutOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {what}'**
+  String rvOutOf(String what);
+
+  /// No description provided for @rvNeedsDecision.
+  ///
+  /// In en, this message translates to:
+  /// **'Need your decision'**
+  String get rvNeedsDecision;
+
+  /// No description provided for @rvUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvUnderReview;
+
+  /// No description provided for @rvAwaitingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting booking amount'**
+  String get rvAwaitingPayment;
+
+  /// No description provided for @rvApprovedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvApprovedHint;
+
+  /// No description provided for @rvPillPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvPillPending;
+
+  /// No description provided for @rvPillApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvPillApproved;
+
+  /// No description provided for @rvPillConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rvPillConverted;
+
+  /// No description provided for @rvPillClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected & cancelled'**
+  String get rvPillClosed;
+
+  /// No description provided for @rvStPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvStPending;
+
+  /// No description provided for @rvStApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvStApproved;
+
+  /// No description provided for @rvStConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rvStConverted;
+
+  /// No description provided for @rvStRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rvStRejected;
+
+  /// No description provided for @rvStCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rvStCancelled;
+
+  /// No description provided for @rvStExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get rvStExpired;
+
+  /// No description provided for @rvBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get rvBooking;
+
+  /// No description provided for @rvPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get rvPaid;
+
+  /// No description provided for @rvUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get rvUnpaid;
+
+  /// No description provided for @rvWaived.
+  ///
+  /// In en, this message translates to:
+  /// **'Waived'**
+  String get rvWaived;
+
+  /// No description provided for @rvByBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Via a broker'**
+  String get rvByBroker;
+
+  /// No description provided for @rvExpiresInN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Ends today} =1{Ends tomorrow} other{Ends in {n} days}}'**
+  String rvExpiresInN(int n);
+
+  /// No description provided for @rvExpiredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Lapsed {date}'**
+  String rvExpiredOn(String date);
+
+  /// No description provided for @rvCreatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String rvCreatedOn(String date);
+
+  /// No description provided for @rvUnpaidWarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount not paid yet'**
+  String get rvUnpaidWarn;
+
+  /// No description provided for @rvExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}'**
+  String rvExpiresOn(String date);
+
+  /// No description provided for @rvReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to convert'**
+  String get rvReady;
+
+  /// No description provided for @rvConvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert'**
+  String get rvConvert;
+
+  /// No description provided for @rvConvertedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted · {date}'**
+  String rvConvertedOn(String date);
+
+  /// No description provided for @rvOpenContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the contract'**
+  String get rvOpenContract;
+
+  /// No description provided for @rvReasonLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String rvReasonLine(String reason);
+
+  /// No description provided for @rvJCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get rvJCreated;
+
+  /// No description provided for @rvJBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get rvJBooking;
+
+  /// No description provided for @rvJApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval'**
+  String get rvJApproved;
+
+  /// No description provided for @rvJContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get rvJContract;
+
+  /// No description provided for @rvJRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rvJRejected;
+
+  /// No description provided for @rvJCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rvJCancelled;
+
+  /// No description provided for @rvJExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Lapsed'**
+  String get rvJExpired;
+
+  /// No description provided for @rvNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get rvNextStep;
+
+  /// No description provided for @rvPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String rvPaidOn(String date);
+
+  /// No description provided for @rvPlanName.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get rvPlanName;
+
+  /// No description provided for @rvUnitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get rvUnitPrice;
+
+  /// No description provided for @rvContractN.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract {n}'**
+  String rvContractN(String n);
+
+  /// No description provided for @rvHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get rvHistory;
+
+  /// No description provided for @rvCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get rvCancel;
+
+  /// No description provided for @rvCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for cancelling'**
+  String get rvCancelReason;
+
+  /// No description provided for @rvRecordPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Record booking amount'**
+  String get rvRecordPayment;
+
+  /// No description provided for @rvPayDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid on'**
+  String get rvPayDate;
+
+  /// No description provided for @rvPayMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Method'**
+  String get rvPayMethod;
+
+  /// No description provided for @rvConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get rvConfirm;
+
+  /// No description provided for @rvKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get rvKeep;
+
+  /// No description provided for @rvApprovedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking approved'**
+  String get rvApprovedMsg;
+
+  /// No description provided for @rvRejectedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking rejected'**
+  String get rvRejectedMsg;
+
+  /// No description provided for @rvCancelledMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking cancelled'**
+  String get rvCancelledMsg;
+
+  /// No description provided for @rvPaidMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount recorded'**
+  String get rvPaidMsg;
+
+  /// No description provided for @rvNoteAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get rvNoteAdded;
+
+  /// No description provided for @rvFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter bookings'**
+  String get rvFilters;
+
+  /// No description provided for @rvShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No bookings} =1{Show 1 booking} other{Show {n} bookings}}'**
+  String rvShowN(int n);
+
+  /// No description provided for @rvConsultant.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get rvConsultant;
+
+  /// No description provided for @rvAllConsultants.
+  ///
+  /// In en, this message translates to:
+  /// **'All consultants'**
+  String get rvAllConsultants;
+
+  /// No description provided for @rvEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get rvEmpty;
+
+  /// No description provided for @rvEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings appear here once they are made.'**
+  String get rvEmptyMessage;
+
+  /// No description provided for @rvNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New booking'**
+  String get rvNew;
+
+  /// No description provided for @rnSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Goes for review once saved'**
+  String get rnSub;
+
+  /// No description provided for @rnStepClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get rnStepClient;
+
+  /// No description provided for @rnStepUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get rnStepUnit;
+
+  /// No description provided for @rnStepPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get rnStepPlan;
+
+  /// No description provided for @rnStepBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get rnStepBooking;
+
+  /// No description provided for @rnChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get rnChange;
+
+  /// No description provided for @rnPickClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client'**
+  String get rnPickClient;
+
+  /// No description provided for @rnSearchClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get rnSearchClient;
+
+  /// No description provided for @rnPickProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the project'**
+  String get rnPickProject;
+
+  /// No description provided for @rnPickUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the unit'**
+  String get rnPickUnit;
+
+  /// No description provided for @rnSearchUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by unit code'**
+  String get rnSearchUnit;
+
+  /// No description provided for @rnNoUnitsFree.
+  ///
+  /// In en, this message translates to:
+  /// **'No units available'**
+  String get rnNoUnitsFree;
+
+  /// No description provided for @rnUnitFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit chosen'**
+  String get rnUnitFixed;
+
+  /// No description provided for @rnNoPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No plan'**
+  String get rnNoPlan;
+
+  /// No description provided for @rnNoPlanSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Priced without a payment plan'**
+  String get rnNoPlanSub;
+
+  /// No description provided for @rnCashSub.
+  ///
+  /// In en, this message translates to:
+  /// **'One payment'**
+  String get rnCashSub;
+
+  /// No description provided for @rnTermsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{months} months'**
+  String rnTermsSub(String months);
+
+  /// No description provided for @rnPlanDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} down'**
+  String rnPlanDown(String pct);
+
+  /// No description provided for @rnPerMonthFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {amount} a month'**
+  String rnPerMonthFrom(String amount);
+
+  /// No description provided for @rnPlansHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans available for this unit'**
+  String get rnPlansHint;
+
+  /// No description provided for @rnPickUnitFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the unit first to see its plans'**
+  String get rnPickUnitFirst;
+
+  /// No description provided for @rnSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking summary'**
+  String get rnSummary;
+
+  /// No description provided for @rnSumPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get rnSumPrice;
+
+  /// No description provided for @rnSumBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get rnSumBooking;
+
+  /// No description provided for @rnSumDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get rnSumDown;
+
+  /// No description provided for @rnSumMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly instalment'**
+  String get rnSumMonthly;
+
+  /// No description provided for @rnBookingFromPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'From the plan'**
+  String get rnBookingFromPlan;
+
+  /// No description provided for @rnMonthlyShort.
+  ///
+  /// In en, this message translates to:
+  /// **'a month'**
+  String get rnMonthlyShort;
+
+  /// No description provided for @rnExp24.
+  ///
+  /// In en, this message translates to:
+  /// **'1 day'**
+  String get rnExp24;
+
+  /// No description provided for @rnExp72.
+  ///
+  /// In en, this message translates to:
+  /// **'3 days'**
+  String get rnExp72;
+
+  /// No description provided for @rnExp168.
+  ///
+  /// In en, this message translates to:
+  /// **'1 week'**
+  String get rnExp168;
+
+  /// No description provided for @rnExp336.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get rnExp336;
+
+  /// No description provided for @rnModePlanSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked out from the chosen plan'**
+  String get rnModePlanSub;
+
+  /// No description provided for @rnModeFixedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'You enter the amount'**
+  String get rnModeFixedSub;
+
+  /// No description provided for @rnModePercentSub.
+  ///
+  /// In en, this message translates to:
+  /// **'A share of the unit price'**
+  String get rnModePercentSub;
+
+  /// No description provided for @rnHoldUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date} unless reviewed'**
+  String rnHoldUntil(String date);
+
+  /// No description provided for @rnHoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the booking for'**
+  String get rnHoldLabel;
+
+  /// No description provided for @rbFromClients.
+  ///
+  /// In en, this message translates to:
+  /// **'From your clients'**
+  String get rbFromClients;
+
+  /// No description provided for @rbConvertedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Became contracts'**
+  String get rbConvertedHint;
+
+  /// No description provided for @rbAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get rbAll;
+
+  /// No description provided for @rbCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get rbCommission;
+
+  /// No description provided for @rbCommissionTotalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your total commission'**
+  String get rbCommissionTotalHint;
+
+  /// No description provided for @rbCommissionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission {pct}'**
+  String rbCommissionPct(String pct);
+
+  /// No description provided for @rbEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get rbEmpty;
+
+  /// No description provided for @rbEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a booking for your client from the projects tab or the client\'s page.'**
+  String get rbEmptyMessage;
+
+  /// No description provided for @rbSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client or booking number'**
+  String get rbSearchHint;
+
+  /// No description provided for @rbOpenContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the contract'**
+  String get rbOpenContract;
+
+  /// No description provided for @pmCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No payments} =1{1 payment} other{{n} payments}}'**
+  String pmCountN(int n);
+
+  /// No description provided for @pmSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client, contract or unit'**
+  String get pmSearchHint;
+
+  /// No description provided for @pmCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmCollected;
+
+  /// No description provided for @pmCollectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'from {n} payments'**
+  String pmCollectedHint(int n);
+
+  /// No description provided for @pmNeedReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Need your review'**
+  String get pmNeedReview;
+
+  /// No description provided for @pmNeedReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Client proofs'**
+  String get pmNeedReviewHint;
+
+  /// No description provided for @pmChequesWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncleared cheques'**
+  String get pmChequesWaiting;
+
+  /// No description provided for @pmChequesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to open'**
+  String get pmChequesHint;
+
+  /// No description provided for @pmPillReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get pmPillReview;
+
+  /// No description provided for @pmPillCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheques'**
+  String get pmPillCheque;
+
+  /// No description provided for @pmPillCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmPillCollected;
+
+  /// No description provided for @pmPillClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected / bounced'**
+  String get pmPillClosed;
+
+  /// No description provided for @pmEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments'**
+  String get pmEmpty;
+
+  /// No description provided for @pmEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments appear here when recorded or when clients send proofs.'**
+  String get pmEmptyMessage;
+
+  /// No description provided for @pmNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments match'**
+  String get pmNoMatch;
+
+  /// No description provided for @pmMethodCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get pmMethodCash;
+
+  /// No description provided for @pmMethodBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get pmMethodBank;
+
+  /// No description provided for @pmMethodCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get pmMethodCheque;
+
+  /// No description provided for @pmChequeN.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque {no}'**
+  String pmChequeN(String no);
+
+  /// No description provided for @pmDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String pmDueOn(String date);
+
+  /// No description provided for @pmPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String pmPaidOn(String date);
+
+  /// No description provided for @pmProofAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof attached'**
+  String get pmProofAttached;
+
+  /// No description provided for @pmViewProof.
+  ///
+  /// In en, this message translates to:
+  /// **'View proof'**
+  String get pmViewProof;
+
+  /// No description provided for @pmOpenCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the cheque'**
+  String get pmOpenCheque;
+
+  /// No description provided for @pmReasonLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String pmReasonLine(String reason);
+
+  /// No description provided for @pmNotCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not counted in the balance until the cheque clears.'**
+  String get pmNotCounted;
+
+  /// No description provided for @pmStRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get pmStRecorded;
+
+  /// No description provided for @pmStReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get pmStReview;
+
+  /// No description provided for @pmStCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing'**
+  String get pmStCleared;
+
+  /// No description provided for @pmStCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get pmStCollected;
+
+  /// No description provided for @pmNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get pmNow;
+
+  /// No description provided for @pmCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'The cheque'**
+  String get pmCheque;
+
+  /// No description provided for @pmChequeNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque number'**
+  String get pmChequeNo;
+
+  /// No description provided for @pmChequeState.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque status'**
+  String get pmChequeState;
+
+  /// No description provided for @pmOpenChequePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the cheque page'**
+  String get pmOpenChequePage;
+
+  /// No description provided for @pmContractInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract and instalment'**
+  String get pmContractInstallment;
+
+  /// No description provided for @pmContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get pmContract;
+
+  /// No description provided for @pmClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get pmClient;
+
+  /// No description provided for @pmInstallmentDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment due'**
+  String get pmInstallmentDue;
+
+  /// No description provided for @pmInstallmentAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalment amount'**
+  String get pmInstallmentAmount;
+
+  /// No description provided for @pmBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get pmBooking;
+
+  /// No description provided for @pmReversedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This payment was reversed{by}'**
+  String pmReversedNote(String by);
+
+  /// No description provided for @pmDecisionTitleApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve this payment?'**
+  String get pmDecisionTitleApprove;
+
+  /// No description provided for @pmDecisionApproveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The amount will count towards the instalment.'**
+  String get pmDecisionApproveBody;
+
+  /// No description provided for @ntUnreadN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No unread} =1{1 unread} other{{n} unread}}'**
+  String ntUnreadN(int n);
+
+  /// No description provided for @ntAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get ntAllRead;
+
+  /// No description provided for @ntAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ntAll;
+
+  /// No description provided for @ntUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get ntUnread;
+
+  /// No description provided for @ntFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get ntFinance;
+
+  /// No description provided for @ntSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get ntSales;
+
+  /// No description provided for @ntToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get ntToday;
+
+  /// No description provided for @ntYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get ntYesterday;
+
+  /// No description provided for @ntNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications match'**
+  String get ntNoMatch;
+
+  /// No description provided for @ntSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a notification'**
+  String get ntSend;
+
+  /// No description provided for @ntPrefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences'**
+  String get ntPrefs;
+
+  /// No description provided for @npHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications always arrive. Choose which also reach you by e-mail or on your phone.'**
+  String get npHint;
+
+  /// No description provided for @npEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'E-mail'**
+  String get npEmail;
+
+  /// No description provided for @npEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A summary with details'**
+  String get npEmailHint;
+
+  /// No description provided for @npPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notification'**
+  String get npPush;
+
+  /// No description provided for @npPushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reaches you at once'**
+  String get npPushHint;
+
+  /// No description provided for @npSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the change. Please try again.'**
+  String get npSaveError;
+
+  /// No description provided for @npGroupSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get npGroupSales;
+
+  /// No description provided for @npGroupSalesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads · visits · bookings · contracts'**
+  String get npGroupSalesHint;
+
+  /// No description provided for @npGroupFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get npGroupFinance;
+
+  /// No description provided for @npGroupFinanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Instalments · payments · cheques · bonuses'**
+  String get npGroupFinanceHint;
+
+  /// No description provided for @npGroupMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get npGroupMaintenance;
+
+  /// No description provided for @npGroupMaintenanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance and warranty requests'**
+  String get npGroupMaintenanceHint;
+
+  /// No description provided for @npGroupAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and team'**
+  String get npGroupAccount;
+
+  /// No description provided for @npGroupAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Security · subscription · team'**
+  String get npGroupAccountHint;
+
+  /// No description provided for @bcTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a notification'**
+  String get bcTitle;
+
+  /// No description provided for @bcSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'To one user or a whole group'**
+  String get bcSubtitle;
+
+  /// No description provided for @bcAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience'**
+  String get bcAudience;
+
+  /// No description provided for @bcAllCustomers.
+  ///
+  /// In en, this message translates to:
+  /// **'All customers'**
+  String get bcAllCustomers;
+
+  /// No description provided for @bcAllCustomersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Every active customer'**
+  String get bcAllCustomersHint;
+
+  /// No description provided for @bcAllBrokers.
+  ///
+  /// In en, this message translates to:
+  /// **'All brokers'**
+  String get bcAllBrokers;
+
+  /// No description provided for @bcAllSales.
+  ///
+  /// In en, this message translates to:
+  /// **'All the sales team'**
+  String get bcAllSales;
+
+  /// No description provided for @bcAllSupervisors.
+  ///
+  /// In en, this message translates to:
+  /// **'All maintenance supervisors'**
+  String get bcAllSupervisors;
+
+  /// No description provided for @bcRole.
+  ///
+  /// In en, this message translates to:
+  /// **'A specific role'**
+  String get bcRole;
+
+  /// No description provided for @bcUser.
+  ///
+  /// In en, this message translates to:
+  /// **'A specific user'**
+  String get bcUser;
+
+  /// No description provided for @bcPickUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the user'**
+  String get bcPickUser;
+
+  /// No description provided for @bcSearchUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name'**
+  String get bcSearchUser;
+
+  /// No description provided for @bcRoleCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get bcRoleCustomer;
+
+  /// No description provided for @bcContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get bcContent;
+
+  /// No description provided for @bcTitleAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (Arabic)'**
+  String get bcTitleAr;
+
+  /// No description provided for @bcTitleEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (English)'**
+  String get bcTitleEn;
+
+  /// No description provided for @bcBodyAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (Arabic)'**
+  String get bcBodyAr;
+
+  /// No description provided for @bcBodyEn.
+  ///
+  /// In en, this message translates to:
+  /// **'Message (English)'**
+  String get bcBodyEn;
+
+  /// No description provided for @bcBothRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Both versions are required: each user gets it in their language.'**
+  String get bcBothRequired;
+
+  /// No description provided for @bcChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Channel'**
+  String get bcChannel;
+
+  /// No description provided for @bcInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app'**
+  String get bcInApp;
+
+  /// No description provided for @bcInAppHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows in the notification list'**
+  String get bcInAppHint;
+
+  /// No description provided for @bcPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone only'**
+  String get bcPush;
+
+  /// No description provided for @bcPushHint.
+  ///
+  /// In en, this message translates to:
+  /// **'An alert on the user\'s phone'**
+  String get bcPushHint;
+
+  /// No description provided for @bcBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'In the app and on the phone'**
+  String get bcBoth;
+
+  /// No description provided for @bcBothHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Best for important alerts'**
+  String get bcBothHint;
+
+  /// No description provided for @bcLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link to a page (optional)'**
+  String get bcLink;
+
+  /// No description provided for @bcLinkNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get bcLinkNone;
+
+  /// No description provided for @bcEntityContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get bcEntityContract;
+
+  /// No description provided for @bcEntityReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get bcEntityReservation;
+
+  /// No description provided for @bcEntityLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get bcEntityLead;
+
+  /// No description provided for @bcRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get bcRecord;
+
+  /// No description provided for @bcRecordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by number or name…'**
+  String get bcRecordHint;
+
+  /// No description provided for @bcLinkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'What the user opens when tapping the notification.'**
+  String get bcLinkNote;
+
+  /// No description provided for @bcPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get bcPreview;
+
+  /// No description provided for @bcNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get bcNow;
+
+  /// No description provided for @bcEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate recipients'**
+  String get bcEstimate;
+
+  /// No description provided for @bcSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get bcSend;
+
+  /// No description provided for @bcSendN.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to {n} users'**
+  String bcSendN(int n);
+
+  /// No description provided for @bcSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get bcSummary;
+
+  /// No description provided for @bcRecipients.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipients'**
+  String get bcRecipients;
+
+  /// No description provided for @bcRecipientsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} users'**
+  String bcRecipientsN(int n);
+
+  /// No description provided for @bcDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered devices'**
+  String get bcDevices;
+
+  /// No description provided for @bcDevicesN.
+  ///
+  /// In en, this message translates to:
+  /// **'{d} devices · {u} without'**
+  String bcDevicesN(int d, int u);
+
+  /// No description provided for @bcPushReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notifications are ready'**
+  String get bcPushReady;
+
+  /// No description provided for @bcPushOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone notifications are not enabled on the server; phone sending is unavailable.'**
+  String get bcPushOff;
+
+  /// No description provided for @bcNoDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipient has a registered phone.'**
+  String get bcNoDevices;
+
+  /// No description provided for @bcConfirmMass.
+  ///
+  /// In en, this message translates to:
+  /// **'I confirm sending this to {n} users. This cannot be undone.'**
+  String bcConfirmMass(int n);
+
+  /// No description provided for @bcNeedEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate the recipients first.'**
+  String get bcNeedEstimate;
+
+  /// No description provided for @bcResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Last send'**
+  String get bcResult;
+
+  /// No description provided for @bcResOk.
+  ///
+  /// In en, this message translates to:
+  /// **'The notification was sent'**
+  String get bcResOk;
+
+  /// No description provided for @bcResPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly sent'**
+  String get bcResPartial;
+
+  /// No description provided for @bcResFail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending failed'**
+  String get bcResFail;
+
+  /// No description provided for @bcResInApp.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications'**
+  String get bcResInApp;
+
+  /// No description provided for @bcResPush.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached the phone'**
+  String get bcResPush;
+
+  /// No description provided for @bcResNoDev.
+  ///
+  /// In en, this message translates to:
+  /// **'No device'**
+  String get bcResNoDev;
+
+  /// No description provided for @bcResFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get bcResFailed;
+
+  /// No description provided for @bcMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill the title and message in both languages.'**
+  String get bcMissing;
+
+  /// No description provided for @bcNoRecipients.
+  ///
+  /// In en, this message translates to:
+  /// **'No recipients for this choice.'**
+  String get bcNoRecipients;
+
+  /// No description provided for @bcAllActiveUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'All active users'**
+  String get bcAllActiveUsers;
+
+  /// No description provided for @bnSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My dues'**
+  String get bnSubtitle;
+
+  /// No description provided for @bnTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your total dues'**
+  String get bnTotal;
+
+  /// No description provided for @bnPendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid after the contract'**
+  String get bnPendingHint;
+
+  /// No description provided for @bnPaidHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached you'**
+  String get bnPaidHint;
+
+  /// No description provided for @bnBasisLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Basis {basis} × {pct}'**
+  String bnBasisLine(String basis, String pct);
+
+  /// No description provided for @bnPeriodLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Period {period}'**
+  String bnPeriodLine(String period);
+
+  /// No description provided for @bnWhenSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted when the contract is signed'**
+  String get bnWhenSigned;
+
+  /// No description provided for @bnApprovedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved, awaiting payment'**
+  String get bnApprovedNote;
+
+  /// No description provided for @bnPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String bnPaidOn(String date);
+
+  /// No description provided for @tgSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales value'**
+  String get tgSales;
+
+  /// No description provided for @tgOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {amount}'**
+  String tgOf(String amount);
+
+  /// No description provided for @tgUnitsSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Units sold'**
+  String get tgUnitsSold;
+
+  /// No description provided for @tgUnitsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{a} of {b}'**
+  String tgUnitsOf(int a, int b);
+
+  /// No description provided for @tgRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Left to reach the target'**
+  String get tgRemaining;
+
+  /// No description provided for @tgNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target for this period yet.'**
+  String get tgNoTarget;
+
+  /// No description provided for @tgPeriodActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Your activity this period'**
+  String get tgPeriodActivity;
+
+  /// No description provided for @tmPeriodPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the period'**
+  String get tmPeriodPick;
+
+  /// No description provided for @tmEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the target'**
+  String get tmEditTitle;
+
+  /// No description provided for @tmSheetNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows in the member\'s targets; progress is measured from their signed contracts.'**
+  String get tmSheetNote;
+
+  /// No description provided for @tmCreatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String tmCreatedOn(String date);
+
+  /// No description provided for @tmUnitsLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} units'**
+  String tmUnitsLine(int n);
+
+  /// No description provided for @tpFunnelLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get tpFunnelLeads;
+
+  /// No description provided for @tpVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get tpVisits;
+
+  /// No description provided for @tpBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get tpBookings;
+
+  /// No description provided for @tpContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get tpContracts;
+
+  /// No description provided for @tmCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No targets} =1{1 target} other{{n} targets}}'**
+  String tmCountN(int n);
+
+  /// No description provided for @tmPeriodField.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get tmPeriodField;
+
+  /// No description provided for @cqCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No cheques} =1{1 cheque} other{{n} cheques}}'**
+  String cqCountN(int n);
+
+  /// No description provided for @cqStReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get cqStReceived;
+
+  /// No description provided for @cqStDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit'**
+  String get cqStDeposit;
+
+  /// No description provided for @cqStClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing'**
+  String get cqStClear;
+
+  /// No description provided for @cqDueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In {n} days'**
+  String cqDueIn(int n);
+
+  /// No description provided for @cqDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get cqDueToday;
+
+  /// No description provided for @cqOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days late'**
+  String cqOverdue(int n);
+
+  /// No description provided for @cqCovers.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments it covers'**
+  String get cqCovers;
+
+  /// No description provided for @bpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' performance'**
+  String get bpTitle;
+
+  /// No description provided for @bpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All time'**
+  String get bpSubtitle;
+
+  /// No description provided for @bpBrokersSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' sales'**
+  String get bpBrokersSales;
+
+  /// No description provided for @bpCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions'**
+  String get bpCommissions;
+
+  /// No description provided for @bpPendingOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} pending'**
+  String bpPendingOf(String amount);
+
+  /// No description provided for @bpActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active brokers'**
+  String get bpActive;
+
+  /// No description provided for @bpActiveOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n}'**
+  String bpActiveOf(int n);
+
+  /// No description provided for @bpFunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokers\' funnel'**
+  String get bpFunnel;
+
+  /// No description provided for @bpFunnelMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clients\' funnel'**
+  String get bpFunnelMine;
+
+  /// No description provided for @bpLeadsSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads sent'**
+  String get bpLeadsSent;
+
+  /// No description provided for @bpLeadsApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads approved'**
+  String get bpLeadsApproved;
+
+  /// No description provided for @bpBookings.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get bpBookings;
+
+  /// No description provided for @bpSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get bpSigned;
+
+  /// No description provided for @bpPaidCom.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission paid'**
+  String get bpPaidCom;
+
+  /// No description provided for @bpTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly trend'**
+  String get bpTrend;
+
+  /// No description provided for @bpTrendMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission by month'**
+  String get bpTrendMine;
+
+  /// No description provided for @bpTrendNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Net commissions per month'**
+  String get bpTrendNote;
+
+  /// No description provided for @bpTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Top brokers'**
+  String get bpTop;
+
+  /// No description provided for @bpByProject.
+  ///
+  /// In en, this message translates to:
+  /// **'By project'**
+  String get bpByProject;
+
+  /// No description provided for @bpSalesLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get bpSalesLbl;
+
+  /// No description provided for @bpCommissionLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get bpCommissionLbl;
+
+  /// No description provided for @bpPaidLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid out'**
+  String get bpPaidLbl;
+
+  /// No description provided for @bpConv.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion {pct}'**
+  String bpConv(String pct);
+
+  /// No description provided for @bpBrokerLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{leads} leads · {res} bookings · {con} contracts'**
+  String bpBrokerLine(int leads, int res, int con);
+
+  /// No description provided for @bpActiveBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get bpActiveBadge;
+
+  /// No description provided for @bpMineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My performance'**
+  String get bpMineTitle;
+
+  /// No description provided for @bpMineSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Your sales'**
+  String get bpMineSales;
+
+  /// No description provided for @bpMineCom.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get bpMineCom;
+
+  /// No description provided for @bpMineContractsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'of {n} bookings'**
+  String bpMineContractsHint(int n);
+
+  /// No description provided for @bpCommissionsBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions and payouts'**
+  String get bpCommissionsBlock;
+
+  /// No description provided for @bpNetCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Net commissions'**
+  String get bpNetCommissions;
+
+  /// No description provided for @bpNetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'All you earned'**
+  String get bpNetHint;
+
+  /// No description provided for @bpPendingLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bpPendingLbl;
+
+  /// No description provided for @bpPendingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid after the contract'**
+  String get bpPendingNote;
+
+  /// No description provided for @bpPaidOutLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid to you'**
+  String get bpPaidOutLbl;
+
+  /// No description provided for @bpMyCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'My commissions and payouts'**
+  String get bpMyCommissions;
+
+  /// No description provided for @bpTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Your team'**
+  String get bpTeam;
+
+  /// No description provided for @bpProjectLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{city} · {n} contracts'**
+  String bpProjectLine(String city, int n);
+
+  /// No description provided for @bpContractsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} signed contracts'**
+  String bpContractsN(int n);
+
+  /// No description provided for @bpAgentLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{leads} leads · {con} contracts'**
+  String bpAgentLine(int leads, int con);
+
+  /// No description provided for @bpEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No data yet'**
+  String get bpEmpty;
+
+  /// No description provided for @bpEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Figures appear after the brokers\' first activity.'**
+  String get bpEmptyMsg;
+
+  /// No description provided for @bkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My commissions and payouts'**
+  String get bkSubtitle;
+
+  /// No description provided for @bkNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Your net commissions'**
+  String get bkNet;
+
+  /// No description provided for @bkNetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending and approved'**
+  String get bkNetHint;
+
+  /// No description provided for @bkPaidOutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Payouts paid'**
+  String get bkPaidOutHint;
+
+  /// No description provided for @bkStRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get bkStRejected;
+
+  /// No description provided for @bkStCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bkStCancelled;
+
+  /// No description provided for @bkPayouts.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout statements'**
+  String get bkPayouts;
+
+  /// No description provided for @bkPoDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get bkPoDraft;
+
+  /// No description provided for @bkPoApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get bkPoApproved;
+
+  /// No description provided for @bkPoProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get bkPoProcessing;
+
+  /// No description provided for @bkPoPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bkPoPaid;
+
+  /// No description provided for @bkPoCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bkPoCancelled;
+
+  /// No description provided for @bkPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String bkPaidOn(String date);
+
+  /// No description provided for @bkEarnedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned {date}'**
+  String bkEarnedOn(String date);
+
+  /// No description provided for @bkOnPayout.
+  ///
+  /// In en, this message translates to:
+  /// **'On a payout statement'**
+  String get bkOnPayout;
+
+  /// No description provided for @bkWaitingPayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a payout statement'**
+  String get bkWaitingPayout;
+
+  /// No description provided for @bkMethodBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get bkMethodBank;
+
+  /// No description provided for @fuCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No follow-ups} =1{1 follow-up} other{{n} follow-ups}}'**
+  String fuCountN(int n);
+
+  /// No description provided for @fuOverdueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Need a call now'**
+  String get fuOverdueHint;
+
+  /// No description provided for @fuNoneToday.
+  ///
+  /// In en, this message translates to:
+  /// **'None today'**
+  String get fuNoneToday;
+
+  /// No description provided for @fuNoneUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'None coming'**
+  String get fuNoneUpcoming;
+
+  /// No description provided for @fuLogResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Log a result'**
+  String get fuLogResult;
+
+  /// No description provided for @fuBandToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get fuBandToday;
+
+  /// No description provided for @calBandDay.
+  ///
+  /// In en, this message translates to:
+  /// **'This day'**
+  String get calBandDay;
+
+  /// No description provided for @calBandVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get calBandVisits;
+
+  /// No description provided for @calBandFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-ups'**
+  String get calBandFollowUps;
+
+  /// No description provided for @calBandContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get calBandContracts;
+
+  /// No description provided for @asSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers from your company\'s data only'**
+  String get asSubtitle;
+
+  /// No description provided for @asTryAlso.
+  ///
+  /// In en, this message translates to:
+  /// **'Try also'**
+  String get asTryAlso;
+
   /// No description provided for @clOwnersN.
   ///
   /// In en, this message translates to:

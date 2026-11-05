@@ -55,6 +55,10 @@ import '../features/contracts/create/contract_create_data.dart';
 import '../features/contracts/create/convert_reservation_screen.dart';
 import '../features/contracts/create/manual_contract_screen.dart';
 import '../features/contracts/view/contract_page_screen.dart';
+import '../features/reservations/view/new_reservation_screen.dart';
+import '../features/reservations/view/reservation_page_screen.dart';
+import '../features/reservations/view/reservations_data.dart';
+import '../features/reservations/view/reservations_list_screen.dart';
 import '../features/contracts/view/contracts_data.dart';
 import '../features/contracts/view/contracts_list_screen.dart';
 import '../features/broker/catalog/portal/portal_catalog_screens.dart';
@@ -62,6 +66,7 @@ import '../features/broker/commissions/domain/repositories/broker_commissions_re
 import '../features/broker/commissions/domain/usecases/get_broker_commissions.dart';
 import '../features/broker/commissions/presentation/cubit/broker_commissions_cubit.dart';
 import '../features/broker/commissions/presentation/screens/broker_commissions_screen.dart';
+import '../features/broker/commissions/view/broker_payouts_data.dart';
 import '../features/broker/leads/domain/entities/broker_lead.dart';
 import '../features/broker/leads/domain/repositories/broker_leads_repository.dart';
 import '../features/broker/leads/domain/usecases/broker_lead_use_cases.dart';
@@ -72,12 +77,11 @@ import '../features/broker/leads/presentation/screens/create_broker_lead_screen.
 import '../features/broker/profile/domain/repositories/broker_profile_repository.dart';
 import '../features/broker/profile/domain/usecases/get_broker_profile.dart';
 import '../features/broker/profile/presentation/cubit/broker_profile_cubit.dart';
-import '../features/broker/reservations/domain/entities/broker_reservation.dart';
 import '../features/broker/reservations/domain/repositories/broker_reservations_repository.dart';
 import '../features/broker/reservations/domain/usecases/broker_reservation_use_cases.dart';
-import '../features/broker/reservations/presentation/cubit/broker_reservation_detail_cubit.dart';
+import '../features/broker/reservations/view/broker_bookings_data.dart';
 import '../features/broker/reservations/presentation/cubit/create_broker_reservation_cubit.dart';
-import '../features/broker/reservations/presentation/screens/broker_reservation_detail_screen.dart';
+import '../features/broker/reservations/view/broker_bookings_screens.dart';
 import '../features/broker/reservations/presentation/screens/create_broker_reservation_screen.dart';
 import '../features/broker/shell/presentation/broker_shell.dart';
 import '../features/payments_review/domain/repositories/payments_review_repository.dart';
@@ -124,20 +128,18 @@ import '../features/installments/presentation/cubit/calculator_cubit.dart';
 import '../features/installments/presentation/cubit/installment_plans_cubit.dart';
 import '../features/installments/presentation/screens/calculator_screen.dart';
 import '../features/installments/presentation/screens/installment_plans_screen.dart';
-import '../features/reservations/domain/entities/reservation.dart';
 import '../features/reservations/domain/repositories/reservations_repository.dart';
 import '../features/reservations/domain/usecases/reservation_use_cases.dart';
 import '../features/reservations/presentation/cubit/create_reservation_cubit.dart';
-import '../features/reservations/presentation/cubit/reservation_detail_cubit.dart';
-import '../features/reservations/presentation/cubit/reservations_cubit.dart';
-import '../features/reservations/presentation/screens/create_reservation_screen.dart';
-import '../features/reservations/presentation/screens/reservation_detail_screen.dart';
-import '../features/reservations/presentation/screens/reservations_screen.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
-import '../features/deposits/presentation/cubit/deposits_cubit.dart';
+import '../features/deposits/view/payments_data.dart';
+import '../features/performance/brokers/brokers_perf_data.dart';
+import '../features/performance/brokers/brokers_perf_screens.dart';
+import '../features/notifications/view/broadcast_data.dart';
+import '../features/notifications/view/broadcast_screen.dart';
+import '../features/deposits/view/payments_screens.dart';
 import '../features/deposits/presentation/cubit/record_deposit_cubit.dart';
-import '../features/deposits/presentation/screens/deposits_screen.dart';
 import '../features/deposits/presentation/screens/record_deposit_screen.dart';
 import '../features/documents/domain/repositories/documents_repository.dart';
 import '../features/documents/domain/usecases/document_use_cases.dart';
@@ -332,13 +334,9 @@ GoRouter createStaffRouter(
         path: '/broker/reservations/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final reservation = state.extra as BrokerReservation?;
           return BlocProvider(
-            create: (ctx) => BrokerReservationDetailCubit(
-              GetBrokerReservationDetail(ctx.read<BrokerReservationsRepository>()),
-              reservationId: id,
-            ),
-            child: BrokerReservationDetailScreen(fallback: reservation),
+            create: (ctx) => BrokerBookingCubit(BrokerBookingsRepository(ctx.read<Dio>()), reservationId: id),
+            child: const BrokerBookingScreen(),
           );
         },
       ),
@@ -358,10 +356,27 @@ GoRouter createStaffRouter(
         ),
       ),
       GoRoute(
-        path: '/broker/commissions',
+        path: '/broker/performance',
         builder: (context, _) => BlocProvider(
-          create: (ctx) =>
-              BrokerCommissionsCubit(GetBrokerCommissions(ctx.read<BrokerCommissionsRepository>())),
+          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).mine),
+          child: const BrokerOwnPerformanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/performance/brokers',
+        // The admin's report (the API refuses anyone else).
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).all),
+          child: const BrokersPerformanceScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/broker/commissions',
+        builder: (context, _) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (ctx) => BrokerCommissionsCubit(GetBrokerCommissions(ctx.read<BrokerCommissionsRepository>()))),
+            BlocProvider(create: (ctx) => BrokerPayoutsCubit(BrokerPayoutsRepository(ctx.read<Dio>()))),
+          ],
           child: const BrokerCommissionsScreen(),
         ),
       ),
@@ -677,8 +692,8 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/reservations',
         builder: (context, _) => BlocProvider(
-          create: (ctx) => ReservationsCubit(GetReservations(ctx.read<ReservationsRepository>())),
-          child: const ReservationsScreen(),
+          create: (ctx) => ReservationsListCubit(ReservationsViewRepository(ctx.read<Dio>())),
+          child: const ReservationsListScreen(),
         ),
       ),
       GoRoute(
@@ -700,7 +715,7 @@ GoRouter createStaffRouter(
                 clientId: args['clientId'] as String?,
               );
             },
-            child: const CreateReservationScreen(),
+            child: const NewReservationScreen(),
           );
         },
       ),
@@ -714,23 +729,11 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/reservations/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          final reservation = state.extra as Reservation?;
-          return BlocProvider(
-            create: (ctx) {
-              final repo = ctx.read<ReservationsRepository>();
-              return ReservationDetailCubit(
-                GetReservationDetail(repo),
-                AddReservationNote(repo),
-                reservationId: id,
-                approve: ApproveReservation(repo),
-                reject: RejectReservation(repo),
-              );
-            },
-            child: ReservationDetailScreen(fallback: reservation),
-          );
-        },
+        builder: (context, state) => BlocProvider(
+          key: ValueKey('reservation-${state.pathParameters['id']}'),
+          create: (ctx) => ReservationPageCubit(ReservationsViewRepository(ctx.read<Dio>()), reservationId: state.pathParameters['id']!),
+          child: const ReservationPageScreen(),
+        ),
       ),
 
       // ── Contracts ────────────────────────────────────────────────────────
@@ -760,8 +763,8 @@ GoRouter createStaffRouter(
         builder: (context, state) {
           final contractId = state.uri.queryParameters['contractId'];
           return BlocProvider(
-            create: (ctx) => DepositsCubit(ListDeposits(ctx.read<StaffDepositsRepository>())),
-            child: DepositsScreen(contractId: contractId),
+            create: (ctx) => PaymentsListCubit(PaymentsRepository(ctx.read<Dio>()), contractId: contractId),
+            child: const PaymentsListScreen(),
           );
         },
       ),
@@ -784,6 +787,17 @@ GoRouter createStaffRouter(
               suggestedAmount: (args['amount'] as num?)?.toDouble() ?? 0,
               installmentLabel: args['label'] as String?,
             ),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/deposits/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return BlocProvider(
+            create: (ctx) => PaymentCubit(PaymentsRepository(ctx.read<Dio>()), paymentId: id, initial: state.extra as PaymentRow?),
+            child: const PaymentScreen(),
           );
         },
       ),
@@ -913,6 +927,11 @@ GoRouter createStaffRouter(
         builder: (context, _) => NotificationPreferencesScreen(
           api: NotificationPreferencesApi(context.read<Dio>()),
         ),
+      ),
+      GoRoute(
+        path: '/notifications/send',
+        // The admin's manual send (the API refuses anyone else).
+        builder: (context, _) => BroadcastScreen(repository: BroadcastRepository(context.read<Dio>())),
       ),
       GoRoute(
         path: '/notifications',

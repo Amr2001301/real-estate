@@ -1,7 +1,9 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+
+import '../../dashboard/home_kit/home_kit.dart';
 
 import '../domain/assistant.dart';
 import 'answer_text.dart';
@@ -57,7 +59,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final l10n = context.l10n;
     final cubit = context.read<AssistantCubit>();
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
       body: BlocConsumer<AssistantCubit, AssistantState>(
         listenWhen: (a, b) => a.turns.length != b.turns.length || a.pending != b.pending || a.draft != b.draft,
         listener: (context, state) {
@@ -70,20 +74,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
           final blocked = state.blockedReason;
           return Column(
             children: [
-              AppNavHeader(
+              HomeListHero(
                 title: l10n.assistantTitle,
-                compact: true,
-                leadingAction: NavHeaderAction(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-                ),
+                subtitle: l10n.asSubtitle,
+                back: true,
                 actions: [
-                  if (state.turns.isNotEmpty)
-                    NavHeaderAction(
-                      icon: Icons.restart_alt_rounded,
-                      tooltip: l10n.assistantNewChat,
-                      onTap: cubit.clear,
-                    ),
+                  if (state.turns.isNotEmpty) HomeHeroButton(key: const Key('assistant-new-chat'), icon: Icons.restart_alt_rounded, tooltip: l10n.assistantNewChat, onTap: cubit.clear),
                 ],
               ),
               if (blocked != null) _Notice(text: _blockedText(l10n, blocked)),
@@ -109,6 +105,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }
@@ -138,23 +135,18 @@ class _Notice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.appColors;
     return Container(
       key: const Key('assistant-unavailable'),
-      margin: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 10),
-      decoration: BoxDecoration(
-        color: c.warning.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(color: c.warning.withValues(alpha: 0.35)),
-      ),
+      margin: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(color: const Color(0xFFFCEBCF), borderRadius: BorderRadius.circular(16)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: c.warning),
+          const Icon(Icons.info_rounded, size: 19, color: Color(0xFF8A5A12)),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 13, height: 1.5, color: c.ink)),
+            child: Text(text, style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF6B4510))),
           ),
         ],
       ),
@@ -178,14 +170,14 @@ class _Welcome extends StatelessWidget {
       l10n.assistantSuggestVisits,
     ];
     return ListView(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.xl, AppSpacing.md, AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
       children: [
         Center(
           child: Container(
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(22),
               gradient: const LinearGradient(
                 colors: [AppPalette.gold500, AppPalette.gold300],
                 begin: Alignment.topLeft,
@@ -199,7 +191,7 @@ class _Welcome extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 28),
+            child: const Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -241,19 +233,19 @@ class _Suggestion extends StatelessWidget {
       opacity: onTap == null ? 0.5 : 1,
       child: Material(
         color: c.surface,
-        borderRadius: BorderRadius.circular(AppRadii.md),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.md),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.md),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: c.hairline),
             ),
             child: Row(
               children: [
-                Icon(Icons.chat_bubble_outline_rounded, size: 18, color: c.brandGold),
+                const Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(text, style: TextStyle(fontSize: 14, color: c.ink)),
@@ -381,7 +373,7 @@ class _Composer extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm + bottom),
       decoration: BoxDecoration(
-        color: c.surface,
+        color: c.canvas,
         border: Border(top: BorderSide(color: c.hairline)),
       ),
       child: Column(
@@ -415,18 +407,18 @@ class _Composer extends StatelessWidget {
                     counterText: '',
                     isDense: true,
                     filled: true,
-                    fillColor: c.surfaceSoft,
+                    fillColor: c.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide(color: c.hairline),
+                      borderRadius: BorderRadius.circular(99),
+                      borderSide: BorderSide(color: c.hairline, width: 1.5),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide(color: c.hairline),
+                      borderRadius: BorderRadius.circular(99),
+                      borderSide: BorderSide(color: c.hairline, width: 1.5),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: BorderRadius.circular(99),
                       borderSide: const BorderSide(color: AppPalette.gold400),
                     ),
                   ),
@@ -449,16 +441,13 @@ class _Composer extends StatelessWidget {
                         child: Container(
                           width: 44,
                           height: 44,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
-                          ),
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
                           child: pending
                               ? const Padding(
                                   padding: EdgeInsets.all(12),
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy),
                                 )
-                              : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                              : const Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
                         ),
                       ),
                     ),

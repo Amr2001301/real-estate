@@ -90,6 +90,9 @@ class TeamTargetsCubit extends Cubit<TeamTargetsState> {
     );
   }
 
+  /// Which month the list shows (the targets are all loaded).
+  void setPeriod(String period) => emit(state.copyWith(period: period));
+
   Future<bool> upsertTarget({
     required String salesId,
     required String period,

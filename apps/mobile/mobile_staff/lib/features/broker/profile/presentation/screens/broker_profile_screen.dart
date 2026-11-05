@@ -86,6 +86,15 @@ class BrokerProfileScreen extends StatelessWidget {
                         onTap: () => context.push('/broker/contracts'),
                       ),
                       _Divider(),
+                      _SettingRow(
+                        key: const Key('broker-profile-performance'),
+                        icon: Icons.insights_rounded,
+                        iconColor: AppPalette.gold400,
+                        iconBg: AppPalette.gold400.withValues(alpha: 0.12),
+                        label: l10n.bpMineTitle,
+                        onTap: () => context.push('/broker/performance'),
+                      ),
+                      _Divider(),
                       BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
                         buildWhen: (a, b) =>
                             a.data?.canViewCommissions !=

@@ -149,3 +149,28 @@ class _RejectDialogState extends State<_RejectDialog> {
     );
   }
 }
+
+/// The reject dialog on its own (the bookings list and page): null when
+/// dismissed, else the reason typed (may be blank).
+Future<String?> askReservationRejectReason(BuildContext context) =>
+    showDialog<String>(context: context, builder: (_) => const _RejectDialog());
+
+/// «الموافقة على هذا الحجز؟» on its own.
+Future<bool> confirmReservationApprove(BuildContext context) async {
+  final l10n = context.l10n;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.reservationApproveConfirm),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.actionCancel)),
+        FilledButton(
+          key: const ValueKey('reservation-approve-confirm'),
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(l10n.reservationApprove),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
+}
