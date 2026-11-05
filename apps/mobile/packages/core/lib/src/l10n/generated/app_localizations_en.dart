@@ -8810,4 +8810,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ledgerFilterApply => 'Show results';
+
+  @override
+  String get prFigPending => 'Awaiting review';
+
+  @override
+  String get prFigTotal => 'Total amount';
+
+  @override
+  String prFigItems(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n receipts',
+      one: '1 receipt',
+      zero: 'no receipts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get prOpenProof => 'Open receipt';
 }

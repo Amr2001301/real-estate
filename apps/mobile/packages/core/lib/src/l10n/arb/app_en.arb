@@ -2930,5 +2930,10 @@
   "@ledgerNoItemsIn": {"placeholders": {"names": {"type": "String"}}},
   "ledgerFilterTitle": "Filter balances",
   "ledgerFilterPeriod": "Period",
-  "ledgerFilterApply": "Show results"
+  "ledgerFilterApply": "Show results",
+  "prFigPending": "Awaiting review",
+  "prFigTotal": "Total amount",
+  "prFigItems": "{n, plural, =0{no receipts} =1{1 receipt} other{{n} receipts}}",
+  "@prFigItems": {"placeholders": {"n": {"type": "int"}}},
+  "prOpenProof": "Open receipt"
 }
