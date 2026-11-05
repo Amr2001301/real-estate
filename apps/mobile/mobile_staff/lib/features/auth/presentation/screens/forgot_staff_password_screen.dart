@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'staff_login_screen.dart' show StaffAuthHero;
+
 import '../cubit/forgot_staff_password_cubit.dart';
 
 class ForgotStaffPasswordScreen extends StatefulWidget {
@@ -108,7 +110,7 @@ class _RequestForm extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: AuthHeader(
+              child: StaffAuthHero(
                 title: l10n.authForgotPasswordTitle,
                 subtitle: l10n.authForgotPasswordSubtitle,
                 onBack: () =>
@@ -193,7 +195,7 @@ class _ResetForm extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
-              child: AuthHeader(
+              child: StaffAuthHero(
                 title: l10n.authResetPasswordTitle,
                 subtitle: l10n.authResetPasswordSubtitle,
                 onBack: null,

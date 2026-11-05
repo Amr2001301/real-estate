@@ -3,16 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../catalog/domain/repositories/staff_catalog_repository.dart';
-import '../../catalog/domain/usecases/staff_catalog_use_cases.dart';
-import '../../catalog/presentation/cubit/staff_projects_cubit.dart';
 import '../../bonus/domain/repositories/bonus_repository.dart';
 import '../../bonus/domain/usecases/get_bonus_entries.dart';
 import '../../bonus/presentation/cubit/bonus_summary_cubit.dart';
-import '../../dashboard/domain/repositories/dashboard_repository.dart';
-import '../../dashboard/domain/usecases/get_sales_dashboard.dart';
-import '../../dashboard/presentation/cubit/dashboard_cubit.dart';
-import '../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../dashboard/admin_home/admin_home_data.dart';
 import '../../dashboard/admin_home/admin_home_screen.dart';
 import '../../dashboard/manager_home/manager_home_screen.dart';
@@ -45,13 +38,11 @@ class _StaffShellState extends State<StaffShell> {
 
   void _switchTab(int index) => setState(() => _index = index);
 
-  /// The sales rep, the sales manager and the admin have their own homes
-  /// (owner-approved designs, 2026-11-04); the other roles keep theirs until
-  /// theirs is redesigned.
+  /// The admin, the sales manager and the sales rep each have their own home
+  /// (owner-approved designs, 2026-11-04). The broker and the maintenance
+  /// supervisor have their own shells.
   late final AppRole _role = context.read<SessionCubit>().state.role;
   late final bool _adminHome = _role == AppRole.admin;
-  late final bool _salesHome = _role == AppRole.sales || _role == AppRole.salesManager;
-  late final bool _newHome = _salesHome || _adminHome;
 
   late final List<Widget> _tabs = [
     // 0 — Dashboard
@@ -62,7 +53,7 @@ class _StaffShellState extends State<StaffShell> {
         ),
         child: AdminHomeScreen(onSwitchTab: _switchTab),
       )
-    else if (_salesHome)
+    else
       BlocProvider(
         create: (ctx) => SalesHomeCubit(
           SalesHomeRepository(ctx.read<Dio>(), ctx.read<TokenStorage>()),
@@ -73,29 +64,7 @@ class _StaffShellState extends State<StaffShell> {
         child: _role == AppRole.salesManager
             ? ManagerHomeScreen(onSwitchTab: _switchTab)
             : SalesHomeScreen(onSwitchTab: _switchTab),
-      )
-    else
-    MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (ctx) =>
-              DashboardCubit(GetSalesDashboard(ctx.read<DashboardRepository>())),
-        ),
-        BlocProvider(
-          create: (ctx) =>
-              BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
-        ),
-        BlocProvider(
-          create: (ctx) => TargetSummaryCubit(
-              GetSalesPerformance(ctx.read<PerformanceRepository>())),
-        ),
-        BlocProvider(
-          create: (ctx) => StaffProjectsCubit(
-              GetStaffProjects(ctx.read<StaffCatalogRepository>())),
-        ),
-      ],
-      child: DashboardScreen(onSwitchTab: _switchTab),
-    ),
+      ),
 
     // 1 — Leads
     BlocProvider(
@@ -146,24 +115,14 @@ class _StaffShellState extends State<StaffShell> {
             label: l10n.navProfile,
           ),
     ];
-    if (_newHome) {
-      // The approved design: a navy bar floating over the page.
-      return Scaffold(
-        extendBody: true,
-        body: IndexedStack(index: _index, children: _tabs),
-        bottomNavigationBar: StaffFloatingNav(
-          items: items,
-          currentIndex: _index,
-          onSelect: (i) => setState(() => _index = i),
-        ),
-      );
-    }
+    // The approved design: a navy bar floating over the page.
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: AppBottomNav(
+      bottomNavigationBar: StaffFloatingNav(
+        items: items,
         currentIndex: _index,
         onSelect: (i) => setState(() => _index = i),
-        items: items,
       ),
     );
   }
