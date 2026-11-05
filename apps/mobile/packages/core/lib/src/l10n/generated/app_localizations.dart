@@ -15193,6 +15193,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try also'**
   String get asTryAlso;
+
+  /// No description provided for @clOwnersN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} unit owners'**
+  String clOwnersN(int n);
+
+  /// No description provided for @clBrowsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing'**
+  String get clBrowsers;
+
+  /// No description provided for @clBrowsersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No unit yet'**
+  String get clBrowsersHint;
+
+  /// No description provided for @clSuspendedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get clSuspendedTitle;
+
+  /// No description provided for @clSuspendedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended accounts'**
+  String get clSuspendedHint;
+
+  /// No description provided for @clAllActive.
+  ///
+  /// In en, this message translates to:
+  /// **'All active'**
+  String get clAllActive;
+
+  /// No description provided for @clOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get clOwner;
+
+  /// No description provided for @clBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing'**
+  String get clBrowser;
+
+  /// No description provided for @clActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get clActive;
+
+  /// No description provided for @clSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get clSuspended;
+
+  /// No description provided for @clJoined.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined {date}'**
+  String clJoined(String date);
+
+  /// No description provided for @clLastLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sign-in {date}'**
+  String clLastLogin(String date);
+
+  /// No description provided for @clNeverLogged.
+  ///
+  /// In en, this message translates to:
+  /// **'Never signed in'**
+  String get clNeverLogged;
+
+  /// No description provided for @clSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, phone or e-mail'**
+  String get clSearchHint;
+
+  /// No description provided for @clEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients yet.'**
+  String get clEmpty;
+
+  /// No description provided for @clAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get clAccount;
+
+  /// No description provided for @clStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get clStatus;
+
+  /// No description provided for @clType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get clType;
+
+  /// No description provided for @clJoinedLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered'**
+  String get clJoinedLbl;
+
+  /// No description provided for @clLastLoginLbl.
+  ///
+  /// In en, this message translates to:
+  /// **'Last sign-in'**
+  String get clLastLoginLbl;
+
+  /// No description provided for @clLocale.
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get clLocale;
+
+  /// No description provided for @clId.
+  ///
+  /// In en, this message translates to:
+  /// **'Client ID'**
+  String get clId;
+
+  /// No description provided for @clSuspendedSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended since {date}'**
+  String clSuspendedSince(String date);
+
+  /// No description provided for @clSuspend.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend account'**
+  String get clSuspend;
+
+  /// No description provided for @clRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get clRestore;
+
+  /// No description provided for @clSuspendConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'The client will not be able to sign in until the account is restored. Continue?'**
+  String get clSuspendConfirm;
+
+  /// No description provided for @clConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get clConfirm;
+
+  /// No description provided for @clDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'More details'**
+  String get clDetails;
+
+  /// No description provided for @clNationalId.
+  ///
+  /// In en, this message translates to:
+  /// **'National ID'**
+  String get clNationalId;
+
+  /// No description provided for @clAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get clAddress;
+
+  /// No description provided for @clBirthDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get clBirthDate;
+
+  /// No description provided for @clBirthPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Place of birth'**
+  String get clBirthPlace;
+
+  /// No description provided for @clOccupation.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupation'**
+  String get clOccupation;
+
+  /// No description provided for @clEmployer.
+  ///
+  /// In en, this message translates to:
+  /// **'Employer'**
+  String get clEmployer;
+
+  /// No description provided for @clIdIssueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'ID issue date'**
+  String get clIdIssueDate;
+
+  /// No description provided for @clIdIssuePlace.
+  ///
+  /// In en, this message translates to:
+  /// **'ID issued at'**
+  String get clIdIssuePlace;
+
+  /// No description provided for @clHomePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Home phone'**
+  String get clHomePhone;
+
+  /// No description provided for @clLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get clLeads;
+
+  /// No description provided for @clNoLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'No leads for this client.'**
+  String get clNoLeads;
+
+  /// No description provided for @clReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings'**
+  String get clReservations;
+
+  /// No description provided for @clContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get clContracts;
+
+  /// No description provided for @clSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed'**
+  String get clSigned;
+
+  /// No description provided for @clUnsigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting signature'**
+  String get clUnsigned;
+
+  /// No description provided for @clMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get clMaintenance;
+
+  /// No description provided for @clDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get clDocuments;
+
+  /// No description provided for @clBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded by {name}'**
+  String clBy(String name);
+
+  /// No description provided for @clNoFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'No follow-up set'**
+  String get clNoFollowUp;
+
+  /// No description provided for @clDocImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get clDocImage;
+
+  /// No description provided for @clDocContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get clDocContract;
+
+  /// No description provided for @clDocReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt'**
+  String get clDocReceipt;
+
+  /// No description provided for @clDocInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice'**
+  String get clDocInvoice;
+
+  /// No description provided for @clDocBrokerAgreement.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker agreement'**
+  String get clDocBrokerAgreement;
+
+  /// No description provided for @clDocCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission statement'**
+  String get clDocCommission;
+
+  /// No description provided for @clDocPayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout receipt'**
+  String get clDocPayout;
+
+  /// No description provided for @clDocId.
+  ///
+  /// In en, this message translates to:
+  /// **'ID document'**
+  String get clDocId;
+
+  /// No description provided for @clDocLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get clDocLegal;
+
+  /// No description provided for @clDocFinancial.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial'**
+  String get clDocFinancial;
+
+  /// No description provided for @clDocOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get clDocOther;
 }
 
 class _AppLocalizationsDelegate

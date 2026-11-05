@@ -8599,4 +8599,189 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get asTryAlso => 'جرّب أيضًا';
+
+  @override
+  String clOwnersN(int n) {
+    return '$n مالك وحدة';
+  }
+
+  @override
+  String get clBrowsers => 'متصفحون';
+
+  @override
+  String get clBrowsersHint => 'بلا وحدة بعد';
+
+  @override
+  String get clSuspendedTitle => 'موقوفون';
+
+  @override
+  String get clSuspendedHint => 'حسابات موقوفة';
+
+  @override
+  String get clAllActive => 'كلها نشطة';
+
+  @override
+  String get clOwner => 'مالك';
+
+  @override
+  String get clBrowser => 'متصفح';
+
+  @override
+  String get clActive => 'نشط';
+
+  @override
+  String get clSuspended => 'موقوف';
+
+  @override
+  String clJoined(String date) {
+    return 'انضم $date';
+  }
+
+  @override
+  String clLastLogin(String date) {
+    return 'آخر دخول $date';
+  }
+
+  @override
+  String get clNeverLogged => 'لم يسجّل الدخول بعد';
+
+  @override
+  String get clSearchHint => 'ابحث بالاسم أو الهاتف أو البريد';
+
+  @override
+  String get clEmpty => 'لا يوجد عملاء بعد.';
+
+  @override
+  String get clAccount => 'الحساب';
+
+  @override
+  String get clStatus => 'الحالة';
+
+  @override
+  String get clType => 'النوع';
+
+  @override
+  String get clJoinedLbl => 'تاريخ التسجيل';
+
+  @override
+  String get clLastLoginLbl => 'آخر دخول';
+
+  @override
+  String get clLocale => 'لغة التطبيق';
+
+  @override
+  String get clId => 'رقم العميل';
+
+  @override
+  String clSuspendedSince(String date) {
+    return 'موقوف منذ $date';
+  }
+
+  @override
+  String get clSuspend => 'إيقاف الحساب';
+
+  @override
+  String get clRestore => 'تفعيل الحساب';
+
+  @override
+  String get clSuspendConfirm =>
+      'لن يستطيع العميل الدخول إلى حسابه حتى يُعاد تفعيله. هل تريد المتابعة؟';
+
+  @override
+  String get clConfirm => 'تأكيد';
+
+  @override
+  String get clDetails => 'البيانات الإضافية';
+
+  @override
+  String get clNationalId => 'الرقم القومي';
+
+  @override
+  String get clAddress => 'العنوان';
+
+  @override
+  String get clBirthDate => 'تاريخ الميلاد';
+
+  @override
+  String get clBirthPlace => 'محل الميلاد';
+
+  @override
+  String get clOccupation => 'الوظيفة / المهنة';
+
+  @override
+  String get clEmployer => 'جهة العمل';
+
+  @override
+  String get clIdIssueDate => 'تاريخ إصدار الهوية';
+
+  @override
+  String get clIdIssuePlace => 'جهة إصدار الهوية';
+
+  @override
+  String get clHomePhone => 'التليفون الأرضي';
+
+  @override
+  String get clLeads => 'الفرص';
+
+  @override
+  String get clNoLeads => 'لا توجد فرص لهذا العميل.';
+
+  @override
+  String get clReservations => 'الحجوزات';
+
+  @override
+  String get clContracts => 'العقود';
+
+  @override
+  String get clSigned => 'موقَّع';
+
+  @override
+  String get clUnsigned => 'بانتظار التوقيع';
+
+  @override
+  String get clMaintenance => 'طلبات الصيانة';
+
+  @override
+  String get clDocuments => 'المستندات';
+
+  @override
+  String clBy(String name) {
+    return 'رفعه $name';
+  }
+
+  @override
+  String get clNoFollowUp => 'بلا متابعة محددة';
+
+  @override
+  String get clDocImage => 'صورة';
+
+  @override
+  String get clDocContract => 'عقد';
+
+  @override
+  String get clDocReceipt => 'إيصال';
+
+  @override
+  String get clDocInvoice => 'فاتورة';
+
+  @override
+  String get clDocBrokerAgreement => 'اتفاقية وسيط';
+
+  @override
+  String get clDocCommission => 'كشف عمولة';
+
+  @override
+  String get clDocPayout => 'إيصال صرف';
+
+  @override
+  String get clDocId => 'إثبات هوية';
+
+  @override
+  String get clDocLegal => 'مستند قانوني';
+
+  @override
+  String get clDocFinancial => 'مستند مالي';
+
+  @override
+  String get clDocOther => 'أخرى';
 }
