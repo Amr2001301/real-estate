@@ -2925,5 +2925,10 @@
   "calculatorManual": "Manual calculation",
   "profileSectionAdmin": "Admin and review",
   "profileSectionAccount": "Account and security",
-  "profileSectionBrokerWork": "My work"
+  "profileSectionBrokerWork": "My work",
+  "ledgerNoItemsIn": "No items: {names}",
+  "@ledgerNoItemsIn": {"placeholders": {"names": {"type": "String"}}},
+  "ledgerFilterTitle": "Filter balances",
+  "ledgerFilterPeriod": "Period",
+  "ledgerFilterApply": "Show results"
 }

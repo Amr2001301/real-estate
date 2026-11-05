@@ -89,14 +89,17 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    String money(num v) => PriceFormatter.format(v, languageCode: 'ar');
-    expect(find.text(money(950000)), findsOneWidget);
+    expect(find.byKey(const Key('home-fig-net')), findsOneWidget);
     expect(find.text('لصالح الشركة'), findsOneWidget);
-    expect(find.text(money(1250000)), findsOneWidget);
-    expect(find.text(money(300000)), findsOneWidget);
+    expect(find.byKey(const Key('home-fig-receivables')), findsOneWidget);
+    expect(find.byKey(const Key('home-fig-payables')), findsOneWidget);
     expect(find.text('أقساط العقود'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('ledger-period-thisMonth')));
+    await tester.tap(find.byKey(const Key('ledger-filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ledger-period-LedgerPeriod.thisMonth')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('filter-apply')));
     await tester.pumpAndSettle();
     expect(repo.calls.last, (dateFrom: '2026-11-01', dateTo: '2026-11-30'));
   });

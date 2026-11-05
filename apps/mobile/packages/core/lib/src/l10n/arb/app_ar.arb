@@ -2917,5 +2917,10 @@
   "calculatorManual": "حساب يدوي",
   "profileSectionAdmin": "الإدارة والمراجعة",
   "profileSectionAccount": "الحساب والأمان",
-  "profileSectionBrokerWork": "أعمالي"
+  "profileSectionBrokerWork": "أعمالي",
+  "ledgerNoItemsIn": "بدون بنود: {names}",
+  "@ledgerNoItemsIn": {"placeholders": {"names": {"type": "String"}}},
+  "ledgerFilterTitle": "تصفية الأرصدة",
+  "ledgerFilterPeriod": "الفترة",
+  "ledgerFilterApply": "عرض النتائج"
 }

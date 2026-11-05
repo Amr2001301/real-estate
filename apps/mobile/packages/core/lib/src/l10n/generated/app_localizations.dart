@@ -15613,6 +15613,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My work'**
   String get profileSectionBrokerWork;
+
+  /// No description provided for @ledgerNoItemsIn.
+  ///
+  /// In en, this message translates to:
+  /// **'No items: {names}'**
+  String ledgerNoItemsIn(String names);
+
+  /// No description provided for @ledgerFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter balances'**
+  String get ledgerFilterTitle;
+
+  /// No description provided for @ledgerFilterPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get ledgerFilterPeriod;
+
+  /// No description provided for @ledgerFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show results'**
+  String get ledgerFilterApply;
 }
 
 class _AppLocalizationsDelegate

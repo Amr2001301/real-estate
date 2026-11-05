@@ -8825,4 +8825,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get profileSectionBrokerWork => 'أعمالي';
+
+  @override
+  String ledgerNoItemsIn(String names) {
+    return 'بدون بنود: $names';
+  }
+
+  @override
+  String get ledgerFilterTitle => 'تصفية الأرصدة';
+
+  @override
+  String get ledgerFilterPeriod => 'الفترة';
+
+  @override
+  String get ledgerFilterApply => 'عرض النتائج';
 }
