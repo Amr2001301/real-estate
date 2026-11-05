@@ -2568,5 +2568,16 @@
   "rnModePercentSub": "A share of the unit price",
   "rnHoldUntil": "Ends {date} unless reviewed",
   "@rnHoldUntil": {"placeholders": {"date": {"type": "String"}}},
-  "rnHoldLabel": "Hold the booking for"
+  "rnHoldLabel": "Hold the booking for",
+  "rbFromClients": "From your clients",
+  "rbConvertedHint": "Became contracts",
+  "rbAll": "All",
+  "rbCommission": "Your commission",
+  "rbCommissionTotalHint": "Your total commission",
+  "rbCommissionPct": "Your commission {pct}",
+  "@rbCommissionPct": {"placeholders": {"pct": {"type": "String"}}},
+  "rbEmpty": "No bookings yet",
+  "rbEmptyMessage": "Request a booking for your client from the projects tab or the client's page.",
+  "rbSearchHint": "Search by client or booking number",
+  "rbOpenContract": "Open the contract"
 }

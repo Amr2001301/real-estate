@@ -7722,4 +7722,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rnHoldLabel => 'Hold the booking for';
+
+  @override
+  String get rbFromClients => 'From your clients';
+
+  @override
+  String get rbConvertedHint => 'Became contracts';
+
+  @override
+  String get rbAll => 'All';
+
+  @override
+  String get rbCommission => 'Your commission';
+
+  @override
+  String get rbCommissionTotalHint => 'Your total commission';
+
+  @override
+  String rbCommissionPct(String pct) {
+    return 'Your commission $pct';
+  }
+
+  @override
+  String get rbEmpty => 'No bookings yet';
+
+  @override
+  String get rbEmptyMessage =>
+      'Request a booking for your client from the projects tab or the client\'s page.';
+
+  @override
+  String get rbSearchHint => 'Search by client or booking number';
+
+  @override
+  String get rbOpenContract => 'Open the contract';
 }
