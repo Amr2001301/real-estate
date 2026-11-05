@@ -8316,4 +8316,43 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get tmPeriodField => 'الفترة';
+
+  @override
+  String cqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n شيكًا',
+      few: '$n شيكات',
+      two: 'شيكان',
+      one: 'شيك واحد',
+      zero: 'لا شيكات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cqStReceived => 'استُلم';
+
+  @override
+  String get cqStDeposit => 'الإيداع';
+
+  @override
+  String get cqStClear => 'الصرف';
+
+  @override
+  String cqDueIn(int n) {
+    return 'بعد $n أيام';
+  }
+
+  @override
+  String get cqDueToday => 'يستحق اليوم';
+
+  @override
+  String cqOverdue(int n) {
+    return 'متأخر $n أيام';
+  }
+
+  @override
+  String get cqCovers => 'الدفعات التي يغطيها';
 }

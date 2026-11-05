@@ -14719,6 +14719,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Period'**
   String get tmPeriodField;
+
+  /// No description provided for @cqCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No cheques} =1{1 cheque} other{{n} cheques}}'**
+  String cqCountN(int n);
+
+  /// No description provided for @cqStReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get cqStReceived;
+
+  /// No description provided for @cqStDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit'**
+  String get cqStDeposit;
+
+  /// No description provided for @cqStClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing'**
+  String get cqStClear;
+
+  /// No description provided for @cqDueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In {n} days'**
+  String cqDueIn(int n);
+
+  /// No description provided for @cqDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Due today'**
+  String get cqDueToday;
+
+  /// No description provided for @cqOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} days late'**
+  String cqOverdue(int n);
+
+  /// No description provided for @cqCovers.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments it covers'**
+  String get cqCovers;
 }
 
 class _AppLocalizationsDelegate

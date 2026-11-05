@@ -1,9 +1,13 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
+import '../../catalog/kit/catalog_kit.dart';
+import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/cheque.dart';
 import 'cheques_cubit.dart';
@@ -37,8 +41,8 @@ Color chequeStatusColor(String status, AppColorsExt c) => switch (status) {
 String chequeMoney(num? amount, String lang) =>
     amount == null ? '—' : latinDigits(PriceFormatter.format(amount, languageCode: lang));
 
-/// FG-01 — «الشيكات»: customers' cheques by status, soonest due first, as on
-/// the dashboard. Admin and sales manager only.
+/// «الشيكات» (design c1, owner-approved 2026-11-05): customers' cheques by
+/// status, soonest due first, as on the dashboard. Admin and sales manager.
 class ChequesScreen extends StatefulWidget {
   const ChequesScreen({super.key});
 
@@ -70,293 +74,163 @@ class _ChequesScreenState extends State<ChequesScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<ChequesCubit>();
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.chequesTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.canPop() ? context.pop() : context.go('/home'),
-            ),
-          ),
-          const _StatusFilter(),
-          Expanded(
-            child: BlocBuilder<ChequesCubit, ChequesState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton();
-                  case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
-                  case DataStatus.empty:
-                    return EmptyState(
-                      icon: Icons.receipt_long_outlined,
-                      title: l10n.chequesEmpty,
-                      message: l10n.chequesEmptyHint,
-                    );
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      onRefresh: cubit.load,
-                      child: ListView.separated(
-                        controller: _scroll,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + 100),
-                        itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          if (i >= state.items.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          final c = state.items[i];
-                          return _ChequeTile(
-                            cheque: c,
-                            onTap: () async {
-                              await context.push('/cheques/${c.id}', extra: c);
-                              // A deposit or clearing recorded there moves it.
-                              if (context.mounted) await cubit.load();
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocBuilder<ChequesCubit, ChequesState>(
+          builder: (context, state) {
+            final ready = state.status == DataStatus.success || state.status == DataStatus.empty;
+            return RefreshIndicator(
+              onRefresh: cubit.load,
+              child: CustomScrollView(
+                controller: _scroll,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeListHero(
+                      title: l10n.chequesTitle,
+                      subtitle: ready ? l10n.cqCountN(state.total) : null,
+                      back: true,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: HomePills(pills: [
+                        for (final s in kChequeStatuses)
+                          HomePill(
+                            id: s,
+                            label: chequeStatusLabel(l10n, s),
+                            dot: _tone(s),
+                            selected: state.filter == s,
+                            onTap: () => cubit.setFilter(s),
+                          ),
+                        HomePill(id: 'all', label: l10n.leadsFilterAll, selected: state.filter == null, onTap: () => cubit.setFilter(null)),
+                      ]),
+                    ),
+                  ),
+                  ...switch (state.status) {
+                    DataStatus.initial || DataStatus.loading => [const SliverToBoxAdapter(child: SizedBox(height: 500, child: StaffListSkeleton()))],
+                    DataStatus.failure => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                    DataStatus.empty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.receipt_long_outlined, title: l10n.chequesEmpty, message: l10n.chequesEmptyHint))],
+                    DataStatus.success => [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                          sliver: SliverList.separated(
+                            itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (context, i) {
+                              if (i >= state.items.length) return const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Center(child: CircularProgressIndicator()));
+                              final c = state.items[i];
+                              return ChequeCardView(
+                                cheque: c,
+                                onTap: () async {
+                                  await context.push('/cheques/${c.id}', extra: c);
+                                  // A deposit or clearing recorded there moves it.
+                                  if (context.mounted) await cubit.load();
+                                },
+                              );
                             },
-                          );
-                        },
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Status filter bar (as on the reservations list) ──────────────────────────
-
-class _StatusFilter extends StatelessWidget {
-  const _StatusFilter();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final cubit = context.read<ChequesCubit>();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(bottom: BorderSide(color: colors.hairline, width: 0.5)),
-      ),
-      child: BlocBuilder<ChequesCubit, ChequesState>(
-        buildWhen: (a, b) => a.filter != b.filter,
-        builder: (context, state) => SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 6),
-          child: Row(
-            children: [
-              for (final s in kChequeStatuses) ...[
-                if (s != kChequeStatuses.first) const SizedBox(width: AppSpacing.xs),
-                _StatusChip(
-                  key: ValueKey('cheque-filter-$s'),
-                  label: chequeStatusLabel(l10n, s),
-                  active: state.filter == s,
-                  dotColor: chequeStatusColor(s, colors),
-                  onTap: () => cubit.setFilter(s),
-                ),
-              ],
-              const SizedBox(width: AppSpacing.xs),
-              _StatusChip(
-                key: const ValueKey('cheque-filter-all'),
-                label: l10n.leadsFilterAll,
-                active: state.filter == null,
-                onTap: () => cubit.setFilter(null),
+                          ),
+                        ),
+                      ],
+                  },
+                  SliverPadding(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24)),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
+
+  Color _tone(String s) => switch (s) {
+        'PENDING_CLEARANCE' => AppPalette.gold500,
+        'DEPOSITED' => const Color(0xFF26405F),
+        'CLEARED' => const Color(0xFF3E7C5A),
+        'BOUNCED' => const Color(0xFFB3261E),
+        _ => const Color(0xFF9A9083),
+      };
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({super.key, required this.label, required this.active, required this.onTap, this.dotColor});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final Color? dotColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppFilterChip(label: label, selected: active, onTap: onTap, dotColor: dotColor);
-  }
-}
-
-// ── Cheque tile ───────────────────────────────────────────────────────────────
-
-class _ChequeTile extends StatefulWidget {
-  const _ChequeTile({required this.cheque, required this.onTap});
+/// One cheque: the client and the amount, the contract and number, the bank,
+/// the state, and the due date (red once it is time to take it to the bank).
+class ChequeCardView extends StatelessWidget {
+  const ChequeCardView({super.key, required this.cheque, required this.onTap});
   final Cheque cheque;
   final VoidCallback onTap;
-
-  @override
-  State<_ChequeTile> createState() => _ChequeTileState();
-}
-
-class _ChequeTileState extends State<_ChequeTile> {
-  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final c = widget.cheque;
-    final accent = chequeStatusColor(c.status, colors);
+    final currency = PriceFormatter.symbol(lang);
+    final c = cheque;
+    final tone = chequeStatusColor(c.status, colors);
     final dueNow = c.dueForDeposit(DateTime.now());
-
-    return GestureDetector(
-      key: ValueKey('cheque-${c.id}'),
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.975 : 1.0,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOutCubic,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: AppRadii.card,
-            border: Border.all(color: accent.withValues(alpha: 0.16), width: 0.9),
-            boxShadow: [
-              BoxShadow(color: accent.withValues(alpha: 0.10), blurRadius: 20, offset: const Offset(0, 6)),
-              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2)),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                    colors: [accent, accent.withValues(alpha: 0.0)],
-                  ),
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('cheque-${c.id}'),
+        onTap: onTap,
+        child: DecoratedBox(
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
+                  child: Icon(Icons.receipt_long_rounded, color: tone, size: 22),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 13, AppSpacing.md, 13),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.10),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: accent.withValues(alpha: 0.28), width: 1.2),
-                          ),
-                          child: Icon(Icons.receipt_long_rounded, color: accent, size: 22),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                c.customer ?? (c.number != null ? ltr('#${c.number}') : l10n.chequesTitle),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 15.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                [
-                                  if (c.number != null) ltr('#${c.number}'),
-                                  if (c.bank != null) c.bank!,
-                                ].join(' · '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            StatusBadge(label: chequeStatusLabel(l10n, c.status), tone: chequeStatusTone(c.status)),
-                            const SizedBox(height: 4),
-                            Icon(Icons.chevron_right_rounded, size: 16, color: colors.inkMuted.withValues(alpha: 0.5)),
-                          ],
-                        ),
-                      ],
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(child: Text(c.customer ?? (c.number != null ? ltr('#${c.number}') : l10n.chequesTitle), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
+                      const SizedBox(width: 6),
+                      Text.rich(TextSpan(children: [
+                        TextSpan(text: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()), style: homeDisplay(16, colors.inkStrong)),
+                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+                      ])),
+                    ]),
+                    const SizedBox(height: 2),
+                    Text.rich(
+                      TextSpan(children: [
+                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                        if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                      ]),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 10),
-                    Container(height: 0.5, color: colors.hairline),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _InfoChip(
-                          icon: Icons.payments_outlined,
-                          label: chequeMoney(c.amount, lang),
-                          color: colors.brandGold,
-                        ),
-                        if (c.dueDate != null)
-                          _InfoChip(
-                            icon: Icons.calendar_today_rounded,
-                            label: followUpDate(c.dueDate!, lang),
-                            color: dueNow ? colors.error : colors.brandNavy,
-                          ),
-                        if (dueNow)
-                          _InfoChip(icon: Icons.account_balance_rounded, label: l10n.chequeDueForDeposit, color: colors.error),
-                        if (c.contractNumber != null)
-                          _InfoChip(icon: Icons.description_outlined, label: c.contractNumber!, color: colors.inkMuted),
-                      ],
-                    ),
-                  ],
+                    const SizedBox(height: 5),
+                    Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      CatalogBadge.status(chequeStatusLabel(l10n, c.status), tone),
+                      if (dueNow) Text(l10n.chequeDueForDeposit, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: colors.error)),
+                    ]),
+                  ]),
                 ),
-              ),
-            ],
-          ),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
+              child: Row(children: [
+                if (c.dueDate != null) Text(l10n.pmDueOn(followUpDate(c.dueDate!, lang)), style: TextStyle(fontSize: 11, color: dueNow ? colors.error : colors.inkMuted)),
+                const Spacer(),
+                Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
+              ]),
+            ),
+          ]),
         ),
       ),
     );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label, required this.color});
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppInfoChip(icon: icon, label: label, color: color);
   }
 }

@@ -1,18 +1,24 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
+import '../../catalog/kit/catalog_kit.dart';
+import '../../contracts/view/contract_page_screen.dart' show KvTable;
+import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
+import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
+import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import '../domain/cheque.dart';
 import 'cheques_cubit.dart';
 import 'cheques_screen.dart';
 
-/// FG-01 — one cheque: its amount and status, the bank and due date, whose
-/// it is and what it pays; and the two steps recorded from the phone —
-/// deposited at the bank, then cleared. Bouncing, cancelling and replacing
-/// stay on the dashboard.
+/// One cheque (design c2): the amount, its state and its road (received,
+/// deposited at the bank, cleared), the cheque and whose it is, what it
+/// pays; and the two steps recorded from the phone: deposited, then cleared.
+/// Bouncing, cancelling and replacing stay on the dashboard.
 class ChequeDetailScreen extends StatefulWidget {
   const ChequeDetailScreen({super.key});
 
@@ -32,200 +38,204 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
     final l10n = context.l10n;
     final cubit = context.read<ChequeDetailCubit>();
     final row = cubit.row;
-
-    return Scaffold(
-      backgroundColor: context.appColors.canvas,
-      body: Column(
-        children: [
-          BlocBuilder<ChequeDetailCubit, ChequeDetailState>(
-            builder: (context, state) {
-              final number = state.cheque?.number ?? row?.number;
-              return AppNavHeader(
-                title: number != null ? '${l10n.chequeNumberLabel} $number' : l10n.chequesTitle,
-                compact: true,
-                leadingAction: NavHeaderAction(
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  onTap: () => context.canPop() ? context.pop() : context.go('/cheques'),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocConsumer<ChequeDetailCubit, ChequeDetailState>(
+          listenWhen: (a, b) => a.actionFailure != b.actionFailure || a.done != b.done,
+          listener: (context, state) {
+            if (state.actionFailure != null) {
+              showFailureSnackBar(context, state.actionFailure!);
+            } else if (state.done != null) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text(state.done == 'clear' ? l10n.chequeClearedDone : l10n.chequeDepositedDone)));
+            }
+          },
+          builder: (context, state) {
+            final c = state.cheque;
+            final number = c?.number ?? row?.number;
+            final title = number != null ? '${l10n.chequeNumberLabel} ${ltr(number)}' : l10n.chequesTitle;
+            if (c == null) {
+              return Column(children: [
+                HomeListHero(title: title, back: true),
+                Expanded(child: state.status == DataStatus.failure ? ErrorState(failure: state.failure, onRetry: cubit.load) : const StaffListSkeleton(rows: 4, lines: 3)),
+              ]);
+            }
+            return Column(children: [
+              Expanded(child: RefreshIndicator(onRefresh: cubit.load, child: _Body(cheque: c, title: title))),
+              if (c.canDeposit || c.canClear)
+                Container(
+                  padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.paddingOf(context).bottom),
+                  decoration: BoxDecoration(color: context.appColors.canvas, border: Border(top: BorderSide(color: context.appColors.hairline))),
+                  child: FilledButton.icon(
+                    key: Key(c.canDeposit ? 'cheque-deposit' : 'cheque-clear'),
+                    onPressed: state.working ? null : () => c.canDeposit ? _confirmDeposit(context) : _confirmClear(context),
+                    icon: state.working
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                        : Icon(c.canDeposit ? Icons.account_balance_rounded : Icons.task_alt_rounded, size: 19),
+                    label: Text(c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      backgroundColor: AppPalette.gold400,
+                      foregroundColor: AppPalette.navy,
+                      textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                  ),
                 ),
-              );
-            },
-          ),
-          Expanded(
-            child: BlocConsumer<ChequeDetailCubit, ChequeDetailState>(
-              listenWhen: (a, b) => a.actionFailure != b.actionFailure || a.done != b.done,
-              listener: (context, state) {
-                if (state.actionFailure != null) {
-                  showFailureSnackBar(context, state.actionFailure!);
-                } else if (state.done != null) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                      content: Text(state.done == 'clear' ? l10n.chequeClearedDone : l10n.chequeDepositedDone),
-                    ));
-                }
-              },
-              builder: (context, state) {
-                final c = state.cheque;
-                if (state.status == DataStatus.failure && c == null) {
-                  return ErrorState(failure: state.failure, onRetry: cubit.load);
-                }
-                if (c == null) return const StaffListSkeleton(rows: 4, lines: 3);
-                return RefreshIndicator(onRefresh: cubit.load, child: _Body(cheque: c, working: state.working));
-              },
-            ),
-          ),
-        ],
+            ]);
+          },
+        ),
       ),
     );
   }
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.cheque, required this.working});
+  const _Body({required this.cheque, required this.title});
   final Cheque cheque;
-  final bool working;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
+    final currency = PriceFormatter.symbol(lang);
     final c = cheque;
-    final accent = chequeStatusColor(c.status, colors);
+    final tone = chequeStatusColor(c.status, colors);
     final dueNow = c.dueForDeposit(DateTime.now());
     String? date(DateTime? d) => d == null ? null : followUpDate(d, lang);
-
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xxl),
-      children: [
-        // ── Amount + status ──────────────────────────────────────────────
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+    String day(DateTime? d) => d == null ? '' : DateFormatter.dayMonth(d, languageCode: lang);
+    final today = DateUtils.dateOnly(DateTime.now());
+    String? dueLine;
+    if (c.dueDate != null && (c.status == 'PENDING_CLEARANCE' || c.status == 'DEPOSITED')) {
+      final days = DateUtils.dateOnly(c.dueDate!).difference(today).inDays;
+      dueLine = '${date(c.dueDate)} · ${days == 0 ? l10n.cqDueToday : (days > 0 ? l10n.cqDueIn(days) : l10n.cqOverdue(-days))}';
+    }
+    // The road: received → deposited → cleared (a bounce ends it).
+    final failed = c.status == 'BOUNCED' || c.status == 'REPLACED' || c.status == 'CANCELLED';
+    final deposited = c.status != 'PENDING_CLEARANCE';
+    final cleared = c.status == 'CLEARED';
+    final steps = <(String, String, bool)>[
+      (l10n.cqStReceived, day(c.createdAt), true),
+      (l10n.cqStDeposit, '', deposited && !failed || failed && c.bounceDate != null),
+      (l10n.cqStClear, day(c.clearingDate), cleared),
+    ];
+    final now = failed ? -1 : steps.indexWhere((s) => !s.$3);
+    return ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
+      HomeOverlap(
+        overlap: 44,
+        top: HomeListHero(
+          title: title,
+          subtitle: [if ((c.customer ?? '').isNotEmpty) c.customer!, if ((c.bank ?? '').isNotEmpty) c.bank!].join(' · '),
+          back: true,
+          bottom: Padding(
+            padding: const EdgeInsets.only(bottom: 48),
+            child: Wrap(spacing: 6, runSpacing: 6, children: [
+              CatalogBadge.status(chequeStatusLabel(l10n, c.status), tone),
+              if (dueNow) CatalogBadge.glass(l10n.chequeDueForDeposit),
+            ]),
+          ),
+        ),
+        bottom: Container(
+          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            border: Border.all(color: accent.withValues(alpha: 0.25)),
-            boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.10), blurRadius: 18, offset: const Offset(0, 6))],
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFEFE6D4)),
+            boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.10),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: accent.withValues(alpha: 0.30), width: 1.2),
-                ),
-                child: Icon(Icons.receipt_long_rounded, color: accent, size: 24),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.chequeAmount, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    const SizedBox(height: 2),
-                    // One line: a long amount shrinks rather than drop the currency to a new line.
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        chequeMoney(c.amount, lang),
-                        key: const Key('cheque-amount'),
-                        maxLines: 1,
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: colors.inkStrong),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(l10n.chequeAmount, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+            Text.rich(
+              key: const Key('cheque-amount'),
+              TextSpan(children: [
+                TextSpan(text: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()), style: homeDisplay(28, colors.inkStrong)),
+                TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+              ]),
+            ),
+            if (dueLine != null) Text(dueLine, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: dueNow ? colors.error : AppPalette.gold600)),
+            const SizedBox(height: 14),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              for (final (i, (label, at, done)) in steps.indexed)
+                Expanded(
+                  child: Column(children: [
+                    Container(
+                      key: Key('cheque-step-$i'),
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFFB3261E) : const Color(0xFFEFE8DC))),
+                        boxShadow: i == now ? const [BoxShadow(color: Color(0xFFF6E9C9), spreadRadius: 4)] : null,
+                      ),
+                      child: Icon(
+                        done ? Icons.check_rounded : (failed && i == steps.length - 1 ? Icons.close_rounded : Icons.more_horiz_rounded),
+                        size: 15,
+                        color: done || (failed && i == steps.length - 1) ? Colors.white : (i == now ? AppPalette.navy : const Color(0xFF9A9083)),
                       ),
                     ),
-                  ],
+                    const SizedBox(height: 4),
+                    Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                    Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 9.5, color: colors.inkMuted)),
+                  ]),
                 ),
-              ),
-              StatusBadge(label: chequeStatusLabel(l10n, c.status), tone: chequeStatusTone(c.status)),
+            ]),
+            if (c.status == 'BOUNCED' && (c.bounceReason?.trim().isNotEmpty ?? false)) ...[
+              const SizedBox(height: 10),
+              Text('${l10n.chequeBounceReason}: ${c.bounceReason}', style: TextStyle(fontSize: 12, color: colors.error)),
             ],
-          ),
+          ]),
         ),
-        if (dueNow) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _Banner(icon: Icons.account_balance_rounded, text: l10n.chequeDueForDeposit, color: colors.error),
-        ],
-        // ── The next step: deposited at the bank, then cleared ──────────
-        if (c.canDeposit || c.canClear) ...[
-          const SizedBox(height: AppSpacing.md),
-          AppButton(
-            key: Key(c.canDeposit ? 'cheque-deposit' : 'cheque-clear'),
-            label: c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear,
-            icon: c.canDeposit ? Icons.account_balance_rounded : Icons.task_alt_rounded,
-            variant: AppButtonVariant.gold,
-            size: AppButtonSize.large,
-            expand: true,
-            isLoading: working,
-            onPressed: working
-                ? null
-                : () => c.canDeposit ? _confirmDeposit(context) : _confirmClear(context),
-          ),
-        ],
-        if (c.status == 'BOUNCED' && (c.bounceReason?.trim().isNotEmpty ?? false)) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _Banner(icon: Icons.error_outline_rounded, text: '${l10n.chequeBounceReason}: ${c.bounceReason}', color: colors.error),
-        ],
-        const SizedBox(height: AppSpacing.md),
-
-        // ── The cheque ───────────────────────────────────────────────────
-        _Card(
-          children: [
-            _Row(label: l10n.chequeNumberLabel, value: c.number),
-            _Row(label: l10n.chequeBank, value: c.bank),
-            _Row(label: l10n.chequeDueDate, value: date(c.dueDate), valueColor: dueNow ? colors.error : null),
-            if (c.clearingDate != null) _Row(label: l10n.chequeClearedOn, value: date(c.clearingDate)),
-            if (c.bounceDate != null) _Row(label: l10n.chequeBouncedOn, value: date(c.bounceDate), valueColor: colors.error),
-            if (c.replacedByNumber != null) _Row(label: l10n.chequeReplacedBy, value: ltr('#${c.replacedByNumber}')),
-            _Row(label: l10n.chequeRecordedBy, value: c.recordedBy),
-          ],
+      ),
+      HomeSection(
+        icon: Icons.receipt_long_rounded,
+        title: l10n.pmCheque,
+        child: KvTable(rows: [
+          (l10n.chequeNumberLabel, ltr(c.number ?? '—')),
+          (l10n.chequeBank, c.bank ?? '—'),
+          (l10n.chequeDueDate, date(c.dueDate) ?? '—'),
+          if (c.clearingDate != null) (l10n.chequeClearedOn, date(c.clearingDate)!),
+          if (c.bounceDate != null) (l10n.chequeBouncedOn, date(c.bounceDate)!),
+          if (c.replacedByNumber != null) (l10n.chequeReplacedBy, ltr('#${c.replacedByNumber}')),
+          (l10n.chequeRecordedBy, c.recordedBy ?? '—'),
+        ]),
+      ),
+      if (c.customer != null || c.contractNumber != null || c.reservationNumber != null)
+        HomeSection(
+          icon: Icons.person_rounded,
+          title: l10n.chequeCustomer,
+          child: Column(children: [
+            KvTable(rows: [
+              if (c.customer != null) (l10n.chequeCustomer, c.customer!),
+              if (c.contractNumber != null) (l10n.chequeContract, ltr(c.contractNumber!)),
+              if (c.reservationNumber != null) (l10n.chequeReservation, ltr(c.reservationNumber!)),
+            ]),
+            if (c.contractId != null) ...[
+              const SizedBox(height: 8),
+              ReservationLinkCard(key: const Key('cheque-open-contract'), icon: Icons.description_rounded, title: l10n.rbOpenContract, onTap: () => context.push('/contracts/${c.contractId}')),
+            ] else if (c.reservationId != null) ...[
+              const SizedBox(height: 8),
+              ReservationLinkCard(key: const Key('cheque-open-reservation'), icon: Icons.bookmark_rounded, title: l10n.chequeReservation, onTap: () => context.push('/reservations/${c.reservationId}')),
+            ],
+          ]),
         ),
-        const SizedBox(height: AppSpacing.md),
-
-        // ── Whose it is ──────────────────────────────────────────────────
-        if (c.customer != null || c.contractNumber != null || c.reservationNumber != null) ...[
-          _Card(
-            children: [
-              _Row(label: l10n.chequeCustomer, value: c.customer),
-              if (c.contractNumber != null)
-                _Row(
-                  label: l10n.chequeContract,
-                  value: c.contractNumber,
-                  onTap: c.contractId == null ? null : () => context.push('/contracts/${c.contractId}'),
-                ),
-              if (c.reservationNumber != null)
-                _Row(
-                  label: l10n.chequeReservation,
-                  value: c.reservationNumber,
-                  onTap: c.reservationId == null ? null : () => context.push('/reservations/${c.reservationId}'),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-
-        // ── What it pays ─────────────────────────────────────────────────
-        if (c.payments.isNotEmpty) ...[
-          Text(l10n.chequePayments, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-          const SizedBox(height: AppSpacing.xs),
-          _Card(
-            children: [
-              for (final p in c.payments)
-                _Row(
-                  label: p.installmentDue == null ? l10n.chequePayments : '${l10n.chequeInstallmentDue} ${date(p.installmentDue)}',
-                  value: chequeMoney(p.amount, lang),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-        ],
-
-        Text(l10n.chequeOnDashboard, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-      ],
-    );
+      if (c.payments.isNotEmpty)
+        HomeSection(
+          icon: Icons.payments_rounded,
+          title: l10n.cqCovers,
+          child: KvTable(rows: [
+            for (final p in c.payments) (p.installmentDue == null ? l10n.chequePayments : '${l10n.chequeInstallmentDue} ${date(p.installmentDue)}', chequeMoney(p.amount, lang)),
+          ]),
+        ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 18, AppSpacing.lg, 0),
+        child: Text(l10n.chequeOnDashboard, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+      ),
+    ]);
   }
 }
 
@@ -297,92 +307,3 @@ Future<void> _confirmClear(BuildContext context) async {
   if (ok == true) await cubit.clear(clearingDate: date);
 }
 
-class _Card extends StatelessWidget {
-  const _Card({required this.children});
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final rows = children.toList();
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: colors.hairline, indent: AppSpacing.md, endIndent: AppSpacing.md),
-            rows[i],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.label, this.value, this.valueColor, this.onTap});
-  final String label;
-  final String? value;
-  final Color? valueColor;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 13),
-        child: Row(
-          children: [
-            Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: colors.inkMuted))),
-            const SizedBox(width: AppSpacing.sm),
-            Flexible(
-              child: Text(
-                value ?? '—',
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor ?? (onTap != null ? colors.brandNavy : colors.inkStrong),
-                ),
-              ),
-            ),
-            if (onTap != null) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right_rounded, size: 16, color: colors.inkMuted),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Banner extends StatelessWidget {
-  const _Banner({required this.icon, required this.text, required this.color});
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(AppRadii.md),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color))),
-          ],
-        ),
-      );
-}

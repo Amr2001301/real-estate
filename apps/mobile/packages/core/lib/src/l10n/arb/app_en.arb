@@ -2755,5 +2755,16 @@
   "tpContracts": "Contracts",
   "tmCountN": "{n, plural, =0{No targets} =1{1 target} other{{n} targets}}",
   "@tmCountN": {"placeholders": {"n": {"type": "int"}}},
-  "tmPeriodField": "Period"
+  "tmPeriodField": "Period",
+  "cqCountN": "{n, plural, =0{No cheques} =1{1 cheque} other{{n} cheques}}",
+  "@cqCountN": {"placeholders": {"n": {"type": "int"}}},
+  "cqStReceived": "Received",
+  "cqStDeposit": "Deposit",
+  "cqStClear": "Clearing",
+  "cqDueIn": "In {n} days",
+  "@cqDueIn": {"placeholders": {"n": {"type": "int"}}},
+  "cqDueToday": "Due today",
+  "cqOverdue": "{n} days late",
+  "@cqOverdue": {"placeholders": {"n": {"type": "int"}}},
+  "cqCovers": "Payments it covers"
 }

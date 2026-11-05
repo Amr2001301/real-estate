@@ -8291,4 +8291,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tmPeriodField => 'Period';
+
+  @override
+  String cqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n cheques',
+      one: '1 cheque',
+      zero: 'No cheques',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cqStReceived => 'Received';
+
+  @override
+  String get cqStDeposit => 'Deposit';
+
+  @override
+  String get cqStClear => 'Clearing';
+
+  @override
+  String cqDueIn(int n) {
+    return 'In $n days';
+  }
+
+  @override
+  String get cqDueToday => 'Due today';
+
+  @override
+  String cqOverdue(int n) {
+    return '$n days late';
+  }
+
+  @override
+  String get cqCovers => 'Payments it covers';
 }

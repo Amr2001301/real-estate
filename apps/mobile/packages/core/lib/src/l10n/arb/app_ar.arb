@@ -2747,5 +2747,16 @@
   "tpContracts": "عقود",
   "tmCountN": "{n, plural, =0{لا أهداف مسجّلة} =1{هدف واحد مسجّل} =2{هدفان مسجّلان} few{{n} أهداف مسجّلة} other{{n} هدفًا مسجّلًا}}",
   "@tmCountN": {"placeholders": {"n": {"type": "int"}}},
-  "tmPeriodField": "الفترة"
+  "tmPeriodField": "الفترة",
+  "cqCountN": "{n, plural, =0{لا شيكات} =1{شيك واحد} =2{شيكان} few{{n} شيكات} other{{n} شيكًا}}",
+  "@cqCountN": {"placeholders": {"n": {"type": "int"}}},
+  "cqStReceived": "استُلم",
+  "cqStDeposit": "الإيداع",
+  "cqStClear": "الصرف",
+  "cqDueIn": "بعد {n} أيام",
+  "@cqDueIn": {"placeholders": {"n": {"type": "int"}}},
+  "cqDueToday": "يستحق اليوم",
+  "cqOverdue": "متأخر {n} أيام",
+  "@cqOverdue": {"placeholders": {"n": {"type": "int"}}},
+  "cqCovers": "الدفعات التي يغطيها"
 }
