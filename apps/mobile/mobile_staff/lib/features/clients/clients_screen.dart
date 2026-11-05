@@ -156,70 +156,77 @@ class ClientCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
+    final phone = client.phone ?? '';
+    final contact = phone.isNotEmpty ? ltr(phone) : (client.email ?? '');
     return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.transparent,
       child: InkWell(
         key: Key('client-${client.id}'),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         onTap: () => context.push('/clients/${client.id}', extra: client),
         child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: homeCard(context),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-              child: Text(homeInitials(client.name), style: homeDisplay(14, AppPalette.gold300)),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(client.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  ),
-                  ClientPill(text: client.owner ? l10n.clOwner : l10n.clBrowser, color: client.owner ? colors.success : colors.info),
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+                child: Text(homeInitials(client.name), style: homeDisplay(14, AppPalette.gold300)),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(client.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                  if (contact.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      Icon(phone.isNotEmpty ? Icons.phone_outlined : Icons.mail_outline_rounded, size: 14, color: colors.inkMuted),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(contact, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
+                    ]),
+                  ],
                 ]),
-                if ((client.phone ?? '').isNotEmpty || (client.email ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    (client.phone ?? '').isNotEmpty ? ltr(client.phone!) : client.email!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                ClientPill(text: client.owner ? l10n.clOwner : l10n.clBrowser, color: client.owner ? colors.success : AppPalette.navy600),
+                if (!client.active) ...[
+                  const SizedBox(height: 4),
+                  ClientPill(text: l10n.clSuspended, color: colors.error),
                 ],
-                const SizedBox(height: 6),
-                Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  if (!client.active) ClientPill(text: l10n.clSuspended, color: colors.error),
-                  if (client.createdAt != null)
-                    Text(l10n.clJoined(leadWhen(context, client.createdAt!, withTime: false)),
-                        style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-                  Text(
-                    client.lastLoginAt == null ? l10n.clNeverLogged : l10n.clLastLogin(leadWhen(context, client.lastLoginAt!, withTime: false)),
-                    style: TextStyle(fontSize: 11, color: colors.inkMuted),
-                  ),
-                ]),
               ]),
-            ),
-            if ((client.phone ?? '').isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Material(
-                color: AppPalette.navy.withValues(alpha: 0.08),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => ContactActions.call(client.phone!),
-                  child: const SizedBox(width: 36, height: 36, child: Icon(Icons.phone_rounded, size: 18, color: AppPalette.navy)),
+            ]),
+            const SizedBox(height: 10),
+            Divider(height: 1, color: colors.hairline),
+            const SizedBox(height: 10),
+            Row(children: [
+              Icon(Icons.login_rounded, size: 14, color: colors.inkMuted),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  client.lastLoginAt == null ? l10n.clNeverLogged : l10n.clLastLogin(leadWhen(context, client.lastLoginAt!, withTime: false)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: colors.inkMuted),
                 ),
               ),
-            ],
+              if (phone.isNotEmpty)
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => ContactActions.call(phone),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(color: colors.surface, border: Border.all(color: colors.hairline), borderRadius: BorderRadius.circular(12)),
+                    child: Icon(Icons.phone_rounded, size: 18, color: colors.ink),
+                  ),
+                )
+              else
+                const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+            ]),
           ]),
         ),
       ),

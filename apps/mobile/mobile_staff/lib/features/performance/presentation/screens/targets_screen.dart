@@ -58,6 +58,7 @@ class _TargetsScreenState extends State<TargetsScreen> {
                           icon: Icons.insights_rounded,
                           title: l10n.tgPeriodActivity,
                           child: GridView.count(
+                            padding: EdgeInsets.zero,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             crossAxisCount: 2,
@@ -79,21 +80,25 @@ class _TargetsScreenState extends State<TargetsScreen> {
                             child: Column(children: [
                               for (final t in state.targets)
                                 Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                  decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: colors.hairline)),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: homeCard(context, radius: 20),
                                   child: Row(children: [
+                                    Container(
+                                      width: 42,
+                                      height: 42,
+                                      decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                                      child: const Icon(Icons.track_changes_rounded, size: 21, color: AppPalette.gold500),
+                                    ),
+                                    const SizedBox(width: 11),
                                     Expanded(
                                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Text('${contractMoney(double.tryParse(t.amountTarget) ?? 0)} $currency', style: homeDisplay(14, colors.inkStrong)),
-                                        Text(l10n.targetsUnitsN(t.unitsTarget), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                        Text(periodLabel(t.period, lang), style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                                        const SizedBox(height: 3),
+                                        Text(l10n.targetsUnitsN(t.unitsTarget), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                                       ]),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(color: const Color(0xFFEEF2F7), borderRadius: BorderRadius.circular(99)),
-                                      child: Text(periodLabel(t.period, lang), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF26405F))),
-                                    ),
+                                    Text('${contractMoney(double.tryParse(t.amountTarget) ?? 0)} $currency', style: homeDisplay(15, colors.inkStrong)),
                                   ]),
                                 ),
                             ]),
@@ -131,7 +136,16 @@ class _Progress extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: homeCard(context, radius: 22),
       child: !p.hasTarget
-          ? Text(l10n.tgNoTarget, style: TextStyle(fontSize: 13, color: colors.inkMuted))
+          ? Row(children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.flag_outlined, size: 21, color: AppPalette.gold500),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(l10n.tgNoTarget, style: TextStyle(fontSize: 13.5, height: 1.5, color: colors.ink))),
+            ])
           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
@@ -188,7 +202,7 @@ class _Stat extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: colors.hairline)),
+      decoration: homeCard(context, radius: 18),
       child: Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(11)), child: Icon(icon, size: 18, color: AppPalette.gold600)),
         const SizedBox(width: 9),

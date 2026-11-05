@@ -152,65 +152,59 @@ class _RowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
     final ref = row.contractNumber ?? row.reservationNumber;
+    final name = row.partyName ?? ledgerTypeLabel(l10n, row.type);
+    final state = row.state;
+    final stateColor = state == null ? colors.inkMuted : ledgerStateColor(colors, state);
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      decoration: homeCard(context, radius: 22),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
+            child: Text(homeInitials(name), style: homeDisplay(14, AppPalette.gold300)),
+          ),
+          const SizedBox(width: 11),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  row.partyName ?? ledgerTypeLabel(l10n, row.type),
-                  style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    ledgerTypeLabel(l10n, row.type),
-                    if (row.date != null) DateFormatter.mediumDate(row.date!, languageCode: lang),
-                  ].join(' · '),
-                  style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-                ),
-                if (ref != null || row.unitCode != null) ...[
-                  const SizedBox(height: 7),
-                  Wrap(spacing: 6, runSpacing: 4, children: [
-                    if (ref != null) _Ref(text: ref, gold: true),
-                    if (row.unitCode != null) _Ref(text: row.unitCode!),
-                  ]),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+              const SizedBox(height: 4),
               Text(
-                PriceFormatter.format(row.amount, languageCode: lang),
-                style: homeDisplay(15, colors.inkStrong),
+                [
+                  ledgerTypeLabel(l10n, row.type),
+                  if (row.date != null) DateFormatter.mediumDate(row.date!, languageCode: lang),
+                ].join(' · '),
+                style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
               ),
-              if (row.state != null) ...[
-                const SizedBox(height: 4),
-                StatusBadge(
-                  label: ledgerStateLabel(l10n, row.state!),
-                  tone: switch (row.state!) {
-                    LedgerState.late => BadgeTone.error,
-                    LedgerState.dueToday => BadgeTone.warning,
-                    LedgerState.onItsWay => BadgeTone.gold,
-                    _ => BadgeTone.neutral,
-                  },
-                ),
-              ],
-            ],
+            ]),
           ),
-        ],
-      ),
+          if (state != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: stateColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+              child: Text(ledgerStateLabel(l10n, state), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: stateColor)),
+            ),
+          ],
+        ]),
+        const SizedBox(height: 10),
+        Divider(height: 1, color: colors.hairline),
+        const SizedBox(height: 10),
+        Row(children: [
+          Text(PriceFormatter.format(row.amount, languageCode: lang), style: homeDisplay(16, colors.inkStrong)),
+          const Spacer(),
+          if (ref != null || row.unitCode != null)
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              if (ref != null) _Ref(text: ref, gold: true),
+              if (row.unitCode != null) _Ref(text: row.unitCode!),
+            ]),
+        ]),
+      ]),
     );
   }
 }
