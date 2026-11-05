@@ -9,8 +9,6 @@ import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
 
 // Money for tight spaces, without losing piasters below a million.
 String _compact(String raw, String lang) {
@@ -372,6 +370,7 @@ class _PropertyCard extends StatelessWidget {
             index: index,
             l10n: l10n,
           ),
+          Divider(height: 1, indent: AppSpacing.lg, endIndent: AppSpacing.lg, color: colors.hairline),
           if (stats.isNotEmpty) _StatsBlock(stats: stats, colors: colors),
           if (property.hasInstallmentPlan)
             _InstallmentBanner(property: property, lang: lang, l10n: l10n),
@@ -403,134 +402,61 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final indexStr = (index + 1).toString().padLeft(2, '0');
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return SizedBox(
-      height: 88,
-      child: Stack(
-        fit: StackFit.expand,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Row(
         children: [
-          const DecoratedBox(
+          Container(
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [_navyLight, _navyCard, _navyDeep],
-                stops: [0.0, 0.48, 1.0],
-              ),
+              color: AppPalette.gold400.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-          ),
-          const IgnorePointer(child: _HeaderDots()),
-          // Decorative ordinal number
-          PositionedDirectional(
-            end: AppSpacing.md,
-            bottom: -10,
-            child: Opacity(
-              opacity: 0.055,
-              child: Text(
-                indexStr,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 76,
-                  fontWeight: FontWeight.w900,
-                  height: 1.0,
-                ),
-              ),
-            ),
-          ),
-          // Decorative icon behind content
-          PositionedDirectional(
-            end: 52,
-            top: 8,
-            bottom: 8,
             child: Icon(
-              AppIcons.property,
-              size: 64,
-              color: Colors.white.withValues(alpha: 0.045),
+              Icons.domain_rounded,
+              color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+              size: 26,
             ),
           ),
-          // Gold hairline at bottom edge
-          Positioned(
-            bottom: 0,
-            left: 32,
-            right: 32,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                    AppPalette.gold400.withValues(alpha: 0.5),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Gold-tinted icon tile
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppPalette.gold400.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: AppPalette.gold400.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.domain_rounded,
-                    color: AppPalette.gold400,
-                    size: 26,
+                Text(
+                  projectName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        projectName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$unitType · $unitCode',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.55),
-                          fontSize: 12,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 2),
+                Text(
+                  '$unitType · $unitCode',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                _StatusPill(owned: owned, l10n: l10n),
               ],
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          _StatusPill(owned: owned, l10n: l10n),
         ],
       ),
     );
@@ -544,8 +470,9 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const ownedColor = Color(0xFF34C77B);
-    const reservedColor = AppPalette.gold400;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ownedColor = dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
+    final reservedColor = dark ? AppPalette.gold300 : const Color(0xFF9A6F1E);
     final dotColor = owned ? ownedColor : reservedColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -770,31 +697,4 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
-}
-
-// ── Dot texture ───────────────────────────────────────────────────────────────
-
-class _HeaderDots extends StatelessWidget {
-  const _HeaderDots();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
 }
