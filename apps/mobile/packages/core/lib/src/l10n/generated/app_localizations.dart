@@ -16333,6 +16333,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Awaiting signature'**
   String get brkStUnsigned;
+
+  /// No description provided for @brkActApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get brkActApprove;
+
+  /// No description provided for @brkActReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get brkActReject;
+
+  /// No description provided for @brkActCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get brkActCancel;
+
+  /// No description provided for @brkActDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as duplicate'**
+  String get brkActDuplicate;
+
+  /// No description provided for @brkActProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Start paying'**
+  String get brkActProcess;
+
+  /// No description provided for @brkActMarkPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as paid'**
+  String get brkActMarkPaid;
+
+  /// No description provided for @brkActSuspend.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend the firm'**
+  String get brkActSuspend;
+
+  /// No description provided for @brkActTerminate.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminate'**
+  String get brkActTerminate;
+
+  /// No description provided for @brkActActivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate the firm'**
+  String get brkActActivate;
+
+  /// No description provided for @brkActHoldOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold its payouts'**
+  String get brkActHoldOn;
+
+  /// No description provided for @brkActHoldOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume its payouts'**
+  String get brkActHoldOff;
+
+  /// No description provided for @brkReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write the reason'**
+  String get brkReasonHint;
+
+  /// No description provided for @brkActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not do that.'**
+  String get brkActionFailed;
+
+  /// No description provided for @brkPmBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get brkPmBank;
+
+  /// No description provided for @brkPmCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get brkPmCheque;
+
+  /// No description provided for @brkPmCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get brkPmCash;
+
+  /// No description provided for @brkPmOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get brkPmOther;
+
+  /// No description provided for @brkFBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Firm'**
+  String get brkFBroker;
+
+  /// No description provided for @brkFAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get brkFAgent;
+
+  /// No description provided for @brkFPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get brkFPhone;
+
+  /// No description provided for @brkFEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get brkFEmail;
+
+  /// No description provided for @brkFCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get brkFCity;
+
+  /// No description provided for @brkFProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get brkFProject;
+
+  /// No description provided for @brkFUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get brkFUnit;
+
+  /// No description provided for @brkFCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get brkFCustomer;
+
+  /// No description provided for @brkFAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales rep'**
+  String get brkFAssigned;
+
+  /// No description provided for @brkFSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent on'**
+  String get brkFSubmitted;
+
+  /// No description provided for @brkFReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get brkFReason;
+
+  /// No description provided for @brkFBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get brkFBooking;
+
+  /// No description provided for @brkFExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking ends'**
+  String get brkFExpires;
+
+  /// No description provided for @brkFTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract value'**
+  String get brkFTotal;
+
+  /// No description provided for @brkFDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get brkFDown;
+
+  /// No description provided for @brkFSigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed on'**
+  String get brkFSigned;
+
+  /// No description provided for @brkFBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission basis'**
+  String get brkFBasis;
+
+  /// No description provided for @brkFCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get brkFCommission;
+
+  /// No description provided for @brkFGross.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross'**
+  String get brkFGross;
+
+  /// No description provided for @brkFTax.
+  ///
+  /// In en, this message translates to:
+  /// **'Tax'**
+  String get brkFTax;
+
+  /// No description provided for @brkFWithholding.
+  ///
+  /// In en, this message translates to:
+  /// **'Withholding'**
+  String get brkFWithholding;
+
+  /// No description provided for @brkFNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get brkFNet;
+
+  /// No description provided for @brkFEarned.
+  ///
+  /// In en, this message translates to:
+  /// **'Earned on'**
+  String get brkFEarned;
+
+  /// No description provided for @brkFPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get brkFPeriod;
+
+  /// No description provided for @brkFMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get brkFMethod;
+
+  /// No description provided for @brkFReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get brkFReference;
+
+  /// No description provided for @brkFContractPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract period'**
+  String get brkFContractPeriod;
+
+  /// No description provided for @brkFBank.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank'**
+  String get brkFBank;
+
+  /// No description provided for @brkFNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get brkFNotes;
 }
 
 class _AppLocalizationsDelegate

@@ -9224,4 +9224,142 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brkStUnsigned => 'Awaiting signature';
+
+  @override
+  String get brkActApprove => 'Approve';
+
+  @override
+  String get brkActReject => 'Reject';
+
+  @override
+  String get brkActCancel => 'Cancel';
+
+  @override
+  String get brkActDuplicate => 'Mark as duplicate';
+
+  @override
+  String get brkActProcess => 'Start paying';
+
+  @override
+  String get brkActMarkPaid => 'Mark as paid';
+
+  @override
+  String get brkActSuspend => 'Suspend the firm';
+
+  @override
+  String get brkActTerminate => 'Terminate';
+
+  @override
+  String get brkActActivate => 'Activate the firm';
+
+  @override
+  String get brkActHoldOn => 'Hold its payouts';
+
+  @override
+  String get brkActHoldOff => 'Resume its payouts';
+
+  @override
+  String get brkReasonHint => 'Write the reason';
+
+  @override
+  String get brkActionFailed => 'Could not do that.';
+
+  @override
+  String get brkPmBank => 'Bank transfer';
+
+  @override
+  String get brkPmCheque => 'Cheque';
+
+  @override
+  String get brkPmCash => 'Cash';
+
+  @override
+  String get brkPmOther => 'Other';
+
+  @override
+  String get brkFBroker => 'Firm';
+
+  @override
+  String get brkFAgent => 'Agent';
+
+  @override
+  String get brkFPhone => 'Phone';
+
+  @override
+  String get brkFEmail => 'Email';
+
+  @override
+  String get brkFCity => 'City';
+
+  @override
+  String get brkFProject => 'Project';
+
+  @override
+  String get brkFUnit => 'Unit';
+
+  @override
+  String get brkFCustomer => 'Customer';
+
+  @override
+  String get brkFAssigned => 'Sales rep';
+
+  @override
+  String get brkFSubmitted => 'Sent on';
+
+  @override
+  String get brkFReason => 'Reason';
+
+  @override
+  String get brkFBooking => 'Booking amount';
+
+  @override
+  String get brkFExpires => 'Booking ends';
+
+  @override
+  String get brkFTotal => 'Contract value';
+
+  @override
+  String get brkFDown => 'Down payment';
+
+  @override
+  String get brkFSigned => 'Signed on';
+
+  @override
+  String get brkFBasis => 'Commission basis';
+
+  @override
+  String get brkFCommission => 'Commission';
+
+  @override
+  String get brkFGross => 'Gross';
+
+  @override
+  String get brkFTax => 'Tax';
+
+  @override
+  String get brkFWithholding => 'Withholding';
+
+  @override
+  String get brkFNet => 'Net';
+
+  @override
+  String get brkFEarned => 'Earned on';
+
+  @override
+  String get brkFPeriod => 'Period';
+
+  @override
+  String get brkFMethod => 'Payment method';
+
+  @override
+  String get brkFReference => 'Reference';
+
+  @override
+  String get brkFContractPeriod => 'Contract period';
+
+  @override
+  String get brkFBank => 'Bank';
+
+  @override
+  String get brkFNotes => 'Notes';
 }
