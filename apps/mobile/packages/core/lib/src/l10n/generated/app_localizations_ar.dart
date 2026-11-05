@@ -8552,4 +8552,51 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bkMethodBank => 'تحويل بنكي';
+
+  @override
+  String fuCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n متابعة',
+      few: '$n متابعات',
+      two: 'متابعتان',
+      one: 'متابعة واحدة',
+      zero: 'لا متابعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fuOverdueHint => 'تحتاج اتصالك الآن';
+
+  @override
+  String get fuNoneToday => 'لا موعد اليوم';
+
+  @override
+  String get fuNoneUpcoming => 'لا مواعيد قادمة';
+
+  @override
+  String get fuLogResult => 'تسجيل نتيجة';
+
+  @override
+  String get fuBandToday => 'اليوم';
+
+  @override
+  String get calBandDay => 'اليوم';
+
+  @override
+  String get calBandVisits => 'زيارات';
+
+  @override
+  String get calBandFollowUps => 'متابعات';
+
+  @override
+  String get calBandContracts => 'عقود موقّعة';
+
+  @override
+  String get asSubtitle => 'يجيب من بيانات شركتك فقط';
+
+  @override
+  String get asTryAlso => 'جرّب أيضًا';
 }

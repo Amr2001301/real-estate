@@ -2835,5 +2835,18 @@
   "@bkEarnedOn": {"placeholders": {"date": {"type": "String"}}},
   "bkOnPayout": "On a payout statement",
   "bkWaitingPayout": "Waiting for a payout statement",
-  "bkMethodBank": "Bank transfer"
+  "bkMethodBank": "Bank transfer",
+  "fuCountN": "{n, plural, =0{No follow-ups} =1{1 follow-up} other{{n} follow-ups}}",
+  "@fuCountN": {"placeholders": {"n": {"type": "int"}}},
+  "fuOverdueHint": "Need a call now",
+  "fuNoneToday": "None today",
+  "fuNoneUpcoming": "None coming",
+  "fuLogResult": "Log a result",
+  "fuBandToday": "Today",
+  "calBandDay": "This day",
+  "calBandVisits": "Visits",
+  "calBandFollowUps": "Follow-ups",
+  "calBandContracts": "Signed contracts",
+  "asSubtitle": "Answers from your company's data only",
+  "asTryAlso": "Try also"
 }
