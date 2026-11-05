@@ -36,6 +36,14 @@ const _summary = <String, dynamic>{
     'prevMonthNewLeads': 20,
   },
   'cashflowForecast': {'next30': 1790000, 'next3160': 0, 'next6190': 0},
+  'portfolio': {'paid': 17000000, 'awaiting': 600000, 'overdue': 467200, 'notYetDue': 100000000, 'unscheduled': 0},
+  'topProjects': [
+    {'id': 'p1', 'name': 'مشروع النخيل', 'totalUnits': 20, 'availableUnits': 8, 'reservedUnits': 2, 'soldUnits': 10, 'signedContracts': 9, 'contractValue': 50000000},
+  ],
+  'leadSources': [
+    {'source': 'فيسبوك', 'count': 30},
+    {'source': 'موقع', 'count': 12},
+  ],
   'reservationTrend': [
     {'month': '2026-06', 'label': 'يونيو', 'value': 2},
     {'month': '2026-07', 'label': 'يوليو', 'value': 2},
@@ -94,6 +102,10 @@ void main() {
     expect(h.trend.first.$1, DateTime(2026, 6));
     expect(h.topSales.first.name, 'عمر الشناوي'); // highest sales first
     expect(h.topBrokers.single.commission, 396000);
+    expect(h.projects.single.sold, 10);
+    expect(h.leadSources.first, ('فيسبوك', 30));
+    expect(h.forecast, [1790000, 0, 0]);
+    expect(h.portfolio!.total, 118067200);
   });
 
   test('nothing due yet: no collection rate', () {
@@ -139,6 +151,11 @@ void main() {
     expect(find.text('أكتوبر'), findsOneWidget);
     expect(find.byKey(const Key('home-rank-r1')), findsOneWidget);
     expect(find.textContaining('عمولة'), findsOneWidget);
+    for (final k in ['ah-project-p1', 'ah-finance-health', 'ah-cash-flow', 'ah-lead-sources']) {
+      await t.scrollUntilVisible(find.byKey(Key(k)), 300, scrollable: find.byType(Scrollable).first);
+      expect(find.byKey(Key(k)), findsOneWidget);
+    }
+    await t.scrollUntilVisible(find.text('رانيا غالي'), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('رانيا غالي'), findsOneWidget);
     expect(find.text('طلب زيارة'), findsOneWidget);
   });

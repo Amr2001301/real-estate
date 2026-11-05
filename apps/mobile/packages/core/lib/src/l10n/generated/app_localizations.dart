@@ -15733,6 +15733,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visit details'**
   String get visitInfoTitle;
+
+  /// No description provided for @ahProjectHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get ahProjectHealth;
+
+  /// No description provided for @ahProjectContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} contracts · {value}'**
+  String ahProjectContracts(int n, String value);
+
+  /// No description provided for @ahUnitsWord.
+  ///
+  /// In en, this message translates to:
+  /// **'units'**
+  String get ahUnitsWord;
+
+  /// No description provided for @ahProjectSold.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} sold'**
+  String ahProjectSold(int n);
+
+  /// No description provided for @ahProjectReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} booked'**
+  String ahProjectReserved(int n);
+
+  /// No description provided for @ahProjectAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} available'**
+  String ahProjectAvailable(int n);
+
+  /// No description provided for @ahFinanceHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial health'**
+  String get ahFinanceHealth;
+
+  /// No description provided for @ahPfPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get ahPfPaid;
+
+  /// No description provided for @ahPfAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting payment'**
+  String get ahPfAwaiting;
+
+  /// No description provided for @ahPfOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ahPfOverdue;
+
+  /// No description provided for @ahPfNotYetDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not due yet'**
+  String get ahPfNotYetDue;
+
+  /// No description provided for @ahPfUnscheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Unscheduled'**
+  String get ahPfUnscheduled;
+
+  /// No description provided for @ahFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees and penalties collected'**
+  String get ahFees;
+
+  /// No description provided for @ahCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected cash flow'**
+  String get ahCashFlow;
+
+  /// No description provided for @ahCfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total over 90 days plus overdue'**
+  String get ahCfTotal;
+
+  /// No description provided for @ahCfSlot30.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 30 days'**
+  String get ahCfSlot30;
+
+  /// No description provided for @ahCfSlot60.
+  ///
+  /// In en, this message translates to:
+  /// **'31 to 60 days'**
+  String get ahCfSlot60;
+
+  /// No description provided for @ahCfSlot90.
+  ///
+  /// In en, this message translates to:
+  /// **'61 to 90 days'**
+  String get ahCfSlot90;
+
+  /// No description provided for @ahCfOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get ahCfOverdue;
+
+  /// No description provided for @ahLeadSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead sources'**
+  String get ahLeadSources;
+
+  /// No description provided for @ahSourcesOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get ahSourcesOther;
+
+  /// No description provided for @inqTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer inquiries'**
+  String get inqTitle;
+
+  /// No description provided for @inqProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'What customers and visitors asked'**
+  String get inqProfileDesc;
+
+  /// No description provided for @inqCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No inquiries} =1{1 inquiry} other{{n} inquiries}}'**
+  String inqCountN(int n);
+
+  /// No description provided for @inqStatusOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get inqStatusOpen;
+
+  /// No description provided for @inqStatusReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Replied'**
+  String get inqStatusReplied;
+
+  /// No description provided for @inqStatusClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get inqStatusClosed;
+
+  /// No description provided for @inqOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a reply'**
+  String get inqOpenHint;
+
+  /// No description provided for @inqAllAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'All answered'**
+  String get inqAllAnswered;
+
+  /// No description provided for @inqRepliedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get inqRepliedHint;
+
+  /// No description provided for @inqClosedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get inqClosedHint;
+
+  /// No description provided for @inqFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter inquiries'**
+  String get inqFilterTitle;
+
+  /// No description provided for @inqFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show inquiries'**
+  String get inqFilterApply;
+
+  /// No description provided for @inqEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No inquiries in this state.'**
+  String get inqEmpty;
+
+  /// No description provided for @inqVisitor.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitor'**
+  String get inqVisitor;
+
+  /// No description provided for @inqOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit owner'**
+  String get inqOwner;
+
+  /// No description provided for @inqBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing client'**
+  String get inqBrowser;
+
+  /// No description provided for @inqNoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitor without a name'**
+  String get inqNoName;
+
+  /// No description provided for @inqMarkReplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark replied'**
+  String get inqMarkReplied;
+
+  /// No description provided for @inqClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get inqClose;
+
+  /// No description provided for @inqActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update the inquiry.'**
+  String get inqActionFailed;
+
+  /// No description provided for @rpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get rpTitle;
+
+  /// No description provided for @rpProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales, conversion, projects and brokers'**
+  String get rpProfileDesc;
+
+  /// No description provided for @rpFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report period'**
+  String get rpFilterTitle;
+
+  /// No description provided for @rpFilterPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get rpFilterPeriod;
+
+  /// No description provided for @rpFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Show report'**
+  String get rpFilterApply;
+
+  /// No description provided for @rpPeriodThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get rpPeriodThisMonth;
+
+  /// No description provided for @rpPeriodLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get rpPeriodLastMonth;
+
+  /// No description provided for @rpPeriodQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'This quarter'**
+  String get rpPeriodQuarter;
+
+  /// No description provided for @rpPeriodYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This year'**
+  String get rpPeriodYear;
+
+  /// No description provided for @rpSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Total sales'**
+  String get rpSales;
+
+  /// No description provided for @rpAvgContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {value}'**
+  String rpAvgContract(String value);
+
+  /// No description provided for @rpContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts signed'**
+  String get rpContracts;
+
+  /// No description provided for @rpContractsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'In the period'**
+  String get rpContractsHint;
+
+  /// No description provided for @rpConversion.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversion'**
+  String get rpConversion;
+
+  /// No description provided for @rpConversionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead to contract'**
+  String get rpConversionHint;
+
+  /// No description provided for @rpCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get rpCollected;
+
+  /// No description provided for @rpCollectedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Towards the price'**
+  String get rpCollectedSub;
+
+  /// No description provided for @rpFees.
+  ///
+  /// In en, this message translates to:
+  /// **'Fees and penalties'**
+  String get rpFees;
+
+  /// No description provided for @rpTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts per month this year'**
+  String get rpTrend;
+
+  /// No description provided for @rpReservationStates.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking states'**
+  String get rpReservationStates;
+
+  /// No description provided for @rpResPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get rpResPending;
+
+  /// No description provided for @rpResConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get rpResConfirmed;
+
+  /// No description provided for @rpResApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rpResApproved;
+
+  /// No description provided for @rpResConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rpResConverted;
+
+  /// No description provided for @rpResCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rpResCancelled;
+
+  /// No description provided for @rpResExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get rpResExpired;
+
+  /// No description provided for @rpProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects by sales'**
+  String get rpProjects;
+
+  /// No description provided for @rpUnknownProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown project'**
+  String get rpUnknownProject;
+
+  /// No description provided for @rpNoSales.
+  ///
+  /// In en, this message translates to:
+  /// **'No sales in this period.'**
+  String get rpNoSales;
 }
 
 class _AppLocalizationsDelegate

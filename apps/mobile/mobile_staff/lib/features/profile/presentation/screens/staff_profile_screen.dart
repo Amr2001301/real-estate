@@ -106,6 +106,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                   label: l10n.targetsTitle,
                   subtitle: l10n.staffMyTargetsDesc,
                   onTap: () => context.push('/targets')),
+              if (StaffAccess.inquiries(role, perms))
+                ProfileItem(
+                    id: 'inquiries',
+                    icon: Icons.question_answer_rounded,
+                    label: l10n.inqTitle,
+                    subtitle: l10n.inqProfileDesc,
+                    onTap: () => context.push('/inquiries')),
               ProfileItem(
                   id: 'bonus', icon: Icons.payments_rounded, label: l10n.bonusTitle, subtitle: l10n.staffMyBonusDesc, onTap: () => context.push('/bonus')),
               ProfileItem(
@@ -159,6 +166,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                     label: l10n.paymentReviewTitle,
                     onTap: () => context.push('/payments-review')),
               // The brokers' performance report is the admin's.
+              if (StaffAccess.reports(role, perms))
+                ProfileItem(
+                    id: 'reports',
+                    icon: Icons.bar_chart_rounded,
+                    label: l10n.rpTitle,
+                    subtitle: l10n.rpProfileDesc,
+                    onTap: () => context.push('/reports')),
               if (role == AppRole.admin)
                 ProfileItem(id: 'brokers', icon: Icons.handshake_rounded, label: l10n.bpTitle, onTap: () => context.push('/performance/brokers')),
             ],

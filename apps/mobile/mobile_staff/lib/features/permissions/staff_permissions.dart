@@ -34,6 +34,14 @@ abstract final class StaffAccess {
   /// API's /users is ADMIN-only; no code opens it).
   static bool clients(AppRole? r, StaffPermissions p) => r == AppRole.admin;
 
+  /// «استفسارات العملاء» (visits:read); answering or closing one asks for
+  /// visits:approve, as the website.
+  static bool inquiries(AppRole? r, StaffPermissions p) => _manager(r) || p.has('visits:read');
+  static bool inquiriesAct(AppRole? r, StaffPermissions p) => _manager(r) || p.has('visits:approve');
+
+  /// «التقارير» — the sales report (reports:sales:read; the admin has it).
+  static bool reports(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('reports:sales:read');
+
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
 }

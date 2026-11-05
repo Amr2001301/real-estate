@@ -26,6 +26,8 @@ import '../features/campaigns/presentation/campaigns_screen.dart';
 import '../features/calendar/presentation/calendar_cubit.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/clients/client_detail_screen.dart';
+import '../features/inquiries/inquiries_screen.dart';
+import '../features/reports/reports_screen.dart';
 import '../features/clients/clients_data.dart';
 import '../features/clients/domain/repositories/clients_repository.dart';
 import '../features/clients/domain/usecases/client_use_cases.dart';
@@ -590,6 +592,30 @@ GoRouter createStaffRouter(
             ),
           );
         },
+      ),
+
+      // ── Customer inquiries (visits:read, as on the website) ─────────────
+      GoRoute(
+        path: '/inquiries',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.inquiries,
+          child: Builder(builder: (ctx) {
+            final perms = ctx.watch<StaffPermissionsCubit>().state;
+            return InquiriesScreen(
+              repository: InquiriesRepository(ctx.read<Dio>()),
+              canAct: StaffAccess.inquiriesAct(ctx.read<SessionCubit>().state.role, perms),
+            );
+          }),
+        ),
+      ),
+
+      // ── Sales report (reports:sales:read, as on the website) ────────────
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.reports,
+          child: Builder(builder: (ctx) => ReportsScreen(repository: ReportsRepository(ctx.read<Dio>()))),
+        ),
       ),
 
       // ── Projects list ────────────────────────────────────────────────────

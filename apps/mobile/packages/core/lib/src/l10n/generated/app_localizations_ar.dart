@@ -8931,4 +8931,235 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get visitInfoTitle => 'بيانات الزيارة';
+
+  @override
+  String get ahProjectHealth => 'حالة المشاريع';
+
+  @override
+  String ahProjectContracts(int n, String value) {
+    return '$n عقد · $value';
+  }
+
+  @override
+  String get ahUnitsWord => 'وحدة';
+
+  @override
+  String ahProjectSold(int n) {
+    return 'مباعة $n';
+  }
+
+  @override
+  String ahProjectReserved(int n) {
+    return 'محجوزة $n';
+  }
+
+  @override
+  String ahProjectAvailable(int n) {
+    return 'متاحة $n';
+  }
+
+  @override
+  String get ahFinanceHealth => 'الصحة المالية';
+
+  @override
+  String get ahPfPaid => 'مدفوع';
+
+  @override
+  String get ahPfAwaiting => 'بانتظار السداد';
+
+  @override
+  String get ahPfOverdue => 'متأخر';
+
+  @override
+  String get ahPfNotYetDue => 'لم يحن موعده';
+
+  @override
+  String get ahPfUnscheduled => 'غير مجدول';
+
+  @override
+  String get ahFees => 'رسوم وغرامات محصّلة';
+
+  @override
+  String get ahCashFlow => 'التدفق النقدي المتوقع';
+
+  @override
+  String get ahCfTotal => 'الإجمالي خلال ٩٠ يومًا والمتأخر';
+
+  @override
+  String get ahCfSlot30 => 'خلال ٣٠ يومًا';
+
+  @override
+  String get ahCfSlot60 => 'من ٣١ إلى ٦٠ يومًا';
+
+  @override
+  String get ahCfSlot90 => 'من ٦١ إلى ٩٠ يومًا';
+
+  @override
+  String get ahCfOverdue => 'متأخر';
+
+  @override
+  String get ahLeadSources => 'مصادر العملاء المحتملين';
+
+  @override
+  String get ahSourcesOther => 'أخرى';
+
+  @override
+  String get inqTitle => 'استفسارات العملاء';
+
+  @override
+  String get inqProfileDesc => 'ما سأل عنه العملاء والزوار';
+
+  @override
+  String inqCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n استفسارًا',
+      few: '$n استفسارات',
+      two: 'استفساران',
+      one: 'استفسار واحد',
+      zero: 'لا استفسارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get inqStatusOpen => 'مفتوح';
+
+  @override
+  String get inqStatusReplied => 'تم الرد';
+
+  @override
+  String get inqStatusClosed => 'مغلق';
+
+  @override
+  String get inqOpenHint => 'تنتظر ردًّا';
+
+  @override
+  String get inqAllAnswered => 'كلها أُجيب عنها';
+
+  @override
+  String get inqRepliedHint => 'أُجيب عنها';
+
+  @override
+  String get inqClosedHint => 'انتهت';
+
+  @override
+  String get inqFilterTitle => 'تصفية الاستفسارات';
+
+  @override
+  String get inqFilterApply => 'عرض الاستفسارات';
+
+  @override
+  String get inqEmpty => 'لا استفسارات بهذه الحالة.';
+
+  @override
+  String get inqVisitor => 'زائر';
+
+  @override
+  String get inqOwner => 'مالك وحدة';
+
+  @override
+  String get inqBrowser => 'متصفّح';
+
+  @override
+  String get inqNoName => 'زائر دون اسم';
+
+  @override
+  String get inqMarkReplied => 'تم الرد';
+
+  @override
+  String get inqClose => 'إغلاق';
+
+  @override
+  String get inqActionFailed => 'تعذّر تحديث الاستفسار.';
+
+  @override
+  String get rpTitle => 'التقارير';
+
+  @override
+  String get rpProfileDesc => 'المبيعات والتحويل والمشاريع والوسطاء';
+
+  @override
+  String get rpFilterTitle => 'فترة التقرير';
+
+  @override
+  String get rpFilterPeriod => 'الفترة';
+
+  @override
+  String get rpFilterApply => 'عرض التقرير';
+
+  @override
+  String get rpPeriodThisMonth => 'هذا الشهر';
+
+  @override
+  String get rpPeriodLastMonth => 'الشهر الماضي';
+
+  @override
+  String get rpPeriodQuarter => 'هذا الربع';
+
+  @override
+  String get rpPeriodYear => 'هذه السنة';
+
+  @override
+  String get rpSales => 'إجمالي المبيعات';
+
+  @override
+  String rpAvgContract(String value) {
+    return 'المتوسط $value';
+  }
+
+  @override
+  String get rpContracts => 'عقود موقّعة';
+
+  @override
+  String get rpContractsHint => 'في الفترة';
+
+  @override
+  String get rpConversion => 'نسبة التحويل';
+
+  @override
+  String get rpConversionHint => 'من عميل محتمل إلى عقد';
+
+  @override
+  String get rpCollected => 'المحصَّل';
+
+  @override
+  String get rpCollectedSub => 'من ثمن العقود';
+
+  @override
+  String get rpFees => 'رسوم وغرامات';
+
+  @override
+  String get rpTrend => 'العقود شهريًّا هذا العام';
+
+  @override
+  String get rpReservationStates => 'حالات الحجوزات';
+
+  @override
+  String get rpResPending => 'قيد الانتظار';
+
+  @override
+  String get rpResConfirmed => 'مؤكَّد';
+
+  @override
+  String get rpResApproved => 'معتمد';
+
+  @override
+  String get rpResConverted => 'تحوّل إلى عقد';
+
+  @override
+  String get rpResCancelled => 'ملغى';
+
+  @override
+  String get rpResExpired => 'منتهٍ';
+
+  @override
+  String get rpProjects => 'المشاريع حسب المبيعات';
+
+  @override
+  String get rpUnknownProject => 'مشروع غير معروف';
+
+  @override
+  String get rpNoSales => 'لا مبيعات في هذه الفترة.';
 }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../common/role_label.dart';
 import '../home_kit/home_kit.dart';
 import 'admin_home_data.dart';
+import 'admin_home_panels.dart';
 
 /// The company admin's home (owner-approved design, 2026-11-04), with the
 /// figures of the admin dashboard on the website: the contracts' value and
@@ -107,6 +108,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     HomeSection(
                       icon: Icons.handshake_rounded,
                       title: l10n.ahTopBrokers,
+                      action: l10n.mhPerformance,
+                      onAction: () => context.push('/performance/brokers'),
                       child: HomeRankList(
                         empty: l10n.ahNoBrokers,
                         rows: [
@@ -125,6 +128,34 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         ],
                       ),
                     ),
+                    if (data.projects.isNotEmpty)
+                      HomeSection(
+                        icon: Icons.apartment_rounded,
+                        title: l10n.ahProjectHealth,
+                        action: l10n.navProjects,
+                        onAction: () => context.push('/projects'),
+                        child: AdminProjectHealth(projects: data.projects, onOpen: (p) => context.push('/projects/${p.id}')),
+                      ),
+                    if (data.portfolio != null && data.portfolio!.total > 0)
+                      HomeSection(
+                        icon: Icons.account_balance_wallet_rounded,
+                        title: l10n.ahFinanceHealth,
+                        child: AdminFinanceHealth(portfolio: data.portfolio!, fees: data.fees),
+                      ),
+                    if (data.forecast.any((v) => v > 0) || data.overdue > 0)
+                      HomeSection(
+                        icon: Icons.waterfall_chart_rounded,
+                        title: l10n.ahCashFlow,
+                        action: l10n.ledgerTitle,
+                        onAction: () => context.push('/ledger'),
+                        child: AdminCashFlow(forecast: data.forecast, overdue: data.overdue),
+                      ),
+                    if (data.leadSources.isNotEmpty)
+                      HomeSection(
+                        icon: Icons.donut_large_rounded,
+                        title: l10n.ahLeadSources,
+                        child: AdminLeadSources(sources: data.leadSources),
+                      ),
                     HomeSection(
                       icon: Icons.history_rounded,
                       title: l10n.ahActivity,
@@ -264,7 +295,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             tone: HomeTone.sky,
             count: a.infoRequestsOpen,
             label: l10n.ahAttInquiries,
-            onTap: () => widget.onSwitchTab?.call(1),
+            onTap: () => context.push('/inquiries'),
           ),
           HomeAttention(
             id: 'proofs',
