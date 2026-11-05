@@ -1,566 +1,60 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../domain/entities/installment.dart';
-import '../cubit/installment_plans_cubit.dart';
+import '../../../catalog/domain/repositories/staff_catalog_repository.dart';
 import '../../../dashboard/home_kit/home_kit.dart';
+import '../../domain/repositories/installments_repository.dart';
+import 'calculator_unit_plans.dart';
 
-const _navy = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
-
-class InstallmentPlansScreen extends StatefulWidget {
+/// «خطط التقسيط»: the same way as the calculator — pick the project, then
+/// one of its units, and that unit's own payment plans come up with every
+/// duration and its instalment. A unit with no plans says so.
+class InstallmentPlansScreen extends StatelessWidget {
   const InstallmentPlansScreen({super.key});
-
-  @override
-  State<InstallmentPlansScreen> createState() => _InstallmentPlansScreenState();
-}
-
-class _InstallmentPlansScreenState extends State<InstallmentPlansScreen> {
-  final _search = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<InstallmentPlansCubit>().load();
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-
-    return Scaffold(
-      body: Column(
-        children: [
-          _PlansHeader(
-            l10n: l10n,
-            searchController: _search,
-            onSearch: context.read<InstallmentPlansCubit>().search,
-          ),
-          Expanded(
-            child: BlocBuilder<InstallmentPlansCubit, InstallmentPlansState>(
-              builder: (context, state) {
-                if (state.status == DataStatus.loading ||
-                    state.status == DataStatus.initial) {
-                  return _PlansSkeleton();
-                }
-                if (state.status == DataStatus.failure) {
-                  return _ErrorView(
-                    onRetry: () => context.read<InstallmentPlansCubit>().load(),
-                  );
-                }
-                final plans = state.filtered;
-                if (plans.isEmpty) {
-                  return _EmptyView(l10n: l10n);
-                }
-                return ListView.separated(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.xl + bottomPad,
-                  ),
-                  itemCount: plans.length,
-                  separatorBuilder: (_, i) =>
-                      const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, i) => _PlanCard(
-                    template: plans[i],
-                    l10n: l10n,
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/calculator'),
-        tooltip: l10n.planTemplatesOpenCalculator,
-        child: const Icon(Icons.calculate_rounded),
-      ),
-    );
-  }
-}
-
-// ── Navy hero header with search bar ─────────────────────────────────────────
-
-class _PlansHeader extends StatelessWidget {
-  const _PlansHeader({
-    required this.l10n,
-    required this.searchController,
-    required this.onSearch,
-  });
-  final AppLocalizations l10n;
-  final TextEditingController searchController;
-  final ValueChanged<String> onSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    return HomeListHero(back: true, title: l10n.planTemplatesTitle, subtitle: l10n.planTemplatesSubtitle, bottom: HomeSearchField(controller: searchController, hint: l10n.planTemplatesSearch, onSubmitted: onSearch, onClear: () {
-        searchController.clear();
-        onSearch('');
-      }));
-  }
-}
-
-// ── Plan template card ────────────────────────────────────────────────────────
-
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.template, required this.l10n});
-  final InstallmentPlanTemplate template;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: homeCard(context, radius: 24),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md + 2,
-              AppSpacing.md,
-              AppSpacing.md,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [_navyLight, _navy],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_rounded,
-                    size: 20,
-                    color: AppPalette.gold300,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ltrRuns(template.name),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: colors.inkStrong,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        l10n.planTemplatesMonths(
-                          template.durations.isNotEmpty
-                              ? template.durations.map((d) => d.durationMonths).reduce((a, b) => a > b ? a : b)
-                              : 0,
-                        ),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.inkMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Use plan → go to calculator
-                Material(
-                  color: AppPalette.gold50,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: const BorderSide(color: AppPalette.gold100)),
-                  child: InkWell(
-                    key: Key('plan-calc-${template.id}'),
-                    borderRadius: BorderRadius.circular(13),
-                    onTap: () => context.push('/calculator', extra: {'templateId': template.id}),
-                    child: Tooltip(
-                      message: l10n.calculatorTitle,
-                      child: const SizedBox(width: 40, height: 40, child: Icon(Icons.calculate_rounded, size: 20, color: AppPalette.gold600)),
-                    ),
-                  ),
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appColors.canvas,
+        body: ListView(
+          key: const Key('installment-plans'),
+          padding: EdgeInsets.only(bottom: bottom + 32),
+          children: [
+            HomeListHero(
+              back: true,
+              title: l10n.planTemplatesTitle,
+              subtitle: l10n.planTemplatesSubtitle,
+              actions: [
+                HomeHeroButton(
+                  key: const Key('plans-calculator'),
+                  icon: Icons.calculate_rounded,
+                  tooltip: l10n.calculatorTitle,
+                  onTap: () => context.push('/calculator'),
                 ),
               ],
             ),
-          ),
-
-          // Duration chips
-          if (template.durations.isNotEmpty) ...[
-            Container(
-              height: 1,
-              color: AppPalette.gold400.withValues(alpha: 0.08),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: template.durations.map((d) {
-                  return _DurationPill(
-                    months: d.durationMonths,
-                    increase: d.increasePercentage,
-                    l10n: l10n,
-                    onTap: () => context.push(
-                      '/calculator',
-                      extra: {
-                        'templateId': template.id,
-                        'durationMonths': d.durationMonths,
-                        'increasePercentage': d.increasePercentage,
-                      },
-                    ),
-                  );
-                }).toList(),
+            HomeSection(
+              icon: Icons.view_list_rounded,
+              title: l10n.calculatorUnitSection,
+              child: CalculatorUnitPlans(
+                catalog: context.read<StaffCatalogRepository>(),
+                installments: context.read<InstallmentsRepository>(),
+                noPlansText: l10n.plansNoUnitPlans,
+                pickHint: l10n.plansPickHint,
+                onUnitPrice: (_) {},
+                onApply: (_, _) {},
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _DurationPill extends StatelessWidget {
-  const _DurationPill({
-    required this.months,
-    required this.increase,
-    required this.l10n,
-    required this.onTap,
-  });
-  final int months;
-  final double increase;
-  final AppLocalizations l10n;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF8EC),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: AppPalette.gold400.withValues(alpha: 0.30),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.calendar_month_rounded,
-              size: 12,
-              color: Color(0xFFB8973A),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              l10n.planTemplatesMonths(months),
-              style: const TextStyle(
-                color: _navy,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (increase > 0) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: AppPalette.gold400.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '+${increase.toStringAsFixed(increase.truncateToDouble() == increase ? 0 : 1)}%',
-                  style: const TextStyle(
-                    color: Color(0xFFB8973A),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );
   }
 }
-
-// ── Shimmer skeleton ──────────────────────────────────────────────────────────
-
-class _PlansSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return AppSkeletonizer(
-      enabled: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xl),
-        itemCount: 4,
-        separatorBuilder: (_, i) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (_, i) => Container(
-          decoration: BoxDecoration(
-            color: context.appColors.surface,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(
-                        color: context.appColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('اسم خطة التقسيط',
-                              style: Theme.of(context).textTheme.titleSmall),
-                          const SizedBox(height: 4),
-                          Text('حتى 24 شهراً',
-                              style: Theme.of(context).textTheme.bodySmall),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      width: 80, height: 30,
-                      decoration: BoxDecoration(
-                        color: context.appColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(height: 1, color: context.appColors.hairline),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: List.generate(
-                    3,
-                    (_) => Container(
-                      width: 72, height: 28,
-                      decoration: BoxDecoration(
-                        color: context.appColors.surfaceSoft,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-class _EmptyView extends StatelessWidget {
-  const _EmptyView({required this.l10n});
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFF4D6), Color(0xFFFFE5A0)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Icon(
-                Icons.receipt_long_rounded,
-                size: 34,
-                color: AppPalette.gold500,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              l10n.planTemplatesEmpty,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colors.inkStrong,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              l10n.planTemplatesEmptyDesc,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.inkMuted,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Error state ───────────────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.onRetry});
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline_rounded, size: 40, color: colors.error),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            context.l10n.errorUnknown,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: colors.inkMuted),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppButton(
-            label: context.l10n.actionRetry,
-            variant: AppButtonVariant.outline,
-            onPressed: onRetry,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── White-pill search bar ─────────────────────────────────────────────────────
-
-class _PlansSearchBar extends StatefulWidget {
-  const _PlansSearchBar({
-    required this.controller,
-    required this.hint,
-    required this.onChanged,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_PlansSearchBar> createState() => _PlansSearchBarState();
-}
-
-class _PlansSearchBarState extends State<_PlansSearchBar> {
-  bool _hasText = false;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onControllerChange);
-  }
-
-  void _onControllerChange() {
-    final has = widget.controller.text.isNotEmpty;
-    if (has != _hasText) setState(() => _hasText = has);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onControllerChange);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Container(
-      height: 46,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadii.pillAll,
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 14),
-          Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: widget.controller,
-              onChanged: widget.onChanged,
-              style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: widget.hint,
-                hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkMuted,
-                ),
-              ),
-            ),
-          ),
-          if (_hasText)
-            IconButton(
-              icon: Icon(Icons.close_rounded, size: 18, color: colors.inkMuted),
-              visualDensity: VisualDensity.compact,
-              onPressed: () {
-                widget.controller.clear();
-                widget.onChanged('');
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Circle back button ────────────────────────────────────────────────────────
-

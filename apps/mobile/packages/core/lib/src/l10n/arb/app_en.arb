@@ -2947,5 +2947,7 @@
   "visitsCountN": "{n, plural, =0{no visits} =1{1 visit} other{{n} visits}}",
   "@visitsCountN": {"placeholders": {"n": {"type": "int"}}},
   "maintenanceFilterTitle": "Filter requests",
-  "maintenanceFilterApply": "Show requests"
+  "maintenanceFilterApply": "Show requests",
+  "plansNoUnitPlans": "This unit has no payment plans.",
+  "plansPickHint": "Pick the project, then the unit, to see its payment plans."
 }

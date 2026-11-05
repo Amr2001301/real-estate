@@ -8922,4 +8922,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceFilterApply => 'عرض الطلبات';
+
+  @override
+  String get plansNoUnitPlans => 'لا توجد خطط تقسيط لهذه الوحدة.';
+
+  @override
+  String get plansPickHint => 'اختر المشروع ثم الوحدة لتظهر خطط سدادها.';
 }

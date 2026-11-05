@@ -8885,4 +8885,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maintenanceFilterApply => 'Show requests';
+
+  @override
+  String get plansNoUnitPlans => 'This unit has no payment plans.';
+
+  @override
+  String get plansPickHint =>
+      'Pick the project, then the unit, to see its payment plans.';
 }
