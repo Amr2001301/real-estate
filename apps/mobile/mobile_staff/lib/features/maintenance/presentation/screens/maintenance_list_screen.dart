@@ -656,9 +656,9 @@ class _DetailsRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(
-                Icons.arrow_back_ios_new_rounded,
+                AppIcons.chevronForward,
                 color: accent,
-                size: 13,
+                size: 16,
               ),
             ),
           ],
