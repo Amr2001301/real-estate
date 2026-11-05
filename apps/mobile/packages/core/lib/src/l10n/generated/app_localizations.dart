@@ -13501,6 +13501,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New booking'**
   String get rvNew;
+
+  /// No description provided for @rnSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Goes for review once saved'**
+  String get rnSub;
+
+  /// No description provided for @rnStepClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Client'**
+  String get rnStepClient;
+
+  /// No description provided for @rnStepUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get rnStepUnit;
+
+  /// No description provided for @rnStepPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get rnStepPlan;
+
+  /// No description provided for @rnStepBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get rnStepBooking;
+
+  /// No description provided for @rnChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get rnChange;
+
+  /// No description provided for @rnPickClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the client'**
+  String get rnPickClient;
+
+  /// No description provided for @rnSearchClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get rnSearchClient;
+
+  /// No description provided for @rnPickProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the project'**
+  String get rnPickProject;
+
+  /// No description provided for @rnPickUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the unit'**
+  String get rnPickUnit;
+
+  /// No description provided for @rnSearchUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by unit code'**
+  String get rnSearchUnit;
+
+  /// No description provided for @rnNoUnitsFree.
+  ///
+  /// In en, this message translates to:
+  /// **'No units available'**
+  String get rnNoUnitsFree;
+
+  /// No description provided for @rnUnitFixed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit chosen'**
+  String get rnUnitFixed;
+
+  /// No description provided for @rnNoPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No plan'**
+  String get rnNoPlan;
+
+  /// No description provided for @rnNoPlanSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Priced without a payment plan'**
+  String get rnNoPlanSub;
+
+  /// No description provided for @rnCashSub.
+  ///
+  /// In en, this message translates to:
+  /// **'One payment'**
+  String get rnCashSub;
+
+  /// No description provided for @rnTermsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{months} months'**
+  String rnTermsSub(String months);
+
+  /// No description provided for @rnPlanDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} down'**
+  String rnPlanDown(String pct);
+
+  /// No description provided for @rnPerMonthFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {amount} a month'**
+  String rnPerMonthFrom(String amount);
+
+  /// No description provided for @rnPlansHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans available for this unit'**
+  String get rnPlansHint;
+
+  /// No description provided for @rnPickUnitFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the unit first to see its plans'**
+  String get rnPickUnitFirst;
+
+  /// No description provided for @rnSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking summary'**
+  String get rnSummary;
+
+  /// No description provided for @rnSumPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get rnSumPrice;
+
+  /// No description provided for @rnSumBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get rnSumBooking;
+
+  /// No description provided for @rnSumDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get rnSumDown;
+
+  /// No description provided for @rnSumMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly instalment'**
+  String get rnSumMonthly;
+
+  /// No description provided for @rnBookingFromPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'From the plan'**
+  String get rnBookingFromPlan;
+
+  /// No description provided for @rnMonthlyShort.
+  ///
+  /// In en, this message translates to:
+  /// **'a month'**
+  String get rnMonthlyShort;
+
+  /// No description provided for @rnExp24.
+  ///
+  /// In en, this message translates to:
+  /// **'1 day'**
+  String get rnExp24;
+
+  /// No description provided for @rnExp72.
+  ///
+  /// In en, this message translates to:
+  /// **'3 days'**
+  String get rnExp72;
+
+  /// No description provided for @rnExp168.
+  ///
+  /// In en, this message translates to:
+  /// **'1 week'**
+  String get rnExp168;
+
+  /// No description provided for @rnExp336.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get rnExp336;
+
+  /// No description provided for @rnModePlanSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked out from the chosen plan'**
+  String get rnModePlanSub;
+
+  /// No description provided for @rnModeFixedSub.
+  ///
+  /// In en, this message translates to:
+  /// **'You enter the amount'**
+  String get rnModeFixedSub;
+
+  /// No description provided for @rnModePercentSub.
+  ///
+  /// In en, this message translates to:
+  /// **'A share of the unit price'**
+  String get rnModePercentSub;
+
+  /// No description provided for @rnHoldUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date} unless reviewed'**
+  String rnHoldUntil(String date);
+
+  /// No description provided for @rnHoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the booking for'**
+  String get rnHoldLabel;
 }
 
 class _AppLocalizationsDelegate

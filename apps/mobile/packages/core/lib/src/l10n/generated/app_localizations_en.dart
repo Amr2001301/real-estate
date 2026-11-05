@@ -7603,4 +7603,123 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rvNew => 'New booking';
+
+  @override
+  String get rnSub => 'Goes for review once saved';
+
+  @override
+  String get rnStepClient => 'Client';
+
+  @override
+  String get rnStepUnit => 'Unit';
+
+  @override
+  String get rnStepPlan => 'Plan';
+
+  @override
+  String get rnStepBooking => 'Booking';
+
+  @override
+  String get rnChange => 'Change';
+
+  @override
+  String get rnPickClient => 'Choose the client';
+
+  @override
+  String get rnSearchClient => 'Search by name or phone';
+
+  @override
+  String get rnPickProject => 'Choose the project';
+
+  @override
+  String get rnPickUnit => 'Choose the unit';
+
+  @override
+  String get rnSearchUnit => 'Search by unit code';
+
+  @override
+  String get rnNoUnitsFree => 'No units available';
+
+  @override
+  String get rnUnitFixed => 'Unit chosen';
+
+  @override
+  String get rnNoPlan => 'No plan';
+
+  @override
+  String get rnNoPlanSub => 'Priced without a payment plan';
+
+  @override
+  String get rnCashSub => 'One payment';
+
+  @override
+  String rnTermsSub(String months) {
+    return '$months months';
+  }
+
+  @override
+  String rnPlanDown(String pct) {
+    return '$pct down';
+  }
+
+  @override
+  String rnPerMonthFrom(String amount) {
+    return 'From $amount a month';
+  }
+
+  @override
+  String get rnPlansHint => 'Plans available for this unit';
+
+  @override
+  String get rnPickUnitFirst => 'Choose the unit first to see its plans';
+
+  @override
+  String get rnSummary => 'Booking summary';
+
+  @override
+  String get rnSumPrice => 'Unit price';
+
+  @override
+  String get rnSumBooking => 'Booking amount';
+
+  @override
+  String get rnSumDown => 'Down payment';
+
+  @override
+  String get rnSumMonthly => 'Monthly instalment';
+
+  @override
+  String get rnBookingFromPlan => 'From the plan';
+
+  @override
+  String get rnMonthlyShort => 'a month';
+
+  @override
+  String get rnExp24 => '1 day';
+
+  @override
+  String get rnExp72 => '3 days';
+
+  @override
+  String get rnExp168 => '1 week';
+
+  @override
+  String get rnExp336 => '2 weeks';
+
+  @override
+  String get rnModePlanSub => 'Worked out from the chosen plan';
+
+  @override
+  String get rnModeFixedSub => 'You enter the amount';
+
+  @override
+  String get rnModePercentSub => 'A share of the unit price';
+
+  @override
+  String rnHoldUntil(String date) {
+    return 'Ends $date unless reviewed';
+  }
+
+  @override
+  String get rnHoldLabel => 'Hold the booking for';
 }

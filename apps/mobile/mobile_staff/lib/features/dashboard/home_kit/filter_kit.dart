@@ -299,11 +299,14 @@ class FilterSegments<T> extends StatelessWidget {
 
 /// A card of rows with a radio, the label and the count — for long lists.
 class FilterRadioList<T> extends StatelessWidget {
-  const FilterRadioList({super.key, required this.options, required this.selected, required this.onSelect, this.keyPrefix = 'filter-row'});
+  const FilterRadioList({super.key, required this.options, required this.selected, required this.onSelect, this.keyPrefix = 'filter-row', this.stacked = false});
   final List<FilterOption<T>> options;
   final T selected;
   final ValueChanged<T> onSelect;
   final String keyPrefix;
+
+  /// The sub-text under the label (a sentence) rather than beside it (a count).
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
@@ -333,8 +336,17 @@ class FilterRadioList<T> extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
-                if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                if (stacked)
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                      if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                    ]),
+                  )
+                else ...[
+                  Expanded(child: Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
+                  if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                ],
               ]),
             ),
           ),
