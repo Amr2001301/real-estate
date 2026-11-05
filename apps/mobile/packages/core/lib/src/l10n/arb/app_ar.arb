@@ -2939,5 +2939,7 @@
   "visitsCountN": "{n, plural, =0{لا زيارات} =1{زيارة واحدة} =2{زيارتان} few{{n} زيارات} other{{n} زيارة}}",
   "@visitsCountN": {"placeholders": {"n": {"type": "int"}}},
   "maintenanceFilterTitle": "تصفية الطلبات",
-  "maintenanceFilterApply": "عرض الطلبات"
+  "maintenanceFilterApply": "عرض الطلبات",
+  "plansNoUnitPlans": "لا توجد خطط تقسيط لهذه الوحدة.",
+  "plansPickHint": "اختر المشروع ثم الوحدة لتظهر خطط سدادها."
 }

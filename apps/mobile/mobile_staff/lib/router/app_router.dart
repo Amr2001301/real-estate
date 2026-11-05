@@ -125,7 +125,6 @@ import '../features/notifications/presentation/screens/notifications_screen.dart
 import '../features/installments/domain/repositories/installments_repository.dart';
 import '../features/installments/domain/usecases/installment_use_cases.dart';
 import '../features/installments/presentation/cubit/calculator_cubit.dart';
-import '../features/installments/presentation/cubit/installment_plans_cubit.dart';
 import '../features/installments/presentation/screens/calculator_screen.dart';
 import '../features/installments/presentation/screens/installment_plans_screen.dart';
 import '../features/reservations/domain/repositories/reservations_repository.dart';
@@ -892,12 +891,7 @@ GoRouter createStaffRouter(
       // ── Installment plan templates list ─────────────────────────────────
       GoRoute(
         path: '/installment-plans',
-        builder: (context, state) => BlocProvider(
-          create: (ctx) => InstallmentPlansCubit(
-            GetPlanTemplates(ctx.read<InstallmentsRepository>()),
-          ),
-          child: const InstallmentPlansScreen(),
-        ),
+        builder: (context, state) => const InstallmentPlansScreen(),
       ),
 
       // ── Installment calculator ───────────────────────────────────────────

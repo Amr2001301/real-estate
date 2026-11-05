@@ -15715,6 +15715,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show requests'**
   String get maintenanceFilterApply;
+
+  /// No description provided for @plansNoUnitPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'This unit has no payment plans.'**
+  String get plansNoUnitPlans;
+
+  /// No description provided for @plansPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick the project, then the unit, to see its payment plans.'**
+  String get plansPickHint;
 }
 
 class _AppLocalizationsDelegate

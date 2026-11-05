@@ -20,11 +20,19 @@ class CalculatorUnitPlans extends StatefulWidget {
     required this.onApply,
     required this.onUnitPrice,
     this.projectId,
+    this.noPlansText,
+    this.pickHint,
   });
 
   final StaffCatalogRepository catalog;
   final InstallmentsRepository installments;
   final String? projectId;
+
+  /// What to say when a unit has no plans (the calculator says it can be done by hand).
+  final String? noPlansText;
+
+  /// A line under the pickers until a unit is chosen.
+  final String? pickHint;
 
   /// A unit was chosen: its price, for the manual figures.
   final void Function(double price) onUnitPrice;
@@ -221,6 +229,12 @@ class _CalculatorUnitPlansState extends State<CalculatorUnitPlans> {
             ],
           ),
         ),
+        if (_unit == null && widget.pickHint != null)
+          Padding(
+            key: const Key('plans-pick-hint'),
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(widget.pickHint!, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+          ),
         if (_loadingOffers)
           const Padding(
             padding: EdgeInsets.all(20),
@@ -231,7 +245,7 @@ class _CalculatorUnitPlansState extends State<CalculatorUnitPlans> {
             key: const Key('calc-no-plans'),
             padding: const EdgeInsets.only(top: 12),
             child: Text(
-              l10n.calculatorNoPlans,
+              widget.noPlansText ?? l10n.calculatorNoPlans,
               style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
             ),
           )
