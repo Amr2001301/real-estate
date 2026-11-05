@@ -271,214 +271,124 @@ class _ContractCard extends StatelessWidget {
     final signed = contract.status == ContractStatus.signed;
     final projectName = contract.projectName.resolve(lang);
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = signed
+        ? (dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))
+        : colors.inkMuted;
+    final unitLine = [
+      unitTypeLabel(contract.unitType, languageCode: lang),
+      contract.unitCode,
+    ].where((e) => e.isNotEmpty).join(' · ');
+    final date = contract.signedAt ?? contract.createdAt;
+    final dateLabel = contract.signedAt != null
+        ? l10n.myPropertySignedDate
+        : context.l10n.createdDateLabel;
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
-          if (signed)
-            BoxShadow(
-              color: AppPalette.gold400.withValues(alpha: 0.05),
-              blurRadius: 28,
-              spreadRadius: 2,
-            ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Navy gradient strip
-          SizedBox(
-            height: 100,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_navyLight, _navyDeep],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppPalette.gold400.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  AppIcons.contract,
+                  color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      contract.contractNumber ?? projectName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                ),
-                const IgnorePointer(child: _DotTexture()),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 1,
-                    color: AppPalette.gold400.withValues(alpha: 0.3),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25),
-                          ),
+                    if (contract.contractNumber != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        projectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.inkMuted,
                         ),
-                        child: const Icon(
-                          AppIcons.contract,
-                          color: AppPalette.gold300,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              contract.contractNumber ?? projectName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
-                                height: 1.1,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                            if (contract.contractNumber != null) ...[
-                              const SizedBox(height: 3),
-                              Text(
-                                projectName,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _StatusPill(
-                        label: signed
-                            ? l10n.contractStatusSigned
-                            : l10n.contractStatusDraft,
-                        icon: signed
-                            ? Icons.verified_rounded
-                            : Icons.pending_outlined,
-                        color: signed
-                            ? const Color(0xFF4ADE80)
-                            : Colors.white.withValues(alpha: 0.7),
-                        bg: signed
-                            ? const Color(0xFF1B7A50).withValues(alpha: 0.85)
-                            : Colors.white.withValues(alpha: 0.12),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── White body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Unit row
-                Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_navyLight, _navyDeep],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: const Icon(
-                        AppIcons.property,
-                        size: 17,
-                        color: AppPalette.gold300,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            unitTypeLabel(contract.unitType, languageCode: Localizations.localeOf(context).languageCode),
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: colors.inkStrong,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            contract.unitCode,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.inkMuted,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
-                // Signed date row
-                const SizedBox(height: AppSpacing.sm),
-                Divider(height: 1, color: colors.hairline),
-                const SizedBox(height: AppSpacing.sm),
-                if (contract.signedAt != null)
-                  _InfoRow(
-                    icon: AppIcons.calendar,
-                    label: l10n.myPropertySignedDate,
-                    value: DateFormatter.mediumDate(
-                      contract.signedAt!,
-                      languageCode: lang,
-                    ),
-                  )
-                else if (contract.createdAt != null)
-                  _InfoRow(
-                    icon: AppIcons.calendar,
-                    label: context.l10n.createdDateLabel,
-                    value: DateFormatter.mediumDate(
-                      contract.createdAt!,
-                      languageCode: lang,
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.md),
-                // Documents button
-                _DocumentsButton(
-                  label: l10n.contractsDocumentsTitle,
-                  onTap: () => context.push(
-                    '/account/contracts/${contract.id}',
-                    extra: contract,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _StatusPill(
+                label: signed
+                    ? l10n.contractStatusSigned
+                    : l10n.contractStatusDraft,
+                icon: signed ? Icons.verified_rounded : Icons.pending_outlined,
+                color: accent,
+                bg: accent.withValues(alpha: 0.12),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.hairline),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Icon(AppIcons.property, size: 16, color: colors.inkMuted),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  unitLine,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-              ],
+              ),
+            ],
+          ),
+          if (date != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _InfoRow(
+              icon: AppIcons.calendar,
+              label: dateLabel,
+              value: DateFormatter.mediumDate(date, languageCode: lang),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          _DocumentsButton(
+            label: l10n.contractsDocumentsTitle,
+            onTap: () => context.push(
+              '/account/contracts/${contract.id}',
+              extra: contract,
             ),
           ),
         ],

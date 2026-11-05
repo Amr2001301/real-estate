@@ -9,7 +9,6 @@ import 'deposit_format.dart';
 import 'deposits_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -381,34 +380,19 @@ class _DepositCard extends StatelessWidget {
   final Deposit deposit;
   final AppLocalizations l10n;
 
-  static List<Color> _stripColors(DepositType type) => switch (type) {
-    DepositType.bookingAmount => [
-      const Color(0xFF1B5E3F),
-      const Color(0xFF0D3826),
-    ],
-    DepositType.downPayment => [_navyLight, _navyDeep],
-    DepositType.installment => [
-      const Color(0xFF1E3A6E),
-      const Color(0xFF0B1F42),
-    ],
-    DepositType.finalPayment => [
-      const Color(0xFF7A5C1E),
-      const Color(0xFF4A3610),
-    ],
-    DepositType.fee => [
-      const Color(0xFF7A2E1E),
-      const Color(0xFF3A1407),
-    ],
-    DepositType.unknown => [_navyCard, _navyDeep],
-  };
-
-  static Color _iconColor(DepositType type) => switch (type) {
-    DepositType.bookingAmount => const Color(0xFF4ADE80),
-    DepositType.downPayment => AppPalette.gold300,
-    DepositType.installment => const Color(0xFF93C5FD),
-    DepositType.finalPayment => const Color(0xFFFBD27A),
-    DepositType.fee => const Color(0xFFFCA5A5),
-    DepositType.unknown => AppPalette.gold300,
+  static Color _accent(DepositType type, bool dark) => switch (type) {
+    DepositType.bookingAmount =>
+      dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D),
+    DepositType.downPayment =>
+      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+    DepositType.installment =>
+      dark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+    DepositType.finalPayment =>
+      dark ? const Color(0xFFFBD27A) : const Color(0xFFB45309),
+    DepositType.fee =>
+      dark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
+    DepositType.unknown =>
+      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
   };
 
   @override
@@ -417,199 +401,110 @@ class _DepositCard extends StatelessWidget {
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
 
-    final stripGrad = _stripColors(deposit.type);
-    final iconColor = _iconColor(deposit.type);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = _accent(deposit.type, dark);
     final typeLabel = depositTypeLabel(l10n, deposit.type);
+    final locationLine = [
+      if (deposit.contractNumber != null) deposit.contractNumber!,
+      if (deposit.unitCode != null) deposit.unitCode!,
+    ].join(' · ');
 
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Gradient strip
-          SizedBox(
-            height: 92,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: stripGrad,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(AppIcons.deposit, color: accent, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      PriceFormatter.formatString(
+                        deposit.amount,
+                        languageCode: lang,
+                      ),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                ),
-                const IgnorePointer(child: _DotTexture()),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 1,
-                    color: AppPalette.gold400.withValues(alpha: 0.28),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.11),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22),
-                          ),
-                        ),
-                        child: Icon(
-                          AppIcons.deposit,
-                          color: iconColor,
-                          size: 25,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      typeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              PriceFormatter.formatString(
-                                deposit.amount,
-                                languageCode: lang,
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 20,
-                                height: 1.0,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              typeLabel,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _VerifiedBadge(verified: deposit.collected, l10n: l10n),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _VerifiedBadge(verified: deposit.collected, l10n: l10n),
+            ],
           ),
-
-          // ── White body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              AppSpacing.md,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.hairline),
+          const SizedBox(height: AppSpacing.md),
+          if (locationLine.isNotEmpty) ...[
+            Row(
               children: [
-                if (deposit.contractNumber != null ||
-                    deposit.unitCode != null) ...[
-                  Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [_navyLight, _navyDeep],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          AppIcons.contract,
-                          size: 16,
-                          color: AppPalette.gold300,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (deposit.contractNumber != null)
-                              Text(
-                                deposit.contractNumber!,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colors.inkStrong,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            if (deposit.unitCode != null)
-                              Text(
-                                deposit.unitCode!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colors.inkMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Divider(height: 1, color: colors.hairline),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
-                if (deposit.paidAt != null)
-                  _InfoRow(
-                    icon: AppIcons.calendar,
-                    label: l10n.depositPaidOn,
-                    value: DateFormatter.mediumDate(
-                      deposit.paidAt!,
-                      languageCode: lang,
+                Icon(AppIcons.contract, size: 16, color: colors.inkMuted),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    locationLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.inkStrong,
+                      fontWeight: FontWeight.w700,
                     ),
-                  )
-                else
-                  _InfoRow(
-                    icon: AppIcons.calendar,
-                    label: l10n.depositPaidOn,
-                    value: '—',
-                  ),
-                const SizedBox(height: AppSpacing.md),
-                // Receipts button
-                _ReceiptsButton(
-                  label: l10n.depositReceiptsTitle,
-                  onTap: () => context.push(
-                    '/account/deposits/${deposit.id}',
-                    extra: deposit,
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          _InfoRow(
+            icon: AppIcons.calendar,
+            label: l10n.depositPaidOn,
+            value: deposit.paidAt != null
+                ? DateFormatter.mediumDate(deposit.paidAt!, languageCode: lang)
+                : '—',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _ReceiptsButton(
+            label: l10n.depositReceiptsTitle,
+            onTap: () => context.push(
+              '/account/deposits/${deposit.id}',
+              extra: deposit,
             ),
           ),
         ],
@@ -627,19 +522,18 @@ class _VerifiedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = verified
-        ? const Color(0xFF1B7A50).withValues(alpha: 0.85)
-        : const Color(0xFF7A5C1E).withValues(alpha: 0.85);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final dotColor = verified
-        ? const Color(0xFF4ADE80)
-        : const Color(0xFFFBBF24);
+        ? (dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))
+        : (dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309));
+    final bg = dotColor.withValues(alpha: 0.12);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: dotColor.withValues(alpha: 0.4)),
+        border: Border.all(color: dotColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
