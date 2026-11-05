@@ -7380,4 +7380,248 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get kbEmptyMessage =>
       'تظهر هنا عقود العملاء الذين أحضرتهم بعد تحويل حجوزاتهم إلى عقود.';
+
+  @override
+  String rvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حجزًا',
+      few: '$n حجوزات',
+      two: 'حجزان',
+      one: 'حجز واحد',
+      zero: 'لا حجوزات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvSearchHint => 'ابحث بالعميل أو رقم الحجز أو الوحدة';
+
+  @override
+  String get rvActive => 'نشطة';
+
+  @override
+  String rvOutOf(String what) {
+    return 'من $what';
+  }
+
+  @override
+  String get rvNeedsDecision => 'تحتاج قرارك';
+
+  @override
+  String get rvUnderReview => 'قيد المراجعة';
+
+  @override
+  String get rvAwaitingPayment => 'بانتظار العربون';
+
+  @override
+  String get rvApprovedHint => 'معتمدة';
+
+  @override
+  String get rvPillPending => 'قيد المراجعة';
+
+  @override
+  String get rvPillApproved => 'معتمدة';
+
+  @override
+  String get rvPillConverted => 'محوّلة';
+
+  @override
+  String get rvPillClosed => 'مرفوضة وملغاة';
+
+  @override
+  String get rvStPending => 'قيد المراجعة';
+
+  @override
+  String get rvStApproved => 'معتمد';
+
+  @override
+  String get rvStConverted => 'تحوّل إلى عقد';
+
+  @override
+  String get rvStRejected => 'مرفوض';
+
+  @override
+  String get rvStCancelled => 'ملغى';
+
+  @override
+  String get rvStExpired => 'منتهٍ';
+
+  @override
+  String get rvBooking => 'العربون';
+
+  @override
+  String get rvPaid => 'مدفوع';
+
+  @override
+  String get rvUnpaid => 'غير مدفوع';
+
+  @override
+  String get rvWaived => 'معفى';
+
+  @override
+  String get rvByBroker => 'عن طريق وسيط';
+
+  @override
+  String rvExpiresInN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'تنتهي بعد $n يومًا',
+      few: 'تنتهي بعد $n أيام',
+      two: 'تنتهي بعد يومين',
+      one: 'تنتهي غدًا',
+      zero: 'تنتهي اليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvExpiredOn(String date) {
+    return 'انتهت مدته $date';
+  }
+
+  @override
+  String rvCreatedOn(String date) {
+    return 'أُنشئ $date';
+  }
+
+  @override
+  String get rvUnpaidWarn => 'العربون لم يُدفع بعد';
+
+  @override
+  String rvExpiresOn(String date) {
+    return 'تنتهي $date';
+  }
+
+  @override
+  String get rvReady => 'جاهز للتحويل إلى عقد';
+
+  @override
+  String get rvConvert => 'تحويل';
+
+  @override
+  String rvConvertedOn(String date) {
+    return 'تحوّل إلى عقد · $date';
+  }
+
+  @override
+  String get rvOpenContract => 'فتح العقد';
+
+  @override
+  String rvReasonLine(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get rvJCreated => 'أُنشئ';
+
+  @override
+  String get rvJBooking => 'العربون';
+
+  @override
+  String get rvJApproved => 'الاعتماد';
+
+  @override
+  String get rvJContract => 'العقد';
+
+  @override
+  String get rvJRejected => 'رُفض';
+
+  @override
+  String get rvJCancelled => 'أُلغي';
+
+  @override
+  String get rvJExpired => 'انتهى';
+
+  @override
+  String get rvNextStep => 'الخطوة التالية';
+
+  @override
+  String rvPaidOn(String date) {
+    return 'دُفع $date';
+  }
+
+  @override
+  String get rvPlanName => 'الخطة';
+
+  @override
+  String get rvUnitPrice => 'سعر الوحدة';
+
+  @override
+  String rvContractN(String n) {
+    return 'العقد $n';
+  }
+
+  @override
+  String get rvHistory => 'السجل';
+
+  @override
+  String get rvCancel => 'إلغاء الحجز';
+
+  @override
+  String get rvCancelReason => 'سبب الإلغاء';
+
+  @override
+  String get rvRecordPayment => 'تسجيل العربون';
+
+  @override
+  String get rvPayDate => 'تاريخ الدفع';
+
+  @override
+  String get rvPayMethod => 'طريقة الدفع';
+
+  @override
+  String get rvConfirm => 'تأكيد';
+
+  @override
+  String get rvKeep => 'تراجع';
+
+  @override
+  String get rvApprovedMsg => 'تمت الموافقة على الحجز';
+
+  @override
+  String get rvRejectedMsg => 'تم رفض الحجز';
+
+  @override
+  String get rvCancelledMsg => 'تم إلغاء الحجز';
+
+  @override
+  String get rvPaidMsg => 'تم تسجيل العربون';
+
+  @override
+  String get rvNoteAdded => 'أُضيفت الملاحظة';
+
+  @override
+  String get rvFilters => 'تصفية الحجوزات';
+
+  @override
+  String rvShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'عرض $n حجزًا',
+      few: 'عرض $n حجوزات',
+      two: 'عرض حجزين',
+      one: 'عرض حجز واحد',
+      zero: 'لا حجوزات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConsultant => 'المستشار';
+
+  @override
+  String get rvAllConsultants => 'كل المستشارين';
+
+  @override
+  String get rvEmpty => 'لا توجد حجوزات';
+
+  @override
+  String get rvEmptyMessage => 'تظهر هنا الحجوزات بعد إنشائها.';
+
+  @override
+  String get rvNew => 'حجز جديد';
 }
