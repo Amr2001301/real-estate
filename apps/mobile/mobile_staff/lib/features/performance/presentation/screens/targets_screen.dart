@@ -1,13 +1,18 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
+import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/sales_performance.dart';
 import '../cubit/targets_cubit.dart';
-import '../widgets/target_progress_card.dart';
+import '../period.dart';
 
+/// «أهدافي» (design t1, owner-approved 2026-11-05): this period's progress on
+/// the sales value and the units, what is left, the rep's activity, and the
+/// history of targets.
 class TargetsScreen extends StatefulWidget {
   const TargetsScreen({super.key});
 
@@ -25,295 +30,175 @@ class _TargetsScreenState extends State<TargetsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final currency = PriceFormatter.symbol(lang);
     final cubit = context.read<TargetsCubit>();
-    final bottomPad = MediaQuery.paddingOf(context).bottom;
-    return Scaffold(
-      body: Column(
-        children: [
-          AppNavHeader(
-            title: l10n.targetsTitle,
-            compact: true,
-            leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_ios_new_rounded,
-              onTap: () => context.pop(),
-            ),
-          ),
-          Expanded(
-            child: BlocBuilder<TargetsCubit, TargetsState>(
-              builder: (context, state) {
-                switch (state.status) {
-                  case DataStatus.initial:
-                  case DataStatus.loading:
-                    return const StaffListSkeleton(rows: 4);
-                  case DataStatus.failure:
-                    return ErrorState(
-                        failure: state.failure, onRetry: cubit.load);
-                  case DataStatus.empty:
-                  case DataStatus.success:
-                    return RefreshIndicator(
-                      color: AppPalette.gold400,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocBuilder<TargetsCubit, TargetsState>(
+          builder: (context, state) {
+            final p = state.performance;
+            return Column(children: [
+              HomeListHero(title: l10n.targetsTitle, subtitle: p == null ? null : periodLabel(p.period, lang), back: true),
+              Expanded(
+                child: switch (state.status) {
+                  DataStatus.initial || DataStatus.loading => const StaffListSkeleton(rows: 4),
+                  DataStatus.failure => ErrorState(failure: state.failure, onRetry: cubit.load),
+                  _ when p == null => const SizedBox.shrink(),
+                  _ => RefreshIndicator(
                       onRefresh: cubit.load,
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.md,
-                          AppSpacing.lg,
-                          bottomPad + AppSpacing.xl,
+                      child: ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                          child: _Progress(perf: p, currency: currency),
                         ),
-                        children: [
-                          if (state.performance != null) ...[
-                            TargetProgressCard(performance: state.performance!),
-                            const SizedBox(height: AppSpacing.lg),
-                            _ActivityGrid(performance: state.performance!),
-                          ],
-                          if (state.targets.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.xl),
-                            AppSectionHeader(title: l10n.targetsHistory),
-                            const SizedBox(height: AppSpacing.sm),
-                            for (final t in state.targets) ...[
-                              _TargetHistoryTile(target: t),
-                              const SizedBox(height: AppSpacing.sm),
+                        HomeSection(
+                          icon: Icons.insights_rounded,
+                          title: l10n.tgPeriodActivity,
+                          child: GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 2.6,
+                            children: [
+                              _Stat(Icons.person_rounded, '${p.leadsCount}', l10n.dashboardLeads),
+                              _Stat(Icons.event_rounded, '${p.visitsCount}', l10n.navVisits),
+                              _Stat(Icons.bookmark_rounded, '${p.reservationsCount}', l10n.navReservations),
+                              _Stat(Icons.description_rounded, '${p.signedContractsCount}', l10n.targetsSignedContracts),
                             ],
-                          ],
-                        ],
-                      ),
-                    );
-                }
-              },
-            ),
-          ),
-        ],
+                          ),
+                        ),
+                        if (state.targets.isNotEmpty)
+                          HomeSection(
+                            icon: Icons.history_rounded,
+                            title: l10n.targetsHistory,
+                            child: Column(children: [
+                              for (final t in state.targets)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                                  decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: colors.hairline)),
+                                  child: Row(children: [
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text('${contractMoney(double.tryParse(t.amountTarget) ?? 0)} $currency', style: homeDisplay(14, colors.inkStrong)),
+                                        Text(l10n.targetsUnitsN(t.unitsTarget), style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+                                      ]),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(color: const Color(0xFFEEF2F7), borderRadius: BorderRadius.circular(99)),
+                                      child: Text(periodLabel(t.period, lang), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF26405F))),
+                                    ),
+                                  ]),
+                                ),
+                            ]),
+                          ),
+                      ]),
+                    ),
+                },
+              ),
+            ]);
+          },
+        ),
       ),
     );
   }
 }
 
-// ─── Activity stats 2×2 grid ────────────────────────────────────────────────
-
-class _ActivityGrid extends StatelessWidget {
-  const _ActivityGrid({required this.performance});
-  final SalesPerformance performance;
+class _Progress extends StatelessWidget {
+  const _Progress({required this.perf, required this.currency});
+  final SalesPerformance perf;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-
+    final p = perf;
+    Widget bar(double? pct, {Color color = AppPalette.gold400}) => ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(value: ((pct ?? 0) / 100).clamp(0, 1), minHeight: 8, backgroundColor: const Color(0xFFEFE8DC), color: color),
+        );
+    final left = (p.targetAmount ?? 0) - p.achievedAmount;
+    final unitsLeft = (p.targetUnits ?? 0) - p.achievedUnits;
     return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.hairline),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section header
-          Row(children: [
-            Container(
-              width: 3,
-              height: 16,
-              decoration: BoxDecoration(
-                color: AppPalette.gold400,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              l10n.targetsActivity,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ]),
-          const SizedBox(height: AppSpacing.md),
-          // Row 1
-          Row(
-            children: [
-              _StatCell(
-                icon: Icons.person_rounded,
-                color: const Color(0xFF60A5FA),
-                count: '${performance.leadsCount}',
-                label: l10n.dashboardLeads,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              _StatCell(
-                icon: Icons.event_rounded,
-                color: const Color(0xFF34C77B),
-                count: '${performance.visitsCount}',
-                label: l10n.navVisits,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          // Row 2
-          Row(
-            children: [
-              _StatCell(
-                icon: Icons.bookmark_rounded,
-                color: AppPalette.gold400,
-                count: '${performance.reservationsCount}',
-                label: l10n.navReservations,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              _StatCell(
-                icon: Icons.description_rounded,
-                color: const Color(0xFFA78BFA),
-                count: '${performance.signedContractsCount}',
-                label: l10n.targetsSignedContracts,
-              ),
-            ],
-          ),
-        ],
-      ),
+      key: const Key('targets-progress'),
+      padding: const EdgeInsets.all(14),
+      decoration: homeCard(context, radius: 22),
+      child: !p.hasTarget
+          ? Text(l10n.tgNoTarget, style: TextStyle(fontSize: 13, color: colors.inkMuted))
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(l10n.tgSales, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                    Text.rich(TextSpan(children: [
+                      TextSpan(text: contractMoney(p.achievedAmount), style: homeDisplay(26, colors.inkStrong)),
+                      TextSpan(text: '  ${l10n.tgOf('${contractMoney(p.targetAmount ?? 0)} $currency')}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                    ])),
+                  ]),
+                ),
+                if (p.targetAmountPercent != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: AppPalette.gold400, borderRadius: BorderRadius.circular(99)),
+                    child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
+                  ),
+              ]),
+              const SizedBox(height: 10),
+              bar(p.targetAmountPercent),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(child: Text(l10n.tgUnitsSold, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+                Text(l10n.tgUnitsOf(p.achievedUnits, p.targetUnits ?? 0), style: homeDisplay(13, colors.inkStrong)),
+              ]),
+              const SizedBox(height: 6),
+              bar(p.targetUnitsPercent),
+              if (left > 0 || unitsLeft > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.only(top: 10),
+                  decoration: BoxDecoration(border: Border(top: BorderSide(color: colors.hairline))),
+                  child: Text.rich(TextSpan(style: TextStyle(fontSize: 12, color: colors.inkMuted), children: [
+                    TextSpan(text: '${l10n.tgRemaining}: '),
+                    if (left > 0) TextSpan(text: '${contractMoney(left)} $currency', style: TextStyle(fontWeight: FontWeight.w800, color: colors.inkStrong)),
+                    if (left > 0 && unitsLeft > 0) const TextSpan(text: ' · '),
+                    if (unitsLeft > 0) TextSpan(text: l10n.targetsUnitsN(unitsLeft)),
+                  ])),
+                ),
+              ],
+            ]),
     );
   }
 }
 
-class _StatCell extends StatelessWidget {
-  const _StatCell({
-    required this.icon,
-    required this.color,
-    required this.count,
-    required this.label,
-  });
+class _Stat extends StatelessWidget {
+  const _Stat(this.icon, this.value, this.label);
   final IconData icon;
-  final Color color;
-  final String count;
+  final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.md),
-        decoration: BoxDecoration(
-          color: colors.surfaceSoft,
-          borderRadius: BorderRadius.circular(14),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: colors.hairline)),
+      child: Row(children: [
+        Container(width: 34, height: 34, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(11)), child: Icon(icon, size: 18, color: AppPalette.gold600)),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(value, style: homeDisplay(19, colors.inkStrong)),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, color: colors.inkMuted)),
+          ]),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 20, color: color),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    count,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      color: AppPalette.navy,
-                      height: 1.1,
-                    ),
-                  ),
-                  Text(
-                    label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: colors.inkMuted),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Target history tile ─────────────────────────────────────────────────────
-
-class _TargetHistoryTile extends StatelessWidget {
-  const _TargetHistoryTile({required this.target});
-  final SalesTarget target;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(14),
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
-        child: Row(
-          children: [
-            // Period badge
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppPalette.navy.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                target.period,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppPalette.navy,
-                    ),
-              ),
-            ),
-            const Spacer(),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  PriceFormatter.formatString(
-                    target.amountTarget,
-                    languageCode: lang,
-                  ),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: colors.brandGold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.targetsUnitsN(target.unitsTarget),
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(color: colors.inkMuted),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      ]),
     );
   }
 }

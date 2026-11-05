@@ -12,6 +12,7 @@ class ChequesState extends Equatable {
     this.page = 1,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.total = 0,
   });
 
   final DataStatus status;
@@ -24,6 +25,9 @@ class ChequesState extends Equatable {
   final bool hasMore;
   final bool isLoadingMore;
 
+  /// How many cheques the shown status has in all.
+  final int total;
+
   ChequesState copyWith({
     DataStatus? status,
     String? filter,
@@ -33,6 +37,7 @@ class ChequesState extends Equatable {
     int? page,
     bool? hasMore,
     bool? isLoadingMore,
+    int? total,
   }) =>
       ChequesState(
         status: status ?? this.status,
@@ -42,10 +47,11 @@ class ChequesState extends Equatable {
         page: page ?? this.page,
         hasMore: hasMore ?? this.hasMore,
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+        total: total ?? this.total,
       );
 
   @override
-  List<Object?> get props => [status, filter, items, failure, page, hasMore, isLoadingMore];
+  List<Object?> get props => [status, filter, items, failure, page, hasMore, isLoadingMore, total];
 }
 
 /// FG-01 — the cheques list, a status at a time, soonest due first.
@@ -64,6 +70,7 @@ class ChequesCubit extends Cubit<ChequesState> {
         items: page.data,
         page: 1,
         hasMore: page.hasMore,
+        total: page.meta.total,
       )),
       err: (f) => emit(state.copyWith(status: DataStatus.failure, failure: f)),
     );

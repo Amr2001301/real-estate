@@ -1045,6 +1045,15 @@ class _SettingsServicesCard extends StatelessWidget {
           navyStyle: true,
           onTap: () => context.push('/payments-review'),
         ),
+      // The brokers' performance report is the admin's.
+      if (context.read<SessionCubit>().state.role == AppRole.admin)
+        _SItem(
+          icon: Icons.handshake_rounded,
+          label: l10n.bpTitle,
+          subtitle: '',
+          navyStyle: true,
+          onTap: () => context.push('/performance/brokers'),
+        ),
     ];
 
     return Container(

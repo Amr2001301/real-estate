@@ -9,6 +9,8 @@ extension BonusEntryDtoMapper on BonusEntryDto {
         status: status,
         ruleName: ruleName,
         commissionPct: commissionPct,
+        basisAmount: basisAmount,
+        contractId: contractId,
         paidAt: DateTime.tryParse(paidAt ?? ''),
         createdAt: DateTime.tryParse(createdAt ?? ''),
       );
