@@ -13111,6 +13111,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Contracts of the clients you brought appear here once their bookings are converted.'**
   String get kbEmptyMessage;
+
+  /// No description provided for @rvCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No bookings} =1{1 booking} other{{n} bookings}}'**
+  String rvCountN(int n);
+
+  /// No description provided for @rvSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client, booking number or unit'**
+  String get rvSearchHint;
+
+  /// No description provided for @rvActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get rvActive;
+
+  /// No description provided for @rvOutOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of {what}'**
+  String rvOutOf(String what);
+
+  /// No description provided for @rvNeedsDecision.
+  ///
+  /// In en, this message translates to:
+  /// **'Need your decision'**
+  String get rvNeedsDecision;
+
+  /// No description provided for @rvUnderReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvUnderReview;
+
+  /// No description provided for @rvAwaitingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting booking amount'**
+  String get rvAwaitingPayment;
+
+  /// No description provided for @rvApprovedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvApprovedHint;
+
+  /// No description provided for @rvPillPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvPillPending;
+
+  /// No description provided for @rvPillApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvPillApproved;
+
+  /// No description provided for @rvPillConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rvPillConverted;
+
+  /// No description provided for @rvPillClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected & cancelled'**
+  String get rvPillClosed;
+
+  /// No description provided for @rvStPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Under review'**
+  String get rvStPending;
+
+  /// No description provided for @rvStApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get rvStApproved;
+
+  /// No description provided for @rvStConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get rvStConverted;
+
+  /// No description provided for @rvStRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rvStRejected;
+
+  /// No description provided for @rvStCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rvStCancelled;
+
+  /// No description provided for @rvStExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get rvStExpired;
+
+  /// No description provided for @rvBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get rvBooking;
+
+  /// No description provided for @rvPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get rvPaid;
+
+  /// No description provided for @rvUnpaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid'**
+  String get rvUnpaid;
+
+  /// No description provided for @rvWaived.
+  ///
+  /// In en, this message translates to:
+  /// **'Waived'**
+  String get rvWaived;
+
+  /// No description provided for @rvByBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Via a broker'**
+  String get rvByBroker;
+
+  /// No description provided for @rvExpiresInN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Ends today} =1{Ends tomorrow} other{Ends in {n} days}}'**
+  String rvExpiresInN(int n);
+
+  /// No description provided for @rvExpiredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Lapsed {date}'**
+  String rvExpiredOn(String date);
+
+  /// No description provided for @rvCreatedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String rvCreatedOn(String date);
+
+  /// No description provided for @rvUnpaidWarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount not paid yet'**
+  String get rvUnpaidWarn;
+
+  /// No description provided for @rvExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}'**
+  String rvExpiresOn(String date);
+
+  /// No description provided for @rvReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to convert'**
+  String get rvReady;
+
+  /// No description provided for @rvConvert.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert'**
+  String get rvConvert;
+
+  /// No description provided for @rvConvertedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted · {date}'**
+  String rvConvertedOn(String date);
+
+  /// No description provided for @rvOpenContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the contract'**
+  String get rvOpenContract;
+
+  /// No description provided for @rvReasonLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String rvReasonLine(String reason);
+
+  /// No description provided for @rvJCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get rvJCreated;
+
+  /// No description provided for @rvJBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking'**
+  String get rvJBooking;
+
+  /// No description provided for @rvJApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval'**
+  String get rvJApproved;
+
+  /// No description provided for @rvJContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get rvJContract;
+
+  /// No description provided for @rvJRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rvJRejected;
+
+  /// No description provided for @rvJCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get rvJCancelled;
+
+  /// No description provided for @rvJExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Lapsed'**
+  String get rvJExpired;
+
+  /// No description provided for @rvNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get rvNextStep;
+
+  /// No description provided for @rvPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date}'**
+  String rvPaidOn(String date);
+
+  /// No description provided for @rvPlanName.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get rvPlanName;
+
+  /// No description provided for @rvUnitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get rvUnitPrice;
+
+  /// No description provided for @rvContractN.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract {n}'**
+  String rvContractN(String n);
+
+  /// No description provided for @rvHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get rvHistory;
+
+  /// No description provided for @rvCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel booking'**
+  String get rvCancel;
+
+  /// No description provided for @rvCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for cancelling'**
+  String get rvCancelReason;
+
+  /// No description provided for @rvRecordPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Record booking amount'**
+  String get rvRecordPayment;
+
+  /// No description provided for @rvPayDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid on'**
+  String get rvPayDate;
+
+  /// No description provided for @rvPayMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Method'**
+  String get rvPayMethod;
+
+  /// No description provided for @rvConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get rvConfirm;
+
+  /// No description provided for @rvKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get rvKeep;
+
+  /// No description provided for @rvApprovedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking approved'**
+  String get rvApprovedMsg;
+
+  /// No description provided for @rvRejectedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking rejected'**
+  String get rvRejectedMsg;
+
+  /// No description provided for @rvCancelledMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking cancelled'**
+  String get rvCancelledMsg;
+
+  /// No description provided for @rvPaidMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount recorded'**
+  String get rvPaidMsg;
+
+  /// No description provided for @rvNoteAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get rvNoteAdded;
+
+  /// No description provided for @rvFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter bookings'**
+  String get rvFilters;
+
+  /// No description provided for @rvShowN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No bookings} =1{Show 1 booking} other{Show {n} bookings}}'**
+  String rvShowN(int n);
+
+  /// No description provided for @rvConsultant.
+  ///
+  /// In en, this message translates to:
+  /// **'Consultant'**
+  String get rvConsultant;
+
+  /// No description provided for @rvAllConsultants.
+  ///
+  /// In en, this message translates to:
+  /// **'All consultants'**
+  String get rvAllConsultants;
+
+  /// No description provided for @rvEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get rvEmpty;
+
+  /// No description provided for @rvEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookings appear here once they are made.'**
+  String get rvEmptyMessage;
+
+  /// No description provided for @rvNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New booking'**
+  String get rvNew;
 }
 
 class _AppLocalizationsDelegate

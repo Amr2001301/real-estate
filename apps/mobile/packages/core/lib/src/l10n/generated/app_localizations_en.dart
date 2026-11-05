@@ -7365,4 +7365,242 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get kbEmptyMessage =>
       'Contracts of the clients you brought appear here once their bookings are converted.';
+
+  @override
+  String rvCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n bookings',
+      one: '1 booking',
+      zero: 'No bookings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvSearchHint => 'Search by client, booking number or unit';
+
+  @override
+  String get rvActive => 'Active';
+
+  @override
+  String rvOutOf(String what) {
+    return 'of $what';
+  }
+
+  @override
+  String get rvNeedsDecision => 'Need your decision';
+
+  @override
+  String get rvUnderReview => 'Under review';
+
+  @override
+  String get rvAwaitingPayment => 'Awaiting booking amount';
+
+  @override
+  String get rvApprovedHint => 'Approved';
+
+  @override
+  String get rvPillPending => 'Under review';
+
+  @override
+  String get rvPillApproved => 'Approved';
+
+  @override
+  String get rvPillConverted => 'Converted';
+
+  @override
+  String get rvPillClosed => 'Rejected & cancelled';
+
+  @override
+  String get rvStPending => 'Under review';
+
+  @override
+  String get rvStApproved => 'Approved';
+
+  @override
+  String get rvStConverted => 'Converted';
+
+  @override
+  String get rvStRejected => 'Rejected';
+
+  @override
+  String get rvStCancelled => 'Cancelled';
+
+  @override
+  String get rvStExpired => 'Expired';
+
+  @override
+  String get rvBooking => 'Booking amount';
+
+  @override
+  String get rvPaid => 'Paid';
+
+  @override
+  String get rvUnpaid => 'Unpaid';
+
+  @override
+  String get rvWaived => 'Waived';
+
+  @override
+  String get rvByBroker => 'Via a broker';
+
+  @override
+  String rvExpiresInN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Ends in $n days',
+      one: 'Ends tomorrow',
+      zero: 'Ends today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rvExpiredOn(String date) {
+    return 'Lapsed $date';
+  }
+
+  @override
+  String rvCreatedOn(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String get rvUnpaidWarn => 'Booking amount not paid yet';
+
+  @override
+  String rvExpiresOn(String date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String get rvReady => 'Ready to convert';
+
+  @override
+  String get rvConvert => 'Convert';
+
+  @override
+  String rvConvertedOn(String date) {
+    return 'Converted · $date';
+  }
+
+  @override
+  String get rvOpenContract => 'Open the contract';
+
+  @override
+  String rvReasonLine(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get rvJCreated => 'Created';
+
+  @override
+  String get rvJBooking => 'Booking';
+
+  @override
+  String get rvJApproved => 'Approval';
+
+  @override
+  String get rvJContract => 'Contract';
+
+  @override
+  String get rvJRejected => 'Rejected';
+
+  @override
+  String get rvJCancelled => 'Cancelled';
+
+  @override
+  String get rvJExpired => 'Lapsed';
+
+  @override
+  String get rvNextStep => 'Next step';
+
+  @override
+  String rvPaidOn(String date) {
+    return 'Paid $date';
+  }
+
+  @override
+  String get rvPlanName => 'Plan';
+
+  @override
+  String get rvUnitPrice => 'Unit price';
+
+  @override
+  String rvContractN(String n) {
+    return 'Contract $n';
+  }
+
+  @override
+  String get rvHistory => 'History';
+
+  @override
+  String get rvCancel => 'Cancel booking';
+
+  @override
+  String get rvCancelReason => 'Reason for cancelling';
+
+  @override
+  String get rvRecordPayment => 'Record booking amount';
+
+  @override
+  String get rvPayDate => 'Paid on';
+
+  @override
+  String get rvPayMethod => 'Method';
+
+  @override
+  String get rvConfirm => 'Confirm';
+
+  @override
+  String get rvKeep => 'Back';
+
+  @override
+  String get rvApprovedMsg => 'Booking approved';
+
+  @override
+  String get rvRejectedMsg => 'Booking rejected';
+
+  @override
+  String get rvCancelledMsg => 'Booking cancelled';
+
+  @override
+  String get rvPaidMsg => 'Booking amount recorded';
+
+  @override
+  String get rvNoteAdded => 'Note added';
+
+  @override
+  String get rvFilters => 'Filter bookings';
+
+  @override
+  String rvShowN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Show $n bookings',
+      one: 'Show 1 booking',
+      zero: 'No bookings',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rvConsultant => 'Consultant';
+
+  @override
+  String get rvAllConsultants => 'All consultants';
+
+  @override
+  String get rvEmpty => 'No bookings yet';
+
+  @override
+  String get rvEmptyMessage => 'Bookings appear here once they are made.';
+
+  @override
+  String get rvNew => 'New booking';
 }

@@ -50,6 +50,9 @@ import '../features/contracts/create/contract_create_data.dart';
 import '../features/contracts/create/convert_reservation_screen.dart';
 import '../features/contracts/create/manual_contract_screen.dart';
 import '../features/contracts/view/contract_page_screen.dart';
+import '../features/reservations/view/reservation_page_screen.dart';
+import '../features/reservations/view/reservations_data.dart';
+import '../features/reservations/view/reservations_list_screen.dart';
 import '../features/contracts/view/contracts_data.dart';
 import '../features/contracts/view/contracts_list_screen.dart';
 import '../features/broker/catalog/portal/portal_catalog_screens.dart';
@@ -126,15 +129,10 @@ import '../features/installments/presentation/cubit/calculator_cubit.dart';
 import '../features/installments/presentation/cubit/installment_plans_cubit.dart';
 import '../features/installments/presentation/screens/calculator_screen.dart';
 import '../features/installments/presentation/screens/installment_plans_screen.dart';
-import '../features/reservations/domain/entities/reservation.dart';
 import '../features/reservations/domain/repositories/reservations_repository.dart';
 import '../features/reservations/domain/usecases/reservation_use_cases.dart';
 import '../features/reservations/presentation/cubit/create_reservation_cubit.dart';
-import '../features/reservations/presentation/cubit/reservation_detail_cubit.dart';
-import '../features/reservations/presentation/cubit/reservations_cubit.dart';
 import '../features/reservations/presentation/screens/create_reservation_screen.dart';
-import '../features/reservations/presentation/screens/reservation_detail_screen.dart';
-import '../features/reservations/presentation/screens/reservations_screen.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/deposit_use_cases.dart';
 import '../features/deposits/presentation/cubit/deposits_cubit.dart';
@@ -678,8 +676,8 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/reservations',
         builder: (context, _) => BlocProvider(
-          create: (ctx) => ReservationsCubit(GetReservations(ctx.read<ReservationsRepository>())),
-          child: const ReservationsScreen(),
+          create: (ctx) => ReservationsListCubit(ReservationsViewRepository(ctx.read<Dio>())),
+          child: const ReservationsListScreen(),
         ),
       ),
       GoRoute(
@@ -715,23 +713,11 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/reservations/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          final reservation = state.extra as Reservation?;
-          return BlocProvider(
-            create: (ctx) {
-              final repo = ctx.read<ReservationsRepository>();
-              return ReservationDetailCubit(
-                GetReservationDetail(repo),
-                AddReservationNote(repo),
-                reservationId: id,
-                approve: ApproveReservation(repo),
-                reject: RejectReservation(repo),
-              );
-            },
-            child: ReservationDetailScreen(fallback: reservation),
-          );
-        },
+        builder: (context, state) => BlocProvider(
+          key: ValueKey('reservation-${state.pathParameters['id']}'),
+          create: (ctx) => ReservationPageCubit(ReservationsViewRepository(ctx.read<Dio>()), reservationId: state.pathParameters['id']!),
+          child: const ReservationPageScreen(),
+        ),
       ),
 
       // ── Contracts ────────────────────────────────────────────────────────
