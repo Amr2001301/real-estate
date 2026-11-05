@@ -171,11 +171,11 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ReservationPageCubit>().load,
                   child: ListView(padding: const EdgeInsets.only(bottom: 20), children: [
-                    HomeOverlap(overlap: 44, top: _Header(page: p), bottom: _BookingCard(page: p)),
+                    HomeOverlap(overlap: 44, top: ReservationHeader(page: p), bottom: ReservationBookingCard(page: p)),
                     if (p.contractId != null)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                        child: _LinkCard(
+                        child: ReservationLinkCard(
                           key: const Key('reservation-contract'),
                           icon: Icons.description_rounded,
                           title: l10n.rvContractN(ltr(p.contractNumber ?? '')),
@@ -202,7 +202,7 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                         ]),
                       ),
                     ),
-                    if (p.planName != null || r.months != null) HomeSection(icon: Icons.payments_rounded, title: l10n.kcPlan, child: _Plan(page: p)),
+                    if (p.planName != null || r.months != null) HomeSection(icon: Icons.payments_rounded, title: l10n.kcPlan, child: ReservationPlan(page: p)),
                     if (r.status == 'PENDING' || r.status == 'APPROVED' || r.status == 'CONVERTED')
                       Padding(
                         padding: const EdgeInsets.fromLTRB(AppSpacing.md, 18, AppSpacing.md, 0),
@@ -212,7 +212,7 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                       icon: Icons.history_rounded,
                       title: l10n.rvHistory,
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        if (p.events.isNotEmpty) _History(events: p.events),
+                        if (p.events.isNotEmpty) ReservationHistory(events: p.events),
                         const SizedBox(height: 10),
                         TextField(
                           key: const Key('reservation-note'),
@@ -250,8 +250,8 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
 }
 
 /// The navy header: back, the number, the client and unit, the badges.
-class _Header extends StatelessWidget {
-  const _Header({required this.page});
+class ReservationHeader extends StatelessWidget {
+  const ReservationHeader({super.key, required this.page});
   final ReservationPage page;
 
   @override
@@ -280,9 +280,12 @@ class _Header extends StatelessWidget {
 
 /// The floating card: the booking amount and whether it is paid, and the
 /// booking's journey to a contract.
-class _BookingCard extends StatelessWidget {
-  const _BookingCard({required this.page});
+class ReservationBookingCard extends StatelessWidget {
+  const ReservationBookingCard({super.key, required this.page, this.extra});
   final ReservationPage page;
+
+  /// Something under the amount (the broker's commission).
+  final Widget? extra;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +338,7 @@ class _BookingCard extends StatelessWidget {
           if (r.bookingAmount > 0)
             CatalogBadge.status(bookingPayLabel(l10n, r), r.bookingSettled ? catalogAvailable : catalogReserved),
         ]),
+        if (extra != null) ...[const SizedBox(height: 12), extra!],
         const SizedBox(height: 14),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           for (final (i, (label, at, done)) in steps.indexed)
@@ -376,8 +380,8 @@ class _BookingCard extends StatelessWidget {
   }
 }
 
-class _LinkCard extends StatelessWidget {
-  const _LinkCard({super.key, required this.icon, required this.title, required this.onTap, this.subtitle});
+class ReservationLinkCard extends StatelessWidget {
+  const ReservationLinkCard({super.key, required this.icon, required this.title, required this.onTap, this.subtitle});
   final IconData icon;
   final String title;
   final String? subtitle;
@@ -412,8 +416,8 @@ class _LinkCard extends StatelessWidget {
   }
 }
 
-class _Plan extends StatelessWidget {
-  const _Plan({required this.page});
+class ReservationPlan extends StatelessWidget {
+  const ReservationPlan({super.key, required this.page});
   final ReservationPage page;
 
   @override
@@ -433,8 +437,8 @@ class _Plan extends StatelessWidget {
   }
 }
 
-class _History extends StatelessWidget {
-  const _History({required this.events});
+class ReservationHistory extends StatelessWidget {
+  const ReservationHistory({super.key, required this.events});
   final List<ReservationEvent> events;
 
   @override

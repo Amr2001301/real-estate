@@ -13723,6 +13723,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hold the booking for'**
   String get rnHoldLabel;
+
+  /// No description provided for @rbFromClients.
+  ///
+  /// In en, this message translates to:
+  /// **'From your clients'**
+  String get rbFromClients;
+
+  /// No description provided for @rbConvertedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Became contracts'**
+  String get rbConvertedHint;
+
+  /// No description provided for @rbAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get rbAll;
+
+  /// No description provided for @rbCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission'**
+  String get rbCommission;
+
+  /// No description provided for @rbCommissionTotalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your total commission'**
+  String get rbCommissionTotalHint;
+
+  /// No description provided for @rbCommissionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commission {pct}'**
+  String rbCommissionPct(String pct);
+
+  /// No description provided for @rbEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No bookings yet'**
+  String get rbEmpty;
+
+  /// No description provided for @rbEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Request a booking for your client from the projects tab or the client\'s page.'**
+  String get rbEmptyMessage;
+
+  /// No description provided for @rbSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by client or booking number'**
+  String get rbSearchHint;
+
+  /// No description provided for @rbOpenContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the contract'**
+  String get rbOpenContract;
 }
 
 class _AppLocalizationsDelegate

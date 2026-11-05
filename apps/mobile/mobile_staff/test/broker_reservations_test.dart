@@ -7,8 +7,6 @@ import 'package:mobile_staff/features/broker/reservations/data/datasources/broke
 import 'package:mobile_staff/features/broker/reservations/data/repositories/broker_reservations_repository_impl.dart';
 import 'package:mobile_staff/features/broker/reservations/domain/entities/broker_reservation.dart';
 import 'package:mobile_staff/features/broker/reservations/domain/repositories/broker_reservations_repository.dart';
-import 'package:mobile_staff/features/broker/reservations/domain/usecases/broker_reservation_use_cases.dart';
-import 'package:mobile_staff/features/broker/reservations/presentation/cubit/broker_reservations_cubit.dart';
 
 class _FakeRemote implements BrokerReservationsRemoteDataSource {
   _FakeRemote({this.rows = const [], this.error});
@@ -30,17 +28,6 @@ class _FakeRemote implements BrokerReservationsRemoteDataSource {
     created = input;
     return BrokerReservationDto.fromJson(_row());
   }
-}
-
-class _FakeRepo implements BrokerReservationsRepository {
-  _FakeRepo(this._list);
-  final Result<List<BrokerReservation>> _list;
-  @override
-  Future<Result<List<BrokerReservation>>> getReservations(BrokerReservationsQuery q) async => _list;
-  @override
-  Future<Result<BrokerReservationDetail>> getReservation(String id) async => throw UnimplementedError();
-  @override
-  Future<Result<BrokerReservation>> createReservation(NewBrokerReservation input) async => throw UnimplementedError();
 }
 
 Map<String, dynamic> _row({String status = 'PENDING'}) => {
@@ -92,23 +79,6 @@ void main() {
       );
       final r = await repo.getReservations(const BrokerReservationsQuery());
       expect(r.dataOrNull?.single.reservationNumber, 'R-1');
-    });
-  });
-
-  group('BrokerReservationsCubit', () {
-    test('empty → empty', () async {
-      final cubit = BrokerReservationsCubit(GetBrokerReservations(_FakeRepo(const Ok([]))));
-      await cubit.load();
-      expect(cubit.state.status, DataStatus.empty);
-    });
-
-    test('setStatus filters + reloads', () async {
-      final cubit = BrokerReservationsCubit(GetBrokerReservations(_FakeRepo(Ok([
-        const BrokerReservation(id: 'r1', status: 'PENDING'),
-      ]))));
-      await cubit.setStatus('PENDING');
-      expect(cubit.state.statusFilter, 'PENDING');
-      expect(cubit.state.status, DataStatus.success);
     });
   });
 }

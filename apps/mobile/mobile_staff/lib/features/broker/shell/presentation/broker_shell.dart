@@ -15,10 +15,8 @@ import '../../leads/domain/usecases/broker_lead_use_cases.dart';
 import '../../leads/presentation/cubit/broker_leads_cubit.dart';
 import '../../leads/presentation/screens/broker_leads_screen.dart';
 import '../../profile/presentation/screens/broker_profile_screen.dart';
-import '../../reservations/domain/repositories/broker_reservations_repository.dart';
-import '../../reservations/domain/usecases/broker_reservation_use_cases.dart';
-import '../../reservations/presentation/cubit/broker_reservations_cubit.dart';
-import '../../reservations/presentation/screens/broker_reservations_screen.dart';
+import '../../reservations/view/broker_bookings_data.dart';
+import '../../reservations/view/broker_bookings_screens.dart';
 
 /// The authenticated Broker workspace: a 5-tab bottom-nav shell.
 ///
@@ -53,9 +51,8 @@ class _BrokerShellState extends State<BrokerShell> {
       child: const BrokerLeadsScreen(),
     ),
     BlocProvider(
-      create: (ctx) => BrokerReservationsCubit(
-          GetBrokerReservations(ctx.read<BrokerReservationsRepository>())),
-      child: const BrokerReservationsScreen(),
+      create: (ctx) => BrokerBookingsCubit(BrokerBookingsRepository(ctx.read<Dio>())),
+      child: const BrokerBookingsScreen(),
     ),
     const BrokerProfileScreen(),
   ];

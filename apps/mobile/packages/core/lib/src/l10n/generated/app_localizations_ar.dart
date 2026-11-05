@@ -7743,4 +7743,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rnHoldLabel => 'مدة الحجز';
+
+  @override
+  String get rbFromClients => 'من عملائك';
+
+  @override
+  String get rbConvertedHint => 'تحوّلت إلى عقود';
+
+  @override
+  String get rbAll => 'كلها';
+
+  @override
+  String get rbCommission => 'عمولتك';
+
+  @override
+  String get rbCommissionTotalHint => 'مجموع عمولتك';
+
+  @override
+  String rbCommissionPct(String pct) {
+    return 'عمولتك $pct';
+  }
+
+  @override
+  String get rbEmpty => 'لا توجد حجوزات بعد';
+
+  @override
+  String get rbEmptyMessage =>
+      'اطلب حجزًا لوحدة لعميلك من تاب المشاريع أو من صفحة العميل.';
+
+  @override
+  String get rbSearchHint => 'ابحث بالعميل أو رقم الحجز';
+
+  @override
+  String get rbOpenContract => 'فتح العقد';
 }

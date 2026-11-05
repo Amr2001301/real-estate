@@ -71,12 +71,11 @@ import '../features/broker/leads/presentation/screens/create_broker_lead_screen.
 import '../features/broker/profile/domain/repositories/broker_profile_repository.dart';
 import '../features/broker/profile/domain/usecases/get_broker_profile.dart';
 import '../features/broker/profile/presentation/cubit/broker_profile_cubit.dart';
-import '../features/broker/reservations/domain/entities/broker_reservation.dart';
 import '../features/broker/reservations/domain/repositories/broker_reservations_repository.dart';
 import '../features/broker/reservations/domain/usecases/broker_reservation_use_cases.dart';
-import '../features/broker/reservations/presentation/cubit/broker_reservation_detail_cubit.dart';
+import '../features/broker/reservations/view/broker_bookings_data.dart';
 import '../features/broker/reservations/presentation/cubit/create_broker_reservation_cubit.dart';
-import '../features/broker/reservations/presentation/screens/broker_reservation_detail_screen.dart';
+import '../features/broker/reservations/view/broker_bookings_screens.dart';
 import '../features/broker/reservations/presentation/screens/create_broker_reservation_screen.dart';
 import '../features/broker/shell/presentation/broker_shell.dart';
 import '../features/payments_review/domain/repositories/payments_review_repository.dart';
@@ -332,13 +331,9 @@ GoRouter createStaffRouter(
         path: '/broker/reservations/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          final reservation = state.extra as BrokerReservation?;
           return BlocProvider(
-            create: (ctx) => BrokerReservationDetailCubit(
-              GetBrokerReservationDetail(ctx.read<BrokerReservationsRepository>()),
-              reservationId: id,
-            ),
-            child: BrokerReservationDetailScreen(fallback: reservation),
+            create: (ctx) => BrokerBookingCubit(BrokerBookingsRepository(ctx.read<Dio>()), reservationId: id),
+            child: const BrokerBookingScreen(),
           );
         },
       ),

@@ -2560,5 +2560,16 @@
   "rnModePercentSub": "نسبة مئوية من سعر الوحدة",
   "rnHoldUntil": "ينتهي الحجز {date} إن لم يُراجَع",
   "@rnHoldUntil": {"placeholders": {"date": {"type": "String"}}},
-  "rnHoldLabel": "مدة الحجز"
+  "rnHoldLabel": "مدة الحجز",
+  "rbFromClients": "من عملائك",
+  "rbConvertedHint": "تحوّلت إلى عقود",
+  "rbAll": "كلها",
+  "rbCommission": "عمولتك",
+  "rbCommissionTotalHint": "مجموع عمولتك",
+  "rbCommissionPct": "عمولتك {pct}",
+  "@rbCommissionPct": {"placeholders": {"pct": {"type": "String"}}},
+  "rbEmpty": "لا توجد حجوزات بعد",
+  "rbEmptyMessage": "اطلب حجزًا لوحدة لعميلك من تاب المشاريع أو من صفحة العميل.",
+  "rbSearchHint": "ابحث بالعميل أو رقم الحجز",
+  "rbOpenContract": "فتح العقد"
 }
