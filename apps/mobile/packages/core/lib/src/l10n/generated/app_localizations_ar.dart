@@ -8784,4 +8784,36 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get clDocOther => 'أخرى';
+
+  @override
+  String get calculatorUnitSection => 'الوحدة وخططها';
+
+  @override
+  String get calculatorProject => 'المشروع';
+
+  @override
+  String get calculatorUnit => 'الوحدة';
+
+  @override
+  String get calculatorNoPlans =>
+      'لا توجد خطط سداد فعّالة لهذه الوحدة. يمكنك الحساب يدويًا بالأسفل.';
+
+  @override
+  String calculatorPlanUpfront(String amount) {
+    return 'المقدم والحجز $amount';
+  }
+
+  @override
+  String get calculatorPlanDurations => 'مدد السداد';
+
+  @override
+  String calculatorPerMonth(String amount) {
+    return '$amount شهريًا';
+  }
+
+  @override
+  String get calculatorCashPlan => 'سداد نقدي';
+
+  @override
+  String get calculatorManual => 'حساب يدوي';
 }

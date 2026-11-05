@@ -8755,4 +8755,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clDocOther => 'Other';
+
+  @override
+  String get calculatorUnitSection => 'Unit and its plans';
+
+  @override
+  String get calculatorProject => 'Project';
+
+  @override
+  String get calculatorUnit => 'Unit';
+
+  @override
+  String get calculatorNoPlans =>
+      'This unit has no active payment plans. You can calculate by hand below.';
+
+  @override
+  String calculatorPlanUpfront(String amount) {
+    return 'Down payment and booking $amount';
+  }
+
+  @override
+  String get calculatorPlanDurations => 'Payment durations';
+
+  @override
+  String calculatorPerMonth(String amount) {
+    return '$amount / month';
+  }
+
+  @override
+  String get calculatorCashPlan => 'Cash';
+
+  @override
+  String get calculatorManual => 'Manual calculation';
 }

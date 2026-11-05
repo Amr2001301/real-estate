@@ -2911,5 +2911,16 @@
   "clDocId": "ID document",
   "clDocLegal": "Legal",
   "clDocFinancial": "Financial",
-  "clDocOther": "Other"
+  "clDocOther": "Other",
+  "calculatorUnitSection": "Unit and its plans",
+  "calculatorProject": "Project",
+  "calculatorUnit": "Unit",
+  "calculatorNoPlans": "This unit has no active payment plans. You can calculate by hand below.",
+  "calculatorPlanUpfront": "Down payment and booking {amount}",
+  "@calculatorPlanUpfront": {"placeholders": {"amount": {"type": "String"}}},
+  "calculatorPlanDurations": "Payment durations",
+  "calculatorPerMonth": "{amount} / month",
+  "@calculatorPerMonth": {"placeholders": {"amount": {"type": "String"}}},
+  "calculatorCashPlan": "Cash",
+  "calculatorManual": "Manual calculation"
 }

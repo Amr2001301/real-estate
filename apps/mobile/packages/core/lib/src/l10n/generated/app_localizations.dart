@@ -15541,6 +15541,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get clDocOther;
+
+  /// No description provided for @calculatorUnitSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit and its plans'**
+  String get calculatorUnitSection;
+
+  /// No description provided for @calculatorProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get calculatorProject;
+
+  /// No description provided for @calculatorUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get calculatorUnit;
+
+  /// No description provided for @calculatorNoPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'This unit has no active payment plans. You can calculate by hand below.'**
+  String get calculatorNoPlans;
+
+  /// No description provided for @calculatorPlanUpfront.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment and booking {amount}'**
+  String calculatorPlanUpfront(String amount);
+
+  /// No description provided for @calculatorPlanDurations.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment durations'**
+  String get calculatorPlanDurations;
+
+  /// No description provided for @calculatorPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} / month'**
+  String calculatorPerMonth(String amount);
+
+  /// No description provided for @calculatorCashPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get calculatorCashPlan;
+
+  /// No description provided for @calculatorManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual calculation'**
+  String get calculatorManual;
 }
 
 class _AppLocalizationsDelegate
