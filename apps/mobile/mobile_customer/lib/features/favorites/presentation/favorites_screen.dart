@@ -46,7 +46,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final bottom = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: context.appColors.canvas,
       body: Column(
         children: [
           // Header
@@ -168,7 +168,7 @@ class _FilterRow extends StatelessWidget {
     final projectCount = all.where((f) => f.isProject).length;
 
     return Container(
-      color: const Color(0xFFF5F7FA),
+      color: context.appColors.canvas,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Row(
         children: [
