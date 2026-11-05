@@ -347,15 +347,32 @@ class _InquiryCard extends StatelessWidget {
         ],
         if (phone.isNotEmpty || (canAct && row.status != 'CLOSED')) ...[
           const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            if (phone.isNotEmpty) ...[
-              _Act(key: Key('inquiry-call-${row.id}'), icon: Icons.phone_rounded, label: l10n.contactCall, onTap: () => ContactActions.call(phone)),
-              _Act(key: Key('inquiry-wa-${row.id}'), icon: Icons.chat_rounded, label: l10n.contactWhatsapp, onTap: () => ContactActions.whatsApp(number: phone)),
-            ],
+          Row(children: [
             if (canAct && row.status == 'OPEN')
-              _Act(key: Key('inquiry-replied-${row.id}'), icon: Icons.mark_chat_read_rounded, label: l10n.inqMarkReplied, gold: true, onTap: () => onSet('RESPONDED')),
-            if (canAct && row.status != 'CLOSED')
-              _Act(key: Key('inquiry-close-${row.id}'), icon: Icons.archive_outlined, label: l10n.inqClose, onTap: () => onSet('CLOSED')),
+              Expanded(
+                child: _Primary(
+                  key: Key('inquiry-replied-${row.id}'),
+                  icon: Icons.mark_chat_read_rounded,
+                  label: l10n.inqMarkReplied,
+                  onTap: () => onSet('RESPONDED'),
+                ),
+              )
+            else
+              const Spacer(),
+            if (phone.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              _Act(key: Key('inquiry-call-${row.id}'), icon: Icons.phone_rounded, tooltip: l10n.contactCall, onTap: () => ContactActions.call(phone)),
+              const SizedBox(width: 8),
+              _Act(
+                  key: Key('inquiry-wa-${row.id}'),
+                  icon: Icons.chat_rounded,
+                  tooltip: l10n.contactWhatsapp,
+                  onTap: () => ContactActions.whatsApp(number: phone)),
+            ],
+            if (canAct && row.status != 'CLOSED') ...[
+              const SizedBox(width: 8),
+              _Act(key: Key('inquiry-close-${row.id}'), icon: Icons.archive_outlined, tooltip: l10n.inqClose, onTap: () => onSet('CLOSED')),
+            ],
           ]),
         ],
       ]),
@@ -376,34 +393,54 @@ class _Pill extends StatelessWidget {
       );
 }
 
+/// A square icon button for the secondary actions.
 class _Act extends StatelessWidget {
-  const _Act({super.key, required this.icon, required this.label, required this.onTap, this.gold = false});
+  const _Act({super.key, required this.icon, required this.tooltip, required this.onTap});
   final IconData icon;
-  final String label;
+  final String tooltip;
   final VoidCallback onTap;
-  final bool gold;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: gold ? AppPalette.gold50 : colors.surface,
-          border: Border.all(color: gold ? AppPalette.gold100 : colors.hairline),
-          borderRadius: BorderRadius.circular(12),
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(13),
+        onTap: onTap,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(color: colors.surface, border: Border.all(color: colors.hairline), borderRadius: BorderRadius.circular(13)),
+          child: Icon(icon, size: 19, color: colors.ink),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: gold ? AppPalette.gold600 : colors.ink),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: gold ? AppPalette.gold600 : colors.ink)),
-        ]),
       ),
     );
   }
+}
+
+/// The one main action on a card, gold and as wide as the room allows.
+class _Primary extends StatelessWidget {
+  const _Primary({super.key, required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(13),
+        onTap: onTap,
+        child: Container(
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(13)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 18, color: AppPalette.gold600),
+            const SizedBox(width: 7),
+            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+          ]),
+        ),
+      );
 }
 
 class _StatusSheet extends StatefulWidget {
