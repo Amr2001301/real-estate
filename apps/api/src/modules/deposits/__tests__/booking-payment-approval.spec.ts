@@ -52,6 +52,7 @@ const PAID_AT = new Date('2030-04-01T00:00:00.000Z');
 
 const documentsMock = {
   create: jest.fn().mockResolvedValue({ id: 'doc-1' }),
+  assertFileRef: jest.fn(),
 };
 const notificationsMock = {
   sendToUser: jest.fn().mockResolvedValue(undefined),

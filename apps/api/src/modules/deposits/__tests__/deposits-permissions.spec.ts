@@ -14,7 +14,7 @@ import { runTenantContext } from '../../../common/tenant/tenant-context';
 
 // DepositsModule imports DocumentsModule; override the service so tests never
 // touch R2, and ConfigModule satisfies the (unused-here) R2/Config deps.
-const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
+const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }), assertFileRef: jest.fn() };
 // P11.6.1 — R2 is overridden so the signed-download handler returns a
 // deterministic signed URL without contacting object storage.
 const r2Mock = {

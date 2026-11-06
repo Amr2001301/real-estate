@@ -1152,6 +1152,8 @@ export class DepositsService {
    * service contract — DB row first, push best-effort try/catch).
    */
   async submitProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    // Before any write: a bad file reference must not leave a proof row behind (F-030).
+    this.documents.assertFileRef(dto.receiptUrl);
     // Exactly one target — an installment OR a reservation booking amount.
     const hasInstallment = !!dto.installmentId;
     const hasReservation = !!dto.reservationId;
@@ -1275,6 +1277,7 @@ export class DepositsService {
    * rejection reverts it to UNPAID (see rejectProof).
    */
   async submitBookingProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    this.documents.assertFileRef(dto.receiptUrl);
     const reservation = await this.prisma.reservation.findUnique({
       where: { id: dto.reservationId },
       select: {
@@ -1390,6 +1393,7 @@ export class DepositsService {
     depositId: string,
     dto: CustomerResubmitProofDto,
   ) {
+    this.documents.assertFileRef(dto.receiptUrl);
     // The same ownership as /me/deposits: an installment payment by who owned
     // the contract when it was made, a booking payment (no contract) by the
     // reservation's client. Checking contract.customerId alone 404'd every
