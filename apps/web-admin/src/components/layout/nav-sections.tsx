@@ -4,13 +4,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { NAV_ICONS, type IconKey } from '@/lib/nav';
 import { NavLink, isNavActive } from './nav-link';
 
 export interface NavSectionView {
   key: string;
   title: string;
+  /** The icon on the section's header. */
+  iconKey: IconKey;
   flat?: boolean;
-  items: { href: string; label: string; badge?: number; matches?: string[] }[];
+  items: { href: string; label: string; iconKey: IconKey; badge?: number; matches?: string[] }[];
 }
 
 interface Props {
@@ -20,30 +23,38 @@ interface Props {
   onNavigate?: () => void;
 }
 
-const STORAGE_KEY = 'sidebar.openSections';
+const STORAGE_KEY = 'sidebar.openSection';
 
-function readStored(): string[] | null {
+function readStored(): string | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : null;
+    return window.localStorage.getItem(STORAGE_KEY);
   } catch {
     return null;
   }
 }
 
-function store(keys: string[]) {
+function store(key: string | null) {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+    if (key) window.localStorage.setItem(STORAGE_KEY, key);
+    else window.localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* a private window: the choice lasts this page only */
   }
 }
 
+function Icon({ name }: { name: IconKey }) {
+  const C = NAV_ICONS[name];
+  return <C aria-hidden className="h-4 w-4" strokeWidth={1.8} />;
+}
+
 /**
- * The sidebar's sections, each opening and closing. The section of the page
- * you are on is always open; the rest stay as you left them. A search box
- * finds any page by name (Ctrl/⌘+K). Closed sections keep their links in the
- * page, hidden, so nothing that counts on them changes.
+ * The sidebar's sections: one open at a time, so nine of them fit without
+ * scrolling. The section of the page you are on is always the open one; a tap
+ * on another opens it and closes the first. Each header says what is inside
+ * (an icon, how many pages) and whether something there is waiting (a gold
+ * dot while it is closed). A search box finds any page by name (Ctrl/⌘+K).
+ * Closed sections keep their links in the page, hidden, so nothing that
+ * counts on them changes.
  */
 export function NavSections({ sections, searchPlaceholder, noResults, onNavigate }: Props) {
   const pathname = usePathname() ?? '';
@@ -51,14 +62,17 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
     () => sections.find((s) => !s.flat && s.items.some((i) => isNavActive(pathname, i.href, i.matches)))?.key,
     [sections, pathname],
   );
-  const [open, setOpen] = useState<Set<string>>(() => new Set([current ?? sections.find((s) => !s.flat)?.key ?? '']));
+  const [open, setOpen] = useState<string | null>(current ?? sections.find((s) => !s.flat)?.key ?? null);
   const [query, setQuery] = useState('');
   const input = useRef<HTMLInputElement>(null);
 
-  // What the user left open last time, plus the section of this page.
+  // The section of this page opens; with no section (a page the menu does not list), the last one left open.
   useEffect(() => {
-    const stored = readStored();
-    setOpen((prev) => new Set([...(stored ?? [...prev]), ...(current ? [current] : [])]));
+    if (current) setOpen(current);
+    else {
+      const stored = readStored();
+      if (stored) setOpen(stored);
+    }
   }, [current]);
 
   useEffect(() => {
@@ -73,13 +87,9 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
   }, []);
 
   function toggle(key: string) {
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      store([...next]);
-      return next;
-    });
+    const next = open === key ? null : key;
+    setOpen(next);
+    store(next);
   }
 
   const q = query.trim().toLowerCase();
@@ -114,6 +124,7 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
                 key={i.href}
                 href={i.href}
                 label={i.label}
+                icon={<Icon name={i.iconKey} />}
                 hint={i.section}
                 badge={i.badge}
                 matches={i.matches}
@@ -133,37 +144,85 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
           section.flat ? (
             <div key={section.key} className="space-y-0.5 border-t border-white/[0.06] pt-2">
               {section.items.map((item) => (
-                <NavLink key={item.href} {...item} onNavigate={onNavigate} />
+                <NavLink key={item.href} {...item} icon={<Icon name={item.iconKey} />} onNavigate={onNavigate} />
               ))}
             </div>
           ) : (
-            <div key={section.key}>
-              <button
-                type="button"
-                onClick={() => toggle(section.key)}
-                aria-expanded={open.has(section.key)}
-                data-testid="nav-section"
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11.5px] font-bold uppercase tracking-[0.12em] text-sidebar-text-muted transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-              >
-                <span>{section.title}</span>
-                <span className="flex items-center gap-2">
-                  {!open.has(section.key) && section.items.some((i) => (i.badge ?? 0) > 0) && (
-                    <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#D8B66A]" />
-                  )}
-                  <ChevronDown
-                    aria-hidden
-                    className={cn('h-3.5 w-3.5 transition-transform duration-150', !open.has(section.key) && 'ltr:-rotate-90 rtl:rotate-90')}
-                  />
-                </span>
-              </button>
-              <div className={cn('space-y-0.5 pb-1', !open.has(section.key) && 'hidden')}>
-                {section.items.map((item) => (
-                  <NavLink key={item.href} {...item} onNavigate={onNavigate} />
-                ))}
-              </div>
-            </div>
+            <Section
+              key={section.key}
+              section={section}
+              isOpen={open === section.key}
+              onToggle={() => toggle(section.key)}
+              onNavigate={onNavigate}
+            />
           ),
         )}
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  section,
+  isOpen,
+  onToggle,
+  onNavigate,
+}: {
+  section: NavSectionView;
+  isOpen: boolean;
+  onToggle: () => void;
+  onNavigate?: () => void;
+}) {
+  const waiting = section.items.some((i) => (i.badge ?? 0) > 0);
+  const panel = `nav-panel-${section.key}`;
+  return (
+    <div className={cn('rounded-2xl transition-colors duration-200', isOpen && 'bg-white/[0.03]')}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={panel}
+        data-testid="nav-section"
+        className={cn(
+          'flex h-11 w-full items-center gap-2.5 rounded-xl px-2 text-start text-[14px] transition-colors duration-150',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
+          isOpen ? 'font-bold text-white' : 'font-medium text-sidebar-text hover:bg-white/[0.04] hover:text-white/90',
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            'grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150',
+            isOpen ? 'bg-[#D8B66A]/[0.15] text-[#D8B66A]' : 'bg-white/[0.05] text-sidebar-text-muted',
+          )}
+        >
+          <Icon name={section.iconKey} />
+        </span>
+        <span className="flex-1 truncate">{section.title}</span>
+        {!isOpen && waiting && <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-[#D8B66A]" />}
+        <span aria-hidden className="rounded-full bg-white/[0.05] px-1.5 text-[11px] font-medium tabular-nums text-sidebar-text-muted">
+          {section.items.length}
+        </span>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            'h-[15px] w-[15px] shrink-0 text-sidebar-text-muted transition-transform duration-200',
+            !isOpen && 'ltr:-rotate-90 rtl:rotate-90',
+          )}
+        />
+      </button>
+      <div
+        id={panel}
+        className={cn('grid transition-[grid-template-rows] duration-200 ease-smooth', isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}
+      >
+        {/* Closed: hidden for the eye and for tab / screen readers, after the fold has finished. */}
+        <div className={cn('overflow-hidden', !isOpen && 'invisible transition-[visibility] delay-200 duration-0')}>
+          <div className="ms-[22px] me-1.5 space-y-px border-s border-white/[0.08] py-1 ps-2 pe-1">
+            {section.items.map((item) => (
+              <NavLink key={item.href} {...item} dense icon={<Icon name={item.iconKey} />} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

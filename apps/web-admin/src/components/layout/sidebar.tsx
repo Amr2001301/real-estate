@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
 import type { Locale } from '@/lib/locale';
-import { filterNavForRole, type NavSection } from '@/lib/nav';
+import { filterNavForRole, SECTION_ICONS, type NavSection } from '@/lib/nav';
 import { uiT } from '@/messages/ui';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
@@ -42,16 +42,18 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
       </div>
 
       {/* Navigation */}
-      {/* Sections open and close; a search box finds any page (U5: text + ring, no icons). */}
+      {/* One section open at a time, each with its icon; a search box finds any page. */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3">
         <NavSections
           sections={resolved.map((section) => ({
             key: section.titleKey,
             title: m.nav.sections[section.titleKey],
+            iconKey: SECTION_ICONS[section.titleKey],
             flat: section.flat || resolved.length === 1,
             items: section.items.map((item) => ({
               href: item.href,
               label: m.nav.items[item.labelKey],
+              iconKey: item.iconKey,
               badge: item.badge,
               matches: item.matches,
             })),
