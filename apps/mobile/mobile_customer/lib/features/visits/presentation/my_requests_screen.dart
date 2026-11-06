@@ -918,36 +918,14 @@ class _AppointmentActions extends StatelessWidget {
     );
   }
 
-  Future<String?> _askReason(BuildContext context) async {
-    final l10n       = context.l10n;
-    final controller = TextEditingController();
-    final result     = await showDialog<String>(
+  Future<String?> _askReason(BuildContext context) {
+    return showModalBottomSheet<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.appointmentRescheduleReasonLabel),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          maxLength: 500,
-          decoration: InputDecoration(
-            hintText: l10n.appointmentRescheduleReasonHint,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
-            child: Text(l10n.appointmentSendReschedule),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _RescheduleReasonSheet(),
     );
-    controller.dispose();
-    return result;
   }
 
   @override
@@ -978,6 +956,105 @@ class _AppointmentActions extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Reschedule reason sheet ──────────────────────────────────────────────────
+class _RescheduleReasonSheet extends StatefulWidget {
+  const _RescheduleReasonSheet();
+
+  @override
+  State<_RescheduleReasonSheet> createState() => _RescheduleReasonSheetState();
+}
+
+class _RescheduleReasonSheetState extends State<_RescheduleReasonSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final inset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: inset),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.sm,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.hairline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.appointmentRescheduleReasonLabel,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colors.inkStrong,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: InputDecoration(
+                hintText: l10n.appointmentRescheduleReasonHint,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: l10n.appointmentSendReschedule,
+                    variant: AppButtonVariant.gold,
+                    size: AppButtonSize.medium,
+                    onPressed: () =>
+                        Navigator.pop(context, _controller.text),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: l10n.actionCancel,
+                    variant: AppButtonVariant.outline,
+                    size: AppButtonSize.medium,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
