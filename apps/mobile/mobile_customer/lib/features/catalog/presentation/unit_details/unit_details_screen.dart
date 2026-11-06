@@ -665,24 +665,15 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              height: 370,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                itemCount: units.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppSpacing.md),
-                itemBuilder: (context, i) {
-                  final unit = units[i];
-                  return UnitCard(
-                    unit: unit,
-                    width: 280,
-                    onTap: () => context.push('/units/${unit.id}'),
-                  );
-                },
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Column(children: [
+                for (final unit in units.take(3))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: UnitCard(unit: unit, onTap: () => context.push('/units/${unit.id}')),
+                  ),
+              ]),
             ),
           ],
         );
