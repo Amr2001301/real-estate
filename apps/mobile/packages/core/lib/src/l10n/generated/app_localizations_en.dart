@@ -9506,4 +9506,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get financeServices => 'Financial services';
+
+  @override
+  String get myPropertyUnitsLabel => 'My units';
+
+  @override
+  String get myPropertyOwnedLabel => 'Owned';
+
+  @override
+  String get myPropertyOwnedHint => 'Signed contract';
+
+  @override
+  String get myPropertyWithPlanHint => 'On a plan';
 }

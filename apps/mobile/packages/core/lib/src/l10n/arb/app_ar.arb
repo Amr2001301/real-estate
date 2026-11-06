@@ -3140,5 +3140,9 @@
   "financeAllOnTime": "لا متأخرات",
   "financeNeedsPayment": "تحتاج سدادًا",
   "financeNextInstallment": "القسط القادم",
-  "financeServices": "الخدمات المالية"
+  "financeServices": "الخدمات المالية",
+  "myPropertyUnitsLabel": "وحداتي",
+  "myPropertyOwnedLabel": "مملوكة",
+  "myPropertyOwnedHint": "عقد موقّع",
+  "myPropertyWithPlanHint": "بخطة سداد"
 }

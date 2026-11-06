@@ -16849,6 +16849,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Financial services'**
   String get financeServices;
+
+  /// No description provided for @myPropertyUnitsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'My units'**
+  String get myPropertyUnitsLabel;
+
+  /// No description provided for @myPropertyOwnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get myPropertyOwnedLabel;
+
+  /// No description provided for @myPropertyOwnedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contract'**
+  String get myPropertyOwnedHint;
+
+  /// No description provided for @myPropertyWithPlanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'On a plan'**
+  String get myPropertyWithPlanHint;
 }
 
 class _AppLocalizationsDelegate
