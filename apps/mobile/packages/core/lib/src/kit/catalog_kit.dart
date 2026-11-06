@@ -290,7 +290,7 @@ class _CatalogPageHeroState extends State<CatalogPageHero> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(color: AppPalette.navy.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(99)),
-                  child: Text(l10n.ppPhotoOf(_i + 1, photos.length), style: const TextStyle(fontSize: 12, color: Colors.white)),
+                  child: Text(ltr(l10n.ppPhotoOf(_i + 1, photos.length)), style: const TextStyle(fontSize: 12, color: Colors.white)),
                 ),
               if (widget.onShare != null) ...[
                 const SizedBox(width: 8),
