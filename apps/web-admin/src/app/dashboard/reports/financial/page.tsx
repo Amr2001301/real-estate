@@ -39,6 +39,8 @@ import { ReportsTabs } from '../_components/reports-tabs';
 import { getMyCodes } from '@/lib/permissions';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
 import { CashflowChart } from './_components/cashflow-chart';
+import { CompareView } from './_components/compare-view';
+import { buildCompareData, type FinancialComparison } from './_components/compare-data';
 import { EntityLink } from '@/components/entity-link';
 
 export const dynamic    = 'force-dynamic';
@@ -75,6 +77,29 @@ function getDepositPayer(d: FinancialDepositRow): { kind: 'customer' | 'client' 
   if (d.reservation?.client) return { kind: 'client', id: d.reservation.client.id };
   if (d.reservation?.lead) return { kind: 'lead', id: d.reservation.lead.id };
   return null;
+}
+
+/**
+ * A period's name: «نوفمبر 2026», «2026», «الربع 4 2026»; a part of a month
+ * says so («أول 7 أيام من أكتوبر 2026»); a running period says «حتى اليوم».
+ */
+function rangeName(r: { dateFrom: string; dateTo: string }, today: string, locale: string, other = false): string {
+  const en = locale === 'en';
+  const loc = intlLocale(locale as never);
+  const a = new Date(`${r.dateFrom}T00:00:00Z`);
+  const b = new Date(`${r.dateTo}T00:00:00Z`);
+  const month = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(a);
+  const lastOfMonth = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 0)).getUTCDate();
+  const startsMonth = a.getUTCDate() === 1;
+  const sameMonth = a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();
+  const days = Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1;
+  let name: string;
+  if (startsMonth && sameMonth && b.getUTCDate() === lastOfMonth) name = month;
+  else if (startsMonth && sameMonth) name = en ? `First ${days} days of ${month}` : `أول ${days} ${days <= 10 ? 'أيام' : 'يومًا'} من ${month}`;
+  else if (startsMonth && a.getUTCMonth() === 0 && b.getUTCMonth() === 11 && a.getUTCFullYear() === b.getUTCFullYear()) name = String(a.getUTCFullYear());
+  else if (startsMonth && days >= 89 && days <= 92 && a.getUTCMonth() % 3 === 0) name = en ? `Q${a.getUTCMonth() / 3 + 1} ${a.getUTCFullYear()}` : `الربع ${a.getUTCMonth() / 3 + 1} ${a.getUTCFullYear()}`;
+  else name = `${r.dateFrom} → ${r.dateTo}`;
+  return !other && r.dateTo >= today && r.dateFrom <= today ? (en ? `${name} (to date)` : `${name} (حتى اليوم)`) : name;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,7 +149,13 @@ export default async function FinancialReportsPage({
     return `/reports/financial-dashboard${qs ? `?${qs}` : ''}`;
   }
 
-  const [dashRes, cmpDashRes, projectsRes, refundsRes] = await Promise.all([
+  const compareQs = new URLSearchParams();
+  if (cmpRange) {
+    compareQs.set('dateFrom', dateFrom); compareQs.set('dateTo', dateTo);
+    compareQs.set('prevFrom', cmpRange.dateFrom); compareQs.set('prevTo', cmpRange.dateTo);
+    for (const k of ['projectId', 'type', 'q'] as const) if (sp[k]) compareQs.set(k, sp[k]!);
+  }
+  const [dashRes, cmpDashRes, projectsRes, refundsRes, compareRes] = await Promise.all([
     safe(api.get<FinancialDashboard>(apiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
     cmpRange
       // The same filters as the current period, only the dates differ.
@@ -132,6 +163,7 @@ export default async function FinancialReportsPage({
       : Promise.resolve({ data: null, error: null }),
     safe(fetchProjectOptions()),
     safe(api.get<OutstandingRefunds>('/contracts/refunds/outstanding')),
+    cmpRange ? safe(api.get<FinancialComparison>(`/reports/financial-comparison?${compareQs.toString()}`)) : Promise.resolve({ data: null, error: null }),
   ]);
   const refundsOwedRows = refundsRes.data?.data ?? [];
 
@@ -278,6 +310,25 @@ export default async function FinancialReportsPage({
         projects={projectOptions}
         locale={locale}
       />
+
+      {compareRes.error && (
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{compareRes.error}</div>
+      )}
+      {compareRes.data && cmpRange && (
+        <CompareView
+          data={buildCompareData(compareRes.data, {
+            en,
+            money: cmoney,
+            short,
+            count,
+            name: (v) => tx(v as never) || '—',
+            typeLabel: (k) => DEPOSIT_TYPE_LABELS[k as DepositType] ?? k,
+            periodLabel: rangeName({ dateFrom, dateTo }, today, locale),
+            prevLabel: rangeName(cmpRange, today, locale, true),
+            asOf: { dueToDate, overdue: overdueAmt, contractValue: contractVal },
+          })}
+        />
+      )}
 
       {dashRes.error && (
         <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
