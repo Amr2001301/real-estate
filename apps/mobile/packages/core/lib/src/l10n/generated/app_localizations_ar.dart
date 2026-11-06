@@ -9531,4 +9531,22 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get financeInstallmentsPaid => 'مدفوعة';
+
+  @override
+  String get financeOverdue => 'المتأخرة';
+
+  @override
+  String get financeAllOnTime => 'لا متأخرات';
+
+  @override
+  String get financeNeedsPayment => 'تحتاج سدادًا';
+
+  @override
+  String get financeNextInstallment => 'القسط القادم';
+
+  @override
+  String get financeServices => 'الخدمات المالية';
 }

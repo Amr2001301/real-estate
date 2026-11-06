@@ -3134,5 +3134,11 @@
   "ctProjectsCountN": "{n, plural, =0{لا مشاريع} =1{مشروع واحد} =2{مشروعان} few{{n} مشاريع} other{{n} مشروعًا}}",
   "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
   "ctUnitsCountN": "{n, plural, =0{لا وحدات} =1{وحدة واحدة} =2{وحدتان} few{{n} وحدات} other{{n} وحدة}}",
-  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}}
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "financeInstallmentsPaid": "مدفوعة",
+  "financeOverdue": "المتأخرة",
+  "financeAllOnTime": "لا متأخرات",
+  "financeNeedsPayment": "تحتاج سدادًا",
+  "financeNextInstallment": "القسط القادم",
+  "financeServices": "الخدمات المالية"
 }

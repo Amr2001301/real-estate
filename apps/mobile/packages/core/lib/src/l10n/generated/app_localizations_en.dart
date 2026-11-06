@@ -9488,4 +9488,22 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get financeInstallmentsPaid => 'paid';
+
+  @override
+  String get financeOverdue => 'Overdue';
+
+  @override
+  String get financeAllOnTime => 'None overdue';
+
+  @override
+  String get financeNeedsPayment => 'Needs payment';
+
+  @override
+  String get financeNextInstallment => 'Next installment';
+
+  @override
+  String get financeServices => 'Financial services';
 }

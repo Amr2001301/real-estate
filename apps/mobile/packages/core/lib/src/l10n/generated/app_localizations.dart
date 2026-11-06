@@ -16813,6 +16813,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n, plural, =0{No units} =1{1 unit} other{{n} units}}'**
   String ctUnitsCountN(int n);
+
+  /// No description provided for @financeInstallmentsPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'paid'**
+  String get financeInstallmentsPaid;
+
+  /// No description provided for @financeOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get financeOverdue;
+
+  /// No description provided for @financeAllOnTime.
+  ///
+  /// In en, this message translates to:
+  /// **'None overdue'**
+  String get financeAllOnTime;
+
+  /// No description provided for @financeNeedsPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs payment'**
+  String get financeNeedsPayment;
+
+  /// No description provided for @financeNextInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next installment'**
+  String get financeNextInstallment;
+
+  /// No description provided for @financeServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial services'**
+  String get financeServices;
 }
 
 class _AppLocalizationsDelegate

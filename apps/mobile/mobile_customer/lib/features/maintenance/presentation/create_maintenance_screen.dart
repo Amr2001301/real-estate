@@ -62,50 +62,72 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
                     AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                   ),
                   children: [
                     // ── Unit picker ──────────────────────────────────────
-                    if (!state.fixedUnit) ...[
-                      _SectionLabel(label: l10n.maintenanceUnitLabel, step: step.next()),
-                      const SizedBox(height: AppSpacing.sm),
-                      _Units(state: state),
-                      if (state.showValidation && !state.hasUnit) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        _ValidationText(l10n.maintenanceUnitRequired),
-                      ],
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
+                    if (!state.fixedUnit)
+                      _StepCard(
+                        children: [
+                          _SectionLabel(
+                            label: l10n.maintenanceUnitLabel,
+                            step: step.next(),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          _Units(state: state),
+                          if (state.showValidation && !state.hasUnit) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            _ValidationText(l10n.maintenanceUnitRequired),
+                          ],
+                        ],
+                      ),
 
                     // ── Categories ───────────────────────────────────────
-                    _SectionLabel(label: l10n.maintenanceCategoryLabel, step: step.next()),
-                    const SizedBox(height: AppSpacing.sm),
-                    _Categories(state: state),
-                    if (state.showValidation && !state.hasCategory) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      _ValidationText(l10n.maintenanceCategoryRequired),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
+                    _StepCard(
+                      children: [
+                        _SectionLabel(
+                          label: l10n.maintenanceCategoryLabel,
+                          step: step.next(),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _Categories(state: state),
+                        if (state.showValidation && !state.hasCategory) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          _ValidationText(l10n.maintenanceCategoryRequired),
+                        ],
+                      ],
+                    ),
 
                     // ── Description ──────────────────────────────────────
-                    _SectionLabel(label: l10n.maintenanceDescriptionLabel, step: step.next()),
-                    const SizedBox(height: AppSpacing.sm),
-                    _DescriptionField(
-                      hint: l10n.maintenanceDescriptionHint,
-                      enabled: state.requestId == null,
-                      onChanged: cubit.setDescription,
-                      errorText: state.showValidation && !state.hasDescription
-                          ? l10n.maintenanceDescriptionRequired
-                          : null,
+                    _StepCard(
+                      children: [
+                        _SectionLabel(
+                          label: l10n.maintenanceDescriptionLabel,
+                          step: step.next(),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _DescriptionField(
+                          hint: l10n.maintenanceDescriptionHint,
+                          enabled: state.requestId == null,
+                          onChanged: cubit.setDescription,
+                          errorText:
+                              state.showValidation && !state.hasDescription
+                              ? l10n.maintenanceDescriptionRequired
+                              : null,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
 
                     // ── Photos ───────────────────────────────────────────
-                    _PhotosSection(state: state, step: step.next()),
-                    const SizedBox(height: AppSpacing.xl),
+                    _StepCard(
+                      children: [
+                        _PhotosSection(state: state, step: step.next()),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
 
                     // ── Submit ───────────────────────────────────────────
                     _SubmitArea(state: state),
@@ -160,57 +182,60 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel({required this.label, this.step});
   final String label;
 
-  /// The step's number, in a navy circle.
+  /// The step's number, in a gold tile.
   final int? step;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final colors = context.appColors;
     return Row(
       children: [
-        if (step != null)
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_navyLight, _navyDeep],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$step',
-              style: const TextStyle(color: AppPalette.gold300, fontSize: 13, fontWeight: FontWeight.w800),
-            ),
-          )
-        else
-          Container(
-            width: 3,
-            height: 16,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppPalette.gold400, AppPalette.gold300],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(2),
-            ),
+        Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppPalette.gold50,
+            border: Border.all(color: AppPalette.gold100),
+            borderRadius: BorderRadius.circular(9),
           ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: colors.inkStrong,
-          ),
+          child: step == null
+              ? const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 16,
+                  color: AppPalette.gold500,
+                )
+              : Text(
+                  '$step',
+                  style: const TextStyle(
+                    color: AppPalette.gold600,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
         ),
+        const SizedBox(width: 9),
+        Expanded(child: Text(label, style: homeDisplay(17, colors.inkStrong))),
       ],
     );
   }
+}
+
+/// A step of the form in its own card, as in the other request forms.
+class _StepCard extends StatelessWidget {
+  const _StepCard({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+    padding: const EdgeInsets.all(14),
+    decoration: homeCard(context, radius: 22),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    ),
+  );
 }
 
 // ── Description field ─────────────────────────────────────────────────────────
@@ -864,7 +889,9 @@ class _Units extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                unit.label(Localizations.localeOf(context).languageCode),
+                                unit.label(
+                                  Localizations.localeOf(context).languageCode,
+                                ),
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   color: state.selectedUnitId == unit.id
                                       ? Colors.white
@@ -944,7 +971,9 @@ class _Categories extends StatelessWidget {
                 label: cat.name.resolve(lang),
                 icon: maintenanceCategoryIcon('${cat.name.ar} ${cat.name.en}'),
                 selected: state.selectedCategoryIds.contains(cat.id),
-                onTap: state.requestId == null ? () => cubit.toggleCategory(cat.id) : null,
+                onTap: state.requestId == null
+                    ? () => cubit.toggleCategory(cat.id)
+                    : null,
                 colors: colors,
               ),
           ],
@@ -959,10 +988,16 @@ IconData maintenanceCategoryIcon(String name) {
   bool has(List<String> w) => w.any(n.contains);
   if (has(['سباك', 'plumb', 'مياه', 'water'])) return Icons.plumbing_rounded;
   if (has(['كهرب', 'electric'])) return Icons.electrical_services_rounded;
-  if (has(['تكييف', 'تبريد', 'air', 'ac', 'hvac'])) return Icons.ac_unit_rounded;
-  if (has(['نجار', 'carpent', 'wood', 'أبواب', 'door'])) return Icons.carpenter_rounded;
+  if (has(['تكييف', 'تبريد', 'air', 'ac', 'hvac'])) {
+    return Icons.ac_unit_rounded;
+  }
+  if (has(['نجار', 'carpent', 'wood', 'أبواب', 'door'])) {
+    return Icons.carpenter_rounded;
+  }
   if (has(['دهان', 'نقاش', 'paint'])) return Icons.format_paint_rounded;
-  if (has(['مصعد', 'أسانسير', 'elevator', 'lift'])) return Icons.elevator_rounded;
+  if (has(['مصعد', 'أسانسير', 'elevator', 'lift'])) {
+    return Icons.elevator_rounded;
+  }
   if (has(['حديقة', 'زراعة', 'garden', 'landscape'])) return Icons.yard_rounded;
   if (has(['أمن', 'حراسة', 'security'])) return Icons.security_rounded;
   if (has(['نظافة', 'clean'])) return Icons.cleaning_services_rounded;
@@ -970,7 +1005,13 @@ IconData maintenanceCategoryIcon(String name) {
 }
 
 class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.label, required this.icon, required this.selected, required this.onTap, required this.colors});
+  const _CategoryTile({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    required this.colors,
+  });
   final String label;
   final IconData icon;
   final bool selected;
@@ -986,14 +1027,25 @@ class _CategoryTile extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight)
+              ? const LinearGradient(
+                  colors: [_navyLight, _navyDeep],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
               : null,
           color: selected ? null : colors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? AppPalette.gold400 : colors.hairline.withValues(alpha: 0.7), width: 1.5),
+          border: Border.all(
+            color: selected
+                ? AppPalette.gold400
+                : colors.hairline.withValues(alpha: 0.7),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: selected ? _navyDeep.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.04),
+              color: selected
+                  ? _navyDeep.withValues(alpha: 0.25)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: selected ? 12 : 4,
               offset: const Offset(0, 3),
             ),
@@ -1009,10 +1061,16 @@ class _CategoryTile extends StatelessWidget {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: selected ? Colors.white.withValues(alpha: 0.1) : AppPalette.gold400.withValues(alpha: 0.14),
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : AppPalette.gold400.withValues(alpha: 0.14),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, size: 22, color: selected ? AppPalette.gold300 : AppPalette.gold500),
+                    child: Icon(
+                      icon,
+                      size: 22,
+                      color: selected ? AppPalette.gold300 : AppPalette.gold500,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -1033,7 +1091,11 @@ class _CategoryTile extends StatelessWidget {
               const PositionedDirectional(
                 top: 0,
                 end: 0,
-                child: Icon(Icons.check_circle_rounded, size: 18, color: AppPalette.gold300),
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: AppPalette.gold300,
+                ),
               ),
           ],
         ),
@@ -1066,23 +1128,42 @@ class _Done extends StatelessWidget {
                   Container(
                     width: 84,
                     height: 84,
-                    decoration: BoxDecoration(color: colors.success.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: Icon(Icons.check_circle_rounded, size: 52, color: colors.success),
+                    decoration: BoxDecoration(
+                      color: colors.success.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 52,
+                      color: colors.success,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text(l10n.maintenanceDoneTitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w900)),
+                  Text(
+                    l10n.maintenanceDoneTitle,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: colors.inkStrong,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(l10n.maintenanceDoneMessage,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted, height: 1.6)),
+                  Text(
+                    l10n.maintenanceDoneMessage,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.inkMuted,
+                      height: 1.6,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   AppButton(
                     label: l10n.maintenanceDoneBack,
                     icon: Icons.build_rounded,
                     expand: true,
-                    onPressed: () => context.canPop() ? context.pop(true) : context.go('/account/maintenance'),
+                    onPressed: () => context.canPop()
+                        ? context.pop(true)
+                        : context.go('/account/maintenance'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   AppButton(
@@ -1128,4 +1209,3 @@ class _ValidationText extends StatelessWidget {
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────
-
