@@ -102,9 +102,9 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                 }
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
                     AppSpacing.xl + MediaQuery.paddingOf(context).bottom,
                   ),
                   children: [
@@ -118,10 +118,10 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                         isUnit: widget.unitId != null,
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.visitPickDay),
-                    const SizedBox(height: AppSpacing.sm),
-                    SizedBox(
+                    RequestStep(
+                      icon: Icons.calendar_month_rounded,
+                      title: l10n.visitPickDay,
+                      child: SizedBox(
                       height: 78,
                       child: ListView.separated(
                         key: const Key('visit-days'),
@@ -162,9 +162,11 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                         },
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.visitPickTime),
-                    const SizedBox(height: AppSpacing.sm),
+                    ),
+                    RequestStep(
+                      icon: Icons.schedule_rounded,
+                      title: l10n.visitPickTime,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Wrap(
                       key: const Key('visit-hours'),
                       spacing: AppSpacing.sm,
@@ -194,16 +196,19 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                         padding: const EdgeInsets.only(top: AppSpacing.sm),
                         child: Text(l10n.validationRequired, style: TextStyle(color: colors.error)),
                       ),
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.fieldNotes),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: _notes,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: InputDecoration(hintText: l10n.visitNotesHint),
+                      ]),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    RequestStep(
+                      icon: Icons.edit_note_rounded,
+                      title: l10n.fieldNotes,
+                      child: TextField(
+                        controller: _notes,
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: InputDecoration(hintText: l10n.visitNotesHint),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     const RequestContactCard(),
                     const SizedBox(height: AppSpacing.xl),
                     if (when != null)

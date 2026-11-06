@@ -230,3 +230,25 @@ class RequestDoneView extends StatelessWidget {
     );
   }
 }
+
+/// One titled step of a request form, in the staff app's look.
+class RequestStep extends StatelessWidget {
+  const RequestStep({super.key, required this.icon, required this.title, required this.child});
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            AppDetailSectionTitle(title, icon: icon),
+            const SizedBox(height: 12),
+            child,
+          ]),
+        ),
+      );
+}

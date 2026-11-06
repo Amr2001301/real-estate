@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../design/theme/app_theme_ext.dart';
-import '../design/tokens/app_colors.dart';
-import '../design/tokens/app_radii.dart';
-import '../design/tokens/app_spacing.dart';
-import 'app_detail_kit.dart';
-import 'app_nav_header.dart';
+import '../../core.dart';
+
 
 /// The detail page of a project or a unit, in both apps: the navy header
 /// every page has (back, name, a line under it, actions), the photos in a
@@ -17,40 +14,39 @@ class AppDetailPage extends StatelessWidget {
     required this.title,
     required this.slivers,
     this.subtitle,
-    this.gallery,
-    this.photos,
-    this.photoPlaceholder,
+    this.photos = const [],
     this.photoBadge,
-    this.photoOverlay,
+    this.card,
     this.actions = const [],
     this.onBack,
     this.bottomBar,
   });
 
   final String title;
+
+  /// The place line under the title, on the cover.
   final String? subtitle;
 
-  /// The photos (a carousel, a placeholder…), shown in a 16:10 rounded card.
-  final Widget? gallery;
+  /// The cover photos (they swipe when there are several).
+  final List<String> photos;
 
-  /// The photos, shown by [AppPhotoGallery] (counter, thumbnails, full
-  /// screen). Takes the place of [gallery] when set.
-  final List<String>? photos;
-  final Widget? photoPlaceholder;
+  /// A badge at the start of the cover's bottom (the unit's status, "featured").
   final Widget? photoBadge;
-  final Widget? photoOverlay;
 
-  /// The sections. Box widgets go in [AppDetailPage.box].
-  final List<Widget> slivers;
+  /// The card laid over the cover's bottom edge (the price).
+  final Widget? card;
 
-  /// Header buttons and pills ([NavHeaderAction], [NavHeaderPill]).
+  /// Round buttons on the cover (favourite, compare).
   final List<Widget> actions;
   final VoidCallback? onBack;
   final Widget? bottomBar;
 
+  /// The sections. Box widgets go in [AppDetailPage.box].
+  final List<Widget> slivers;
+
   /// Wraps a box widget as a padded sliver.
   static Widget box(Widget child, {EdgeInsetsGeometry? padding}) => SliverPadding(
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         sliver: SliverToBoxAdapter(child: child),
       );
 
@@ -58,49 +54,36 @@ class AppDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final bottom = MediaQuery.paddingOf(context).bottom;
-    return Scaffold(
-      backgroundColor: colors.canvas,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              AppNavSliverHeader(
-                title: title,
-                subtitle: subtitle,
-                leadingAction: NavHeaderBack(onTap: onBack),
-                actions: actions,
-              ),
-              if (photos != null)
-                box(
-                  AppPhotoGallery(
-                    images: photos!,
-                    placeholder: photoPlaceholder,
-                    badge: photoBadge,
-                    overlay: photoOverlay,
-                  ),
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-                )
-              else if (gallery != null)
-                box(
-                  Container(
-                    key: const Key('detail-gallery'),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadii.xl),
-                      boxShadow: colors.shadowSoft,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadii.xl),
-                      child: AspectRatio(aspectRatio: 16 / 10, child: gallery),
-                    ),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+    final hero = CatalogPageHero(
+      photos: photos,
+      badges: [?photoBadge],
+      title: title,
+      place: subtitle ?? '',
+      height: 270,
+      actions: actions,
+      onBack: onBack,
+    );
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: colors.canvas,
+        body: Stack(
+          children: [
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: card == null
+                      ? hero
+                      : HomeOverlap(overlap: 30, top: hero, bottom: Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: card!)),
                 ),
-              ...slivers,
-              SliverToBoxAdapter(child: SizedBox(height: (bottomBar != null ? 104 : AppSpacing.xxl) + bottom)),
-            ],
-          ),
-          if (bottomBar != null) Positioned(left: 0, right: 0, bottom: 0, child: bottomBar!),
-        ],
+                if (card != null) const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                ...slivers,
+                SliverToBoxAdapter(child: SizedBox(height: (bottomBar != null ? 104 : AppSpacing.xxl) + bottom)),
+              ],
+            ),
+            if (bottomBar != null) Positioned(left: 0, right: 0, bottom: 0, child: bottomBar!),
+          ],
+        ),
       ),
     );
   }
@@ -108,36 +91,27 @@ class AppDetailPage extends StatelessWidget {
 
 /// A section title of the detail page: a gold bar and the title.
 class AppDetailSectionTitle extends StatelessWidget {
-  const AppDetailSectionTitle(this.title, {super.key});
+  const AppDetailSectionTitle(this.title, {super.key, this.icon = Icons.auto_awesome_rounded});
   final String title;
+  final IconData icon;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: AppPalette.gold50,
+              border: Border.all(color: AppPalette.gold100),
+              borderRadius: BorderRadius.circular(9),
             ),
-            borderRadius: BorderRadius.circular(999),
+            child: Icon(icon, size: 16, color: AppPalette.gold500),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: colors.inkStrong),
-          ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(width: 9),
+          Expanded(child: Text(title, style: homeDisplay(18.5, context.appColors.inkStrong))),
+        ],
+      );
 }
 
 /// One fact of the detail page (bedrooms, area…): gold icon, value, label.
@@ -150,36 +124,17 @@ class AppDetailStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md, horizontal: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
-        boxShadow: colors.shadowSoft,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: homeCard(context, radius: 18),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 22, color: colors.brandGold),
+          Icon(icon, size: 21, color: AppPalette.gold500),
           const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              maxLines: 1,
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: colors.inkStrong),
-            ),
-          ),
+          FittedBox(fit: BoxFit.scaleDown, child: Text(value, maxLines: 1, style: homeDisplay(16, colors.inkStrong))),
           const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
-          ),
+          Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ],
       ),
     );

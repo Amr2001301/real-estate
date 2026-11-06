@@ -140,6 +140,21 @@ class _DetailPageState extends State<_DetailPage> {
       subtitle: project.city,
       actions: [NavHeaderGlass(child: FavoriteToggleButton(isProject: true, id: project.id))],
       photos: project.galleryImages,
+      card: AppPriceCard(
+        label: _startingPrice != null ? l10n.detailPricesFrom : l10n.labelPrice,
+        price: _startingPrice != null
+            ? PriceFormatter.formatString(_startingPrice, languageCode: lang)
+            : l10n.priceOnRequest,
+        caption: offerLine,
+        facts: [
+          AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
+          AppPriceFact(l10n.labelCity, project.city),
+          if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
+        ],
+        actionLabel: l10n.requestInfo,
+        actionIcon: Icons.info_outline_rounded,
+        onAction: () => _requestInfo(context, project),
+      ),
       photoBadge: project.featured ? _FeaturedPill(label: l10n.featuredBadge) : null,
       bottomBar: AppDetailBottomBar(
         children: [
@@ -163,26 +178,6 @@ class _DetailPageState extends State<_DetailPage> {
         ],
       ),
       slivers: [
-        AppDetailPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: AppPriceCard(
-              label: _startingPrice != null ? l10n.detailPricesFrom : l10n.labelPrice,
-              price: _startingPrice != null
-                  ? PriceFormatter.formatString(_startingPrice, languageCode: lang)
-                  : l10n.priceOnRequest,
-              caption: offerLine,
-              facts: [
-                AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
-                AppPriceFact(l10n.labelCity, project.city),
-                if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
-              ],
-              actionLabel: l10n.requestInfo,
-              actionIcon: Icons.info_outline_rounded,
-              onAction: () => _requestInfo(context, project),
-            ),
-          ),
-        ),
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
         AppSectionTabsSliver(
           tabs: [

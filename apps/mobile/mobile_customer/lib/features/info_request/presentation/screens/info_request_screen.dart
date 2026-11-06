@@ -86,9 +86,9 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
                 }
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
                     AppSpacing.xl + MediaQuery.paddingOf(context).bottom,
                   ),
                   children: [
@@ -102,10 +102,10 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
                         isUnit: widget.unitId != null,
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.infoTopicsTitle),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
+                    RequestStep(
+                      icon: Icons.help_outline_rounded,
+                      title: l10n.infoTopicsTitle,
+                      child: Wrap(
                       key: const Key('info-topics'),
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
@@ -115,9 +115,16 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
                             label: Text(infoTopicLabel(l10n, t)),
                             selected: _topics.contains(t),
                             showCheckmark: true,
-                            selectedColor: AppPalette.gold400.withValues(alpha: 0.22),
-                            checkmarkColor: AppPalette.navy,
-                            side: BorderSide(color: _topics.contains(t) ? AppPalette.gold400 : colors.hairline),
+                            selectedColor: AppPalette.navy,
+                            backgroundColor: colors.surface,
+                            checkmarkColor: AppPalette.gold300,
+                            shape: const StadiumBorder(),
+                            labelStyle: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: _topics.contains(t) ? Colors.white : colors.inkStrong,
+                            ),
+                            side: BorderSide(color: _topics.contains(t) ? AppPalette.navy : colors.hairline),
                             onSelected: (on) => setState(() {
                               on ? _topics.add(t) : _topics.remove(t);
                               _missing = false;
@@ -125,9 +132,11 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.infoMessageOptional),
-                    const SizedBox(height: AppSpacing.sm),
+                    ),
+                    RequestStep(
+                      icon: Icons.edit_note_rounded,
+                      title: l10n.infoMessageOptional,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     TextField(
                       controller: _messageCtrl,
                       minLines: 4,
@@ -143,7 +152,9 @@ class _InfoRequestScreenState extends State<InfoRequestScreen> {
                         padding: const EdgeInsets.only(top: AppSpacing.sm),
                         child: Text(l10n.infoTopicsRequired, style: TextStyle(color: colors.error)),
                       ),
-                    const SizedBox(height: AppSpacing.lg),
+                      ]),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     const RequestContactCard(),
                     const SizedBox(height: AppSpacing.xl),
                     AppButton(

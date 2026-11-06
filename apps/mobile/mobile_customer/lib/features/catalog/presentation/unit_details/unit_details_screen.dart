@@ -134,6 +134,22 @@ class _DetailPageState extends State<_DetailPage> {
         NavHeaderGlass(child: _CompareButton(unit: unit)),
       ],
       photos: unit.galleryImages,
+      card: AppPriceCard(
+        label: l10n.detailTotalPrice,
+        price: price,
+        caption: monthlyLine,
+        facts: [
+          if (offer != null)
+            AppPriceFact(
+              l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
+              PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
+            ),
+          if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
+          if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
+        ],
+        actionLabel: offer != null ? l10n.detailCalcInstallment : null,
+        onAction: offer != null ? _openCalculator : null,
+      ),
       photoBadge: UnitStatusChip(unit.status),
       bottomBar: AppDetailBottomBar(
         price: price,
@@ -157,27 +173,6 @@ class _DetailPageState extends State<_DetailPage> {
         ],
       ),
       slivers: [
-        AppDetailPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: AppPriceCard(
-              label: l10n.detailTotalPrice,
-              price: price,
-              caption: monthlyLine,
-              facts: [
-                if (offer != null)
-                  AppPriceFact(
-                    l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
-                    PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
-                  ),
-                if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
-                if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
-              ],
-              actionLabel: offer != null ? l10n.detailCalcInstallment : null,
-              onAction: offer != null ? _openCalculator : null,
-            ),
-          ),
-        ),
         AppDetailPage.box(
           Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: _SpecsRow(unit: unit)),
         ),
