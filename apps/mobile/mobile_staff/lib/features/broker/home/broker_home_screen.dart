@@ -298,7 +298,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final (label, fg, bg) = switch (status) {
-      'APPROVED' => (l10n.brokerLeadStatusApproved, AppPalette.successLight, const Color(0xFFE6F2EA)),
+      'APPROVED' => (l10n.brokerLeadStatusApproved, AppPalette.successLight, homeOkFill(context)),
       'REJECTED' => (l10n.brokerLeadStatusRejected, const Color(0xFFC0392B), const Color(0xFFFBE7E5)),
       'DUPLICATE' => (l10n.brokerLeadStatusDuplicate, const Color(0xFF8A6D1E), const Color(0xFFF6EED8)),
       'EXPIRED' => (l10n.brokerLeadStatusExpired, context.appColors.inkMuted, context.appColors.surfaceSoft),

@@ -65,6 +65,29 @@ Color homeTint(BuildContext context) =>
 Color homeTintBorder(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500.withValues(alpha: 0.32) : AppPalette.gold100;
 
+bool homeIsDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+
+/// A raised field or chip: white by day, the soft surface by night.
+Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors.surfaceSoft : Colors.white;
+
+/// A chosen option's fill: a cream by day, a gold wash by night.
+Color homeSelected(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : const Color(0xFFFFFCF5);
+
+/// A fine line or a track on a card: warm grey by day, the hairline by night.
+Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : const Color(0xFFECE4D6);
+
+/// The page of a bottom sheet.
+Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : const Color(0xFFFBF7F0);
+
+/// Pale fills for a warning, a good state and a bad one (a wash of the colour by night).
+Color homeWarnFill(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.warningLight.withValues(alpha: 0.16) : const Color(0xFFFCEBCF);
+Color homeOkFill(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.successLight.withValues(alpha: 0.16) : const Color(0xFFE6F2EA);
+Color homeErrFill(BuildContext context) =>
+    homeIsDark(context) ? context.appColors.error.withValues(alpha: 0.18) : const Color(0xFFFBE7E4);
+
 BoxDecoration homeCard(BuildContext context, {double radius = 20}) => BoxDecoration(
       color: context.appColors.surface,
       border: Border.all(color: context.appColors.hairline),

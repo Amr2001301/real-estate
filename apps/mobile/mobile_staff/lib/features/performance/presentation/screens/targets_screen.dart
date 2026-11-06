@@ -126,7 +126,7 @@ class _Progress extends StatelessWidget {
     final p = perf;
     Widget bar(double? pct, {Color color = AppPalette.gold400}) => ClipRRect(
           borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(value: ((pct ?? 0) / 100).clamp(0, 1), minHeight: 8, backgroundColor: const Color(0xFFEFE8DC), color: color),
+          child: LinearProgressIndicator(value: ((pct ?? 0) / 100).clamp(0, 1), minHeight: 8, backgroundColor: homeLine(context), color: color),
         );
     final left = (p.targetAmount ?? 0) - p.achievedAmount;
     final unitsLeft = (p.targetUnits ?? 0) - p.achievedUnits;

@@ -181,7 +181,7 @@ class _Tile extends StatelessWidget {
     final s = _style(n.templateCode);
     final unread = !n.read;
     return Material(
-      color: unread ? const Color(0xFFFFFCF5) : colors.surface,
+      color: unread ? homeSelected(context) : colors.surface,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -193,7 +193,7 @@ class _Tile extends StatelessWidget {
           if (route != null) context.push(route);
         },
         child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? const Color(0xFFE7D6A8) : colors.hairline)),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? homeTintBorder(context) : colors.hairline)),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

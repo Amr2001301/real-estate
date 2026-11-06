@@ -145,7 +145,7 @@ class _MemberCard extends StatelessWidget {
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(value: (p.targetAmountPercent! / 100).clamp(0, 1), minHeight: 8, backgroundColor: const Color(0xFFEFE8DC), color: AppPalette.gold400),
+            child: LinearProgressIndicator(value: (p.targetAmountPercent! / 100).clamp(0, 1), minHeight: 8, backgroundColor: homeLine(context), color: AppPalette.gold400),
           ),
         ],
         const SizedBox(height: 10),
@@ -153,7 +153,7 @@ class _MemberCard extends StatelessWidget {
           chip(Icons.person_rounded, '${p.leadsCount} ${l10n.tpFunnelLeads}'),
           chip(Icons.event_rounded, '${p.visitsCount} ${l10n.tpVisits}'),
           chip(Icons.bookmark_rounded, '${p.reservationsCount} ${l10n.tpBookings}'),
-          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: const Color(0xFFE6F2EA), fg: const Color(0xFF2F6B4A)),
+          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: homeOkFill(context), fg: const Color(0xFF2F6B4A)),
         ]),
       ]),
     );

@@ -167,7 +167,7 @@ class _Body extends StatelessWidget {
                       height: 26,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFFB3261E) : const Color(0xFFEFE8DC))),
+                        color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFFB3261E) : homeLine(context))),
                         boxShadow: i == now ? const [BoxShadow(color: Color(0xFFF6E9C9), spreadRadius: 4)] : null,
                       ),
                       child: Icon(

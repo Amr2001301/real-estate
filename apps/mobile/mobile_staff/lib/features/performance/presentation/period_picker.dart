@@ -65,7 +65,7 @@ Future<String?> pickPeriod(BuildContext context, {required String current, List<
     builder: (ctx) => SafeArea(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const SizedBox(height: 10),
-        Container(width: 42, height: 5, decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9))),
+        Container(width: 42, height: 5, decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9))),
         Padding(padding: const EdgeInsets.all(14), child: Text(l10n.tmPeriodPick, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
         Flexible(
           child: ListView(shrinkWrap: true, children: [

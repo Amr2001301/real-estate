@@ -138,7 +138,7 @@ class _Notice extends StatelessWidget {
       key: const Key('assistant-unavailable'),
       margin: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: const Color(0xFFFCEBCF), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: homeWarnFill(context), borderRadius: BorderRadius.circular(16)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

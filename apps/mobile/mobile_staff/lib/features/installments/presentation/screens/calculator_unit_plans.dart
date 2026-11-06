@@ -369,7 +369,7 @@ class _PlanCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     return Material(
-      color: selected ? const Color(0xFFFFFCF5) : colors.surface,
+      color: selected ? homeSelected(context) : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(

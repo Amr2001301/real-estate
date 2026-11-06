@@ -250,7 +250,7 @@ class PerfFunnel extends StatelessWidget {
                   builder: (context, box) => Container(
                     height: 26,
                     alignment: AlignmentDirectional.centerStart,
-                    decoration: BoxDecoration(color: const Color(0xFFEFE8DC), borderRadius: BorderRadius.circular(9)),
+                    decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
                     child: Container(
                       width: (box.maxWidth * (v / max)).clamp(28, box.maxWidth),
                       height: 26,
@@ -398,7 +398,7 @@ class BrokerPerfCard extends StatelessWidget {
             if (b.status == 'ACTIVE')
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFE6F2EA), borderRadius: BorderRadius.circular(99)),
+                decoration: BoxDecoration(color: homeOkFill(context), borderRadius: BorderRadius.circular(99)),
                 child: Text(l10n.bpActiveBadge, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2F6B4A))),
               ),
           ]),

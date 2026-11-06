@@ -274,7 +274,7 @@ class _TargetSheetState extends State<TargetSheet> {
             child: Form(
               key: _formKey,
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)))),
+                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)))),
                 const SizedBox(height: 12),
                 Text(_editing ? l10n.tmEditTitle : l10n.teamTargetAddNew, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 const SizedBox(height: 12),
