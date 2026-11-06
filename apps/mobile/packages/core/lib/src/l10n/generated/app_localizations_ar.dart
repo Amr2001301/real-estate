@@ -9549,4 +9549,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get financeServices => 'الخدمات المالية';
+
+  @override
+  String get myPropertyUnitsLabel => 'وحداتي';
+
+  @override
+  String get myPropertyOwnedLabel => 'مملوكة';
+
+  @override
+  String get myPropertyOwnedHint => 'عقد موقّع';
+
+  @override
+  String get myPropertyWithPlanHint => 'بخطة سداد';
 }

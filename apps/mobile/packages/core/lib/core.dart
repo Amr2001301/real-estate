@@ -141,3 +141,4 @@ export 'src/gallery/component_gallery_screen.dart';
 export 'src/kit/catalog_kit.dart';
 export 'src/kit/filter_kit.dart';
 export 'src/kit/home_kit.dart';
+export 'src/kit/profile_kit.dart';
