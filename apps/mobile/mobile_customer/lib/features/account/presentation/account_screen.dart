@@ -74,10 +74,7 @@ class _AccountScreenState extends State<AccountScreen> {
           ],
         ),
         // The company's published pages (CMS1).
-        Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, 22, AppSpacing.md, 0),
-          child: CompanyPagesCard(title: l10n.contentAboutCompany),
-        ),
+        CompanyPagesCard(title: l10n.contentAboutCompany),
         ProfileSection(
           icon: Icons.settings_rounded,
           title: l10n.accountSectionSettings,

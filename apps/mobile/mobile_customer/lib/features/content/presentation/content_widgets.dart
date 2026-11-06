@@ -180,10 +180,13 @@ String? _kindSubtitle(AppLocalizations l10n, PageKind k) => switch (k) {
 /// website's footer, in the same card as «خدمات العميل»: each page with its
 /// own icon and a line saying what it is. Nothing when there are none.
 class CompanyPagesCard extends StatelessWidget {
-  const CompanyPagesCard({super.key, this.title});
+  const CompanyPagesCard({super.key, this.title, this.horizontal = AppSpacing.md});
 
   /// A heading above the card.
   final String? title;
+
+  /// The side space (0 where the page already pads its list).
+  final double horizontal;
 
   @override
   Widget build(BuildContext context) {
@@ -196,42 +199,24 @@ class CompanyPagesCard extends StatelessWidget {
         builder: (context, state) {
           final pages = state.data ?? const <ContentPage>[];
           if (pages.isEmpty) return const SizedBox.shrink();
-          final c = context.appColors;
-          return Column(
+          final lang = Localizations.localeOf(context).languageCode;
+          return KeyedSubtree(
             key: const Key('company-pages'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (title != null) ...[
-                _GoldLabel(title: title!),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              Container(
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: c.hairline.withValues(alpha: 0.45)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4)),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < pages.length; i++) ...[
-                        if (i > 0)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                            child: Divider(height: 1, color: c.hairline),
-                          ),
-                        _PageRow(page: pages[i], navy: i.isEven),
-                      ],
-                    ],
+            child: ProfileSection(
+              horizontal: horizontal,
+              icon: Icons.business_rounded,
+              title: title ?? context.l10n.contentAboutCompany,
+              items: [
+                for (final page in pages)
+                  ProfileItem(
+                    id: 'page-${page.slug}',
+                    icon: _kindIcon(pageKindOf(page)),
+                    label: page.title.resolve(lang),
+                    subtitle: _kindSubtitle(context.l10n, pageKindOf(page)),
+                    onTap: () => context.push('/pages/${page.slug}'),
                   ),
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -270,69 +255,6 @@ class _GoldLabel extends StatelessWidget {
   }
 }
 
-class _PageRow extends StatelessWidget {
-  const _PageRow({required this.page, required this.navy});
-  final ContentPage page;
-  final bool navy;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.appColors;
-    final theme = Theme.of(context);
-    final lang = Localizations.localeOf(context).languageCode;
-    final kind = pageKindOf(page);
-    final subtitle = _kindSubtitle(context.l10n, kind);
-    return InkWell(
-      key: ValueKey('page-${page.slug}'),
-      onTap: () => context.push('/pages/${page.slug}'),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: navy
-                    ? const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight)
-                    : const LinearGradient(colors: [Color(0xFFC8A24B), AppPalette.gold500], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(_kindIcon(kind), size: 21, color: navy ? AppPalette.gold300 : _navyDeep),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    page.title.resolve(lang),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(color: c.inkStrong, fontWeight: FontWeight.w800),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(color: c.inkMuted),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400.withValues(alpha: 0.7)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// One published page: the company's header (logo, name, the page's title),
 /// the body as headings, lists and paragraphs in a reading card, then a
 /// way to reach the company.
@@ -351,7 +273,7 @@ class ContentPageScreen extends StatelessWidget {
           final page = state.data;
           final company = companyBrandOf(context).name;
           final back = NavHeaderAction(
-            icon: Icons.arrow_back_ios_new_rounded,
+            icon: Icons.arrow_back_rounded,
             onTap: () => context.canPop() ? context.pop() : context.go('/home'),
           );
           return Scaffold(

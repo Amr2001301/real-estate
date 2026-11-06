@@ -612,16 +612,19 @@ class HomeActions extends StatelessWidget {
 // ── Section ──────────────────────────────────────────────────────────────────
 
 class HomeSection extends StatelessWidget {
-  const HomeSection({super.key, required this.icon, required this.title, required this.child, this.action, this.onAction});
+  const HomeSection({super.key, required this.icon, required this.title, required this.child, this.action, this.onAction, this.horizontal = AppSpacing.md});
   final IconData icon;
   final String title;
   final Widget child;
   final String? action;
   final VoidCallback? onAction;
 
+  /// The side space; a page that already pads its list passes 0.
+  final double horizontal;
+
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 22, AppSpacing.md, 0),
+        padding: EdgeInsets.fromLTRB(horizontal, 22, horizontal, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

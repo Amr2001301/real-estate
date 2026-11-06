@@ -17,16 +17,18 @@ class ProfileItem {
 
 /// A titled section: its rows in one card.
 class ProfileSection extends StatelessWidget {
-  const ProfileSection({super.key, required this.icon, required this.title, required this.items});
+  const ProfileSection({super.key, required this.icon, required this.title, required this.items, this.horizontal = AppSpacing.md});
   final IconData icon;
   final String title;
   final List<ProfileItem> items;
+  final double horizontal;
 
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
     final colors = context.appColors;
     return HomeSection(
+      horizontal: horizontal,
       icon: icon,
       title: title,
       child: Container(

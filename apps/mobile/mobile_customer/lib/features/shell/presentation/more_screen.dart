@@ -71,7 +71,7 @@ class MoreScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   // CMS1 — the company's published pages (about, terms…).
-                  CompanyPagesCard(title: l10n.contentAboutCompany),
+                  CompanyPagesCard(title: l10n.contentAboutCompany, horizontal: 0),
                   const SizedBox(height: AppSpacing.xl),
 
                   // ── Settings ─────────────────────────────────────────────
