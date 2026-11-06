@@ -157,7 +157,7 @@ class _MemberCard extends StatelessWidget {
           chip(Icons.person_rounded, '${p.leadsCount} ${l10n.tpFunnelLeads}'),
           chip(Icons.event_rounded, '${p.visitsCount} ${l10n.tpVisits}'),
           chip(Icons.bookmark_rounded, '${p.reservationsCount} ${l10n.tpBookings}'),
-          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: homeOkFill(context), fg: const Color(0xFF2F6B4A)),
+          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: homeOkFill(context), fg: homeIsDark(context) ? const Color(0xFF7FD1A0) : const Color(0xFF2F6B4A)),
         ]),
       ]),
     );
