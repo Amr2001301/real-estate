@@ -143,7 +143,7 @@ class _Body extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFEFE6D4)),
+            border: Border.all(color: homeLine(context)),
             boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -168,7 +168,7 @@ class _Body extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFFB3261E) : homeLine(context))),
-                        boxShadow: i == now ? const [BoxShadow(color: Color(0xFFF6E9C9), spreadRadius: 4)] : null,
+                        boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
                       ),
                       child: Icon(
                         done ? Icons.check_rounded : (failed && i == steps.length - 1 ? Icons.close_rounded : Icons.more_horiz_rounded),

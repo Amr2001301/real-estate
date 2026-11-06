@@ -269,7 +269,7 @@ class _TargetSheetState extends State<TargetSheet> {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
           child: Container(
-            decoration: const BoxDecoration(color: Color(0xFFFAF6EE), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+            decoration: BoxDecoration(color: homeSheet(context), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + MediaQuery.paddingOf(context).bottom),
             child: Form(
               key: _formKey,

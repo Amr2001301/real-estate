@@ -271,9 +271,9 @@ class FilterSegments<T> extends StatelessWidget {
                 duration: const Duration(milliseconds: 160),
                 padding: EdgeInsets.symmetric(vertical: o.sub == null ? 10 : 7),
                 decoration: BoxDecoration(
-                  color: o.value == selected ? Colors.white : Colors.transparent,
+                  color: o.value == selected ? (homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.22) : Colors.white) : Colors.transparent,
                   borderRadius: BorderRadius.circular(11),
-                  boxShadow: o.value == selected ? const [BoxShadow(color: Color(0x1F0F1E33), blurRadius: 8, offset: Offset(0, 2))] : null,
+                  boxShadow: o.value == selected && !homeIsDark(context) ? const [BoxShadow(color: Color(0x1F0F1E33), blurRadius: 8, offset: Offset(0, 2))] : null,
                 ),
                 child: Column(children: [
                   Text(o.label,
@@ -282,7 +282,7 @@ class FilterSegments<T> extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: o.value == selected ? colors.inkStrong : const Color(0xFF6B6256),
+                        color: o.value == selected ? (homeIsDark(context) ? AppPalette.gold300 : colors.inkStrong) : (homeIsDark(context) ? colors.inkMuted : const Color(0xFF6B6256)),
                       )),
                   if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
@@ -315,7 +315,7 @@ class FilterRadioList<T> extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(children: [
         for (final (i, o) in options.indexed) ...[
-          if (i > 0) const Divider(height: 1, color: Color(0xFFF1EBE0)),
+          if (i > 0) Divider(height: 1, color: homeLine(context)),
           InkWell(
             key: Key('$keyPrefix-${o.value ?? 'all'}'),
             onTap: () => onSelect(o.value),

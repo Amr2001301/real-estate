@@ -285,7 +285,7 @@ class _Figures extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

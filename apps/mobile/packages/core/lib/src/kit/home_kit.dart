@@ -527,15 +527,15 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: AppPalette.gold50,
-          border: Border.all(color: AppPalette.gold100),
+          color: homeTint(context),
+          border: Border.all(color: homeTintBorder(context)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
-            Text(value, maxLines: 1, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppPalette.navy)),
+            Text(value, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
           ],
         ),
       );

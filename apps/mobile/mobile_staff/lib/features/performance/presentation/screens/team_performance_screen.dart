@@ -99,15 +99,19 @@ class _MemberCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final p = member.performance;
-    Widget chip(IconData icon, String text, {Color bg = const Color(0xFFEEF2F7), Color fg = const Color(0xFF26405F)}) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 13, color: fg),
-            const SizedBox(width: 4),
-            Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
-          ]),
-        );
+    Widget chip(IconData icon, String text, {Color? bg, Color? fg}) {
+      final back = bg ?? (homeIsDark(context) ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFEEF2F7));
+      final front = fg ?? (homeIsDark(context) ? colors.inkStrong : const Color(0xFF26405F));
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(color: back, borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: front),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: front)),
+        ]),
+      );
+    }
     return Container(
       key: Key('team-member-${member.salesId}'),
       padding: const EdgeInsets.all(12),
