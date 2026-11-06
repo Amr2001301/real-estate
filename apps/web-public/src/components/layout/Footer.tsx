@@ -80,6 +80,7 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
                 alt={companyName}
                 width={32}
                 height={32}
+                unoptimized
                 className="h-8 w-8 rounded-md object-cover"
               />
               <span className="font-display text-xl text-white">{companyName}</span>

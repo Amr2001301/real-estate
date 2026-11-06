@@ -35,6 +35,8 @@ function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingDa
         width={28}
         height={28}
         priority
+        // The company's logo is served from object storage (any host): not through the image optimizer.
+        unoptimized
         className="h-7 w-7 rounded-md object-cover"
       />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
