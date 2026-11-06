@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-06, after #311)
+# Handoff — where the work stands (2026-11-06, after #316)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -119,11 +119,19 @@
 - **اللي فاضل في تطبيق العملاء (اتأكد بالتصوير بحساب عميل):** الكتالوج (الرئيسية والمشاريع والوحدات وصفحاتهم والمقارنة)، صفحات العقد وكشف الحساب والدفعة وإرسال الإثبات، طلب الزيارة وطلب المعلومات وصفحة طلب الصيانة، الملف الشخصي وتفضيلات الإشعارات و«المزيد»، المساعد، الصفحات التعريفية، وتسجيل الدخول. التفاصيل في القسم 2n.
 - **لسه عليك:** قرارات الإصدار (REL1) وقايمة اختبار الجهاز (`docs/staff-app-device-test.md`)، والنشر على السيرفر.
 
+**بعد كده (6 نوفمبر، #312–#316، كله مدموج):** القسم **2o** تحت. تطبيق العملاء اتحوّل كله لشكل تطبيق الموظفين، على دفعات من 10 صفحات تقريبًا، كل دفعة PR لوحده بعد ما بتوافق على الصور:
+- **الشريط السفلي والهيدر والفلتر (#313):** نفس شريط الموظفين الكحلي العايم، وهيدر كل الصفحات، وشاشة الفلتر. العناصر المشتركة (الهيرو، شريط الأرقام، الأزرار، الفلتر، أقسام وصفوف الحساب) اتنقلت لحزمة `core` وبقى التطبيقين يستخدموها.
+- **الكتالوج (#313):** الرئيسية للزائر، المشاريع والوحدات (كروت بصورة غلاف)، صفحة المشروع وصفحة الوحدة (غلاف وكارت السعر فوقه)، طلب المعلومات، وطلب الزيارة (التاريخ والوقت بقوا اختيار حر من منتقي النظام بدل أيام وساعات ثابتة).
+- **الأموال والصيانة (#314):** مركز المالية بشريط أرقام من ملخص الأقساط، وقائمة الصيانة وطلب صيانة جديد.
+- **الحساب (#315، #316):** الإشعارات (بنفس بنية إشعارات الموظفين)، المساعد (شبه مساعد الموظفين)، تفضيلات الإشعارات، الملف الشخصي، المفضلة، والحساب نفسه بأقسام وصفوف الموظفين، وشريط أرقام في «وحدتي».
+- **إصلاحات اتعملت في الطريق:** المفضلة كانت بتقع بخطأ لما يكون فيها حاجة (الاسم بيرجع نص مش خريطة)، واختبار التقويم كان بيفشل أيام الجمعة.
+- **اللي ما اتغيّرش محتواه:** صفحة العقد وكشف الحساب وصفحة الدفعة وإرسال الإثبات وصفحة طلب الصيانة والمستندات (أخدوا الهيدر والشريط الجداد بس، وكانوا بالفعل بشكل الكروت من #306)، وصفحات الدخول (بتستخدم نفس مكوّنات دخول الموظفين).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #311 مدموج. **ابدأ بالقسم 2n** (آخر جدول والمهام الجديدة)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #316 مدموج. **ابدأ بالقسم 2o** (آخر جدول وحالة تطبيق العملاء)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -640,7 +648,7 @@ Done by the other account while this one was out of limit; recorded here from th
 
 **State of the customer app (checked on screen 2026-11-06, a web build logged in as a demo customer; the file lists are from `git show --stat` of #305–#311):**
 - **In the staff look (band, pills, list cards; readable on dark):** finance hub, installments, payments, contracts list, «وحدتي», maintenance list and new-request form, visit requests, notifications, favourites, home property card, the profile name.
-- **Not touched yet (only the font floor changed), so still the older strip-and-white-body pages:**
+- **Not touched yet at that point (only the font floor changed), so still the older strip-and-white-body pages. Superseded: #313–#316 redid these, see 2o:**
   1. **Catalog:** home (guest hero and banners), projects list, units list, project page, unit page, compare (and its empty state), and the unit/project filter sheets.
   2. **Money detail pages:** contract page, statement («كشف الحساب»), payment page, the installment proof form («إرسال إثبات الدفع»).
   3. **Requests and forms:** maintenance request page (the new-request form is done), visit request form, information request form.
@@ -650,6 +658,34 @@ Done by the other account while this one was out of limit; recorded here from th
 - **QA notes for a new container:** the customer app has no `web/` folder in the repo (`flutter create . --platforms web` makes one, do not commit it); build with `--no-web-resources-cdn` (CanvasKit from gstatic is blocked here); the API's `CORS_ORIGINS` must list the web port; customers have no password, so set one for a demo customer by hand (argon2 hash in `User.passwordHash`) and sign in by e-mail in the app.
 
 **Still open from 2m:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps).
+
+### 2o. #312–#316 (2026-11-06) — the customer app in the staff look, page by page
+
+The owner asked for the customer app to look like the staff app. The method: shared pieces first (navigation bar, header, filter), then the content of the pages in groups of about ten; each group's new look was sent to the owner as screenshots from a real web build (logged in as a demo customer), and only after approval went to its own PR.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #312 | Docs | HANDOFF through #311 and the customer app's remaining pages. |
+| #313 | Navbar, header, filter + the catalog | The staff app's floating navy bar (`AppFloatingNav`) on every customer tab; `AppNavHeader` now draws the staff list header (`HomeListHero`), back = `arrow_back_rounded`; one filter sheet (`FilterSheet`) for projects and units. Catalog content: guest home, projects, units (cover cards, pills by city or status), project page and unit page (`AppDetailPage`: cover, price card laid over it, facts, pill tabs, section titles; "units of the project" and "similar units" as vertical card lists), info request and visit request (each step in a card; the visit date and time are picked freely with the system pickers). Also fixes `calendar_test`, which failed every Friday (tomorrow is next week). |
+| #314 | Money and maintenance | Finance hub: figures band from the installments summary and the three services as cards (its own `HomeSummaryCubit` in the router). Maintenance list: figures band, status pills, compact cards; new request: each step in a card. |
+| #315 | Account area | Notifications (hero subtitle, pills all/unread/finance/maintenance, grouped by day, tinted icons), the assistant (welcome with suggestion cards, staff bubbles, pill composer), notification preferences, profile. Bug fix: the favourites list failed on a project name that the API flattens to a string (`favorite_dto.dart`, tests added). |
+| #316 | Account hub | The account page on the staff profile's structure (hero with the person, shortcuts, sections of rows, logout); «وحدتي» has a figures band; the company pages are a profile section (account and the guest «المزيد»). |
+
+**Shared kit (now in `packages/core/lib/src/kit/`, exported by `core.dart`):** `home_kit.dart` (`HomeListHero`, `HomeHeroButton`, `HomeSearchField`, `HomePills`, `HomeBand`, `HomeSection` with a `horizontal` space, `HomeActions`, `HomeOverlap`, `homeCard`, `homeDisplay`, `homeCompact`…), `filter_kit.dart`, `catalog_kit.dart` (`CatalogPageHero`, `CatalogCover`, `CatalogBadge`), `profile_kit.dart` (`ProfileItem`, `ProfileSection`, `ProfileLogout`) and `widgets/app_floating_nav.dart`. The staff app keeps only what needs its own pieces: `HomeHero` (the notifications bell) and `ProfileHero` (its router). Staff files no longer import these kits; they get them from `core`.
+
+**State of the customer app:** every page has the new navigation bar and header; the content of the catalog, finance hub, maintenance, notifications, assistant, preferences, profile, favourites, account hub, «وحدتي» and the company pages was redone. Not redesigned individually (they only got the header and bar, and were already list-card pages from #306 or are shared with the staff app): contract page, statement, payment page, installment proof form, maintenance request page, documents, and sign-in / register / forgot password (shared auth widgets).
+
+**Known small things:**
+- The maintenance figures band repeats the same caption («طلبات الخدمة») under each figure.
+- Project and unit cards have no "starting from" or availability bar: the customer API does not send them.
+- The demo data has one project with the city «Riyadh» next to «الرياض», so the city pills show both.
+- The compare page was not screenshotted with two units selected.
+
+**QA notes for a new container (extends 2n):** building the web app (`flutter build web`) while the API runs can kill the API (memory); start the API again afterwards (`pnpm exec nest start` in `apps/api`). To see lists with data, the demo customer (client2) had maintenance requests, favourites and a visit request inserted by hand in the local database (not in the seed). `psql` needs the `?schema=` part of `DATABASE_URL` removed. While a PR is open, keep unapproved work out of its branch (`git stash`), and reset the branch to `origin/main` after each squash merge.
+
+**Still open:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`).
+
+---
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
