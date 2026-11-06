@@ -15,7 +15,7 @@ export interface CompareRow {
   spark: number[];
   asOfToday?: boolean;
 }
-export interface CompareInsight { tone: 'bad' | 'warn' | 'good'; title: string; text: string }
+export interface CompareInsight { tone: 'bad' | 'warn' | 'good'; title: string; figure: string; text: string }
 export interface CompareSplit { name: string; cur: number; prev: number; note?: string }
 export interface BridgeStep { label: string; value: number }
 export interface CompareData {
@@ -53,69 +53,121 @@ const INSIGHT_RING = {
   good: 'border-emerald-600/40 text-emerald-600',
 } as const;
 
+const INSIGHT_TEXT = { bad: 'text-danger-600', warn: 'text-warning-600', good: 'text-emerald-600' } as const;
+
 function Insight({ i }: { i: CompareInsight }) {
   const Icon = INSIGHT_ICON[i.tone];
   return (
-    <div className="flex gap-3.5 rounded-[22px] border border-hairline bg-surface p-5">
-      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border', INSIGHT_RING[i.tone])}>
-        <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <p className="font-heading text-[16px] font-bold leading-snug text-slate-900">{i.title}</p>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">{i.text}</p>
+    <div className="rounded-[22px] border border-hairline bg-surface p-5">
+      <div className="flex items-center gap-3">
+        <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border', INSIGHT_RING[i.tone])}>
+          <Icon className="h-[17px] w-[17px]" strokeWidth={1.6} aria-hidden />
+        </span>
+        <p className="text-[14px] font-semibold text-slate-600">{i.title}</p>
       </div>
+      <p className={cn('mt-3 font-heading text-[34px] font-bold leading-none tabular-nums', INSIGHT_TEXT[i.tone])}><bdi dir="ltr">{i.figure}</bdi></p>
+      <p className="mt-2.5 text-[14px] leading-snug text-slate-700">{i.text}</p>
     </div>
   );
 }
 
-function Bridge({ b, fmt }: { b: CompareData['bridge']; fmt: (n: number) => string }) {
-  const cols: { label: string; top: number; h: number; kind: 'base' | 'up' | 'down'; shown: string }[] = [];
-  let cur = b.from;
-  const max = Math.max(b.from, b.to, cur) * 1.05;
-  const pct = (n: number) => (n / max) * 100;
-  cols.push({ label: b.fromLabel, top: pct(b.from), h: pct(b.from), kind: 'base', shown: fmt(b.from) });
-  for (const s of b.steps) {
-    const next = cur + s.value;
-    cols.push({ label: s.label, top: pct(Math.max(cur, next)), h: Math.max(1.2, pct(Math.abs(s.value))), kind: s.value < 0 ? 'down' : 'up', shown: (s.value > 0 ? '+' : '−') + fmt(Math.abs(s.value)) });
-    cur = next;
-  }
-  cols.push({ label: b.toLabel, top: pct(b.to), h: pct(b.to), kind: 'base', shown: fmt(b.to) });
+function Drivers({ b, fmt }: { b: CompareData['bridge']; fmt: (n: number) => string }) {
+  const total = b.to - b.from;
+  const max = Math.max(...b.steps.map((x) => Math.abs(x.value)), 0.0001);
+  const sumAbs = b.steps.reduce((n, x) => n + Math.abs(x.value), 0) || 1;
   return (
-    <div dir="ltr" className="flex h-[210px] items-end gap-3 border-b border-hairline pb-0">
-      {cols.map((c) => (
-        <div key={c.label} className="relative flex h-full flex-1 flex-col justify-end">
-          <div className="relative w-full" style={{ height: `${c.top}%` }}>
-            <span className="absolute -top-5 inset-x-0 text-center text-[11.5px] font-bold tabular-nums text-slate-700">{c.shown}</span>
-            <span
-              className={cn(
-                'absolute inset-x-[14%] top-0 rounded-t-lg',
-                c.kind === 'base' && 'bg-gradient-to-t from-brand-600 to-brand-400 shadow-[0_0_18px_-4px] shadow-brand-500/50',
-                c.kind === 'down' && 'bg-danger-500/80',
-                c.kind === 'up' && 'bg-emerald-500/80',
-              )}
-              style={{ height: `${(c.h / c.top) * 100}%` }}
-            />
+    <div>
+      <div className="flex items-end justify-between gap-3 rounded-2xl bg-surface-muted/60 px-4 py-3.5">
+        <div>
+          <p className="text-[12px] text-slate-500">{b.fromLabel}</p>
+          <p className="font-heading text-[24px] font-bold tabular-nums text-slate-900">{fmt(b.from)} <small className="text-[12px] text-brand-700">م</small></p>
+        </div>
+        <span className={cn('mb-1 rounded-full px-3 py-1 text-[13px] font-bold tabular-nums', total < 0 ? 'bg-danger-500/15 text-danger-600' : 'bg-emerald-500/15 text-emerald-600')}>
+          <bdi dir="ltr">{total < 0 ? '−' : '+'}{fmt(Math.abs(total))} م</bdi>
+        </span>
+        <div className="text-end">
+          <p className="text-[12px] text-slate-500">{b.toLabel}</p>
+          <p className="font-heading text-[24px] font-bold tabular-nums text-slate-900">{fmt(b.to)} <small className="text-[12px] text-brand-700">م</small></p>
+        </div>
+      </div>
+      <p className="mb-1 mt-5 text-[12.5px] font-semibold text-slate-600">الفرق بحسب المشروع</p>
+      <ul className="divide-y divide-hairline">
+        {b.steps.map((x) => (
+          <li key={x.label} className="grid grid-cols-[minmax(0,110px)_1fr_auto] items-center gap-3 py-3">
+            <span className="truncate text-[13.5px] font-semibold text-slate-900">{x.label}</span>
+            <span className="h-2.5 overflow-hidden rounded-full bg-surface-muted">
+              <span
+                className={cn('block h-full rounded-full', x.value < 0 ? 'bg-danger-500' : 'bg-emerald-500')}
+                style={{ width: `${(Math.abs(x.value) / max) * 100}%` }}
+              />
+            </span>
+            <span className="text-end tabular-nums">
+              <b className={cn('text-[14px]', x.value < 0 ? 'text-danger-600' : 'text-emerald-600')}><bdi dir="ltr">{x.value < 0 ? '−' : '+'}{fmt(Math.abs(x.value))} م</bdi></b>
+              <span className="ms-2 text-[12px] text-slate-500">{Math.round((Math.abs(x.value) / sumAbs) * 100)}٪ من الفرق</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function niceTop(max: number): number {
+  const raw = max / 4;
+  const exp = 10 ** Math.floor(Math.log10(raw));
+  const f = raw / exp;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * exp * 4;
+}
+
+function Lines({ d, curLabel, prevLabel, days, today }: { d: CompareData['cumulative']; curLabel: string; prevLabel: string; days: number; today: number }) {
+  const W = 640, H = 220;
+  const top = niceTop(Math.max(...d.cur, ...d.prev, ...(d.pace ?? [0])));
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * top);
+  const X = (i: number) => (i * W) / days;
+  const Y = (v: number) => H - (v / top) * H;
+  const path = (v: number[]) => v.map((y, i) => `${X(i)},${Y(y)}`).join(' ');
+  const curEnd = d.cur[d.cur.length - 1]!;
+  const prevAt = d.prev[Math.min(d.cur.length - 1, d.prev.length - 1)]!;
+  const gap = curEnd - prevAt;
+  const xs = [1, 5, 10, 15, 20, 25, days].filter((x) => x <= days);
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-[13px]">
+        <span className="rounded-full bg-surface-muted/70 px-3 py-1 text-slate-600">حتى اليوم {today}:</span>
+        <span className="text-slate-700">{curLabel} <b className="tabular-nums text-slate-900">{curEnd.toFixed(2)} م</b></span>
+        <span className="text-slate-700">{prevLabel} <b className="tabular-nums text-slate-900">{prevAt.toFixed(2)} م</b></span>
+        <span className={cn('rounded-full px-3 py-1 font-bold tabular-nums', gap < 0 ? 'bg-danger-500/15 text-danger-600' : 'bg-emerald-500/15 text-emerald-600')}>
+          <bdi dir="ltr">{gap < 0 ? '−' : '+'}{Math.abs(gap).toFixed(2)} م</bdi>
+        </span>
+      </div>
+      <div dir="ltr" className="grid grid-cols-[auto_1fr] gap-x-3">
+        <div className="relative h-[220px] w-10">
+          {ticks.map((t) => (
+            <span key={t} className="absolute end-0 text-[11px] tabular-nums text-slate-400" style={{ bottom: `${(t / top) * 100}%`, transform: 'translateY(50%)' }}>
+              {t === 0 ? '0' : t.toFixed(t < 1 ? 1 : 0).replace(/\.0$/, '')}
+            </span>
+          ))}
+          <span className="absolute -top-5 end-0 text-[10.5px] text-slate-400">مليون</span>
+        </div>
+        <div className="relative">
+          <svg viewBox={`-6 -6 ${W + 12} ${H + 12}`} className="h-[232px] w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
+            {ticks.map((t) => (
+              <line key={t} x1="0" x2={W} y1={Y(t)} y2={Y(t)} className={t === 0 ? 'stroke-hairline' : 'stroke-hairline/70'} strokeDasharray={t === 0 ? undefined : '4 5'} vectorEffect="non-scaling-stroke" />
+            ))}
+            <line x1={X(today)} x2={X(today)} y1="0" y2={H} className="stroke-brand-500/40" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+            {d.pace && <polyline points={path(d.pace)} fill="none" stroke="#2F8A5B" strokeWidth="1.5" strokeDasharray="2 5" vectorEffect="non-scaling-stroke" />}
+            <polyline points={path(d.prev)} fill="none" stroke="#98A2B3" strokeWidth="2" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />
+            <polyline points={path(d.cur)} fill="none" stroke="#D8B66A" strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <span className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-brand-500 bg-surface p-1" style={{ left: `${(today / days) * 100}%`, top: `${(Y(curEnd) / H) * 94 + 2.5}%` }} />
+          <div className="relative mt-1 h-4">
+            {xs.map((x) => (
+              <span key={x} className="absolute -translate-x-1/2 text-[11px] tabular-nums text-slate-400" style={{ left: `${(x / days) * 100}%` }}>{x}</span>
+            ))}
           </div>
         </div>
-      ))}
+      </div>
     </div>
-  );
-}
-
-function Lines({ d }: { d: CompareData['cumulative'] }) {
-  const W = 640, H = 200;
-  const max = Math.max(...d.cur, ...d.prev, ...(d.pace ?? [0])) * 1.08;
-  const path = (v: number[]) => v.map((y, i) => `${(i * W) / (v.length - 1)},${H - (y / max) * H}`).join(' ');
-  return (
-    <svg viewBox={`0 0 ${W} ${H + 4}`} className="h-[210px] w-full overflow-visible" preserveAspectRatio="none" aria-hidden>
-      {[0.25, 0.5, 0.75].map((t) => (
-        <line key={t} x1="0" x2={W} y1={H * t} y2={H * t} className="stroke-hairline" strokeDasharray="4 5" vectorEffect="non-scaling-stroke" />
-      ))}
-      <line x1="0" x2={W} y1={H} y2={H} className="stroke-hairline" vectorEffect="non-scaling-stroke" />
-      {d.pace && <polyline points={path(d.pace)} fill="none" stroke="#2F8A5B" strokeWidth="1.5" strokeDasharray="2 5" vectorEffect="non-scaling-stroke" />}
-      <polyline points={path(d.prev)} fill="none" stroke="#98A2B3" strokeWidth="2" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />
-      <polyline points={path(d.cur)} fill="none" stroke="#D8B66A" strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-    </svg>
   );
 }
 
@@ -190,7 +242,7 @@ export function CompareView({ data, actions }: { data: CompareData; actions?: Re
                     <td className="py-3 tabular-nums text-slate-500">{r.prev}</td>
                     <td className={cn('py-3 font-bold tabular-nums', TONE_TEXT[String(r.tone) as keyof typeof TONE_TEXT])}>
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-current/10 px-2.5 py-0.5 text-[12.5px]" style={{ backgroundColor: 'color-mix(in srgb, currentColor 11%, transparent)' }}>
-                        {r.diff}{r.pct ? ` · ${r.pct}` : ''}
+                        <bdi dir="ltr">{r.diff}</bdi>{r.pct ? <> · <bdi dir="ltr">{r.pct}</bdi></> : null}
                       </span>
                     </td>
                     <td className="py-3"><Spark v={r.spark} tone={r.tone} /></td>
@@ -201,13 +253,8 @@ export function CompareView({ data, actions }: { data: CompareData; actions?: Re
           </div>
         </PremiumPanel>
 
-        <PremiumPanel title="من أين جاء الفرق" sub={`المحصّل من ${data.bridge.fromLabel} إلى ${data.bridge.toLabel} حسب المشروع (مليون ج.م)`}>
-          <div className="pt-6"><Bridge b={data.bridge} fmt={fmt} /></div>
-          <div className="mt-2 flex" dir="ltr">
-            {[data.bridge.fromLabel, ...data.bridge.steps.map((s) => s.label), data.bridge.toLabel].map((l) => (
-              <span key={l} className="flex-1 truncate px-1 text-center text-[11px] text-slate-500">{l}</span>
-            ))}
-          </div>
+        <PremiumPanel title="من أين جاء الفرق" sub={`ما الذي غيّر المحصّل بين ${data.bridge.fromLabel} و${data.bridge.toLabel}`}>
+          <Drivers b={data.bridge} fmt={fmt} />
           <dl className="mt-5 grid grid-cols-3 gap-4 border-t border-hairline pt-4">
             {data.asOf.map((a) => (
               <div key={a.label} className="min-w-0">
@@ -226,7 +273,7 @@ export function CompareView({ data, actions }: { data: CompareData; actions?: Re
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-6">
         <PremiumPanel
           title="التحصيل التراكمي يومًا بيوم"
-          sub="كل يوم من الفترة مقابل نفس اليوم في الفترة السابقة"
+          sub="كم تجمّع من الأموال منذ أول الشهر، مقارنة بنفس اليوم في الفترة السابقة"
           trailing={
             <div className="flex items-center gap-4 text-[11.5px] font-medium text-slate-500">
               <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand-500" />{data.periodLabel}</span>
@@ -235,7 +282,7 @@ export function CompareView({ data, actions }: { data: CompareData; actions?: Re
             </div>
           }
         >
-          <Lines d={data.cumulative} />
+          <Lines d={data.cumulative} curLabel={data.periodLabel} prevLabel={data.prevLabel} days={30} today={data.cumulative.cur.length - 1} />
         </PremiumPanel>
 
         <PremiumPanel title="أعمار المتأخرات" sub="ما تأخر عن موعده، حسب مدة التأخير">
@@ -254,7 +301,7 @@ export function CompareView({ data, actions }: { data: CompareData; actions?: Re
                   <td className="py-3 font-semibold text-slate-900">{r.label}</td>
                   <td className="py-3 font-bold tabular-nums text-slate-900">{r.cur}</td>
                   <td className="py-3 tabular-nums text-slate-500">{r.prev}</td>
-                  <td className={cn('py-3 font-bold tabular-nums', TONE_TEXT[String(r.tone) as keyof typeof TONE_TEXT])}>{r.diff}</td>
+                  <td className={cn('py-3 font-bold tabular-nums', TONE_TEXT[String(r.tone) as keyof typeof TONE_TEXT])}><bdi dir="ltr">{r.diff}</bdi></td>
                 </tr>
               ))}
             </tbody>
