@@ -269,12 +269,12 @@ class _TargetSheetState extends State<TargetSheet> {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
           child: Container(
-            decoration: const BoxDecoration(color: Color(0xFFFAF6EE), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+            decoration: BoxDecoration(color: homeSheet(context), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + MediaQuery.paddingOf(context).bottom),
             child: Form(
               key: _formKey,
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)))),
+                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)))),
                 const SizedBox(height: 12),
                 Text(_editing ? l10n.tmEditTitle : l10n.teamTargetAddNew, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 const SizedBox(height: 12),

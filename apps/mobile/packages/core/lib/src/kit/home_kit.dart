@@ -65,6 +65,29 @@ Color homeTint(BuildContext context) =>
 Color homeTintBorder(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500.withValues(alpha: 0.32) : AppPalette.gold100;
 
+bool homeIsDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+
+/// A raised field or chip: white by day, the soft surface by night.
+Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors.surfaceSoft : Colors.white;
+
+/// A chosen option's fill: a cream by day, a gold wash by night.
+Color homeSelected(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : const Color(0xFFFFFCF5);
+
+/// A fine line or a track on a card: warm grey by day, the hairline by night.
+Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : const Color(0xFFECE4D6);
+
+/// The page of a bottom sheet.
+Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : const Color(0xFFFBF7F0);
+
+/// Pale fills for a warning, a good state and a bad one (a wash of the colour by night).
+Color homeWarnFill(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.warningLight.withValues(alpha: 0.16) : const Color(0xFFFCEBCF);
+Color homeOkFill(BuildContext context) =>
+    homeIsDark(context) ? AppPalette.successLight.withValues(alpha: 0.16) : const Color(0xFFE6F2EA);
+Color homeErrFill(BuildContext context) =>
+    homeIsDark(context) ? context.appColors.error.withValues(alpha: 0.18) : const Color(0xFFFBE7E4);
+
 BoxDecoration homeCard(BuildContext context, {double radius = 20}) => BoxDecoration(
       color: context.appColors.surface,
       border: Border.all(color: context.appColors.hairline),
@@ -504,15 +527,15 @@ class _MiniStat extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: AppPalette.gold50,
-          border: Border.all(color: AppPalette.gold100),
+          color: homeTint(context),
+          border: Border.all(color: homeTintBorder(context)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
-            Text(value, maxLines: 1, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppPalette.navy)),
+            Text(value, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
           ],
         ),
       );
@@ -634,8 +657,8 @@ class HomeSection extends StatelessWidget {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: AppPalette.gold50,
-                    border: Border.all(color: AppPalette.gold100),
+                    color: homeTint(context),
+                    border: Border.all(color: homeTintBorder(context)),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(icon, size: 16, color: AppPalette.gold500),
@@ -1167,7 +1190,7 @@ class HomeActivityList extends StatelessWidget {
                       Container(
                         width: 34,
                         height: 34,
-                        decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
+                        decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
                         child: Icon(items[i].icon, size: 18, color: AppPalette.gold500),
                       ),
                       const SizedBox(width: 11),

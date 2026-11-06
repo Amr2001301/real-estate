@@ -91,9 +91,9 @@ class _HowItWorks extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppPalette.gold50,
+        color: homeTint(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppPalette.gold100),
+        border: Border.all(color: homeTintBorder(context)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

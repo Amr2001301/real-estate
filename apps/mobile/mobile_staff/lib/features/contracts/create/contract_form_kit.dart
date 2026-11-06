@@ -59,7 +59,7 @@ class FormValueBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: Colors.white,
+      color: homeField(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(13),
         side: BorderSide(color: invalid ? colors.error : colors.hairline),
@@ -242,7 +242,7 @@ class FormWarning extends StatelessWidget {
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: error ? const Color(0xFFF8E6E4) : const Color(0xFFFFF6E6),
+          color: error ? const Color(0xFFF8E6E4) : homeWarnFill(context),
           border: Border.all(color: error ? const Color(0xFFF1C9C4) : const Color(0xFFF1D9A8)),
           borderRadius: BorderRadius.circular(14),
         ),

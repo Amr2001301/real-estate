@@ -65,8 +65,8 @@ class _Row extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppPalette.gold50,
-              border: Border.all(color: AppPalette.gold100),
+              color: homeTint(context),
+              border: Border.all(color: homeTintBorder(context)),
               borderRadius: BorderRadius.circular(13),
             ),
             child: Icon(item.icon, size: 20, color: AppPalette.gold600),

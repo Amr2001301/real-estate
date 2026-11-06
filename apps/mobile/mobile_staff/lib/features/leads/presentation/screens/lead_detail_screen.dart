@@ -533,7 +533,7 @@ class _NotesLog extends StatelessWidget {
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(99)),
+                      decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(99)),
                       child: Text('${l10n.leadNextAction}: ${followUpWhen(notes[i].nextActionAt!, l10n, lang)}',
                           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                     ),

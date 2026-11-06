@@ -134,8 +134,8 @@ class PaymentReviewTile extends StatelessWidget {
         if (item.hasProof) ...[
           const SizedBox(height: 12),
           Material(
-            color: AppPalette.gold50,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppPalette.gold100)),
+            color: homeTint(context),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: homeTintBorder(context))),
             child: InkWell(
               key: Key('review-proof-${item.id}'),
               borderRadius: BorderRadius.circular(16),

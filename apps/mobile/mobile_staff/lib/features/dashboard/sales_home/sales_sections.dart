@@ -44,7 +44,7 @@ class HomeFollowUps extends StatelessWidget {
             const SizedBox(width: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(color: AppPalette.gold100, borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: homeTintBorder(context), borderRadius: BorderRadius.circular(6)),
               child: Text(ltr('$n'), style: const TextStyle(fontSize: 12, color: AppPalette.gold600)),
             ),
           ]),

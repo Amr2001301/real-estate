@@ -109,7 +109,7 @@ class _ManualContractScreenState extends State<ManualContractScreen> {
         hintStyle: const TextStyle(color: Color(0xFFB9B0A3)),
         errorText: error,
         filled: true,
-        fillColor: Colors.white,
+        fillColor: homeField(context),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
@@ -201,7 +201,7 @@ class _ManualContractScreenState extends State<ManualContractScreen> {
                   ),
                   const SizedBox(height: 6),
                   Material(
-                    color: _preSystem ? AppPalette.gold50 : Colors.white,
+                    color: _preSystem ? AppPalette.gold50 : homeField(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(13),
                       side: BorderSide(color: _preSystem ? AppPalette.gold200 : colors.hairline),
@@ -303,14 +303,14 @@ class _PickSheetState extends State<PickSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
-        decoration: const BoxDecoration(color: Color(0xFFFBF7F0), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+        decoration: BoxDecoration(color: homeSheet(context), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Center(
             child: Container(
               width: 40,
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)),
+              decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
             ),
           ),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(widget.title, style: homeDisplay(18, colors.inkStrong))),
@@ -327,7 +327,7 @@ class _PickSheetState extends State<PickSheet> {
                 hintText: widget.hint,
                 prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: homeField(context),
                 isDense: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: colors.hairline)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: colors.hairline)),

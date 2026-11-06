@@ -243,7 +243,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                           onTap: () => cubit.setConfirmed(!s.confirmed),
                           child: Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: const Color(0xFFFCEBCF), borderRadius: BorderRadius.circular(14)),
+                            decoration: BoxDecoration(color: homeWarnFill(context), borderRadius: BorderRadius.circular(14)),
                             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Icon(s.confirmed ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded, color: AppPalette.navy),
                               const SizedBox(width: 10),
@@ -319,7 +319,7 @@ class _Opt extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           decoration: BoxDecoration(
-            color: on ? const Color(0xFFFFFCF5) : colors.surface,
+            color: on ? homeSelected(context) : colors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: on ? AppPalette.navy : colors.hairline, width: 1.5),
           ),
@@ -398,7 +398,7 @@ class _ResultCard extends StatelessWidget {
     final l10n = context.l10n;
     final o = result.outcome;
     final color = o == 0 ? const Color(0xFF2F6B4A) : (o == 1 ? const Color(0xFF8A5A12) : const Color(0xFFB3261E));
-    final bg = o == 0 ? const Color(0xFFE6F2EA) : (o == 1 ? const Color(0xFFFCEBCF) : const Color(0xFFFBE7E4));
+    final bg = o == 0 ? homeOkFill(context) : (o == 1 ? homeWarnFill(context) : homeErrFill(context));
     Widget line(String k, int v) => Text('$k: ${ltr('$v')}', style: TextStyle(fontSize: 12, height: 1.8, color: color));
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
