@@ -17,6 +17,41 @@ abstract final class AppPalette {
   static List<Color> _g = _gold;
   static List<Color> _n = _navy;
 
+  // The deeper / lighter shades the customer app's headers and cards use. The
+  // platform values are what those screens always had; a company's are cut from
+  // its own primary so every header carries its identity, not a fixed navy.
+  static const _shades = [
+    Color(0xFF0B1726), // deep
+    Color(0xFF14273F), // mid
+    Color(0xFF243F62), // light
+    Color(0xFF152236), // card
+    Color(0xFF091524), // darkest
+    Color(0xFF0B1D30), // foot
+    Color(0xFF1E3A62), // bright
+    Color(0xFF0F2137), // mid2
+    Color(0xFF1A3352), // panel
+    Color(0xFF1E3A6E), // hero
+    Color(0xFF0B1F42), // ink
+    Color(0xFF0F1E32), // top
+    Color(0xFF182A43), // accent
+    Color(0xFF1E3451), // accent2
+  ];
+  static List<Color> _s = _shades;
+  static Color get navyDeep => _s[0];
+  static Color get navyMid => _s[1];
+  static Color get navyLight => _s[2];
+  static Color get navyCard => _s[3];
+  static Color get navyDarkest => _s[4];
+  static Color get navyFoot => _s[5];
+  static Color get navyBright => _s[6];
+  static Color get navyMid2 => _s[7];
+  static Color get navyPanel => _s[8];
+  static Color get navyHero => _s[9];
+  static Color get navyInk => _s[10];
+  static Color get navyTop => _s[11];
+  static Color get navyAccent => _s[12];
+  static Color get navyAccent2 => _s[13];
+
   static Color get gold50 => _g[0];
   static Color get gold100 => _g[1];
   static Color get gold200 => _g[2];
@@ -47,8 +82,26 @@ abstract final class AppPalette {
         p = mix(p, const Color(0xFF000000), 0.12);
       }
       _n = [p!, mix(p, const Color(0xFFFFFFFF), 0.07), mix(p, const Color(0xFFFFFFFF), 0.14)];
+      const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
+      _s = [
+        mix(p, k, 0.25),
+        mix(p, w, 0.04),
+        mix(p, w, 0.15),
+        mix(p, w, 0.05),
+        mix(p, k, 0.32),
+        mix(p, k, 0.1),
+        mix(p, w, 0.12),
+        mix(p, k, 0.02),
+        mix(p, w, 0.10),
+        mix(p, w, 0.16),
+        mix(p, k, 0.2),
+        mix(p, k, 0.0),
+        mix(p, w, 0.06),
+        mix(p, w, 0.1),
+      ];
     } else {
       _n = _navy;
+      _s = _shades;
     }
     if (a != null) {
       final base = p ?? _navy[0];

@@ -8,7 +8,7 @@ import '../../notifications/presentation/widgets/customer_notification_button.da
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
+Color get _navyDeep => AppPalette.navyDeep;
 
 // Money for tight spaces, without losing piasters below a million.
 String _compact(String raw, String lang) {
@@ -216,7 +216,7 @@ class _PortfolioPill extends StatelessWidget {
           ),
           child: Text(
             context.l10n.unitsCount(totalCount),
-            style: const TextStyle(
+            style: TextStyle(
               color: _navyDeep,
               fontSize: 12,
               fontWeight: FontWeight.w800,

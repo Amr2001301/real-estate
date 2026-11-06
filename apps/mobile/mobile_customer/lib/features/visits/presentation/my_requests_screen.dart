@@ -6,9 +6,9 @@ import '../domain/entities/visit_request.dart';
 import 'my_visits_cubit.dart';
 
 // ─── palette ──────────────────────────────────────────────────────────────────
-const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─── local filter ─────────────────────────────────────────────────────────────
 enum _FilterKey { all, pending, confirmed, completed, cancelled }
@@ -444,7 +444,7 @@ class _VisitSummary extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [_navyLight, _navyDeep],

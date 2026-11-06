@@ -17,7 +17,7 @@ import '../widgets/contact_buttons.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
+Color get _navyDeep => AppPalette.navyDeep;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point

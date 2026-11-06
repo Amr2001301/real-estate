@@ -153,8 +153,8 @@ class _CarouselState extends State<_Carousel> {
   }
 }
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 IconData _kindIcon(PageKind k) => switch (k) {
       PageKind.about => Icons.info_outline_rounded,
@@ -422,7 +422,7 @@ class _ContactCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  gradient: LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(Icons.support_agent_rounded, size: 20, color: AppPalette.gold300),

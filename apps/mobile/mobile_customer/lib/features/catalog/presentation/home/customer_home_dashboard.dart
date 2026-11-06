@@ -11,9 +11,9 @@ import '../../../maintenance/presentation/maintenance_format.dart';
 import '../../../notifications/presentation/unread_count_cubit.dart';
 import 'customer_home_header.dart';
 
-const _navy = Color(0xFF0B1726);
-const _navyCard = Color(0xFF152236);
-const _navyLight = Color(0xFF243F62);
+Color get _navy => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyCard;
+Color get _navyLight => AppPalette.navyLight;
 
 // Money for tight spaces, without losing piasters below a million.
 String _compact(String raw, String lang) {
@@ -186,7 +186,7 @@ class _SectionRow extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [_navyLight, _navy],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -312,7 +312,7 @@ class _ActionCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyLight, _navyCard, _navy],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -547,7 +547,7 @@ class _CtaButton extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _navy,
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
@@ -998,7 +998,7 @@ class _EmptyProperty extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [_navyLight, _navy],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -1048,7 +1048,7 @@ class _EmptyProperty extends StatelessWidget {
               ),
               child: Text(
                 l10n.homeExploreProjects,
-                style: const TextStyle(
+                style: TextStyle(
                   color: _navy,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
@@ -1070,9 +1070,9 @@ class _FinancialCard extends StatelessWidget {
   const _FinancialCard({required this.installments});
   final HomeSummaryInstallments installments;
 
-  static const _navyDark = Color(0xFF091524);
-  static const _navyMid  = Color(0xFF0F2137);
-  static const _navyFoot = Color(0xFF0B1D30);
+  static Color get _navyDark => AppPalette.navyDarkest;
+  static Color get _navyMid => AppPalette.navyMid2;
+  static Color get _navyFoot => AppPalette.navyFoot;
 
   @override
   Widget build(BuildContext context) {
@@ -1101,7 +1101,7 @@ class _FinancialCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyDark, _navyMid],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1456,8 +1456,8 @@ class _FinancialEmpty extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF091524), Color(0xFF0F2137)],
+        gradient: LinearGradient(
+          colors: [AppPalette.navyDarkest, AppPalette.navyMid2],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1599,7 +1599,7 @@ class _MaintenanceCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [_navyLight, _navy],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -1704,7 +1704,7 @@ class _MRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [_navyLight, _navy],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

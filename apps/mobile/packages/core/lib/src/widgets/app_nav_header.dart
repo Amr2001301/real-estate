@@ -165,13 +165,13 @@ class NavHeaderBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.gold400,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF0B1726), width: 1),
+        border: Border.all(color: AppPalette.navyDeep, width: 1),
       ),
       alignment: Alignment.center,
       child: Text(
         count > 9 ? '9+' : '$count',
-        style: const TextStyle(
-          color: Color(0xFF0B1726),
+        style: TextStyle(
+          color: AppPalette.navyDeep,
           fontSize: 12,
           fontWeight: FontWeight.w800,
           height: 1,

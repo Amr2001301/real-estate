@@ -7,8 +7,8 @@ import '../../notifications/presentation/widgets/customer_notification_button.da
 import '../domain/entities/contract.dart';
 import 'contracts_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contracts Screen
@@ -60,7 +60,7 @@ class _ContractsScreenState extends State<ContractsScreen> {
                     key: null,
                     label: l10n.filterAny,
                     dotColor: null,
-                    activeGradient: const [_navyLight, _navyDeep],
+                    activeGradient: [_navyLight, _navyDeep],
                     count: all.length,
                   ),
                   _FilterItem(
@@ -76,8 +76,8 @@ class _ContractsScreenState extends State<ContractsScreen> {
                   _FilterItem(
                     key: ContractStatus.draft.name,
                     label: l10n.contractStatusDraft,
-                    dotColor: const Color(0xFFCBD5E1),
-                    activeGradient: const [_navyLight, _navyDeep],
+                    dotColor: Color(0xFFCBD5E1),
+                    activeGradient: [_navyLight, _navyDeep],
                     count: draftCount,
                   ),
                 ],
@@ -186,7 +186,7 @@ class _ContractsSummary extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyLight, _navyDeep],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -523,7 +523,7 @@ class _DocumentsButton extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [_navyLight, _navyDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

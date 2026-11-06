@@ -8,9 +8,9 @@ import 'package:mime/mime.dart' as mime;
 import '../../domain/entities/installment.dart';
 import '../cubit/submit_proof_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Submit Payment Proof Screen
@@ -390,7 +390,7 @@ class _MethodChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -499,7 +499,7 @@ class _DatePickerRow extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -590,7 +590,7 @@ class _FilePicker extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       )
-                    : const LinearGradient(
+                    : LinearGradient(
                         colors: [_navyLight, _navyDeep],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -739,7 +739,7 @@ class _SubmitButton extends StatelessWidget {
         height: 56,
         decoration: BoxDecoration(
           gradient: onTap != null
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

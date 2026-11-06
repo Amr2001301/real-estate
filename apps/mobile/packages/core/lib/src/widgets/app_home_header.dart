@@ -32,9 +32,9 @@ class AppHomeHeader extends StatelessWidget {
   /// Optional content under the title block (filters, a summary).
   final Widget? bottom;
 
-  static const _navyDeep = Color(0xFF0B1726);
-  static const _navyMid = Color(0xFF14273F);
-  static const _navyLight = Color(0xFF243F62);
+  static Color get _navyDeep => AppPalette.navyDeep;
+  static Color get _navyMid => AppPalette.navyMid;
+  static Color get _navyLight => AppPalette.navyLight;
   static const _radius = Radius.circular(AppRadii.xl + 4);
 
   @override
@@ -44,7 +44,7 @@ class AppHomeHeader extends StatelessWidget {
       value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
       child: Container(
         clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

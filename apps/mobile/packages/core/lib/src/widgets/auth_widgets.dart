@@ -7,8 +7,8 @@ import '../design/theme/app_theme_ext.dart';
 import 'brand_mark.dart';
 
 // Navy depth constants — shared Devora design language.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyMid => AppPalette.navyMid;
 const _navyLight = Color(0xFF2A4E7C);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ class AuthHeader extends StatelessWidget {
         child: Stack(
           children: [
             // Deep navy base gradient
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(

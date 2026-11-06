@@ -4,16 +4,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/installment.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ── Status colors ─────────────────────────────────────────────────────────────
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
-const _paidAccent = Color(0xFF4ADE80);
-const _overdueAccent = Color(0xFFF87171);
-const _pendingGradient = [_navyLight, _navyDeep];
-final _pendingAccent = AppPalette.gold300;
+final _paidAccent = Color(0xFF4ADE80);
+final _overdueAccent = Color(0xFFF87171);
+List<Color> get _pendingGradient => [_navyLight, _navyDeep];
+Color get _pendingAccent => AppPalette.gold300;
 
 /// The one installment card of the customer app: a status tile, the amount and
 /// payment type, a state pill, project/unit, due and paid dates, payment method,
@@ -415,7 +415,7 @@ class _ViewProofCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.task_alt_rounded,
                   color: _paidAccent,
                   size: 22,
@@ -454,7 +454,7 @@ class _ViewProofCard extends StatelessWidget {
                   color: _paidAccent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: _paidAccent,
                   size: 14,

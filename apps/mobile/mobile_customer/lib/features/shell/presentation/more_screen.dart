@@ -7,9 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../content/presentation/content_widgets.dart';
 
 // Navy depth tokens — shared design language with projects/units/compare.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
-const _navyLight = Color(0xFF24426A);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyMid => AppPalette.navyMid;
+Color get _navyLight => AppPalette.navyLight;
 
 /// Premium "المزيد" hub — self-chrome screen with its own Scaffold.
 ///
@@ -61,7 +61,7 @@ class MoreScreen extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF1E3A62), AppPalette.navy],
+                          colors: [AppPalette.navyBright, AppPalette.navy],
                         ),
                         label: l10n.homeAskAssistant,
                         subtitle: l10n.moreAssistantSubtitle,
@@ -144,7 +144,7 @@ class _MoreHero extends StatelessWidget {
           // Base navy radial gradient
           Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment(0.7, -0.9),
                   radius: 1.5,
@@ -288,7 +288,7 @@ class _BenefitStrip extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF24426A), AppPalette.navy],
+                colors: [AppPalette.navyLight, AppPalette.navy],
               ),
             ),
           ),

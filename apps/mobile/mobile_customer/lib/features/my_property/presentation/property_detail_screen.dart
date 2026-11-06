@@ -10,9 +10,9 @@ import '../../installments/presentation/cubit/installments_cubit.dart';
 import '../../installments/presentation/widgets/installment_card.dart';
 import '../domain/entities/property.dart';
 
-const _navy      = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF152236);
-const _navyAccent= Color(0xFF1E3451);
+Color get _navy => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyCard;
+Color get _navyAccent => AppPalette.navyAccent2;
 
 // Money for tight spaces, without losing piasters below a million.
 String _compact(String? raw, String lang) {
@@ -204,7 +204,7 @@ class _UnitHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
@@ -469,7 +469,7 @@ class _PillTabBar extends StatelessWidget {
       child: TabBar(
         controller: controller,
         indicator: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [_navyAccent, _navy],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -755,7 +755,7 @@ class _FinancialCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyAccent, _navyCard, _navy],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -1149,7 +1149,7 @@ class _ContractCard extends StatelessWidget {
           // Header strip
           Container(
             height: 56,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [_navyAccent, _navyCard, _navy],
                 begin: Alignment.topLeft,
@@ -1276,7 +1276,7 @@ class _ContractInfoRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [_navyAccent, _navy],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

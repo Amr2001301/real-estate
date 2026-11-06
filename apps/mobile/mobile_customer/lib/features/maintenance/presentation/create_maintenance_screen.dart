@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import 'create_maintenance_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Create Maintenance Screen
@@ -429,7 +429,7 @@ class _PhotosSection extends StatelessWidget {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [_navyLight, _navyDeep],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -570,7 +570,7 @@ class _PhotoSourceSheet extends StatelessWidget {
               children: [
                 _SourceCard(
                   icon: Icons.photo_camera_rounded,
-                  iconGradient: const LinearGradient(
+                  iconGradient: LinearGradient(
                     colors: [_navyLight, _navyDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -876,7 +876,7 @@ class _Units extends StatelessWidget {
                                 : Colors.transparent,
                           ),
                           child: state.selectedUnitId == unit.id
-                              ? const Icon(
+                              ? Icon(
                                   Icons.check_rounded,
                                   size: 13,
                                   color: _navyDeep,
@@ -1027,7 +1027,7 @@ class _CategoryTile extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.sm),
         decoration: BoxDecoration(
           gradient: selected
-              ? const LinearGradient(
+              ? LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

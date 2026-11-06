@@ -8,8 +8,8 @@ import '../domain/entities/favorite.dart';
 import 'favorites_cubit.dart';
 
 // ─── palette ──────────────────────────────────────────────────────────────────
-const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
 
 // ─── local filter ─────────────────────────────────────────────────────────────
 enum _FilterTab { all, units, projects }
@@ -522,7 +522,7 @@ class _CtaButton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [_navyCard, _navyDeep],
