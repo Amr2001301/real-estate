@@ -165,7 +165,7 @@ class AuthHeader extends StatelessWidget {
                     width: 48,
                     height: 2,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
                           Color(0x00B8941F),
                           AppPalette.gold400,

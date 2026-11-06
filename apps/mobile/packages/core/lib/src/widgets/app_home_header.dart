@@ -152,7 +152,7 @@ class HeaderRoleChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppPalette.gold400, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -164,7 +164,7 @@ class HeaderRoleChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(color: AppPalette.navy, fontSize: 12, fontWeight: FontWeight.w700),
+        style: TextStyle(color: AppPalette.navy, fontSize: 12, fontWeight: FontWeight.w700),
       ),
     );
   }

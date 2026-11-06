@@ -50,7 +50,7 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final List<BoxShadow> shadowCard;
   final List<BoxShadow> shadowLift;
 
-  static const AppColorsExt light = AppColorsExt(
+  static AppColorsExt get light => AppColorsExt(
     canvas: AppPalette.lightCanvas,
     surface: AppPalette.lightSurface,
     surfaceSoft: AppPalette.lightSurfaceSoft,
@@ -70,7 +70,7 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     shadowLift: [],
   );
 
-  static const AppColorsExt dark = AppColorsExt(
+  static AppColorsExt get dark => AppColorsExt(
     canvas: AppPalette.darkCanvas,
     surface: AppPalette.darkSurface,
     surfaceSoft: AppPalette.darkSurfaceSoft,

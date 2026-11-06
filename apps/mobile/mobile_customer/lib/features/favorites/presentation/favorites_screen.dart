@@ -328,7 +328,7 @@ class _FavoriteCard extends StatelessWidget {
                     end: AppSpacing.md,
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.apartment_rounded,
                           size: 13,
                           color: AppPalette.gold300,
@@ -360,7 +360,7 @@ class _FavoriteCard extends StatelessWidget {
                 width: 52,
                 height: 2,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [AppPalette.gold400, Color(0x00B8941F)],
                   ),
                   borderRadius: BorderRadius.circular(999),

@@ -808,7 +808,7 @@ class _FinancialCard extends StatelessWidget {
                       ),
                       child: Text(
                         context.l10n.monthsCount(property.totalMonths ?? 0),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppPalette.gold300,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -864,7 +864,7 @@ class _FinancialCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   _compact(nextInst!.amount, lang),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppPalette.gold300,
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -1183,7 +1183,7 @@ class _ContractCard extends StatelessWidget {
                             color: AppPalette.gold400.withValues(alpha: 0.35),
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.article_rounded,
                           size: 13,
                           color: AppPalette.gold400,
@@ -1397,7 +1397,7 @@ class _DonutPainter extends CustomPainter {
     canvas.drawArc(rect, startAngle, math.pi * 2 * progress, false, glowPaint);
 
     final solidPaint = Paint()
-      ..shader = const LinearGradient(
+      ..shader = LinearGradient(
         colors: [Color(0xFFCFAA52), AppPalette.gold500],
       ).createShader(rect)
       ..style = PaintingStyle.stroke

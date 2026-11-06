@@ -390,7 +390,7 @@ class BrokerPerfCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 Text.rich(TextSpan(children: [
-                  if (b.code != null) TextSpan(text: ltr(b.code!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                  if (b.code != null) TextSpan(text: ltr(b.code!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                   if (b.conversionRate != null) TextSpan(text: ' · ${l10n.bpConv(ltr('${(b.conversionRate! * 100).round()}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ])),
               ]),

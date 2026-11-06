@@ -221,7 +221,7 @@ class _Tile extends StatelessWidget {
                   Row(children: [
                     Expanded(child: Text(title, style: TextStyle(fontSize: 13.5, fontWeight: unread ? FontWeight.w800 : FontWeight.w700, color: colors.inkStrong))),
                     if (unread)
-                      Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: const BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
+                      Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
                   ]),
                   if (body != null) ...[
                     const SizedBox(height: 2),

@@ -5,19 +5,62 @@ import 'package:flutter/widgets.dart';
 /// in [AppColorsExt] / the theme builders — screens should read tokens from the
 /// theme extension, not from here directly.
 abstract final class AppPalette {
-  // ---- Brand: Gold (stays literal across light/dark) ------------------------
-  static const gold50 = Color(0xFFFBF6EA);
-  static const gold100 = Color(0xFFF4E8C9);
-  static const gold200 = Color(0xFFE2C792);
-  static const gold300 = Color(0xFFD4B36A);
-  static const gold400 = Color(0xFFC8A24B); // primary accent
-  static const gold500 = Color(0xFFB7902F);
-  static const gold600 = Color(0xFF9C7A26);
+  // ---- Brand: Gold / Navy (the platform's own; one company's app replaces them) --
+  // The platform's tools (staff app, admin) never call [applyBrand]; a company's
+  // customer app calls it once its branding is known, so every screen that reads
+  // these gets the company's colours. Read them at build time, not in `const`.
+  static const _gold = [
+    Color(0xFFFBF6EA), Color(0xFFF4E8C9), Color(0xFFE2C792), Color(0xFFD4B36A),
+    Color(0xFFC8A24B), Color(0xFFB7902F), Color(0xFF9C7A26),
+  ];
+  static const _navy = [Color(0xFF0F1E33), Color(0xFF1C3050), Color(0xFF26405F)];
+  static List<Color> _g = _gold;
+  static List<Color> _n = _navy;
 
-  // ---- Brand: Navy (stays literal across light/dark) ------------------------
-  static const navy = Color(0xFF0F1E33);
-  static const navy700 = Color(0xFF1C3050);
-  static const navy600 = Color(0xFF26405F);
+  static Color get gold50 => _g[0];
+  static Color get gold100 => _g[1];
+  static Color get gold200 => _g[2];
+  static Color get gold300 => _g[3];
+  static Color get gold400 => _g[4]; // primary accent
+  static Color get gold500 => _g[5];
+  static Color get gold600 => _g[6];
+
+  static Color get navy => _n[0];
+  static Color get navy700 => _n[1];
+  static Color get navy600 => _n[2];
+
+  /// A company's colours as the app's two scales (navy = the dark surfaces,
+  /// gold = the accent). A light primary is darkened until white text reads on
+  /// it; an accent that would vanish on the primary is lightened. With neither
+  /// colour the platform's own palette stays.
+  static void applyBrand({Color? primary, Color? accent}) {
+    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+    double contrast(Color a, Color b) {
+      final x = a.computeLuminance(), y = b.computeLuminance();
+      return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+    }
+
+    var p = primary;
+    var a = accent;
+    if (p != null) {
+      for (var i = 0; i < 12 && p!.computeLuminance() > 0.18; i++) {
+        p = mix(p, const Color(0xFF000000), 0.12);
+      }
+      _n = [p!, mix(p, const Color(0xFFFFFFFF), 0.07), mix(p, const Color(0xFFFFFFFF), 0.14)];
+    } else {
+      _n = _navy;
+    }
+    if (a != null) {
+      final base = p ?? _navy[0];
+      for (var i = 0; i < 12 && contrast(a!, base) < 3; i++) {
+        a = mix(a, const Color(0xFFFFFFFF), 0.12);
+      }
+      const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
+      _g = [mix(a!, w, 0.9), mix(a, w, 0.8), mix(a, w, 0.55), mix(a, w, 0.22), a, mix(a, k, 0.1), mix(a, k, 0.22)];
+    } else {
+      _g = _gold;
+    }
+  }
 
   // ---- Light surfaces -------------------------------------------------------
   static const lightCanvas = Color(0xFFFAF7F2);

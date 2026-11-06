@@ -529,7 +529,7 @@ class _CtaButton extends StatelessWidget {
           child: Ink(
             height: 40,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppPalette.gold300, AppPalette.gold500],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -1005,7 +1005,7 @@ class _EmptyProperty extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(13),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.home_work_outlined,
               color: AppPalette.gold300,
               size: 22,
@@ -1039,7 +1039,7 @@ class _EmptyProperty extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [AppPalette.gold300, AppPalette.gold500],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -1148,7 +1148,7 @@ class _FinancialCard extends StatelessWidget {
                       color: AppPalette.gold400.withValues(alpha: 0.22),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.account_balance_wallet_rounded,
                     color: AppPalette.gold400,
                     size: 17,
@@ -1606,7 +1606,7 @@ class _MaintenanceCard extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: const Icon(
+              child: Icon(
                 AppIcons.maintenance,
                 size: 17,
                 color: AppPalette.gold300,
@@ -1711,7 +1711,7 @@ class _MRow extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: const Icon(
+              child: Icon(
                 AppIcons.maintenance,
                 size: 18,
                 color: AppPalette.gold300,

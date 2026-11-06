@@ -267,7 +267,7 @@ class _VisitTile extends StatelessWidget {
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.ink),
                 ),
               ),
-              const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+              Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
             ]),
           ]),
         ),

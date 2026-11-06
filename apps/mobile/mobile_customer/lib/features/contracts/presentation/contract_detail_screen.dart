@@ -86,7 +86,7 @@ class ContractDetailScreen extends StatelessWidget {
                       width: 3,
                       height: 18,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           colors: [AppPalette.gold400, AppPalette.gold300],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -215,7 +215,7 @@ class _SummaryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     AppIcons.property,
                     size: 20,
                     color: AppPalette.gold300,
@@ -367,7 +367,7 @@ class _StatementLink extends StatelessWidget {
               gradient: const LinearGradient(colors: [_navyLight, _navyDeep]),
               borderRadius: BorderRadius.circular(AppRadii.md),
             ),
-            child: const Icon(Icons.receipt_long_rounded, color: AppPalette.gold300, size: 20),
+            child: Icon(Icons.receipt_long_rounded, color: AppPalette.gold300, size: 20),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

@@ -70,7 +70,7 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
                     key: Key(c.canDeposit ? 'cheque-deposit' : 'cheque-clear'),
                     onPressed: state.working ? null : () => c.canDeposit ? _confirmDeposit(context) : _confirmClear(context),
                     icon: state.working
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                        ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
                         : Icon(c.canDeposit ? Icons.account_balance_rounded : Icons.task_alt_rounded, size: 19),
                     label: Text(c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear),
                     style: FilledButton.styleFrom(

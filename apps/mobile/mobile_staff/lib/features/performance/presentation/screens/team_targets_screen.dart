@@ -307,7 +307,7 @@ class _TargetSheetState extends State<TargetSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: saving ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: colors.inkStrong, side: const BorderSide(color: AppPalette.navy, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: colors.inkStrong, side: BorderSide(color: AppPalette.navy, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                       child: Text(l10n.actionCancel),
                     ),
                   ),
@@ -317,7 +317,7 @@ class _TargetSheetState extends State<TargetSheet> {
                     child: FilledButton.icon(
                       key: const Key('target-save'),
                       onPressed: saving ? null : _save,
-                      icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
+                      icon: saving ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
                       label: Text(l10n.actionSave),
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: AppPalette.gold400, foregroundColor: AppPalette.navy, textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                     ),

@@ -535,7 +535,7 @@ class _NotesLog extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(99)),
                       child: Text('${l10n.leadNextAction}: ${followUpWhen(notes[i].nextActionAt!, l10n, lang)}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                     ),
                   ],
                   const SizedBox(height: 4),
@@ -813,10 +813,10 @@ class _Assignment extends StatelessWidget {
               key: Key('assign-${o.id}'),
               leading: CircleAvatar(
                 backgroundColor: AppPalette.navy,
-                child: Text(homeInitials(o.name), style: const TextStyle(color: AppPalette.gold300, fontSize: 12)),
+                child: Text(homeInitials(o.name), style: TextStyle(color: AppPalette.gold300, fontSize: 12)),
               ),
               title: Text(o.name),
-              trailing: o.id == detail.assignedSalesId ? const Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
+              trailing: o.id == detail.assignedSalesId ? Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
               onTap: () => Navigator.of(ctx).pop(o),
             ),
         ]),
@@ -905,8 +905,8 @@ class _ClientCard extends StatelessWidget {
             ),
             if (profile) ...[
               const SizedBox(width: 8),
-              Text(l10n.ldClientProfile, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
-              const Icon(Icons.chevron_left_rounded, size: 18, color: AppPalette.gold600),
+              Text(l10n.ldClientProfile, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+              Icon(Icons.chevron_left_rounded, size: 18, color: AppPalette.gold600),
             ],
           ]),
         ),
@@ -1016,7 +1016,7 @@ class _StagePipeline extends StatelessWidget {
                 width: 3,
                 height: 16,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [AppPalette.gold300, AppPalette.gold500],
@@ -1032,7 +1032,7 @@ class _StagePipeline extends StatelessWidget {
               ),
               const Spacer(),
               if (isWorking)
-                const SizedBox(
+                SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(

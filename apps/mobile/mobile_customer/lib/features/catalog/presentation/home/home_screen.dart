@@ -159,7 +159,7 @@ class _CustomerRoleChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppPalette.gold400, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -175,7 +175,7 @@ class _CustomerRoleChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           color: AppPalette.navy,
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -703,7 +703,7 @@ class _TypeOption extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 gradient: selected
-                    ? const LinearGradient(
+                    ? LinearGradient(
                         colors: [AppPalette.navy700, AppPalette.navy],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -734,7 +734,7 @@ class _TypeOption extends StatelessWidget {
               ),
             ),
             if (selected)
-              const Icon(
+              Icon(
                 Icons.check_circle_rounded,
                 color: AppPalette.gold400,
                 size: 20,
@@ -1185,7 +1185,7 @@ class _HomeProjectCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star_rounded,
                           color: AppPalette.gold300,
                           size: 13,
@@ -1220,7 +1220,7 @@ class _HomeProjectCard extends StatelessWidget {
                     if (city.isNotEmpty)
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 14,
                             color: AppPalette.gold300,
@@ -1258,7 +1258,7 @@ class _HomeProjectCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.apartment_rounded,
                                 color: AppPalette.gold300,
                                 size: 13,

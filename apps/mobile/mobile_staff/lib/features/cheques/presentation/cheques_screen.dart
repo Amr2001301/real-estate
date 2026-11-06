@@ -201,7 +201,7 @@ class ChequeCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),

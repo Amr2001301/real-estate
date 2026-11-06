@@ -35,7 +35,7 @@ class HomeHero extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -69,7 +69,7 @@ class HomeHero extends StatelessWidget {
                             companyName ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: AppPalette.gold200, fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: AppPalette.gold200, fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                         ),
                       ] else

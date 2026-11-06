@@ -430,7 +430,7 @@ class _LeadPicker extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadii.md),
-              borderSide: const BorderSide(color: AppPalette.gold400, width: 1.5),
+              borderSide: BorderSide(color: AppPalette.gold400, width: 1.5),
             ),
             suffixIcon: searchCtrl.text.isNotEmpty
                 ? IconButton(
@@ -498,7 +498,7 @@ class _LeadResultTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                       colors: [AppPalette.gold400, AppPalette.gold600]),
                   borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
@@ -564,7 +564,7 @@ class _SelectedLeadCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                   colors: [AppPalette.gold300, AppPalette.gold500]),
               borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
@@ -679,7 +679,7 @@ class _ClientPicker extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadii.md),
-              borderSide: const BorderSide(color: AppPalette.gold400, width: 1.5),
+              borderSide: BorderSide(color: AppPalette.gold400, width: 1.5),
             ),
             suffixIcon: searchCtrl.text.isNotEmpty
                 ? IconButton(
@@ -1139,7 +1139,7 @@ class _ValidationMsg extends StatelessWidget {
 class _FieldLoader extends StatelessWidget {
   const _FieldLoader();
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
         height: 48,
         child: Center(
           child: SizedBox(

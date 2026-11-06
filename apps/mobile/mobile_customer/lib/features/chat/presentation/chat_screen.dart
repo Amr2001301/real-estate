@@ -159,10 +159,10 @@ class _Welcome extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(colors: [AppPalette.gold500, AppPalette.gold300], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              gradient: LinearGradient(colors: [AppPalette.gold500, AppPalette.gold300], begin: Alignment.topLeft, end: Alignment.bottomRight),
               boxShadow: [BoxShadow(color: AppPalette.gold400.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 6))],
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
+            child: Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -266,7 +266,7 @@ class _InputBar extends StatelessWidget {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide(color: c.hairline, width: 1.5)),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide(color: c.hairline, width: 1.5)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: const BorderSide(color: AppPalette.gold400)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide(color: AppPalette.gold400)),
               ),
             ),
           ),
@@ -283,10 +283,10 @@ class _InputBar extends StatelessWidget {
                   child: Container(
                     width: 44,
                     height: 44,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
                     child: sending
-                        ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
-                        : const Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
+                        ? Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                        : Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
                   ),
                 ),
               );

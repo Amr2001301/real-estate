@@ -215,7 +215,7 @@ class _Ring extends StatelessWidget {
             strokeWidth: 8,
             strokeCap: StrokeCap.round,
             backgroundColor: colors.surfaceSoft,
-            valueColor: const AlwaysStoppedAnimation(AppPalette.gold500),
+            valueColor: AlwaysStoppedAnimation(AppPalette.gold500),
           ),
         ),
         Column(mainAxisSize: MainAxisSize.min, children: [
@@ -277,7 +277,7 @@ class _About extends StatelessWidget {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(9)),
-                  child: const Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
+                  child: Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(s, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.inkStrong))),
@@ -345,7 +345,7 @@ class _Phases extends StatelessWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
-                  child: const Icon(Icons.domain_rounded, size: 18, color: AppPalette.gold500),
+                  child: Icon(Icons.domain_rounded, size: 18, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -406,7 +406,7 @@ class _Bar extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
               foregroundColor: AppPalette.navy,
-              side: const BorderSide(color: AppPalette.navy, width: 1.5),
+              side: BorderSide(color: AppPalette.navy, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             ),
           ),

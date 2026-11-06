@@ -223,7 +223,7 @@ class UnitsActiveChip extends StatelessWidget {
         label: Text(label),
         labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appColors.inkStrong),
         backgroundColor: homeTint(context),
-        side: const BorderSide(color: AppPalette.gold300),
+        side: BorderSide(color: AppPalette.gold300),
         shape: const StadiumBorder(),
         deleteIcon: const Icon(Icons.close_rounded, size: 16),
         onDeleted: onRemove,
@@ -278,7 +278,7 @@ class UnitCard extends StatelessWidget {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
-                    child: const Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
+                    child: Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
                   ),
                   PositionedDirectional(
                     bottom: -3,

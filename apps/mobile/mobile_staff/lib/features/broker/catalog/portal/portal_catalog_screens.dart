@@ -48,11 +48,11 @@ Widget portalUnitCard(BuildContext context, PortalUnit u) {
         const SizedBox(width: 6),
         ActionChip(
           key: Key('portal-unit-book-${u.row.id}'),
-          avatar: const Icon(Icons.bookmark_add_rounded, size: 16, color: AppPalette.gold600),
+          avatar: Icon(Icons.bookmark_add_rounded, size: 16, color: AppPalette.gold600),
           label: Text(l10n.bcReserve),
-          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
+          labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
           backgroundColor: homeTint(context),
-          side: const BorderSide(color: AppPalette.gold200),
+          side: BorderSide(color: AppPalette.gold200),
           shape: const StadiumBorder(),
           onPressed: () => _book(context, u),
         ),
@@ -253,7 +253,7 @@ class PortalProjectCard extends StatelessWidget {
                   Text(row.name.resolve(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(18, Colors.white)),
                   if ((row.city ?? '').isNotEmpty)
                     Row(children: [
-                      const Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
+                      Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
                       const SizedBox(width: 3),
                       Text(row.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                     ]),
@@ -637,7 +637,7 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(9)),
-                              child: const Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
+                              child: Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
                             ),
                             const SizedBox(width: 8),
                             Expanded(child: Text(s, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.inkStrong))),
@@ -790,7 +790,7 @@ class _PortalUnitPageState extends State<PortalUnitPage> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(13)),
-                        child: const Icon(Icons.apartment_rounded, color: AppPalette.gold300, size: 20),
+                        child: Icon(Icons.apartment_rounded, color: AppPalette.gold300, size: 20),
                       ),
                       const SizedBox(width: 10),
                       Expanded(

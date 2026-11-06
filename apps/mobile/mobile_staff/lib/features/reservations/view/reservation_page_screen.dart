@@ -227,7 +227,7 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: context.appColors.hairline)),
                             suffixIcon: IconButton(
                               key: const Key('reservation-note-send'),
-                              icon: const Icon(Icons.send_rounded, color: AppPalette.gold600),
+                              icon: Icon(Icons.send_rounded, color: AppPalette.gold600),
                               onPressed: _busy ? null : _addNote,
                             ),
                           ),

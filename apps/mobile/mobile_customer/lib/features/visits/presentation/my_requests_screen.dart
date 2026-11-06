@@ -302,7 +302,7 @@ class _FilterRow extends StatelessWidget {
         _FilterKey.cancelled => l10n.requestsCancelled,
       };
 
-  static const _dots = {
+  static final _dots = {
     _FilterKey.all:       Colors.white,
     _FilterKey.pending:   AppPalette.gold300,
     _FilterKey.confirmed: Color(0xFF93C5FD),
@@ -479,7 +479,7 @@ class _VisitSummary extends StatelessWidget {
                           color: AppPalette.gold300.withValues(alpha: 0.35),
                         ),
                       ),
-                      child: const Icon(Icons.event_note_rounded,
+                      child: Icon(Icons.event_note_rounded,
                           color: AppPalette.gold300, size: 17),
                     ),
                     const SizedBox(width: 10),
@@ -494,7 +494,7 @@ class _VisitSummary extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '$total',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppPalette.gold300,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,

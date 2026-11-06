@@ -116,7 +116,7 @@ class PaymentReviewTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  if (item.contractNumber != null) Text(ltr(item.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold300)),
+                  if (item.contractNumber != null) Text(ltr(item.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold300)),
                   if (item.unitCode != null) Text(ltr(item.unitCode!), style: const TextStyle(fontSize: 12, color: Color(0xFFC9D2DE))),
                 ]),
               ]),
@@ -143,19 +143,19 @@ class PaymentReviewTile extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                 child: Row(children: [
-                  const Icon(Icons.attach_file_rounded, size: 18, color: AppPalette.gold600),
+                  Icon(Icons.attach_file_rounded, size: 18, color: AppPalette.gold600),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(item.proofFileName ?? l10n.paymentProofAttached,
                         maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkStrong)),
                   ),
                   if (openBusy)
-                    const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.gold600))
+                    SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.gold600))
                   else if (onOpenProof != null)
                     Row(mainAxisSize: MainAxisSize.min, children: [
-                      Text(l10n.prOpenProof, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                      Text(l10n.prOpenProof, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                       const SizedBox(width: 4),
-                      const Icon(Icons.open_in_new_rounded, size: 16, color: AppPalette.gold600),
+                      Icon(Icons.open_in_new_rounded, size: 16, color: AppPalette.gold600),
                     ]),
                 ]),
               ),
@@ -171,7 +171,7 @@ class PaymentReviewTile extends StatelessWidget {
                 key: Key('review-approve-${item.id}'),
                 onPressed: busy ? null : onApprove,
                 icon: busy
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                    ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
                     : const Icon(Icons.check_rounded, size: 19),
                 label: Text(l10n.paymentApprove),
                 style: FilledButton.styleFrom(

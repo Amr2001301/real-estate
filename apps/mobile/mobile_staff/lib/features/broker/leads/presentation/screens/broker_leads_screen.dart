@@ -72,7 +72,7 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
               leading: s.isEmpty
                   ? null
                   : Container(width: 10, height: 10, decoration: BoxDecoration(color: leadStageColor(s, ctx.appColors), shape: BoxShape.circle)),
-              trailing: (current ?? '') == s ? const Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
+              trailing: (current ?? '') == s ? Icon(Icons.check_rounded, color: AppPalette.gold500) : null,
               onTap: () => Navigator.of(ctx).pop(s),
             ),
         ]),
@@ -296,7 +296,7 @@ class BrokerLeadCard extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
                     child: duplicate
-                        ? const Icon(Icons.content_copy_rounded, size: 18, color: AppPalette.gold300)
+                        ? Icon(Icons.content_copy_rounded, size: 18, color: AppPalette.gold300)
                         : Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
                   ),
                   const SizedBox(width: 11),

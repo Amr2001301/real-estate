@@ -278,7 +278,7 @@ class _Wordmark extends StatelessWidget {
           width: 40,
           height: 2,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold300, AppPalette.gold500],
             ),
             borderRadius: BorderRadius.circular(999),

@@ -200,14 +200,14 @@ class _SectionLabel extends StatelessWidget {
             borderRadius: BorderRadius.circular(9),
           ),
           child: step == null
-              ? const Icon(
+              ? Icon(
                   Icons.auto_awesome_rounded,
                   size: 16,
                   color: AppPalette.gold500,
                 )
               : Text(
                   '$step',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppPalette.gold600,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -436,7 +436,7 @@ class _PhotosSection extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.add_a_photo_outlined,
                       color: AppPalette.gold300,
                       size: 15,
@@ -549,7 +549,7 @@ class _PhotoSourceSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Container(
               height: 1,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
                     AppPalette.gold400,
@@ -1088,7 +1088,7 @@ class _CategoryTile extends StatelessWidget {
               ),
             ),
             if (selected)
-              const PositionedDirectional(
+              PositionedDirectional(
                 top: 0,
                 end: 0,
                 child: Icon(

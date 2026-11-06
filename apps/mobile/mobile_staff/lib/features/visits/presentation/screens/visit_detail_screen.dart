@@ -661,7 +661,7 @@ class _CustomerRequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.format_quote_rounded,
+              Icon(Icons.format_quote_rounded,
                   size: 15, color: AppPalette.gold500),
               const SizedBox(width: 6),
               Text(
@@ -778,7 +778,7 @@ class _FeedbackTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg, vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [AppPalette.gold300, AppPalette.gold500],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -1035,7 +1035,7 @@ class _DarkContactButtons extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [AppPalette.gold300, AppPalette.gold500],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

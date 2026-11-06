@@ -62,7 +62,7 @@ class UnitCard extends StatelessWidget {
                   Text(unit.typeLabel(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(18, Colors.white)),
                   if (where.isNotEmpty)
                     Row(children: [
-                      const Icon(Icons.apartment_rounded, size: 14, color: AppPalette.gold300),
+                      Icon(Icons.apartment_rounded, size: 14, color: AppPalette.gold300),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFFDCE3EC))),

@@ -349,7 +349,7 @@ class _ProjectsStrip extends StatelessWidget {
                   if (p.coverImageUrl?.isNotEmpty ?? false)
                     AppNetworkImage(url: p.coverImageUrl!)
                   else
-                    const DecoratedBox(decoration: BoxDecoration(gradient: homeNavyGradient)),
+                    DecoratedBox(decoration: BoxDecoration(gradient: homeNavyGradient)),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -366,7 +366,7 @@ class _ProjectsStrip extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
                       child: Text(l10n.bhUnitsAvailable(units),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
                     ),
                   ),
                   PositionedDirectional(
@@ -378,7 +378,7 @@ class _ProjectsStrip extends StatelessWidget {
                           maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15, Colors.white)),
                       if (p.city?.isNotEmpty ?? false)
                         Row(children: [
-                          const Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
+                          Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
                           const SizedBox(width: 3),
                           Text(p.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                         ]),

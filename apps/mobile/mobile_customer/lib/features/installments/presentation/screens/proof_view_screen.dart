@@ -9,7 +9,7 @@ const _navyLight = Color(0xFF243F62);
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
 const _paidAccent = Color(0xFF4ADE80);
-const _pendingAccent = AppPalette.gold300;
+final _pendingAccent = AppPalette.gold300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Proof View Screen

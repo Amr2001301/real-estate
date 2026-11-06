@@ -68,7 +68,7 @@ class ReservationDecisionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(children: [
-            const Icon(Icons.how_to_reg_rounded, color: AppPalette.gold500),
+            Icon(Icons.how_to_reg_rounded, color: AppPalette.gold500),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Text(

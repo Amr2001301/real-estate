@@ -200,7 +200,7 @@ class _PortfolioPill extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [Color(0xFFC8A24B), AppPalette.gold500],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,

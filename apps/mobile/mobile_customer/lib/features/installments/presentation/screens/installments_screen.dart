@@ -20,7 +20,7 @@ const _overdueGradient = [
 ]; // warmer crimson
 const _overdueAccent = Color(0xFFF87171);
 const _pendingGradient = [_navyLight, _navyDeep];
-const _pendingAccent = AppPalette.gold300;
+final _pendingAccent = AppPalette.gold300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Installments Screen

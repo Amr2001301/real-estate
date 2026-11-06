@@ -491,7 +491,7 @@ class _DocumentsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    const accent = AppPalette.gold300;
+    final accent = AppPalette.gold300;
 
     return GestureDetector(
       onTap: onTap,
@@ -537,7 +537,7 @@ class _DocumentsButton extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.folder_open_rounded,
                   color: accent,
                   size: 22,
@@ -574,7 +574,7 @@ class _DocumentsButton extends StatelessWidget {
                   color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: accent,
                   size: 14,

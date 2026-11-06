@@ -66,7 +66,7 @@ class FilterSheet extends StatelessWidget {
                   Text(title, style: homeDisplay(19, colors.inkStrong)),
                   Text(l10n.fsActiveN(active),
                       key: const Key('filter-active'),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
               Material(
@@ -198,7 +198,7 @@ class FilterTiles<T> extends StatelessWidget {
                     color: on ? homeSelected(context) : homeField(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: on ? const BorderSide(color: AppPalette.navy, width: 1.6) : BorderSide(color: homeLine(context)),
+                      side: on ? BorderSide(color: AppPalette.navy, width: 1.6) : BorderSide(color: homeLine(context)),
                     ),
                     child: InkWell(
                       key: Key('$keyPrefix-${o.value ?? 'all'}'),
@@ -232,8 +232,8 @@ class FilterTiles<T> extends StatelessWidget {
                       child: Container(
                         width: 20,
                         height: 20,
-                        decoration: const BoxDecoration(color: AppPalette.navy, shape: BoxShape.circle),
-                        child: const Icon(Icons.check_rounded, size: 13, color: AppPalette.gold300),
+                        decoration: BoxDecoration(color: AppPalette.navy, shape: BoxShape.circle),
+                        child: Icon(Icons.check_rounded, size: 13, color: AppPalette.gold300),
                       ),
                     ),
                 ]),

@@ -32,7 +32,7 @@ class PeriodBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: colors.hairline, width: 1.5)),
             child: Row(children: [
-              const Icon(Icons.calendar_month_rounded, size: 19, color: AppPalette.gold600),
+              Icon(Icons.calendar_month_rounded, size: 19, color: AppPalette.gold600),
               const SizedBox(width: 8),
               Expanded(child: Text(periodLabel(period, lang), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
               Icon(Icons.expand_more_rounded, color: colors.inkMuted),
@@ -73,7 +73,7 @@ Future<String?> pickPeriod(BuildContext context, {required String current, List<
               ListTile(
                 key: Key('period-$m'),
                 title: Text(periodLabel(m, lang)),
-                trailing: m == current ? const Icon(Icons.check_rounded, color: AppPalette.gold600) : null,
+                trailing: m == current ? Icon(Icons.check_rounded, color: AppPalette.gold600) : null,
                 onTap: () => Navigator.pop(ctx, m),
               ),
           ]),

@@ -142,7 +142,7 @@ class _MemberCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(color: AppPalette.gold400, borderRadius: BorderRadius.circular(99)),
-              child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
+              child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
             ),
         ]),
         if (p.targetAmountPercent != null) ...[

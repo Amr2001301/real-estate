@@ -53,7 +53,7 @@ class PlanBanner extends StatelessWidget {
                   color: AppPalette.gold400.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_month_rounded,
                   size: 16,
                   color: AppPalette.gold500,
@@ -64,7 +64,7 @@ class PlanBanner extends StatelessWidget {
                 labelText,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppPalette.gold500,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -88,7 +88,7 @@ class PlanBanner extends StatelessWidget {
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
                       amountText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppPalette.gold500,
                         fontSize: 24,
                         fontWeight: FontWeight.w900,

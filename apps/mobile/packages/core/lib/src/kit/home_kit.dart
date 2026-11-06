@@ -44,12 +44,12 @@ DateTime homeDay(DateTime d) => DateTime(d.year, d.month, d.day);
 /// A percent of [part] in [whole], rounded; null when [whole] is 0.
 int? homePercent(num part, num whole) => whole <= 0 ? null : (part / whole * 100).round();
 
-const homeNavyGradient = LinearGradient(
+LinearGradient get homeNavyGradient => LinearGradient(
   begin: AlignmentDirectional.topStart,
   end: AlignmentDirectional.bottomEnd,
   colors: [AppPalette.navy700, AppPalette.navy],
 );
-const homeGoldGradient = LinearGradient(
+LinearGradient get homeGoldGradient => LinearGradient(
   begin: AlignmentDirectional.topStart,
   end: AlignmentDirectional.bottomEnd,
   colors: [AppPalette.gold300, AppPalette.gold500],
@@ -170,7 +170,7 @@ class HomeListHero extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -195,7 +195,7 @@ class HomeListHero extends StatelessWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(22, Colors.white)),
                     if ((subtitle ?? '').isNotEmpty)
-                      Text(subtitle!, style: const TextStyle(color: AppPalette.gold200, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(subtitle!, style: TextStyle(color: AppPalette.gold200, fontSize: 12, fontWeight: FontWeight.w600)),
                   ]),
                 ),
                 for (final a in actions) ...[const SizedBox(width: 8), a],
@@ -234,7 +234,7 @@ class HomeHeroButton extends StatelessWidget {
           child: Stack(alignment: Alignment.center, children: [
             Icon(icon, size: 20, color: active ? AppPalette.navy : Colors.white),
             if (dot)
-              const PositionedDirectional(
+              PositionedDirectional(
                 top: 8,
                 end: 8,
                 child: SizedBox(width: 8, height: 8, child: DecoratedBox(decoration: BoxDecoration(color: AppPalette.gold300, shape: BoxShape.circle))),
@@ -261,14 +261,14 @@ class HomeSearchField extends StatelessWidget {
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
         child: Row(children: [
           const SizedBox(width: 12),
-          const Icon(Icons.search_rounded, size: 20, color: AppPalette.navy),
+          Icon(Icons.search_rounded, size: 20, color: AppPalette.navy),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.search,
               onSubmitted: onSubmitted,
-              style: const TextStyle(fontSize: 14, color: AppPalette.navy),
+              style: TextStyle(fontSize: 14, color: AppPalette.navy),
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF8A94A6)),
@@ -566,7 +566,7 @@ class _RingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
         ..strokeCap = StrokeCap.round
-        ..shader = const SweepGradient(colors: [AppPalette.gold200, AppPalette.gold500]).createShader(rect),
+        ..shader = SweepGradient(colors: [AppPalette.gold200, AppPalette.gold500]).createShader(rect),
     );
   }
 
@@ -669,9 +669,9 @@ class HomeSection extends StatelessWidget {
                   InkWell(
                     onTap: onAction,
                     child: Row(children: [
-                      Text(action!, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
+                      Text(action!, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
                       // chevron_right mirrors to the outward arrow in Arabic.
-                      const Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
+                      Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
                     ]),
                   ),
               ],
@@ -999,7 +999,7 @@ class HomeRankList extends StatelessWidget {
                                     alignment: AlignmentDirectional.centerStart,
                                     widthFactor: (rows[i].percent! / 100).clamp(0.0, 1.0),
                                     child: Container(
-                                      decoration: const BoxDecoration(
+                                      decoration: BoxDecoration(
                                         gradient: LinearGradient(colors: [AppPalette.gold200, AppPalette.gold500]),
                                       ),
                                     ),
@@ -1040,8 +1040,8 @@ class HomeFunnelStep {
 }
 
 const homeTaupe = [Color(0xFF8A7F70), Color(0xFF6B6256)];
-const homeNavy = [AppPalette.navy600, AppPalette.navy];
-const homeGold = [AppPalette.gold300, AppPalette.gold500];
+List<Color> get homeNavy => [AppPalette.navy600, AppPalette.navy];
+List<Color> get homeGold => [AppPalette.gold300, AppPalette.gold500];
 const homeAmber = [Color(0xFFDDA14A), AppPalette.warningLight];
 const homeGreen = [Color(0xFF5C9A78), AppPalette.successLight];
 
@@ -1094,7 +1094,7 @@ class HomeFunnel extends StatelessWidget {
                     child: Text(
                       i == 0 ? '' : ltr('${homePercent(steps[i].value, steps[i - 1].value) ?? 0}%'),
                       textAlign: TextAlign.end,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
                     ),
                   ),
               ]),

@@ -203,7 +203,7 @@ class StaffAuthHero extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
           ),
-          child: const Icon(Icons.apartment_rounded, size: 32, color: AppPalette.navy),
+          child: Icon(Icons.apartment_rounded, size: 32, color: AppPalette.navy),
         ),
       ),
     );

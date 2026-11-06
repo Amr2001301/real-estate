@@ -58,7 +58,7 @@ class MoreScreen extends StatelessWidget {
                     children: [
                       _MenuTile(
                         icon: AppIcons.chat,
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [Color(0xFF1E3A62), AppPalette.navy],
@@ -81,7 +81,7 @@ class MoreScreen extends StatelessWidget {
                     children: [
                       _MenuTile(
                         icon: Icons.translate_rounded,
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [Color(0xFFC99A2E), AppPalette.gold400],
@@ -273,7 +273,7 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.favorite_rounded,
               label: context.l10n.moreBenefitFavorites,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFFC8A24B), AppPalette.gold400],
@@ -285,7 +285,7 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.compare_arrows_rounded,
               label: context.l10n.moreBenefitCompare,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF24426A), AppPalette.navy],
@@ -531,7 +531,7 @@ class _MoreFooter extends StatelessWidget {
         const BrandMark(size: 32),
         const SizedBox(height: AppSpacing.xs),
         CompanyNameText(
-          style: const TextStyle(
+          style: TextStyle(
             color: AppPalette.gold300,
             fontSize: 12,
             fontWeight: FontWeight.w600,

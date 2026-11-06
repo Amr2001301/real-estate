@@ -193,7 +193,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.hairline)),
                         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(width: 42, height: 42, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.campaign_rounded, color: AppPalette.gold600)),
+                          Container(width: 42, height: 42, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.campaign_rounded, color: AppPalette.gold600)),
                           const SizedBox(width: 11),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -268,7 +268,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                           foregroundColor: colors.inkStrong,
-                          side: const BorderSide(color: AppPalette.navy, width: 1.2),
+                          side: BorderSide(color: AppPalette.navy, width: 1.2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
                         ),
@@ -279,7 +279,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                       child: FilledButton.icon(
                         key: const Key('bc-send'),
                         onPressed: s.canSend ? cubit.send : null,
-                        icon: s.sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.send_rounded, size: 18),
+                        icon: s.sending ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.send_rounded, size: 18),
                         label: Text(p != null && p.recipients > 0 && needEstimate ? l10n.bcSendN(p.recipients) : l10n.bcSend, maxLines: 1, overflow: TextOverflow.ellipsis),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
