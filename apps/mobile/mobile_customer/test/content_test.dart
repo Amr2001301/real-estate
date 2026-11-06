@@ -169,7 +169,7 @@ void main() {
     await t.pump();
     await t.pump();
     expect(find.text('عن الشركة'), findsOneWidget);
-    await t.tap(find.byKey(const ValueKey('page-about')));
+    await t.tap(find.byKey(const Key('profile-page-about')));
     await t.pumpAndSettle();
     expect(visited, ['/pages/about']);
     expect(find.text('فقرة أولى.'), findsOneWidget);
