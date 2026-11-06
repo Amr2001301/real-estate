@@ -49,7 +49,7 @@ export const fetchCache = 'force-no-store';
 // ── Search params ─────────────────────────────────────────────────────────────
 interface Search {
   mode?: string; month?: string; year?: string; quarter?: string;
-  dateFrom?: string; dateTo?: string; compare?: string;
+  dateFrom?: string; dateTo?: string; compare?: string; view?: string;
   projectId?: string; q?: string; type?: string; showFilters?: string;
 }
 
@@ -120,6 +120,9 @@ export default async function FinancialReportsPage({
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
   const compare  = (sp.compare ?? 'none') as CompareMode;
   const cmpRange = resolveComparisonDateRange(resolved, compare, today);
+  // With a comparison chosen, the page shows either the report or the comparison
+  // (a switch under the filters): the comparison first, since it was just asked for.
+  const showCompare = !!cmpRange && sp.view !== 'report';
 
   const PAYMENT_TYPE_LABELS: Partial<Record<PlanPaymentType, string>> = m.paymentTypeLabels;
   const PAYMENT_TYPE_CLS: Partial<Record<PlanPaymentType, string>> = {
@@ -307,6 +310,7 @@ export default async function FinancialReportsPage({
         defaultQ={sp.q ?? ''}
         defaultType={sp.type ?? ''}
         defaultShowFilters={showFilters}
+        defaultView={sp.view}
         projects={projectOptions}
         locale={locale}
       />
@@ -314,7 +318,28 @@ export default async function FinancialReportsPage({
       {compareRes.error && (
         <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{compareRes.error}</div>
       )}
-      {compareRes.data && cmpRange && (
+      {cmpRange && (
+        <div role="tablist" aria-label={en ? 'View' : 'العرض'} className="inline-flex w-fit items-center gap-1 self-start rounded-full border border-hairline bg-surface p-1" data-testid="fin-view-switch">
+          {([['compare', en ? 'Comparison' : 'المقارنة'], ['report', en ? 'Report' : 'التقرير']] as const).map(([v, label]) => {
+            const qs = new URLSearchParams();
+            for (const [k, val] of Object.entries(sp)) if (val && k !== 'view') qs.set(k, String(val));
+            if (v === 'report') qs.set('view', 'report');
+            const on = (v === 'compare') === showCompare;
+            return (
+              <Link
+                key={v}
+                role="tab"
+                aria-selected={on}
+                href={`/dashboard/reports/financial?${qs.toString()}` as never}
+                className={cn('inline-flex h-10 items-center rounded-full px-6 text-[14px] transition-colors', on ? 'bg-brand-500/15 font-bold text-brand-700' : 'text-slate-600 hover:text-slate-900')}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+      {showCompare && compareRes.data && cmpRange && (
         <CompareView
           data={buildCompareData(compareRes.data, {
             en,
@@ -336,6 +361,8 @@ export default async function FinancialReportsPage({
         </div>
       )}
 
+      {!showCompare && (
+      <>
       {/* ─── Hero: what came in, the rate, the months ───────────────────── */}
       <section data-testid="fin-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
@@ -1015,6 +1042,8 @@ export default async function FinancialReportsPage({
           </div>
         )}
       </PremiumPanel>
+      </>
+      )}
     </div>
   );
 }
