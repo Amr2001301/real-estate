@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-06, after #318)
+# Handoff — where the work stands (2026-11-06, after #321)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -107,7 +107,7 @@
 - **الرئيسية والتفاصيل:** كل صفحات الدخول، وصفحات التفاصيل، والنماذج، ولوحات الأدمن الجديدة (صحة المشاريع، الصحة المالية، التدفق النقدي، مصادر العملاء).
 - **صفحات جديدة للأدمن:** استفسارات العملاء، تقرير المبيعات، التقرير المالي مع المقارنة بالفترة السابقة، وصفحات الوسطاء الست بتفاصيلها وأزرارها (اعتماد عمولة، صرف دفعة، إيقاف شركة…).
 - **التجربة على الأدوار الأربعة (مدير مبيعات، مبيعات، وسيط، مشرف صيانة):** كل الصفحات بتفتح بدون أخطاء، وكل دور محصور في صفحاته. الأزرار والنماذج اتجرّبت على بيانات الديمو واتأكدت من قاعدة البيانات.
-- **الوضع الليلي:** اتصلّحت الأماكن اللي كان فيها نص أبيض على فاتح (#302). **لسه حوالي 100 مكان بألوان ثابتة فاتحة** (مهمة DK1).
+- **الوضع الليلي:** اتصلّحت الأماكن اللي كان فيها نص أبيض على فاتح (#302). **اتصلّح الباقي (حوالي 100 مكان بألوان ثابتة فاتحة) في #320** (مهمة DK1 خلصت).
 - **طلباتك الجديدة (المهام الجديدة):**
   1. **حجم الخط في تطبيق الموظفين** — صغير مش مقروء (مهمة FS1).
   2. **تطبيق العملاء صفحة صفحة** بنفس شكل تطبيق الموظفين، مع الخط والوضع الليلي (CU-0، CU-1…n).
@@ -616,7 +616,7 @@ Same method as 2k/2l: one PR per part, a screenshot from a real web build, merge
 **Owner requests not done yet (tasks in the list):**
 1. **FS1 — staff app font size.** The owner finds the text small. Many labels are 10–12.5. Set a readable floor and a shared scale; check at default and the largest system text size.
 2. **CU-0 / CU-1…n — the customer app, page by page,** in the staff app's look (home kit: hero, cards, sheets), with readable fonts and a proper dark theme. The customer app still uses the older strip-and-white-body cards (`InstallmentCard` etc.). Order: home, catalog (projects, units, compare, favourites), my property and contracts, installments and proofs, statement, payments, visits and requests, maintenance, documents, notifications, account and profile, content pages, sign-in. One PR per group; the owner reviews on screen.
-3. **DK1 — the rest of the staff dark theme** (about 100 fixed light colours: `grep -rn "Color(0xFF[EF]" apps/mobile/mobile_staff/lib`).
+3. **DK1 — the rest of the staff dark theme (done in #320, see 2p)** (about 100 fixed light colours: `grep -rn "Color(0xFF[EF]" apps/mobile/mobile_staff/lib`).
 4. **REL1 — release decisions that are the owner's:** the Android `applicationId` (`com.realestate.staff.mobile_staff`, a TODO, immutable after the first Play upload), the iOS bundle id, a release keystore (a release build without `key.properties` is signed with the debug key), the Firebase files (`google-services.json`, `GoogleService-Info.plist`; only `.example` files are in the repo), the app name «Devora Staff», push on a real device. The checklist for the phone is `docs/staff-app-device-test.md`.
 
 **Things learned (so they are not found again):**
@@ -687,6 +687,17 @@ The owner asked for the customer app to look like the staff app. The method: sha
 **QA notes for a new container (extends 2n):** building the web app (`flutter build web`) while the API runs can kill the API (memory); start the API again afterwards (`pnpm exec nest start` in `apps/api`). To see lists with data, the demo customer (client2) had maintenance requests, favourites and a visit request inserted by hand in the local database (not in the seed). `psql` needs the `?schema=` part of `DATABASE_URL` removed. While a PR is open, keep unapproved work out of its branch (`git stash`), and reset the branch to `origin/main` after each squash merge.
 
 **Still open:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`).
+
+---
+
+### 2p. #320–#321 (2026-11-06) — staff dark theme (DK1); calmer admin sidebar and ring
+
+| PR | Slice | Main points |
+|---|---|---|
+| #320 | DK1: staff dark theme | The fixed light colours of the staff app now follow the theme. New helpers in `packages/core/lib/src/kit/home_kit.dart`: `homeField` (input fill), `homeSelected` (chosen-option card), `homeLine` (hairlines), `homeSheet` (sheet body), `homeWarnFill` / `homeOkFill` / `homeErrFill` (status fills), next to the existing `homeTint` / `homeTintBorder` / `homeIsDark`. Light mode is unchanged. Covered: unread notification cards, reservation and contract inputs, chosen-option cards, funnel and progress tracks, mini stat tiles, filter segments, pale gold icon tiles, team-performance chips, the assistant notice. Rule for new code: never write `Color(0xFFF…)` or `Colors.white` as a fill; use these helpers or `context.appColors`. |
+| #321 | Admin sidebar + ring (`apps/web-admin`) | Sidebar: no page counters, no box around the open section, no heavy focus ring, no wash behind the active link (gold text and the gold bar only), no tiles behind section icons. `PremiumMetricStrip` ring metrics (`ring`) draw a larger ring with the value inside it and the note beside it. Refines the #318 sidebar (owner-approved). |
+
+**Still open:** REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`). The owner may later ask to drop the phone / WhatsApp buttons from the dashboard's «متابعات اليوم» (not done).
 
 ---
 
