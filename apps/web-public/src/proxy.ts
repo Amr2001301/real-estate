@@ -144,7 +144,10 @@ function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: Nex
 
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-  const hostname = req.nextUrl.hostname;
+  // The host the browser asked for. `nextUrl.hostname` is always "localhost" in
+  // `next dev` (so a company's own host — `acme.localhost` — could never be
+  // tried locally); the Host header is the same value on a deployed host.
+  const hostname = (req.headers.get('host') ?? req.nextUrl.host).split(':')[0]!.toLowerCase() || req.nextUrl.hostname;
 
   // Resolve tenant once per request — used by all branches below.
   const tenant = await resolveTenant(hostname);

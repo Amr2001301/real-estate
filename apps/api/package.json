@@ -18,6 +18,7 @@
     "prisma:schema-check": "prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:e2e": "tsx prisma/seed-e2e.ts",
+    "prisma:seed:platform": "tsx prisma/seed-platform.ts",
     "prisma:seed:brokers": "tsx prisma/seed-broker-demo.ts",
     "prisma:seed:brokers:cleanup": "tsx prisma/seed-broker-demo.ts --cleanup",
     "prisma:seed:cms": "tsx prisma/seed-cms-demo.ts",

@@ -112,7 +112,7 @@ export class R2Service {
     if (!client || !bucket) {
       throw new ServiceUnavailableException('Storage not configured');
     }
-    const ext = opts.extension ?? this.guessExtension(opts.contentType);
+    const ext = this.normalizeExtension(opts.extension) ?? this.guessExtension(opts.contentType);
     const key = `${opts.folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${ext}`;
     const command = new PutObjectCommand({
       Bucket: bucket,
@@ -152,7 +152,7 @@ export class R2Service {
     if (!client || !bucket) {
       throw new ServiceUnavailableException('Storage not configured');
     }
-    const ext = opts.extension ?? this.guessExtension(opts.contentType);
+    const ext = this.normalizeExtension(opts.extension) ?? this.guessExtension(opts.contentType);
     const key = `${opts.folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${ext}`;
     try {
       await client.send(
@@ -299,6 +299,16 @@ export class R2Service {
     if (!name) return fallback;
     const cleaned = name.replace(/[^\w.\-() ]+/g, '_').trim();
     return cleaned.length > 0 ? cleaned : fallback;
+  }
+
+  /**
+   * ".png" from "png" / ".PNG" / "photo.png"; null when nothing usable. The
+   * browsers send `file.name.split('.').pop()` — without the dot — which made
+   * keys like `…uuidpng`.
+   */
+  private normalizeExtension(ext?: string): string | null {
+    const clean = (ext ?? '').split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) ?? '';
+    return clean ? `.${clean}` : null;
   }
 
   private guessExtension(ct: string): string {
