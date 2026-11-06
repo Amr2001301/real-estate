@@ -3142,5 +3142,11 @@
   "ctProjectsCountN": "{n, plural, =0{No projects} =1{1 project} other{{n} projects}}",
   "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
   "ctUnitsCountN": "{n, plural, =0{No units} =1{1 unit} other{{n} units}}",
-  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}}
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "financeInstallmentsPaid": "paid",
+  "financeOverdue": "Overdue",
+  "financeAllOnTime": "None overdue",
+  "financeNeedsPayment": "Needs payment",
+  "financeNextInstallment": "Next installment",
+  "financeServices": "Financial services"
 }
