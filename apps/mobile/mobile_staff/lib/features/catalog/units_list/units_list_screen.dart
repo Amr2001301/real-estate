@@ -222,7 +222,7 @@ class UnitsActiveChip extends StatelessWidget {
         avatar: Icon(icon, size: 16, color: AppPalette.gold500),
         label: Text(label),
         labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appColors.inkStrong),
-        backgroundColor: AppPalette.gold50,
+        backgroundColor: homeTint(context),
         side: const BorderSide(color: AppPalette.gold300),
         shape: const StadiumBorder(),
         deleteIcon: const Icon(Icons.close_rounded, size: 16),

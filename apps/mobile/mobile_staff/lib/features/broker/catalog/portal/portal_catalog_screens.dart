@@ -51,7 +51,7 @@ Widget portalUnitCard(BuildContext context, PortalUnit u) {
           avatar: const Icon(Icons.bookmark_add_rounded, size: 16, color: AppPalette.gold600),
           label: Text(l10n.bcReserve),
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600),
-          backgroundColor: AppPalette.gold50,
+          backgroundColor: homeTint(context),
           side: const BorderSide(color: AppPalette.gold200),
           shape: const StadiumBorder(),
           onPressed: () => _book(context, u),
