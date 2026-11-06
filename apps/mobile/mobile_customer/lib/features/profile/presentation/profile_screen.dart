@@ -8,7 +8,6 @@ import '../../auth/presentation/auth_cubit.dart';
 import 'profile_cubit.dart';
 
 const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,23 +161,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildView(BuildContext context, UserProfile p, AppLocalizations l10n) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-    // kToolbarHeight = standard AppBar height (56)
-    final appBarBottom = topInset + kToolbarHeight;
 
     final fields = [
-      _Field(l10n.fieldFullName, p.fullName ?? '—'),
-      _Field(l10n.fieldEmail, p.email ?? '—'),
-      _Field(l10n.fieldPhone, p.phone != null ? ltr(p.phone) : '—'),
-      _Field(l10n.fieldLanguage, p.locale == 'en' ? 'English' : 'العربية'),
+      _Field(l10n.fieldFullName, p.fullName ?? '—', Icons.person_rounded),
+      _Field(l10n.fieldEmail, p.email ?? '—', Icons.mail_rounded),
+      _Field(l10n.fieldPhone, p.phone != null ? ltr(p.phone) : '—', Icons.phone_rounded),
+      _Field(l10n.fieldLanguage, p.locale == 'en' ? 'English' : 'العربية', Icons.language_rounded),
     ];
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        appBarBottom + AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        110 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
         // Profile identity hero
@@ -187,59 +183,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         // Fields card
         Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.antiAlias,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: homeCard(context, radius: 22),
           child: Column(
             children: [
               for (var i = 0; i < fields.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    indent: AppSpacing.lg,
-                    endIndent: AppSpacing.lg,
-                    color: colors.hairline,
-                  ),
+                if (i > 0) Divider(height: 1, color: colors.hairline),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              fields[i].label,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.inkMuted,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              fields[i].value,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: colors.inkStrong,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold50,
+                        border: Border.all(color: AppPalette.gold100),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
+                      child: Icon(fields[i].icon, size: 18, color: AppPalette.gold500),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(fields[i].label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                        const SizedBox(height: 2),
+                        Text(fields[i].value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                      ]),
+                    ),
+                  ]),
                 ),
               ],
             ],
@@ -310,15 +281,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final topInset = MediaQuery.paddingOf(context).top;
-    final appBarBottom = topInset + kToolbarHeight;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        appBarBottom + AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xl + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
         Form(
@@ -406,108 +375,31 @@ class _ProfileHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-
     return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.06),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // Navy gradient top strip
-          SizedBox(
-            height: 72,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [_navyLight, _navyCard, _navyDeep],
-                      stops: [0.0, 0.5, 1.0],
-                    ),
-                  ),
-                ),
-                const IgnorePointer(child: _HeaderDots()),
-              ],
-            ),
-          ),
-          // Avatar overlapping the strip
-          Transform.translate(
-            offset: const Offset(0, -36),
-            child: Column(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: colors.surface,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppPalette.gold400.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppPalette.gold400.withValues(alpha: 0.65),
-                        width: 2,
-                      ),
-                    ),
-                    child: GradientAvatar(
-                      name: profile.fullName ?? profile.email,
-                      size: 72,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  profile.fullName ?? profile.email ?? '—',
-                  style: TextStyle(
-                    color: colors.inkStrong,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                StatusBadge(
-                  label: l10n.accountRoleCustomer,
-                  tone: BadgeTone.gold,
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
-            ),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: homeCard(context, radius: 24),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.7), width: 2)),
+          child: GradientAvatar(name: profile.fullName ?? profile.email, size: 64),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(profile.fullName ?? profile.email ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(19, colors.inkStrong)),
+            const SizedBox(height: 6),
+            CatalogBadge.gold(l10n.accountRoleCustomer, icon: Icons.verified_rounded),
+          ]),
+        ),
+      ]),
     );
   }
 }
 
 class _Field {
-  const _Field(this.label, this.value);
+  const _Field(this.label, this.value, this.icon);
+  final IconData icon;
   final String label;
   final String value;
 }
@@ -515,31 +407,6 @@ class _Field {
 // ── Premium app bar ───────────────────────────────────────────────────────────
 
 // ── Dot texture ───────────────────────────────────────────────────────────────
-
-class _HeaderDots extends StatelessWidget {
-  const _HeaderDots();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The code sent to a new phone number
