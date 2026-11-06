@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile_staff/features/dashboard/home_kit/home_kit.dart';
+import 'package:core/core.dart';
 
 /// The card over the hero's edge takes taps where it is drawn — the part
 /// over the hero included — and the layout leaves no gap under it.

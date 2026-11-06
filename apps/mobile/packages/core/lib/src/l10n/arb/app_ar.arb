@@ -3130,5 +3130,9 @@
   "frCompare": "المقارنة",
   "frCompareOff": "بدون مقارنة",
   "frCompareOn": "مقارنة بالفترة السابقة",
-  "brkConfirmHint": "هل تريد تنفيذ هذا الإجراء؟"
+  "brkConfirmHint": "هل تريد تنفيذ هذا الإجراء؟",
+  "ctProjectsCountN": "{n, plural, =0{لا مشاريع} =1{مشروع واحد} =2{مشروعان} few{{n} مشاريع} other{{n} مشروعًا}}",
+  "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "ctUnitsCountN": "{n, plural, =0{لا وحدات} =1{وحدة واحدة} =2{وحدتان} few{{n} وحدات} other{{n} وحدة}}",
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}}
 }

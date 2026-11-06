@@ -7,13 +7,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
-import '../../../catalog/kit/catalog_kit.dart';
 import '../../../catalog/kit/catalog_media.dart';
 import '../../../catalog/unit_page/unit_page_screen.dart';
 import '../../../catalog/units_list/units_list_data.dart';
 import '../../../catalog/units_list/units_list_screen.dart';
-import '../../../dashboard/home_kit/filter_kit.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../domain/repositories/broker_catalog_repository.dart';
 import 'portal_catalog_data.dart';
 

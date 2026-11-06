@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
-import '../../dashboard/home_kit/home_kit.dart';
-import '../kit/catalog_kit.dart';
 import 'projects_list_data.dart';
 
 /// The projects list (owner-approved design, 2026-11-04), with the website's

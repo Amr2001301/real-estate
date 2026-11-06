@@ -2,18 +2,19 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/catalog_enums.dart';
-import '../widgets/filter_sheet.dart';
 import 'projects_state.dart';
 
-/// Bottom sheet to edit project filters. Returns the new filter on apply, or
-/// null if dismissed.
+/// Bottom sheet to edit project filters, in the staff app's look. Returns the
+/// new filter on apply, or null if dismissed.
 Future<ProjectsFilter?> showProjectsFilterSheet(
   BuildContext context, {
   required ProjectsFilter current,
   required List<String> cities,
 }) {
-  return showAppFilterSheet<ProjectsFilter>(
-    context,
+  return showModalBottomSheet<ProjectsFilter>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
     builder: (_) => _ProjectsFilterSheet(initial: current, cities: cities),
   );
 }
@@ -41,114 +42,48 @@ class _ProjectsFilterSheetState extends State<_ProjectsFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
-    return FilterSheetShell(
+    return FilterSheet(
       title: l10n.filtersTitle,
-      activeCount: _f.activeCount,
+      active: _f.activeCount,
       applyLabel: l10n.applyFilters,
-      resetLabel: l10n.clearFilters,
-      onReset: () => Navigator.of(context).pop(const ProjectsFilter()),
+      onClear: () => Navigator.of(context).pop(const ProjectsFilter()),
       onApply: () => Navigator.of(context).pop(_f),
       sections: [
         if (widget.cities.isNotEmpty)
           FilterSection(
-            label: l10n.filterCity,
-            child: Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: [
-                FilterChoiceChip(
-                  label: l10n.filterAny,
-                  selected: _f.city == null,
-                  onTap: () =>
-                      setState(() => _f = _f.copyWith(clearCity: true)),
-                ),
-                for (final city in widget.cities)
-                  FilterChoiceChip(
-                    label: _cityLabel(city),
-                    selected: _f.city == city,
-                    onTap: () => setState(() => _f = _f.copyWith(city: city)),
-                  ),
+            icon: Icons.location_on_rounded,
+            title: l10n.filterCity,
+            child: FilterRadioList<String?>(
+              keyPrefix: 'projects-city',
+              selected: _f.city,
+              onSelect: (v) => setState(() => _f = v == null ? _f.copyWith(clearCity: true) : _f.copyWith(city: v)),
+              options: [
+                FilterOption(null, l10n.filterAny),
+                for (final c in widget.cities) FilterOption(c, _cityLabel(c)),
               ],
             ),
           ),
-        // Compact single-row toggle — no oversized card for one boolean.
         FilterSection(
-          label: l10n.filterFeaturedOnly,
           icon: Icons.star_rounded,
-          trailing: _MiniToggle(value: _f.featuredOnly),
-          onTap: () => setState(
-            () => _f = _f.copyWith(featuredOnly: !_f.featuredOnly),
+          title: l10n.filterFeaturedOnly,
+          child: FilterSegments<bool>(
+            keyPrefix: 'projects-featured',
+            selected: _f.featuredOnly,
+            onSelect: (v) => setState(() => _f = _f.copyWith(featuredOnly: v)),
+            options: [FilterOption(false, l10n.filterAny), FilterOption(true, l10n.filterFeaturedOnly)],
           ),
         ),
         FilterSection(
-          label: l10n.sortTitle,
-          child: FilterChipGrid(
-            items: [
-              FilterChipItem(
-                label: l10n.sortNewest,
-                selected: _f.sort == ProjectSort.newest,
-                onTap: () =>
-                    setState(() => _f = _f.copyWith(sort: ProjectSort.newest)),
-              ),
-              FilterChipItem(
-                label: l10n.sortOldest,
-                selected: _f.sort == ProjectSort.oldest,
-                onTap: () =>
-                    setState(() => _f = _f.copyWith(sort: ProjectSort.oldest)),
-              ),
-            ],
+          icon: Icons.sort_rounded,
+          title: l10n.sortTitle,
+          child: FilterSegments<ProjectSort>(
+            keyPrefix: 'projects-sort',
+            selected: _f.sort,
+            onSelect: (v) => setState(() => _f = _f.copyWith(sort: v)),
+            options: [FilterOption(ProjectSort.newest, l10n.sortNewest), FilterOption(ProjectSort.oldest, l10n.sortOldest)],
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A small premium on/off switch (gold when on) for a one-line boolean filter.
-class _MiniToggle extends StatelessWidget {
-  const _MiniToggle({required this.value});
-  final bool value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      width: 46,
-      height: 28,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: value ? colors.brandGold : colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: value
-              ? colors.brandGold
-              : colors.hairline.withValues(alpha: 0.8),
-        ),
-      ),
-      child: AnimatedAlign(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        alignment:
-            value ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-        child: Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: value ? colors.brandNavy : colors.surface,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

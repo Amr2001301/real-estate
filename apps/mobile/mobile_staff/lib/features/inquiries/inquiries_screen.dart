@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 import '../../common/staff_list_skeleton.dart';
-import '../dashboard/home_kit/filter_kit.dart';
-import '../dashboard/home_kit/home_kit.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
 
 /// What the customers and visitors asked through the apps and the website —

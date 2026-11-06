@@ -5,10 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../common/broker_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contract_page_screen.dart' show ContractParty, KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show ContractCardView, contractBadge, contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
 import 'broker_contracts_data.dart';
 
 /// The broker's contracts (owner-approved design k4, 2026-11-04), as the

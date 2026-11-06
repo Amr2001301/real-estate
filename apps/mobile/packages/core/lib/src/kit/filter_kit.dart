@@ -1,8 +1,6 @@
-import 'package:core/core.dart';
+import '../../core.dart';
 import 'package:flutter/material.dart';
 
-import '../../catalog/kit/catalog_kit.dart';
-import 'home_kit.dart';
 
 /// The filter sheet every list uses (owner-approved design, 2026-11-04):
 /// a title with how many filters are on and a close button, titled

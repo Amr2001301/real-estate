@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../catalog/kit/catalog_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import 'contract_create_data.dart';
 import 'contract_form_kit.dart';
 

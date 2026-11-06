@@ -16801,6 +16801,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Do you want to do this?'**
   String get brkConfirmHint;
+
+  /// No description provided for @ctProjectsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No projects} =1{1 project} other{{n} projects}}'**
+  String ctProjectsCountN(int n);
+
+  /// No description provided for @ctUnitsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{1 unit} other{{n} units}}'**
+  String ctUnitsCountN(int n);
 }
 
 class _AppLocalizationsDelegate

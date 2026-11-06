@@ -10,7 +10,6 @@ import '../../../campaigns/presentation/campaigns_screen.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../cubit/create_lead_cubit.dart';
 import 'open_lead_sheet.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 class CreateLeadScreen extends StatefulWidget {
   const CreateLeadScreen({super.key, this.interestContext});

@@ -8,8 +8,6 @@ import '../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../contracts/create/contract_form_kit.dart';
 import '../../contracts/create/manual_contract_screen.dart' show PickSheet;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/filter_kit.dart' show FilterOption, FilterRadioList;
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../installments/domain/entities/installment.dart';
 import '../../installments/domain/repositories/installments_repository.dart';
 import '../presentation/cubit/create_reservation_cubit.dart';

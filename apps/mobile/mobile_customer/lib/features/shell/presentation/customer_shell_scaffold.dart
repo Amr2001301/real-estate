@@ -103,26 +103,31 @@ class CustomerShellScaffold extends StatelessWidget {
         ? [
             AppBottomNavItem(
               icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               cupertinoIcon: CupertinoIcons.house,
               label: l10n.navHome,
             ),
             AppBottomNavItem(
               icon: Icons.home_work_outlined,
+              activeIcon: Icons.home_work_rounded,
               cupertinoIcon: CupertinoIcons.building_2_fill,
               label: l10n.accountMyProperty,
             ),
             AppBottomNavItem(
               icon: Icons.account_balance_wallet_outlined,
+              activeIcon: Icons.account_balance_wallet_rounded,
               cupertinoIcon: CupertinoIcons.creditcard,
               label: l10n.navFinance,
             ),
             AppBottomNavItem(
               icon: Icons.build_outlined,
+              activeIcon: Icons.build_rounded,
               cupertinoIcon: CupertinoIcons.wrench,
               label: l10n.accountMaintenance,
             ),
             AppBottomNavItem(
               icon: Icons.person_outline_rounded,
+              activeIcon: Icons.person_rounded,
               cupertinoIcon: CupertinoIcons.person_crop_circle,
               label: l10n.navAccount,
             ),
@@ -130,16 +135,19 @@ class CustomerShellScaffold extends StatelessWidget {
         : [
             AppBottomNavItem(
               icon: Icons.home_outlined,
+              activeIcon: Icons.home_rounded,
               cupertinoIcon: CupertinoIcons.house,
               label: l10n.navHome,
             ),
             AppBottomNavItem(
               icon: Icons.location_city_outlined,
+              activeIcon: Icons.location_city_rounded,
               cupertinoIcon: CupertinoIcons.building_2_fill,
               label: l10n.navProjects,
             ),
             AppBottomNavItem(
               icon: Icons.grid_view_outlined,
+              activeIcon: Icons.grid_view_rounded,
               cupertinoIcon: CupertinoIcons.square_grid_2x2,
               label: l10n.navUnits,
             ),
@@ -177,7 +185,7 @@ class CustomerShellScaffold extends StatelessWidget {
       // space so the body area never extends behind the nav bar. The floating
       // look (rounded pill, horizontal margins, shadow) is achieved entirely
       // inside AppBottomNav itself and is unaffected by this setting.
-      extendBody: false,
+      extendBody: true,
       appBar: showShellAppBar
           ? AdaptiveAppBar(
               title: Text(titles[current] ?? l10n.navHome),
@@ -195,7 +203,7 @@ class CustomerShellScaffold extends StatelessWidget {
             Positioned(
               left: 0,
               right: 0,
-              bottom: 0,
+              bottom: MediaQuery.paddingOf(context).bottom + 92,
               child: CompareSelectionBar(
                 onCompare: () => context.go('/compare'),
               ),
@@ -216,7 +224,8 @@ class CustomerShellScaffold extends StatelessWidget {
               ),
             )
           : null,
-      bottomNavigationBar: AppBottomNav(
+      // The staff app's bar: navy, floating over the page, the chosen tab in gold.
+      bottomNavigationBar: AppFloatingNav(
         currentIndex: displayIndex,
         onSelect: (i) => _goBranch(branchOrder[i]),
         items: navItems,

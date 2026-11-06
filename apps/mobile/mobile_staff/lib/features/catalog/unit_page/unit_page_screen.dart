@@ -7,10 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../common/catalog_status_label.dart';
 import '../../../common/reservation_status_label.dart';
 import '../../../common/staff_share.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../installments/domain/repositories/installments_repository.dart';
 import '../domain/entities/staff_project.dart';
-import '../kit/catalog_kit.dart';
 import '../kit/catalog_media.dart';
 import 'unit_page_data.dart';
 

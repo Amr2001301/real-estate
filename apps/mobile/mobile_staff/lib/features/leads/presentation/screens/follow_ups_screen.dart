@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/follow_ups_cubit.dart';
 import '../follow_up_labels.dart';

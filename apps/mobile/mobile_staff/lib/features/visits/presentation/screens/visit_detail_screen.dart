@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../common/visit_status_label.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/visit.dart';
 import '../cubit/visit_detail_cubit.dart';
 

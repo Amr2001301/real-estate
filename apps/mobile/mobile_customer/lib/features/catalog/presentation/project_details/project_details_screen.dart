@@ -14,7 +14,6 @@ import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../widgets/amenity_chips.dart';
 import '../widgets/contact_buttons.dart';
-import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
 
@@ -140,6 +139,21 @@ class _DetailPageState extends State<_DetailPage> {
       subtitle: project.city,
       actions: [NavHeaderGlass(child: FavoriteToggleButton(isProject: true, id: project.id))],
       photos: project.galleryImages,
+      card: AppPriceCard(
+        label: _startingPrice != null ? l10n.detailPricesFrom : l10n.labelPrice,
+        price: _startingPrice != null
+            ? PriceFormatter.formatString(_startingPrice, languageCode: lang)
+            : l10n.priceOnRequest,
+        caption: offerLine,
+        facts: [
+          AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
+          AppPriceFact(l10n.labelCity, project.city),
+          if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
+        ],
+        actionLabel: l10n.requestInfo,
+        actionIcon: Icons.info_outline_rounded,
+        onAction: () => _requestInfo(context, project),
+      ),
       photoBadge: project.featured ? _FeaturedPill(label: l10n.featuredBadge) : null,
       bottomBar: AppDetailBottomBar(
         children: [
@@ -163,26 +177,6 @@ class _DetailPageState extends State<_DetailPage> {
         ],
       ),
       slivers: [
-        AppDetailPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: AppPriceCard(
-              label: _startingPrice != null ? l10n.detailPricesFrom : l10n.labelPrice,
-              price: _startingPrice != null
-                  ? PriceFormatter.formatString(_startingPrice, languageCode: lang)
-                  : l10n.priceOnRequest,
-              caption: offerLine,
-              facts: [
-                AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
-                AppPriceFact(l10n.labelCity, project.city),
-                if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
-              ],
-              actionLabel: l10n.requestInfo,
-              actionIcon: Icons.info_outline_rounded,
-              onAction: () => _requestInfo(context, project),
-            ),
-          ),
-        ),
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
         AppSectionTabsSliver(
           tabs: [
@@ -480,44 +474,31 @@ class _UnitsPreview extends StatelessWidget {
   const _UnitsPreview({required this.state});
   final ProjectDetailsState state;
 
-  // 210 image + hairline + ~148 content = 370 fits the UnitCard without overflow.
-  static const double _cardH = 370.0;
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final project = state.project!;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: SectionHeader(
-            title: l10n.projectUnits,
-            onViewAll: () =>
-                context.push('/projects/${project.id}/units'),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: AppDetailSectionTitle(l10n.projectUnits, icon: Icons.grid_view_rounded)),
+          InkWell(
+            onTap: () => context.push('/projects/${project.id}/units'),
+            child: Row(children: [
+              Text(l10n.viewAll, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
+              // chevron_right mirrors to the outward arrow in Arabic.
+              const Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
+            ]),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: _cardH,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            itemCount: state.previewUnits.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, i) {
-              final unit = state.previewUnits[i];
-              return UnitCard(
-                unit: unit,
-                width: 280,
-                onTap: () => context.push('/units/${unit.id}'),
-              );
-            },
+        ]),
+        const SizedBox(height: 12),
+        for (final unit in state.previewUnits.take(3))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: UnitCard(unit: unit, onTap: () => context.push('/units/${unit.id}')),
           ),
-        ),
-      ],
+      ]),
     );
   }
 }

@@ -5,7 +5,6 @@ import '../../../catalog/domain/entities/staff_project.dart';
 import '../../../catalog/domain/repositories/staff_catalog_repository.dart';
 import '../../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../../contracts/create/manual_contract_screen.dart' show PickSheet;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/repositories/installments_repository.dart';
 
 /// The calculator's first step, as the website's plan page: pick the project,

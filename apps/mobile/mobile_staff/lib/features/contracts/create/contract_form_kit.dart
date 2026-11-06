@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../dashboard/home_kit/home_kit.dart';
 import 'contract_create_data.dart';
 
 /// The pieces the convert page and the manual contract share: a white card

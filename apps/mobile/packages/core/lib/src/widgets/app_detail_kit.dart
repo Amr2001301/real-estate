@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../core.dart';
 import 'package:flutter/rendering.dart';
 
-import '../common/installment_offer.dart';
-import '../common/ltr_isolate.dart';
-import '../common/price_formatter.dart';
-import '../design/theme/app_theme_ext.dart';
-import '../design/tokens/app_colors.dart';
-import '../design/tokens/app_radii.dart';
-import '../design/tokens/app_spacing.dart';
-import '../l10n/l10n.dart';
-import 'app_nav_header.dart';
-import 'app_network_image.dart';
 
 // The pieces of the project and unit pages, shared by both apps: the photos
 // (counter, thumbnails, full screen), the price card, the section tabs, the
@@ -362,12 +354,12 @@ class AppPriceCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       key: const Key('detail-price-card'),
-      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg + 2),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
-        boxShadow: colors.shadowSoft,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.hairline),
+        boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -380,7 +372,7 @@ class AppPriceCard extends StatelessWidget {
             child: Text(
               price,
               maxLines: 1,
-              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: colors.inkStrong),
+              style: homeDisplay(27, colors.inkStrong),
             ),
           ),
           if (caption != null) ...[
@@ -412,8 +404,8 @@ class AppPriceCard extends StatelessWidget {
               label: Text(actionLabel!),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(46),
-                foregroundColor: colors.inkStrong,
-                side: BorderSide(color: colors.inkStrong, width: 1.4),
+                foregroundColor: AppPalette.gold600,
+                side: const BorderSide(color: AppPalette.gold400, width: 1.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
                 textStyle: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
@@ -435,7 +427,7 @@ class _FactTile extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs + 2),
-      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(AppRadii.sm + 2)),
+      decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -483,7 +475,7 @@ class AppSectionTabsSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top + AppNavSliverHeader.contentHeight;
+    final top = MediaQuery.paddingOf(context).top;
     return SliverPersistentHeader(
       pinned: true,
       delegate: _TabsDelegate(tabs: tabs, pinnedAbove: top),
@@ -570,35 +562,30 @@ class _SectionTabsState extends State<_SectionTabs> {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
     return Container(
       key: const Key('detail-section-tabs'),
-      decoration: BoxDecoration(
-        color: colors.canvas,
-        border: Border(bottom: BorderSide(color: colors.hairline)),
-      ),
+      color: colors.canvas,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8),
         itemCount: widget.tabs.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.lg),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final selected = i == _active;
-          return InkWell(
-            key: Key('detail-tab-$i'),
-            onTap: () => _go(i),
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: selected ? colors.brandGold : Colors.transparent, width: 3),
-                ),
-              ),
-              child: Text(
-                widget.tabs[i].label,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: selected ? colors.inkStrong : colors.inkMuted,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+          return Material(
+            color: selected ? AppPalette.navy : colors.surface,
+            shape: StadiumBorder(side: BorderSide(color: selected ? AppPalette.navy : colors.hairline)),
+            child: InkWell(
+              key: Key('detail-tab-$i'),
+              customBorder: const StadiumBorder(),
+              onTap: () => _go(i),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Center(
+                  child: Text(
+                    widget.tabs[i].label,
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? Colors.white : colors.inkStrong),
+                  ),
                 ),
               ),
             ),

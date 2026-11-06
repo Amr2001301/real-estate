@@ -7,11 +7,6 @@ import '../domain/repositories/visits_repository.dart';
 import 'visit_request_cubit.dart';
 
 /// The times a visit can be asked for, as hours of the day.
-const visitHours = [10, 12, 14, 16, 18];
-
-/// The next [days] days a visit can be booked for, from tomorrow.
-List<DateTime> visitDays(DateTime now, {int days = 14}) =>
-    [for (var i = 1; i <= days; i++) DateTime(now.year, now.month, now.day + i)];
 
 /// Asks for a visit to a project (and a unit), as on the website: what it is
 /// about, a day and a time, a note, and who the company will call. Signed in.
@@ -39,9 +34,8 @@ class VisitRequestScreen extends StatefulWidget {
 }
 
 class _VisitRequestScreenState extends State<VisitRequestScreen> {
-  late final List<DateTime> _days = visitDays(DateTime.now());
   DateTime? _day;
-  int? _hour;
+  TimeOfDay? _time;
   final _notes = TextEditingController();
   bool _missing = false;
 
@@ -51,7 +45,44 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
     super.dispose();
   }
 
-  DateTime? get _when => _day == null || _hour == null ? null : DateTime(_day!.year, _day!.month, _day!.day, _hour!);
+  DateTime? get _when => _day == null || _time == null
+      ? null
+      : DateTime(
+          _day!.year,
+          _day!.month,
+          _day!.day,
+          _time!.hour,
+          _time!.minute,
+        );
+
+  Future<void> _pickDay() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _day ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 120)),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _day = picked;
+        _missing = false;
+      });
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _time ?? const TimeOfDay(hour: 11, minute: 0),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _time = picked;
+        _missing = false;
+      });
+    }
+  }
 
   void _submit() {
     final when = _when;
@@ -59,18 +90,23 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
       setState(() => _missing = true);
       return;
     }
-    context.read<VisitRequestCubit>().submit(CreateVisitParams(
-          projectId: widget.projectId,
-          unitId: widget.unitId,
-          preferredDate: when,
-          notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-        ));
+    context.read<VisitRequestCubit>().submit(
+      CreateVisitParams(
+        projectId: widget.projectId,
+        unitId: widget.unitId,
+        preferredDate: when,
+        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+      ),
+    );
   }
 
-  String _timeLabel(int hour, String lang) {
-    final h12 = hour > 12 ? hour - 12 : hour;
-    final pm = hour >= 12;
-    return lang == 'ar' ? '$h12:00 ${pm ? 'م' : 'ص'}' : '$h12:00 ${pm ? 'PM' : 'AM'}';
+  String _timeLabel(TimeOfDay time, String lang) {
+    final h12 = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final mm = time.minute.toString().padLeft(2, '0');
+    final pm = time.period == DayPeriod.pm;
+    return lang == 'ar'
+        ? '${ltr('$h12:$mm')} ${pm ? 'م' : 'ص'}'
+        : '$h12:$mm ${pm ? 'PM' : 'AM'}';
   }
 
   @override
@@ -84,11 +120,16 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
     return Scaffold(
       body: Column(
         children: [
-          AppNavHeader(title: l10n.visitRequestTitle, compact: true, leadingAction: const NavHeaderBack()),
+          AppNavHeader(
+            title: l10n.visitRequestTitle,
+            compact: true,
+            leadingAction: const NavHeaderBack(),
+          ),
           Expanded(
             child: BlocConsumer<VisitRequestCubit, VisitFormState>(
               listener: (context, state) {
-                if (state.status == VisitFormStatus.failure && state.failure != null) {
+                if (state.status == VisitFormStatus.failure &&
+                    state.failure != null) {
                   showFailureSnackBar(context, state.failure!);
                 }
               },
@@ -97,14 +138,17 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                   return RequestDoneView(
                     title: l10n.visitDoneTitle,
                     message: l10n.visitDoneMessage,
-                    detail: l10n.visitSummary(DateFormatter.mediumDate(when, languageCode: lang), _timeLabel(when.hour, lang)),
+                    detail: l10n.visitSummary(
+                      DateFormatter.mediumDate(when, languageCode: lang),
+                      _timeLabel(_time!, lang),
+                    ),
                   );
                 }
                 return ListView(
                   padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
                     AppSpacing.xl + MediaQuery.paddingOf(context).bottom,
                   ),
                   children: [
@@ -118,101 +162,75 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
                         isUnit: widget.unitId != null,
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.visitPickDay),
-                    const SizedBox(height: AppSpacing.sm),
-                    SizedBox(
-                      height: 78,
-                      child: ListView.separated(
-                        key: const Key('visit-days'),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _days.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          final d = _days[i];
-                          final selected = _day == d;
-                          return _Choice(
-                            selected: selected,
-                            width: 64,
-                            onTap: () => setState(() {
-                              _day = d;
-                              _missing = false;
-                            }),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  DateFormatter.weekdayShort(d, languageCode: lang),
-                                  style: theme.textTheme.labelSmall?.copyWith(color: selected ? AppPalette.gold300 : colors.inkMuted),
-                                ),
-                                Text(
-                                  '${d.day}',
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    color: selected ? Colors.white : colors.inkStrong,
-                                    fontWeight: FontWeight.w900,
+                    RequestStep(
+                      icon: Icons.event_available_rounded,
+                      title: l10n.visitPickDay,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _PickTile(
+                            key: const Key('visit-day'),
+                            icon: Icons.calendar_month_rounded,
+                            label: _day == null
+                                ? l10n.visitPickDay
+                                : DateFormatter.mediumDate(
+                                    _day!,
+                                    languageCode: lang,
                                   ),
-                                ),
-                                Text(
-                                  DateFormatter.monthShort(d, languageCode: lang),
-                                  style: theme.textTheme.labelSmall?.copyWith(color: selected ? Colors.white70 : colors.inkMuted),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.visitPickTime),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      key: const Key('visit-hours'),
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        for (final h in visitHours)
-                          _Choice(
-                            selected: _hour == h,
-                            width: 96,
-                            height: 44,
-                            onTap: () => setState(() {
-                              _hour = h;
-                              _missing = false;
-                            }),
-                            child: Text(
-                              _timeLabel(h, lang),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: _hour == h ? Colors.white : colors.inkStrong,
-                                fontWeight: FontWeight.w700,
+                            chosen: _day != null,
+                            onTap: _pickDay,
+                          ),
+                          const SizedBox(height: 10),
+                          _PickTile(
+                            key: const Key('visit-time'),
+                            icon: Icons.schedule_rounded,
+                            label: _time == null
+                                ? l10n.visitPickTime
+                                : _timeLabel(_time!, lang),
+                            chosen: _time != null,
+                            onTap: _pickTime,
+                          ),
+                          if (_missing)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSpacing.sm,
+                              ),
+                              child: Text(
+                                l10n.validationRequired,
+                                style: TextStyle(color: colors.error),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    if (_missing)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.sm),
-                        child: Text(l10n.validationRequired, style: TextStyle(color: colors.error)),
+                        ],
                       ),
-                    const SizedBox(height: AppSpacing.lg),
-                    RequestLabel(l10n.fieldNotes),
-                    const SizedBox(height: AppSpacing.sm),
-                    TextField(
-                      controller: _notes,
-                      minLines: 3,
-                      maxLines: 5,
-                      decoration: InputDecoration(hintText: l10n.visitNotesHint),
                     ),
-                    const SizedBox(height: AppSpacing.lg),
+                    RequestStep(
+                      icon: Icons.edit_note_rounded,
+                      title: l10n.fieldNotes,
+                      child: TextField(
+                        controller: _notes,
+                        minLines: 3,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          hintText: l10n.visitNotesHint,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
                     const RequestContactCard(),
                     const SizedBox(height: AppSpacing.xl),
                     if (when != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
-                          l10n.visitSummary(DateFormatter.mediumDate(when, languageCode: lang), _timeLabel(when.hour, lang)),
+                          l10n.visitSummary(
+                            DateFormatter.mediumDate(when, languageCode: lang),
+                            _timeLabel(_time!, lang),
+                          ),
                           textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong, fontWeight: FontWeight.w700),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colors.inkStrong,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     AppButton(
@@ -234,32 +252,63 @@ class _VisitRequestScreenState extends State<VisitRequestScreen> {
   }
 }
 
-class _Choice extends StatelessWidget {
-  const _Choice({required this.selected, required this.onTap, required this.child, this.width, this.height});
-  final bool selected;
+/// A tappable field that opens the system date or time picker.
+class _PickTile extends StatelessWidget {
+  const _PickTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.chosen,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final bool chosen;
   final VoidCallback onTap;
-  final Widget child;
-  final double? width;
-  final double? height;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: selected ? AppPalette.navy : colors.surface,
-      borderRadius: BorderRadius.circular(14),
+      color: chosen ? AppPalette.navy : colors.surface,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          width: width,
-          height: height,
-          alignment: Alignment.center,
+          height: 54,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? AppPalette.gold400 : colors.hairline),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: chosen ? AppPalette.gold400 : colors.hairline,
+            ),
           ),
-          child: child,
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: chosen ? AppPalette.gold300 : AppPalette.gold500,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: chosen ? Colors.white : colors.inkStrong,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.expand_more_rounded,
+                size: 20,
+                color: chosen ? Colors.white70 : colors.inkMuted,
+              ),
+            ],
+          ),
         ),
       ),
     );

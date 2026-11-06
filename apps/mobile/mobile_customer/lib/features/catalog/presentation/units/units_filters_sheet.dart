@@ -2,15 +2,16 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/catalog_enums.dart';
-import '../widgets/filter_sheet.dart';
 import 'units_state.dart';
 
 Future<UnitsFilter?> showUnitsFilterSheet(
   BuildContext context, {
   required UnitsFilter current,
 }) {
-  return showAppFilterSheet<UnitsFilter>(
-    context,
+  return showModalBottomSheet<UnitsFilter>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
     builder: (_) => _UnitsFilterSheet(initial: current),
   );
 }
@@ -24,196 +25,99 @@ class _UnitsFilterSheet extends StatefulWidget {
 }
 
 class _UnitsFilterSheetState extends State<_UnitsFilterSheet> {
-  // Safe default price-slider bounds (the catalog API exposes no min/max, so we
-  // use generous bounds and always allow manual entry beyond them). The text
-  // fields remain the source of truth on apply.
-  static const double _priceFloor = 0;
-  static const double _priceCeil = 20000000; // 20M in the company currency
-  static const int _priceDivisions = 40; // 500k steps
-
   late UnitsFilter _f = widget.initial;
-  late final _priceMin = TextEditingController(text: _txt(_f.priceMin));
-  late final _priceMax = TextEditingController(text: _txt(_f.priceMax));
   late final _areaMin = TextEditingController(text: _txt(_f.areaMin));
   late final _areaMax = TextEditingController(text: _txt(_f.areaMax));
 
-  late RangeValues _priceRange = _rangeFromText();
-
   String _txt(num? v) => v == null ? '' : '$v';
-
-  double _clampPrice(double v) => v.clamp(_priceFloor, _priceCeil);
-
-  RangeValues _rangeFromText() {
-    final lo = num.tryParse(_priceMin.text)?.toDouble();
-    final hi = num.tryParse(_priceMax.text)?.toDouble();
-    return RangeValues(
-      _clampPrice(lo ?? _priceFloor),
-      _clampPrice(hi ?? _priceCeil),
-    );
-  }
-
-  // Slider → text: write rounded bounds into the fields (they drive apply).
-  void _onSlide(RangeValues v) {
-    setState(() {
-      _priceRange = v;
-      _priceMin.text = v.start.round().toString();
-      _priceMax.text = v.end.round().toString();
-    });
-  }
-
-  // Text → slider: keep the slider thumbs in sync with manual edits.
-  void _onPriceText(String _) =>
-      setState(() => _priceRange = _rangeFromText());
 
   @override
   void dispose() {
-    _priceMin.dispose();
-    _priceMax.dispose();
     _areaMin.dispose();
     _areaMax.dispose();
     super.dispose();
   }
 
-  UnitsFilter _collect() {
-    return _f.copyWith(
-      priceMin: num.tryParse(_priceMin.text),
-      priceMax: num.tryParse(_priceMax.text),
-      areaMin: num.tryParse(_areaMin.text),
-      areaMax: num.tryParse(_areaMax.text),
-      clearPrice: _priceMin.text.isEmpty && _priceMax.text.isEmpty,
-      clearArea: _areaMin.text.isEmpty && _areaMax.text.isEmpty,
-    );
-  }
+  UnitsFilter _collect() => _f.copyWith(
+        areaMin: num.tryParse(_areaMin.text),
+        areaMax: num.tryParse(_areaMax.text),
+        clearArea: _areaMin.text.isEmpty && _areaMax.text.isEmpty,
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
-    return FilterSheetShell(
+    final symbol = PriceFormatter.symbol(Localizations.localeOf(context).languageCode);
+    return FilterSheet(
       title: l10n.filtersTitle,
-      activeCount: _f.activeCount,
+      active: _f.activeCount,
       applyLabel: l10n.applyFilters,
-      resetLabel: l10n.clearFilters,
-      onReset: () => Navigator.of(context).pop(const UnitsFilter()),
+      onClear: () => Navigator.of(context).pop(const UnitsFilter()),
       onApply: () => Navigator.of(context).pop(_collect()),
       sections: [
         FilterSection(
-          label: l10n.filterStatus,
-          child: Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: [
-              FilterChoiceChip(
-                label: l10n.filterAny,
-                selected: _f.status == null,
-                onTap: () =>
-                    setState(() => _f = _f.copyWith(clearStatus: true)),
-              ),
-              for (final s in const [
-                UnitStatus.available,
-                UnitStatus.reserved,
-                UnitStatus.sold,
-              ])
-                FilterChoiceChip(
-                  label: _statusLabel(l10n, s),
-                  selected: _f.status == s,
-                  onTap: () => setState(() => _f = _f.copyWith(status: s)),
-                ),
+          icon: Icons.flag_rounded,
+          title: l10n.filterStatus,
+          child: FilterSegments<UnitStatus?>(
+            keyPrefix: 'units-status',
+            selected: _f.status,
+            onSelect: (v) => setState(() => _f = v == null ? _f.copyWith(clearStatus: true) : _f.copyWith(status: v)),
+            options: [
+              FilterOption(null, l10n.filterAny),
+              for (final s in const [UnitStatus.available, UnitStatus.reserved, UnitStatus.sold]) FilterOption(s, _statusLabel(l10n, s)),
             ],
           ),
         ),
         FilterSection(
-          label: l10n.filterRooms,
-          child: Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: [
-              FilterChoiceChip(
-                label: l10n.filterAny,
-                selected: _f.bedrooms == null,
-                onTap: () =>
-                    setState(() => _f = _f.copyWith(clearBedrooms: true)),
-              ),
-              for (final n in const [1, 2, 3, 4])
-                FilterChoiceChip(
-                  label: '$n${n == 4 ? '+' : ''}',
-                  selected: _f.bedrooms == n,
-                  onTap: () => setState(() => _f = _f.copyWith(bedrooms: n)),
-                ),
-            ],
+          icon: Icons.bed_rounded,
+          title: l10n.filterRooms,
+          child: FilterSegments<int?>(
+            keyPrefix: 'units-rooms',
+            selected: _f.bedrooms,
+            onSelect: (v) => setState(() => _f = v == null ? _f.copyWith(clearBedrooms: true) : _f.copyWith(bedrooms: v)),
+            options: [FilterOption(null, l10n.filterAny), for (final n in const [1, 2, 3, 4]) FilterOption(n, ltr('$n${n == 4 ? '+' : ''}'))],
           ),
         ),
         FilterSection(
-          label: l10n.filterPriceRange,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              RangeSlider(
-                values: _priceRange,
-                min: _priceFloor,
-                max: _priceCeil,
-                divisions: _priceDivisions,
-                activeColor: context.appColors.brandGold,
-                inactiveColor: context.appColors.hairline,
-                labels: RangeLabels(
-                  _priceLabel(_priceRange.start),
-                  _priceLabel(_priceRange.end),
-                ),
-                onChanged: _onSlide,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              FilterRangeRow(
-                min: _priceMin,
-                max: _priceMax,
-                minHint: l10n.minLabel,
-                maxHint: l10n.maxLabel,
-                unit: PriceFormatter.symbol(
-                    Localizations.localeOf(context).languageCode),
-                onChanged: _onPriceText,
-              ),
-            ],
+          icon: Icons.payments_rounded,
+          title: l10n.filterPriceRange,
+          hint: symbol,
+          child: FilterPriceRange(
+            from: _f.priceMin,
+            to: _f.priceMax,
+            onChanged: (a, b) => setState(() {
+              _f = _f.copyWith(priceMin: a, priceMax: b, clearPrice: a == null && b == null);
+            }),
           ),
         ),
         FilterSection(
-          label: l10n.filterAreaRange,
-          child: FilterRangeRow(
-            min: _areaMin,
-            max: _areaMax,
-            minHint: l10n.minLabel,
-            maxHint: l10n.maxLabel,
-            unit: l10n.filterAreaUnit,
-          ),
+          icon: Icons.square_foot_rounded,
+          title: l10n.filterAreaRange,
+          hint: l10n.filterAreaUnit,
+          child: Row(children: [
+            Expanded(child: _AreaField(controller: _areaMin, hint: l10n.minLabel)),
+            const SizedBox(width: 10),
+            Expanded(child: _AreaField(controller: _areaMax, hint: l10n.maxLabel)),
+          ]),
         ),
         FilterSection(
-          label: l10n.sortTitle,
-          child: FilterChipGrid(
-            items: [
-              _sortItem(l10n.sortNewest, UnitSort.newest),
-              _sortItem(l10n.sortPriceAsc, UnitSort.priceAsc),
-              _sortItem(l10n.sortPriceDesc, UnitSort.priceDesc),
-              _sortItem(l10n.sortAreaAsc, UnitSort.areaAsc),
-              _sortItem(l10n.sortAreaDesc, UnitSort.areaDesc),
+          icon: Icons.sort_rounded,
+          title: l10n.sortTitle,
+          child: FilterRadioList<UnitSort>(
+            keyPrefix: 'units-sort',
+            selected: _f.sort,
+            onSelect: (v) => setState(() => _f = _f.copyWith(sort: v)),
+            options: [
+              FilterOption(UnitSort.newest, l10n.sortNewest),
+              FilterOption(UnitSort.priceAsc, l10n.sortPriceAsc),
+              FilterOption(UnitSort.priceDesc, l10n.sortPriceDesc),
+              FilterOption(UnitSort.areaAsc, l10n.sortAreaAsc),
+              FilterOption(UnitSort.areaDesc, l10n.sortAreaDesc),
             ],
           ),
         ),
       ],
     );
-  }
-
-  FilterChipItem _sortItem(String label, UnitSort sort) => FilterChipItem(
-        label: label,
-        selected: _f.sort == sort,
-        onTap: () => setState(() => _f = _f.copyWith(sort: sort)),
-      );
-
-  /// Compact slider-thumb label, e.g. 5M / 750K (digits localize via the field).
-  String _priceLabel(double v) {
-    if (v >= 1000000) {
-      final m = v / 1000000;
-      return '${m % 1 == 0 ? m.toStringAsFixed(0) : m.toStringAsFixed(1)}M';
-    }
-    if (v >= 1000) return '${(v / 1000).round()}K';
-    return v.round().toString();
   }
 
   String _statusLabel(AppLocalizations l10n, UnitStatus s) => switch (s) {
@@ -222,4 +126,25 @@ class _UnitsFilterSheetState extends State<_UnitsFilterSheet> {
         UnitStatus.sold => l10n.statusSold,
         UnitStatus.unknown => '',
       };
+}
+
+class _AreaField extends StatelessWidget {
+  const _AreaField({required this.controller, required this.hint});
+  final TextEditingController controller;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: Colors.white,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFECE4D6))),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFECE4D6))),
+        ),
+      );
 }

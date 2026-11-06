@@ -3138,5 +3138,9 @@
   "frCompare": "Comparison",
   "frCompareOff": "No comparison",
   "frCompareOn": "Against the period before",
-  "brkConfirmHint": "Do you want to do this?"
+  "brkConfirmHint": "Do you want to do this?",
+  "ctProjectsCountN": "{n, plural, =0{No projects} =1{1 project} other{{n} projects}}",
+  "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "ctUnitsCountN": "{n, plural, =0{No units} =1{1 unit} other{{n} units}}",
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}}
 }

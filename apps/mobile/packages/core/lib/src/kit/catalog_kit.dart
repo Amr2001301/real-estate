@@ -1,7 +1,6 @@
-import 'package:core/core.dart';
+import '../../core.dart';
 import 'package:flutter/material.dart';
 
-import '../../dashboard/home_kit/home_kit.dart';
 
 /// Pieces shared by the catalog pages (projects, units, a project, a unit),
 /// in the homes' look (owner-approved designs, 2026-11-04).
@@ -225,6 +224,8 @@ class CatalogPageHero extends StatefulWidget {
     this.onShare,
     this.shareKey,
     this.height = 290,
+    this.actions = const [],
+    this.onBack,
   });
 
   final List<String> photos;
@@ -234,6 +235,12 @@ class CatalogPageHero extends StatefulWidget {
   final VoidCallback? onShare;
   final Key? shareKey;
   final double height;
+
+  /// More round buttons after the share one (favourite, compare).
+  final List<Widget> actions;
+
+  /// Replaces the default pop of the back button.
+  final VoidCallback? onBack;
 
   @override
   State<CatalogPageHero> createState() => _CatalogPageHeroState();
@@ -277,18 +284,19 @@ class _CatalogPageHeroState extends State<CatalogPageHero> {
             end: 14,
             child: Row(children: [
               // arrow_back mirrors itself to → in Arabic.
-              HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: () => Navigator.of(context).maybePop()),
+              HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: widget.onBack ?? () => Navigator.of(context).maybePop()),
               const Spacer(),
               if (photos.length > 1)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                   decoration: BoxDecoration(color: AppPalette.navy.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(99)),
-                  child: Text(l10n.ppPhotoOf(_i + 1, photos.length), style: const TextStyle(fontSize: 12, color: Colors.white)),
+                  child: Text(ltr(l10n.ppPhotoOf(_i + 1, photos.length)), style: const TextStyle(fontSize: 12, color: Colors.white)),
                 ),
               if (widget.onShare != null) ...[
                 const SizedBox(width: 8),
                 HomeHeroButton(key: widget.shareKey, icon: Icons.ios_share_rounded, tooltip: l10n.staffShareWithClient, onTap: widget.onShare!),
               ],
+              for (final a in widget.actions) ...[const SizedBox(width: 8), a],
             ]),
           ),
           PositionedDirectional(

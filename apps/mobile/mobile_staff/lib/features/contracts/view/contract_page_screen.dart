@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../catalog/kit/catalog_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;
 import 'contracts_data.dart';

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../clients/domain/entities/staff_client.dart';
 import '../cubit/create_visit_cubit.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 /// "Schedule visit" form — mirrors the dashboard's 3-section create-visit flow:
 ///   01 العميل   02 المشروع والوحدة   03 موعد الزيارة والملاحظات

@@ -5,9 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
-import '../../../catalog/kit/catalog_kit.dart';
 import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/bonus_entry.dart';
 import '../cubit/bonus_cubit.dart';
 
