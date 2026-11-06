@@ -16,6 +16,8 @@ interface Props {
   matches?: string[];
   /** A second line, e.g. the section a search result is in. */
   hint?: string;
+  /** Inside an opened section: shorter, with the gold bar on its guide line. */
+  dense?: boolean;
 }
 
 /** Whether a link is the page you are on (or a page under it, or one it stands for). */
@@ -27,7 +29,7 @@ export function isNavActive(pathname: string, href: string, matches?: string[]):
   return on(href) || (matches ?? []).some(on);
 }
 
-export function NavLink({ href, label, icon, onNavigate, badge, matches, hint }: Props) {
+export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, dense }: Props) {
   const pathname = usePathname() ?? '';
   const active = isNavActive(pathname, href, matches);
 
@@ -38,11 +40,13 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint }:
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group flex items-center gap-3 px-3.5 h-11 rounded-xl text-[14.5px] font-medium transition-all duration-150 ease-smooth',
+        'group relative flex items-center gap-2.5 rounded-[10px] text-[13.5px] font-medium transition-colors duration-150 ease-smooth',
+        dense ? 'h-9 px-2.5' : 'h-10 px-3',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset',
-        // Active: gold-tinted background + gold dot (U5), not a solid gold pill.
+        // Active: a gold wash and a gold bar on the guide line.
         active
-          ? 'bg-[#D8B66A]/[0.12] text-[#EBD29B] font-bold'
+          ? 'bg-[#D8B66A]/[0.12] font-bold text-[#EBD29B] before:absolute before:bottom-2 before:top-2 before:w-[3px] before:rounded-full before:bg-[#D8B66A] ' +
+              (dense ? 'before:-start-[9px]' : 'before:start-0')
           : 'text-sidebar-text hover:bg-white/[0.06] hover:text-white/90',
       )}
     >
@@ -50,7 +54,7 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint }:
         <span
           aria-hidden
           className={cn(
-            'inline-flex shrink-0 transition-colors duration-150',
+            'inline-flex shrink-0 transition-colors duration-150 [&>svg]:h-4 [&>svg]:w-4',
             active ? 'text-[#D8B66A]' : 'text-sidebar-text-muted group-hover:text-[#D8B66A]/80',
           )}
         >
@@ -69,14 +73,6 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint }:
           {badge}
         </span>
       )}
-      {/* U5: a ring per item; the active one is a filled gold dot. */}
-      <span
-        aria-hidden
-        className={cn(
-          'h-[7px] w-[7px] rounded-full shrink-0',
-          active ? 'bg-[#D8B66A]' : 'border border-sidebar-text-muted/60 group-hover:border-[#D8B66A]/70',
-        )}
-      />
     </Link>
   );
 }
