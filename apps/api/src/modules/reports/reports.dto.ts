@@ -11,6 +11,18 @@ export class FinancialDashboardQueryDto {
   @IsOptional() @IsDateString() dateTo?: string;
 }
 
+/** The financial comparison: the period and the one it is compared with (calendar days), and the report's filters. */
+export class FinancialComparisonQueryDto {
+  @IsDateString() dateFrom!: string;
+  @IsDateString() dateTo!: string;
+  @IsDateString() prevFrom!: string;
+  @IsDateString() prevTo!: string;
+  @IsOptional() @IsUUID() projectId?: string;
+  @IsOptional() @IsUUID() salesId?: string;
+  @IsOptional() @IsEnum(DepositType) type?: DepositType;
+  @IsOptional() @IsString() @MaxLength(200) q?: string;
+}
+
 /** Receivables & payables (المستحقات والالتزامات): the period (calendar days, company time zone), project and search. */
 export class LedgerQueryDto {
   @IsOptional() @IsDateString() dateFrom?: string;
