@@ -42,10 +42,10 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, d
       className={cn(
         'group relative flex items-center gap-2.5 rounded-[10px] text-[13.5px] font-medium transition-colors duration-150 ease-smooth',
         dense ? 'h-9 px-2.5' : 'h-10 px-3',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset',
+        'focus-visible:outline-none focus-visible:bg-white/[0.06]',
         // Active: a gold wash and a gold bar on the guide line.
         active
-          ? 'bg-[#D8B66A]/[0.12] font-bold text-[#EBD29B] before:absolute before:bottom-2 before:top-2 before:w-[3px] before:rounded-full before:bg-[#D8B66A] ' +
+          ? 'font-bold text-[#EBD29B] before:absolute before:bottom-2 before:top-2 before:w-[3px] before:rounded-full before:bg-[#D8B66A] ' +
               (dense ? 'before:-start-[9px]' : 'before:start-0')
           : 'text-sidebar-text hover:bg-white/[0.06] hover:text-white/90',
       )}
