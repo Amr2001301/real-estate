@@ -142,9 +142,9 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
       <div className={cn('space-y-1', q && 'hidden')}>
         {sections.map((section) =>
           section.flat ? (
-            <div key={section.key} className="space-y-0.5 border-t border-white/[0.06] pt-2">
+            <div key={section.key} className="space-y-1">
               {section.items.map((item) => (
-                <NavLink key={item.href} {...item} icon={<Icon name={item.iconKey} />} onNavigate={onNavigate} />
+                <NavLink key={item.href} {...item} wide icon={<Icon name={item.iconKey} />} onNavigate={onNavigate} />
               ))}
             </div>
           ) : (

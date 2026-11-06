@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import { LogOut, ShieldCheck } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
 import type { Locale } from '@/lib/locale';
 import { filterNavForRole, SECTION_ICONS, type NavSection } from '@/lib/nav';
@@ -7,6 +5,7 @@ import { uiT } from '@/messages/ui';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
 import { NavSections } from './nav-sections';
+import { UserMenu } from './user-menu';
 
 interface Props {
   user: SessionUser;
@@ -25,8 +24,13 @@ function initials(name: string): string {
 }
 
 export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
-  const resolved = sections ?? filterNavForRole(user.role);
+  const all = sections ?? filterNavForRole(user.role);
   const m = uiT(locale);
+  // The settings page lives in the account menu at the foot, not in the list.
+  const settingsItem = all.flatMap((s) => s.items).find((i) => i.labelKey === 'settings');
+  const resolved = all
+    .map((s) => ({ ...s, items: s.items.filter((i) => i.labelKey !== 'settings') }))
+    .filter((s) => s.items.length > 0);
 
   return (
     <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text border-e border-[#D8B66A]/[0.18]">
@@ -64,34 +68,17 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
         />
       </nav>
 
-      {/* User card + logout at the bottom (U5); the top bar no longer repeats the name. */}
-      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0 space-y-1">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] text-[#1A1408] text-[13px] font-bold shrink-0">
-            {initials(user.fullName)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-bold text-white truncate leading-snug">{user.fullName}</p>
-            <p className="text-[11px] text-[#D8B66A]/85 truncate">{m.sidebar.roles[user.role as SessionRole]}</p>
-          </div>
-        </div>
-        <Link
-          href={(user.role === 'BROKER' ? '/portal/security' : '/dashboard/security') as never}
-          onClick={onNavigate}
-          className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
-        >
-          <ShieldCheck className="h-[15px] w-[15px] shrink-0 opacity-70" aria-hidden />
-          {m.sidebar.security}
-        </Link>
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
-          >
-            <LogOut className="h-[15px] w-[15px] shrink-0 opacity-70" aria-hidden />
-            {m.sidebar.logout}
-          </button>
-        </form>
+      {/* One row at the foot: the person, and a menu with settings, security and sign out. */}
+      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0">
+        <UserMenu
+          name={user.fullName}
+          role={m.sidebar.roles[user.role as SessionRole]}
+          initials={initials(user.fullName)}
+          settings={settingsItem ? { href: settingsItem.href, label: m.nav.items[settingsItem.labelKey], matches: settingsItem.matches } : undefined}
+          security={{ href: user.role === 'BROKER' ? '/portal/security' : '/dashboard/security', label: m.sidebar.security }}
+          logout={{ label: m.sidebar.logout, action: logoutAction }}
+          onNavigate={onNavigate}
+        />
       </div>
 
     </div>

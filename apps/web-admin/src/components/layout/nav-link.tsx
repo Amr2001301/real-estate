@@ -18,6 +18,8 @@ interface Props {
   hint?: string;
   /** Inside an opened section: shorter, with the gold bar on its guide line. */
   dense?: boolean;
+  /** A top-level row: the same size and icon column as a section's header. */
+  wide?: boolean;
 }
 
 /** Whether a link is the page you are on (or a page under it, or one it stands for). */
@@ -29,7 +31,7 @@ export function isNavActive(pathname: string, href: string, matches?: string[]):
   return on(href) || (matches ?? []).some(on);
 }
 
-export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, dense }: Props) {
+export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, dense, wide }: Props) {
   const pathname = usePathname() ?? '';
   const active = isNavActive(pathname, href, matches);
 
@@ -41,12 +43,12 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, d
       aria-current={active ? 'page' : undefined}
       className={cn(
         'group relative flex items-center gap-2.5 rounded-[10px] text-[13.5px] font-medium transition-colors duration-150 ease-smooth',
-        dense ? 'h-9 px-2.5' : 'h-10 px-3',
+        dense ? 'h-9 px-2.5' : wide ? 'h-11 px-2 text-[14px]' : 'h-10 px-3',
         'focus-visible:outline-none focus-visible:bg-white/[0.06]',
         // Active: a gold wash and a gold bar on the guide line.
         active
           ? 'font-bold text-[#EBD29B] before:absolute before:bottom-2 before:top-2 before:w-[3px] before:rounded-full before:bg-[#D8B66A] ' +
-              (dense ? 'before:-start-[9px]' : 'before:start-0')
+              (dense ? 'before:-start-[9px]' : 'before:-start-1')
           : 'text-sidebar-text hover:bg-white/[0.06] hover:text-white/90',
       )}
     >
@@ -54,7 +56,8 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, d
         <span
           aria-hidden
           className={cn(
-            'inline-flex shrink-0 transition-colors duration-150 [&>svg]:h-4 [&>svg]:w-4',
+            'shrink-0 transition-colors duration-150 [&>svg]:h-4 [&>svg]:w-4',
+            wide ? 'grid h-7 w-7 place-items-center' : 'inline-flex',
             active ? 'text-[#D8B66A]' : 'text-sidebar-text-muted group-hover:text-[#D8B66A]/80',
           )}
         >
