@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 /// The unit status colours, as the website's inventory bars.
 const catalogAvailable = Color(0xFF3E7C5A);
 const catalogReserved = Color(0xFFC98A2B);
-const catalogSold = AppPalette.navy600;
+Color get catalogSold => AppPalette.navy600;
 
 Color unitStatusColor(String status) => switch (status) {
       'AVAILABLE' => catalogAvailable,
@@ -57,7 +57,7 @@ class CatalogCover extends StatelessWidget {
         if (hasPhoto)
           AppNetworkImage(url: url)
         else
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -311,7 +311,7 @@ class _CatalogPageHeroState extends State<CatalogPageHero> {
                 if (widget.place.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Row(children: [
-                    const Icon(Icons.location_on_rounded, size: 15, color: AppPalette.gold300),
+                    Icon(Icons.location_on_rounded, size: 15, color: AppPalette.gold300),
                     const SizedBox(width: 4),
                     Expanded(child: Text(widget.place, style: const TextStyle(fontSize: 12.5, color: Color(0xFFDCE3EC)))),
                   ]),

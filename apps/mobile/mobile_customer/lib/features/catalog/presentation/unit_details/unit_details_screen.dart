@@ -309,7 +309,7 @@ class _AboutCard extends StatelessWidget {
             Container(
               width: 3,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [AppPalette.gold300, AppPalette.gold500],
@@ -477,7 +477,7 @@ class _BlueprintCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: Stack(
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -513,7 +513,7 @@ class _BlueprintCard extends StatelessWidget {
                           color: AppPalette.gold400.withValues(alpha: 0.55),
                         ),
                       ),
-                      child: const Icon(Icons.architecture_rounded,
+                      child: Icon(Icons.architecture_rounded,
                           color: AppPalette.gold300, size: 28),
                     ),
                   ),

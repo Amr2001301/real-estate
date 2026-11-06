@@ -298,7 +298,7 @@ class NavHeaderButton extends StatelessWidget {
           height: 40,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold500],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -315,7 +315,7 @@ class NavHeaderButton extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(color: AppPalette.navy, fontSize: 13, fontWeight: FontWeight.w800),
+                style: TextStyle(color: AppPalette.navy, fontSize: 13, fontWeight: FontWeight.w800),
               ),
             ],
           ),

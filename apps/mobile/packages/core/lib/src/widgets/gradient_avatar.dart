@@ -69,7 +69,7 @@ class GradientAvatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppPalette.gold300, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

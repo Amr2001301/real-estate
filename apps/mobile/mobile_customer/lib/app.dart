@@ -469,6 +469,11 @@ class _CustomerRootState extends State<_CustomerRoot> {
     final locale = context.watch<LocaleCubit>().state;
     final isArabic = locale.languageCode == 'ar';
     final brandTokens = context.watch<BrandingCubit>().state;
+    // The company's colours reach every screen through the palette (the platform's
+    // staff app never does this). Applied before the tree below is built; a change
+    // (the branding arriving after start-up) rebuilds the tree under a new key.
+    AppPalette.applyBrand(primary: brandTokens?.primaryColor, accent: brandTokens?.accentColor);
+    final brandKey = ValueKey('${brandTokens?.primaryColor}-${brandTokens?.accentColor}');
 
     return BlocListener<SessionCubit, SessionState>(
       listenWhen: (a, b) => a.isAuthenticated != b.isAuthenticated,
@@ -504,11 +509,14 @@ class _CustomerRootState extends State<_CustomerRoot> {
                 (system * kCustomerTextBoost).clamp(1.0, 1.6),
               ),
             ),
-            child: Column(
-              children: [
-                const OfflineBanner(),
-                Expanded(child: child ?? const SizedBox.shrink()),
-              ],
+            child: KeyedSubtree(
+              key: brandKey,
+              child: Column(
+                children: [
+                  const OfflineBanner(),
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                ],
+              ),
             ),
           );
         },

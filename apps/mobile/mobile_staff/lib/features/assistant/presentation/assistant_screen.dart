@@ -177,7 +177,7 @@ class _Welcome extends StatelessWidget {
             height: 64,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppPalette.gold500, AppPalette.gold300],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -190,7 +190,7 @@ class _Welcome extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
+            child: Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -244,7 +244,7 @@ class _Suggestion extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
+                Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(text, style: TextStyle(fontSize: 14, color: c.ink)),
@@ -298,11 +298,11 @@ class _Bubble extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.auto_awesome_rounded, size: 14, color: AppPalette.gold500),
+                          Icon(Icons.auto_awesome_rounded, size: 14, color: AppPalette.gold500),
                           const SizedBox(width: 4),
                           Text(
                             context.l10n.assistantTitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppPalette.gold600,
@@ -418,7 +418,7 @@ class _Composer extends StatelessWidget {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(99),
-                      borderSide: const BorderSide(color: AppPalette.gold400),
+                      borderSide: BorderSide(color: AppPalette.gold400),
                     ),
                   ),
                 ),
@@ -440,13 +440,13 @@ class _Composer extends StatelessWidget {
                         child: Container(
                           width: 44,
                           height: 44,
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
+                          decoration: BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
                           child: pending
-                              ? const Padding(
+                              ? Padding(
                                   padding: EdgeInsets.all(12),
                                   child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy),
                                 )
-                              : const Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
+                              : Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
                         ),
                       ),
                     ),

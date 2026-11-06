@@ -271,7 +271,7 @@ class _AssistantFab extends StatelessWidget {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppPalette.navy700, AppPalette.navy],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -295,7 +295,7 @@ class _AssistantFab extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: const Center(
+          child: Center(
             child: Icon(
               Icons.auto_awesome_rounded,
               color: AppPalette.gold300,

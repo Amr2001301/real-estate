@@ -51,7 +51,7 @@ class ProjectCard extends StatelessWidget {
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(19, Colors.white)),
                   if (city.isNotEmpty)
                     Row(children: [
-                      const Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
+                      Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(city, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFFDCE3EC))),

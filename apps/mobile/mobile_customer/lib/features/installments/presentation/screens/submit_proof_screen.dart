@@ -424,7 +424,7 @@ class _MethodChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (selected) ...[
-              const Icon(
+              Icon(
                 Icons.check_rounded,
                 color: AppPalette.gold300,
                 size: 14,
@@ -506,7 +506,7 @@ class _DatePickerRow extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.calendar_today_rounded,
                 color: AppPalette.gold300,
                 size: 16,
@@ -761,7 +761,7 @@ class _SubmitButton extends StatelessWidget {
         ),
         child: Center(
           child: submitting
-              ? const SizedBox(
+              ? SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
@@ -772,7 +772,7 @@ class _SubmitButton extends StatelessWidget {
               : Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.send_rounded,
                       color: AppPalette.gold300,
                       size: 18,
@@ -782,7 +782,7 @@ class _SubmitButton extends StatelessWidget {
                       isResubmit
                           ? l10n.paymentProofResubmit
                           : l10n.paymentProofSubmit,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppPalette.gold300,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -813,7 +813,7 @@ class _SectionLabel extends StatelessWidget {
           width: 3,
           height: 16,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold300],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

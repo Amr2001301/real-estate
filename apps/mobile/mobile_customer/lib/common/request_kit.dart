@@ -131,7 +131,7 @@ class RequestReplyNote extends StatelessWidget {
     final colors = context.appColors;
     return Row(
       children: [
-        const Icon(Icons.schedule_rounded, size: 17, color: AppPalette.gold500),
+        Icon(Icons.schedule_rounded, size: 17, color: AppPalette.gold500),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(context.l10n.requestReplyNote, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted)),

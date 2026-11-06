@@ -73,7 +73,7 @@ class AdminProjectHealth extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(12), border: Border.all(color: homeTintBorder(context))),
-                    child: const Icon(Icons.apartment_rounded, size: 20, color: AppPalette.gold500),
+                    child: Icon(Icons.apartment_rounded, size: 20, color: AppPalette.gold500),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

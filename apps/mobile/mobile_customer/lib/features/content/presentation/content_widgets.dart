@@ -237,7 +237,7 @@ class _GoldLabel extends StatelessWidget {
           width: 3,
           height: 18,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [AppPalette.gold300, AppPalette.gold500],
@@ -351,7 +351,7 @@ class _PageBody extends StatelessWidget {
                         child: Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle),
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -425,7 +425,7 @@ class _ContactCard extends StatelessWidget {
                   gradient: const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.support_agent_rounded, size: 20, color: AppPalette.gold300),
+                child: Icon(Icons.support_agent_rounded, size: 20, color: AppPalette.gold300),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

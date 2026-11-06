@@ -224,7 +224,7 @@ class ClientCard extends StatelessWidget {
                   ),
                 )
               else
-                const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+                Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
             ]),
           ]),
         ),

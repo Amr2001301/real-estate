@@ -44,9 +44,9 @@ class ChatBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(children: [
-                  const Icon(Icons.auto_awesome_rounded, size: 14, color: AppPalette.gold500),
+                  Icon(Icons.auto_awesome_rounded, size: 14, color: AppPalette.gold500),
                   const SizedBox(width: 4),
-                  Text(context.l10n.chatTitle, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                  Text(context.l10n.chatTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
                 const SizedBox(height: 4),
                 Text(message.content, style: TextStyle(fontSize: 14, height: 1.55, color: c.inkStrong)),
@@ -361,7 +361,7 @@ class ChatSuggestions extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
                 decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: c.hairline)),
                 child: Row(children: [
-                  const Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
+                  Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(child: Text(r, style: TextStyle(fontSize: 14, color: c.ink))),
                   Icon(Icons.north_west_rounded, size: 16, color: c.inkMuted),

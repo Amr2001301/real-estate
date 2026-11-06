@@ -13,7 +13,7 @@ const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
 const _paidAccent = Color(0xFF4ADE80);
 const _overdueAccent = Color(0xFFF87171);
 const _pendingGradient = [_navyLight, _navyDeep];
-const _pendingAccent = AppPalette.gold300;
+final _pendingAccent = AppPalette.gold300;
 
 /// The one installment card of the customer app: a status tile, the amount and
 /// payment type, a state pill, project/unit, due and paid dates, payment method,

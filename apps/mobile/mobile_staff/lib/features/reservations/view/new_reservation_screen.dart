@@ -226,7 +226,7 @@ class _NewReservationScreenState extends State<NewReservationScreen> {
                       if (state.fixedUnit)
                         _Picked(
                           key: const Key('new-res-unit-fixed'),
-                          leading: const Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
+                          leading: Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
                           title: unit == null ? l10n.rnUnitFixed : ltr(unit.code as String),
                           subtitle: l10n.rnUnitFixed,
                         )
@@ -255,7 +255,7 @@ class _NewReservationScreenState extends State<NewReservationScreen> {
                         if (state.hasUnit && unit != null)
                           _Picked(
                             key: const Key('new-res-unit-picked'),
-                            leading: const Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
+                            leading: Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
                             title: ltr(unit.code as String),
                             subtitle: state.projects.where((p) => p.id == state.selectedProjectId).map((p) => p.name.resolve(lang)).firstOrNull,
                             onChange: () => _pickUnit(cubit, state),
@@ -495,7 +495,7 @@ class _Picked extends StatelessWidget {
           ]),
         ),
         if (onChange != null)
-          TextButton(onPressed: onChange, child: Text(context.l10n.rnChange, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
+          TextButton(onPressed: onChange, child: Text(context.l10n.rnChange, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
       ]),
     );
   }

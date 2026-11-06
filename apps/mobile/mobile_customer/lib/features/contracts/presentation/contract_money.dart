@@ -63,13 +63,13 @@ class ContractMoneyCard extends StatelessWidget {
               value: share,
               minHeight: 8,
               backgroundColor: Colors.white.withValues(alpha: 0.14),
-              valueColor: const AlwaysStoppedAnimation(AppPalette.gold400),
+              valueColor: AlwaysStoppedAnimation(AppPalette.gold400),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             l10n.contractPaidShare(percent),
-            style: const TextStyle(color: AppPalette.gold300, fontSize: 12, fontWeight: FontWeight.w700),
+            style: TextStyle(color: AppPalette.gold300, fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -137,7 +137,7 @@ class SectionTitle extends StatelessWidget {
           width: 3,
           height: 18,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold300],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

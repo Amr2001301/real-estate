@@ -435,7 +435,7 @@ class _Primary extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 18, color: AppPalette.gold600),
             const SizedBox(width: 7),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
           ]),
         ),
       );

@@ -220,7 +220,7 @@ class _ContextBanner extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppPalette.gold300, AppPalette.gold500],
               ),
               borderRadius: BorderRadius.circular(AppRadii.sm),
@@ -321,7 +321,7 @@ class _ClientPickerState extends State<_ClientPicker> {
               onChanged: _onSearch,
             ),
             if (state.clientSearchLoading)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Center(
                   child: SizedBox(
@@ -523,7 +523,7 @@ class _SearchField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.md),
-          borderSide: const BorderSide(color: AppPalette.gold400, width: 1.5),
+          borderSide: BorderSide(color: AppPalette.gold400, width: 1.5),
         ),
       ),
     );
@@ -669,7 +669,7 @@ class _SelectedClientCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppPalette.gold300, AppPalette.gold500],
               ),
               borderRadius: BorderRadius.circular(AppRadii.sm),
@@ -747,7 +747,7 @@ class _SourcePicker extends StatelessWidget {
     final colors = context.appColors;
 
     if (loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 52,
         child: Center(
           child: SizedBox(

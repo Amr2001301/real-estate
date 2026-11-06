@@ -333,7 +333,7 @@ class _ReceiptsSection extends StatelessWidget {
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
                 size: 17,
                 color: AppPalette.gold300,

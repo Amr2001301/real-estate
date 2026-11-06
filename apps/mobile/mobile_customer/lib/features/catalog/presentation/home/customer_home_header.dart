@@ -168,7 +168,7 @@ class CustomerHomeHeader extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.auto_awesome_rounded,
                               size: 10,
                               color: AppPalette.gold300,
@@ -292,7 +292,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [Color(0xFFCFAA52), AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

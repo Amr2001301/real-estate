@@ -59,7 +59,7 @@ class IconChip extends StatelessWidget {
     if (filled && tone == AppTone.gold) {
       // Emphasized gold gradient (matches the website's active summary chip).
       decoration = BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppPalette.gold300, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

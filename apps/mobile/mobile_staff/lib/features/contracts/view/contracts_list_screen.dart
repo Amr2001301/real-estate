@@ -285,7 +285,7 @@ class ContractCardView extends StatelessWidget {
                     ]),
                     const SizedBox(height: 2),
                     Text.rich(TextSpan(children: [
-                      TextSpan(text: ltr(row.displayNumber), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                      TextSpan(text: ltr(row.displayNumber), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                       TextSpan(text: ' · $source', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ])),
                     if (where.isNotEmpty)
@@ -327,7 +327,7 @@ class ContractCardView extends StatelessWidget {
                     const Spacer(),
                   if ((row.downPayment ?? 0) > 0)
                     Text(l10n.kcDown(contractMoney(row.downPayment!)),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
           ]),

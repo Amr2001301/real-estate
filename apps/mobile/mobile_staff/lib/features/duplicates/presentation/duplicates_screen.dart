@@ -98,7 +98,7 @@ class _HowItWorks extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, size: 18, color: AppPalette.gold600),
+          Icon(Icons.info_outline_rounded, size: 18, color: AppPalette.gold600),
           const SizedBox(width: AppSpacing.xs),
           Expanded(child: Text(context.l10n.duplicatesHow, style: TextStyle(fontSize: 12.5, height: 1.6, color: c.ink))),
         ],
@@ -150,7 +150,7 @@ class _GroupCard extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(gradient: homeGoldGradient, borderRadius: BorderRadius.circular(15)),
-                child: const Icon(Icons.people_alt_rounded, color: AppPalette.navy, size: 22),
+                child: Icon(Icons.people_alt_rounded, color: AppPalette.navy, size: 22),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -197,7 +197,7 @@ class _GroupCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: busy
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy),
@@ -205,11 +205,11 @@ class _GroupCard extends StatelessWidget {
                         : Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.merge_rounded, color: AppPalette.navy, size: 19),
+                              Icon(Icons.merge_rounded, color: AppPalette.navy, size: 19),
                               const SizedBox(width: 6),
                               Text(
                                 l10n.duplicatesMergeN(latinDigits('${toMerge.length}')),
-                                style: const TextStyle(color: AppPalette.navy, fontWeight: FontWeight.w800, fontSize: 14),
+                                style: TextStyle(color: AppPalette.navy, fontWeight: FontWeight.w800, fontSize: 14),
                               ),
                             ],
                           ),

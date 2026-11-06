@@ -241,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.edit_outlined,
                   color: AppPalette.gold300,
                   size: 18,

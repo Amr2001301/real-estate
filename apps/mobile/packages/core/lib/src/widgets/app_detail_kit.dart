@@ -405,7 +405,7 @@ class AppPriceCard extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(46),
                 foregroundColor: AppPalette.gold600,
-                side: const BorderSide(color: AppPalette.gold400, width: 1.4),
+                side: BorderSide(color: AppPalette.gold400, width: 1.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
                 textStyle: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),

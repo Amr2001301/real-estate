@@ -501,7 +501,7 @@ class _DateTimeTile extends StatelessWidget {
                   color: AppPalette.gold400.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.event_rounded, color: AppPalette.gold400, size: 18),
+                child: Icon(Icons.event_rounded, color: AppPalette.gold400, size: 18),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

@@ -307,8 +307,8 @@ class PaymentCardView extends StatelessWidget {
               key: Key('payment-cheque-${row.id}'),
               onTap: () => context.push('/cheques/${row.instrumentId}'),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(l10n.pmOpenCheque, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
+                Text(l10n.pmOpenCheque, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
               ]),
             ),
         ],
@@ -363,7 +363,7 @@ class PaymentCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        if (row.reference != null) TextSpan(text: ltr(row.reference!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (row.reference != null) TextSpan(text: ltr(row.reference!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if ((row.unitCode ?? '').isNotEmpty) TextSpan(text: ' · ${ltr(row.unitCode!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 1,
@@ -542,7 +542,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ]),
                           ),
                           if (p.state == 'CHEQUE_PENDING')
-                            Text(l10n.pmNotCounted, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
+                            Text(l10n.pmNotCounted, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
                           else if (p.state == 'COLLECTED' && p.paidAt != null)
                             Text('✓ ${l10n.pmPaidOn(DateFormatter.mediumDate(p.paidAt!, languageCode: lang))}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable))
                           else if ((p.rejectionReason ?? '').isNotEmpty)

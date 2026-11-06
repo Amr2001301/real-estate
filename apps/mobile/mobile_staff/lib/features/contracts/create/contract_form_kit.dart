@@ -198,7 +198,7 @@ class FormBottomBar extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
               foregroundColor: colors.inkStrong,
-              side: const BorderSide(color: AppPalette.navy, width: 1.2),
+              side: BorderSide(color: AppPalette.navy, width: 1.2),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
@@ -212,7 +212,7 @@ class FormBottomBar extends StatelessWidget {
             key: confirmKey,
             onPressed: busy ? null : onConfirm,
             icon: busy
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
                 : Icon(icon, size: 19),
             label: Text(label),
             style: FilledButton.styleFrom(

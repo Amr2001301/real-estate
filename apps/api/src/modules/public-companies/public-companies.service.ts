@@ -6,7 +6,10 @@
  *
  * Eligibility rule (enforced here, not in the caller):
  *   lifecycleStatus == ACTIVE
- *   AND customerAppEnabled == true
+ *   AND the customer app is on for the company: Company.customerAppEnabled when
+ *       set, otherwise the subscription plan's default (a company made in the
+ *       super-admin UI has it unset — «use the plan's default» — and was refused,
+ *       QA run 1, F-016)
  *   AND isActive == true  (legacy guard until MT-034 fully retires it)
  *
  * No companyId is returned. slug is the external tenant identifier.
@@ -14,6 +17,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { buildEffectiveView } from '../../common/capabilities/capability-schema';
 
 export interface DiscoveredCompany {
   slug: string;
@@ -22,9 +26,44 @@ export interface DiscoveredCompany {
 
 const ELIGIBLE_WHERE = {
   lifecycleStatus: 'ACTIVE' as const,
-  customerAppEnabled: true,
+  // Switched on, or left to the plan's default (null) — decided in [customerAppOn].
+  AND: [{ OR: [{ customerAppEnabled: true }, { customerAppEnabled: null }] }],
   isActive: true,
+};
+
+const ELIGIBLE_SELECT = {
+  slug: true,
+  name: true,
+  customerAppEnabled: true,
+  subscriptionPlan: true,
+  capabilities: true,
+  websiteEnabled: true,
+  staffAppEnabled: true,
 } as const;
+
+interface EligibleRow {
+  slug: string;
+  name: string;
+  customerAppEnabled?: boolean | null;
+  subscriptionPlan?: Parameters<typeof buildEffectiveView>[0];
+  capabilities?: unknown;
+  websiteEnabled?: boolean | null;
+  staffAppEnabled?: boolean | null;
+}
+
+/** Whether the company's customer app is on: its own switch, else its plan's default. */
+function customerAppOn(row: EligibleRow): boolean {
+  if (row.customerAppEnabled === true) return true;
+  if (row.customerAppEnabled === false || !row.subscriptionPlan) return false;
+  const view = buildEffectiveView(
+    row.subscriptionPlan,
+    (row.capabilities as Record<string, unknown> | null) ?? {},
+    row.websiteEnabled ?? null,
+    null,
+    row.staffAppEnabled ?? null,
+  );
+  return view.keys.find((k) => k.key === 'feature.customerApp')?.effective === true;
+}
 
 /** Maximum results returned by search — bounding response size and db work. */
 const SEARCH_LIMIT = 10;
@@ -49,12 +88,16 @@ export class PublicCompaniesService {
           { slug: { contains: q, mode: 'insensitive' } },
         ],
       },
-      select: { slug: true, name: true },
+      select: ELIGIBLE_SELECT,
       orderBy: { slug: 'asc' },
-      take: SEARCH_LIMIT,
+      // More than the limit: some rows are dropped by their plan's default below.
+      take: SEARCH_LIMIT * 5,
     });
 
-    return rows.map((r) => ({ slug: r.slug, name: r.name }));
+    return rows
+      .filter((r) => customerAppOn(r as EligibleRow))
+      .slice(0, SEARCH_LIMIT)
+      .map((r) => ({ slug: r.slug, name: r.name }));
   }
 
   /**
@@ -70,10 +113,10 @@ export class PublicCompaniesService {
         slug: normalizedSlug,
         ...ELIGIBLE_WHERE,
       },
-      select: { slug: true, name: true },
+      select: ELIGIBLE_SELECT,
     });
 
-    if (!company) return null;
+    if (!company || !customerAppOn(company as EligibleRow)) return null;
     return { slug: company.slug, name: company.name };
   }
 }

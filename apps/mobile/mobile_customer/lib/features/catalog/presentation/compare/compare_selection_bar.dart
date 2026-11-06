@@ -48,7 +48,7 @@ class CompareSelectionBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.xl),
               child: Stack(
                 children: [
-                  const Positioned.fill(
+                  Positioned.fill(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

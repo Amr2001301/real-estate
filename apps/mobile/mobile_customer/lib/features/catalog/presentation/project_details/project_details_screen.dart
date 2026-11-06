@@ -64,7 +64,7 @@ class _LoadingScaffold extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: _navyDeep,
-        body: const Center(
+        body: Center(
           child: CircularProgressIndicator(
             color: AppPalette.gold400,
             strokeWidth: 2,
@@ -256,15 +256,15 @@ class _FeaturedPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppPalette.gold300, AppPalette.gold500]),
+        gradient: LinearGradient(colors: [AppPalette.gold300, AppPalette.gold500]),
         borderRadius: AppRadii.pillAll,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star_rounded, size: 13, color: AppPalette.navy),
+          Icon(Icons.star_rounded, size: 13, color: AppPalette.navy),
           const SizedBox(width: 5),
-          Text(label, style: const TextStyle(color: AppPalette.navy, fontSize: 12, fontWeight: FontWeight.w800)),
+          Text(label, style: TextStyle(color: AppPalette.navy, fontSize: 12, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -314,7 +314,7 @@ class _AboutBlock extends StatelessWidget {
             Container(
               width: 3,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [AppPalette.gold300, AppPalette.gold500],
@@ -410,7 +410,7 @@ class _LocationTile extends StatelessWidget {
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppPalette.gold500,
-            side: const BorderSide(color: AppPalette.gold400, width: 1.2),
+            side: BorderSide(color: AppPalette.gold400, width: 1.2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.md),
             ),
@@ -486,9 +486,9 @@ class _UnitsPreview extends StatelessWidget {
           InkWell(
             onTap: () => context.push('/projects/${project.id}/units'),
             child: Row(children: [
-              Text(l10n.viewAll, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
+              Text(l10n.viewAll, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppPalette.gold600)),
               // chevron_right mirrors to the outward arrow in Arabic.
-              const Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
+              Icon(Icons.chevron_right_rounded, size: 18, color: AppPalette.gold600),
             ]),
           ),
         ]),
