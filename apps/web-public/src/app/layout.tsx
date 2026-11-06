@@ -5,7 +5,7 @@ import './fonts.css';
 import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
-import { fetchBranding, hexToRgbVars } from '@/lib/branding';
+import { brandThemeVars, fetchBranding } from '@/lib/branding';
 import { fetchPageLinks } from '@/lib/cms';
 import { DEFAULT_CURRENCY } from '@/lib/site-currency';
 import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
@@ -47,12 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Build inline CSS only when the tenant supplies at least one colour.
   // globals.css provides fallbacks (navy / gold-400) so brand-* utilities always
   // resolve even when no <style> tag is emitted.
-  const primaryVars = branding?.primaryColor ? hexToRgbVars(branding.primaryColor) : null;
-  const accentVars  = branding?.accentColor  ? hexToRgbVars(branding.accentColor)  : null;
-  const cssOverrides = [
-    primaryVars ? `--c-brand-primary:${primaryVars}` : null,
-    accentVars  ? `--c-brand-accent:${accentVars}`   : null,
-  ].filter(Boolean).join(';');
+  const cssOverrides = brandThemeVars(branding?.primaryColor, branding?.accentColor) ?? '';
 
   return (
     <html

@@ -25,6 +25,19 @@
        match navy DEFAULT and gold-400 so existing utilities still resolve. */
     --c-brand-primary: 15 30 51;    /* navy DEFAULT #0F1E33 */
     --c-brand-accent:  200 162 75;  /* gold-400  #C8A24B  */
+    /* The navy and gold scales (tailwind.config.ts reads these); the root layout
+       replaces them with the company's own colours. */
+    --c-navy: 15 30 51;       /* #0F1E33 */
+    --c-navy-700: 28 48 80;   /* #1C3050 */
+    --c-navy-600: 38 64 95;   /* #26405F */
+    --c-gold-50: 251 246 234;  /* #FBF6EA */
+    --c-gold-100: 244 232 201; /* #F4E8C9 */
+    --c-gold-200: 226 199 146; /* #E2C792 */
+    --c-gold-300: 212 179 106; /* #D4B36A */
+    --c-gold-400: 200 162 75;  /* #C8A24B */
+    --c-gold-500: 183 144 47;  /* #B7902F */
+    --c-gold-600: 156 122 38;  /* #9C7A26 */
+    --c-gold-700: 125 97 30;   /* #7D611E */
 
     /* Skeleton shimmer sweep highlight (over surface-soft). */
     --skeleton-highlight: rgb(255 255 255 / 0.55);

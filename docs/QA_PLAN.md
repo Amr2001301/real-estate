@@ -168,6 +168,13 @@ once and checked the same three ways.
   header). Two companies with different brands must each show only their own
   name, logo, colours, contact numbers, pages, SEO tags and share previews.
   An unknown or disconnected domain is handled cleanly.
+- Brand colours: a company's primary/accent colours restyle its own website
+  (header, hero, footer, buttons, accents) and its customer app, and nothing of
+  any other company; changing company A's colours leaves B unchanged (test with
+  two companies and two hosts; mind the 60 s branding cache).
+- Staff app and admin dashboard are the platform's tools: they keep the Devora
+  colours and logo for every company (decided 2026-11-06). Test that they never
+  take a company's colours.
 - Customer app: one build per company (`COMPANY_SLUG`). Its name, logo, colours,
   contact card and pages are the company's; nothing of another company or of the
   platform brand shows; a switched-off company shows the "app not available"

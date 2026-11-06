@@ -32,20 +32,20 @@ export function Hero({ image, projectsCount, unitsCount, locale }: HeroProps) {
       ) : (
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(130% 120% at 80% 10%, #24426A 0%, #14273F 55%, #0B1726 100%)' }}
+          style={{ background: 'radial-gradient(130% 120% at 80% 10%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 55%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
           aria-hidden
         />
       )}
       {/* Directional wash — heavy on the right behind Arabic text */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'linear-gradient(to left, rgba(11,23,38,0.96) 0%, rgba(13,26,43,0.85) 28%, rgba(13,26,43,0.44) 62%, rgba(11,23,38,0.08) 100%)' }}
+        style={{ background: 'linear-gradient(to left, rgb(var(--c-navy) / 0.96) 0%, rgb(var(--c-navy) / 0.85) 28%, rgb(var(--c-navy) / 0.44) 62%, rgb(var(--c-navy) / 0.08) 100%)' }}
         aria-hidden
       />
       {/* Cinematic vignette */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(120% 120% at 50% 42%, transparent 54%, rgba(11,23,38,0.50) 100%)' }}
+        style={{ background: 'radial-gradient(120% 120% at 50% 42%, transparent 54%, rgb(var(--c-navy) / 0.5) 100%)' }}
         aria-hidden
       />
       {/* Top fade for nav legibility */}

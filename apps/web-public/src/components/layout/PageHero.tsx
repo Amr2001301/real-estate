@@ -49,13 +49,13 @@ export function PageHero({
     <section className="relative overflow-hidden bg-navy">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(125% 150% at 88% -8%, #2A4A74 0%, #142A45 50%, #0A1422 100%)' }}
+        style={{ background: 'radial-gradient(125% 150% at 88% -8%, color-mix(in srgb, rgb(var(--c-navy-600)) 85%, white) 0%, rgb(var(--c-navy)) 50%, color-mix(in srgb, rgb(var(--c-navy)) 65%, black) 100%)' }}
         aria-hidden
       />
       {/* Warm gold wash from the lower-start corner — the navy-to-gold luxury tint. */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(70% 90% at 4% 112%, rgba(200,162,75,0.14), transparent 58%)' }}
+        style={{ background: 'radial-gradient(70% 90% at 4% 112%, rgb(var(--c-gold-400) / 0.14), transparent 58%)' }}
         aria-hidden
       />
       <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />

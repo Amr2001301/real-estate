@@ -47,7 +47,7 @@ export function AuthShell({
           <div className="relative hidden overflow-hidden rounded-4xl shadow-card lg:block">
             <div
               className="absolute inset-0"
-              style={{ background: 'radial-gradient(130% 130% at 80% 0%, #24426A 0%, #14273F 55%, #0B1726 100%)' }}
+              style={{ background: 'radial-gradient(130% 130% at 80% 0%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 55%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
               aria-hidden
             />
             <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />
