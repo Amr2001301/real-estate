@@ -20,6 +20,14 @@ class ProjectsScreen extends StatefulWidget {
 }
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
+  /// Display-only Arabic normalization for English city values from the data.
+  String _cityLabel(String raw) => switch (raw) {
+        'Riyadh' => 'الرياض',
+        'Jeddah' => 'جدة',
+        'New Damietta' => 'دمياط الجديدة',
+        _ => raw,
+      };
+
   final _scroll = ScrollController();
   late final TextEditingController _search;
 
@@ -129,7 +137,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           for (final c in state.knownCities)
                             HomePill(
                               id: c,
-                              label: c,
+                              label: _cityLabel(c),
                               selected: state.filter.city == c,
                               onTap: () => context.read<ProjectsCubit>().applyFilter(state.filter.copyWith(city: c)),
                             ),
