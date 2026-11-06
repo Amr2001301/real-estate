@@ -223,6 +223,10 @@ class CustomerApp extends StatelessWidget {
           BlocProvider<BrandingCubit>(
             create: (ctx) => BrandingCubit(
               ctx.read<BrandingRepository>(),
+              // The last branding saved on this device, so the app opens in the
+              // company's colours at once (and offline).
+              prefs: ctx.read<SharedPreferences>(),
+              initialSlug: ctx.read<CustomerTenantStorage>().selectedCompanySlug,
               // A company's own app shows its name before branding loads.
               fallbackName: kLockedCompanyName.isEmpty ? null : kLockedCompanyName,
             ),
@@ -321,11 +325,12 @@ class _CustomerRootState extends State<_CustomerRoot> {
 
   void _loadBranding() {
     final slug = context.read<CustomerTenantStorage>().selectedCompanySlug;
-    // Clear before fetching so A's tokens never appear on B's screens while the
-    // new request is in-flight. Also clears on logout (slug becomes null).
-    context.read<BrandingCubit>().clear();
+    // [load] swaps to this company's saved copy first, so A's tokens never show
+    // on B's screens while the request is in flight. No slug (logout) clears.
     if (slug != null && slug.isNotEmpty) {
       context.read<BrandingCubit>().load(slug);
+    } else {
+      context.read<BrandingCubit>().clear();
     }
   }
 

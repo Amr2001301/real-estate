@@ -53,6 +53,21 @@ class BrandTokens {
     );
   }
 
+  /// For the on-device copy of the last branding (read back with [fromJson]).
+  Map<String, dynamic> toJson() => {
+        if (primaryColor != null) 'primaryColor': _hex(primaryColor!),
+        if (accentColor != null) 'accentColor': _hex(accentColor!),
+        if (logoUrl != null) 'logoUrl': logoUrl,
+        if (displayName != null) 'displayName': displayName,
+        if (currency != null) 'currency': currency,
+        if (contactPhone != null) 'contactPhone': contactPhone,
+        if (contactWhatsApp != null) 'contactWhatsApp': contactWhatsApp,
+        if (contactEmail != null) 'contactEmail': contactEmail,
+      };
+
+  static String _hex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
   static Color? _parseHex(String? hex) {
     if (hex == null || hex.isEmpty) return null;
     final s = hex.trim().replaceFirst('#', '');
