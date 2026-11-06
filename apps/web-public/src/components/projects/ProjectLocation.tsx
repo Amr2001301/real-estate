@@ -47,7 +47,7 @@ export function ProjectLocation({ city, lat, lng }: ProjectLocationProps) {
         ) : (
           <div
             className="relative flex min-h-56 items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #1C3050 0%, #0F1E33 60%, #26405F 100%)' }}
+            style={{ background: 'linear-gradient(135deg, rgb(var(--c-navy-700)) 0%, rgb(var(--c-navy)) 60%, rgb(var(--c-navy-600)) 100%)' }}
           >
             <span className="pointer-events-none absolute -left-10 top-1/3 h-40 w-40 rounded-full bg-gold-400/15 blur-2xl" aria-hidden />
             <div className="relative flex flex-col items-center text-center text-white">

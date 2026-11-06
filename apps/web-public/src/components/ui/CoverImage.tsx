@@ -51,7 +51,7 @@ export function CoverImage({ src, alt, className, imgClassName, zoomOnHover }: C
           aria-label={alt}
           style={{
             background:
-              'linear-gradient(135deg, #26405F 0%, #1C3050 55%, #0F1E33 100%)',
+              'linear-gradient(135deg, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy-700)) 55%, rgb(var(--c-navy)) 100%)',
           }}
         >
           <span className="pointer-events-none absolute -left-10 top-1/3 h-40 w-40 rounded-full bg-gold-400/20 blur-2xl" />

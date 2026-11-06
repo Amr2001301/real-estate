@@ -29,7 +29,7 @@ export function CtaBand({ eyebrow, title, description, children }: CtaBandProps)
           {/* Depth + warmth */}
           <div
             className="pointer-events-none absolute inset-0"
-            style={{ background: 'radial-gradient(120% 150% at 82% 0%, #24426A 0%, #14273F 58%, #0B1726 100%)' }}
+            style={{ background: 'radial-gradient(120% 150% at 82% 0%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 58%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
             aria-hidden
           />
           <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />

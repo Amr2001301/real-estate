@@ -17,7 +17,7 @@ export function HomeBanner({ locale }: { locale: Locale }) {
           <div className="relative overflow-hidden rounded-4xl bg-navy px-8 py-12 shadow-card sm:px-12 sm:py-14">
             <div
               className="pointer-events-none absolute inset-0"
-              style={{ background: 'radial-gradient(120% 160% at 85% 0%, #24426A 0%, #14273F 60%, #0B1726 100%)' }}
+              style={{ background: 'radial-gradient(120% 160% at 85% 0%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 60%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
               aria-hidden
             />
             <span className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />

@@ -364,7 +364,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 <div
                   className="relative flex min-h-56 items-center justify-center border-b border-hairline"
                   style={{
-                    backgroundColor: '#0F1E33',
+                    backgroundColor: 'rgb(var(--c-navy))',
                     backgroundImage:
                       'linear-gradient(rgba(200,162,75,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(200,162,75,0.18) 1px, transparent 1px)',
                     backgroundSize: '28px 28px',
