@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-06, after #316)
+# Handoff — where the work stands (2026-11-06, after #318)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -119,11 +119,12 @@
 - **اللي فاضل في تطبيق العملاء (اتأكد بالتصوير بحساب عميل):** الكتالوج (الرئيسية والمشاريع والوحدات وصفحاتهم والمقارنة)، صفحات العقد وكشف الحساب والدفعة وإرسال الإثبات، طلب الزيارة وطلب المعلومات وصفحة طلب الصيانة، الملف الشخصي وتفضيلات الإشعارات و«المزيد»، المساعد، الصفحات التعريفية، وتسجيل الدخول. التفاصيل في القسم 2n.
 - **لسه عليك:** قرارات الإصدار (REL1) وقايمة اختبار الجهاز (`docs/staff-app-device-test.md`)، والنشر على السيرفر.
 
-**بعد كده (6 نوفمبر، #312–#316، كله مدموج):** القسم **2o** تحت. تطبيق العملاء اتحوّل كله لشكل تطبيق الموظفين، على دفعات من 10 صفحات تقريبًا، كل دفعة PR لوحده بعد ما بتوافق على الصور:
+**بعد كده (6 نوفمبر، #312–#318، كله مدموج):** القسم **2o** تحت. تطبيق العملاء اتحوّل كله لشكل تطبيق الموظفين، على دفعات من 10 صفحات تقريبًا، كل دفعة PR لوحده بعد ما بتوافق على الصور:
 - **الشريط السفلي والهيدر والفلتر (#313):** نفس شريط الموظفين الكحلي العايم، وهيدر كل الصفحات، وشاشة الفلتر. العناصر المشتركة (الهيرو، شريط الأرقام، الأزرار، الفلتر، أقسام وصفوف الحساب) اتنقلت لحزمة `core` وبقى التطبيقين يستخدموها.
 - **الكتالوج (#313):** الرئيسية للزائر، المشاريع والوحدات (كروت بصورة غلاف)، صفحة المشروع وصفحة الوحدة (غلاف وكارت السعر فوقه)، طلب المعلومات، وطلب الزيارة (التاريخ والوقت بقوا اختيار حر من منتقي النظام بدل أيام وساعات ثابتة).
 - **الأموال والصيانة (#314):** مركز المالية بشريط أرقام من ملخص الأقساط، وقائمة الصيانة وطلب صيانة جديد.
 - **الحساب (#315، #316):** الإشعارات (بنفس بنية إشعارات الموظفين)، المساعد (شبه مساعد الموظفين)، تفضيلات الإشعارات، الملف الشخصي، المفضلة، والحساب نفسه بأقسام وصفوف الموظفين، وشريط أرقام في «وحدتي».
+- **القائمة الجانبية في لوحة تحكم الأدمن (#318):** الأقسام بقت بتفتح واحد واحد (مجموعة واحدة مفتوحة، ومجموعة الصفحة اللي أنت فيها مفتوحة دايمًا)، وكل قسم وصفحة ليهم أيقونة، وعدد الصفحات جنب اسم القسم، ونقطة دهبية على القسم المقفول لو فيه حاجة محتاجة انتباه، وشريط دهبي على الصفحة الحالية. ده بيبدّل قرار U5 القديم «نص وحلقة من غير أيقونات»، والتصميم نفسه اتوافق عليه الأول.
 - **إصلاحات اتعملت في الطريق:** المفضلة كانت بتقع بخطأ لما يكون فيها حاجة (الاسم بيرجع نص مش خريطة)، واختبار التقويم كان بيفشل أيام الجمعة.
 - **اللي ما اتغيّرش محتواه:** صفحة العقد وكشف الحساب وصفحة الدفعة وإرسال الإثبات وصفحة طلب الصيانة والمستندات (أخدوا الهيدر والشريط الجداد بس، وكانوا بالفعل بشكل الكروت من #306)، وصفحات الدخول (بتستخدم نفس مكوّنات دخول الموظفين).
 
@@ -131,7 +132,7 @@
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #316 مدموج. **ابدأ بالقسم 2o** (آخر جدول وحالة تطبيق العملاء)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #318 مدموج. **ابدأ بالقسم 2o** (آخر جدول وحالة تطبيق العملاء)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -659,7 +660,7 @@ Done by the other account while this one was out of limit; recorded here from th
 
 **Still open from 2m:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps).
 
-### 2o. #312–#316 (2026-11-06) — the customer app in the staff look, page by page
+### 2o. #312–#318 (2026-11-06) — the customer app in the staff look, page by page; the admin sidebar
 
 The owner asked for the customer app to look like the staff app. The method: shared pieces first (navigation bar, header, filter), then the content of the pages in groups of about ten; each group's new look was sent to the owner as screenshots from a real web build (logged in as a demo customer), and only after approval went to its own PR.
 
@@ -670,6 +671,8 @@ The owner asked for the customer app to look like the staff app. The method: sha
 | #314 | Money and maintenance | Finance hub: figures band from the installments summary and the three services as cards (its own `HomeSummaryCubit` in the router). Maintenance list: figures band, status pills, compact cards; new request: each step in a card. |
 | #315 | Account area | Notifications (hero subtitle, pills all/unread/finance/maintenance, grouped by day, tinted icons), the assistant (welcome with suggestion cards, staff bubbles, pill composer), notification preferences, profile. Bug fix: the favourites list failed on a project name that the API flattens to a string (`favorite_dto.dart`, tests added). |
 | #316 | Account hub | The account page on the staff profile's structure (hero with the person, shortcuts, sections of rows, logout); «وحدتي» has a figures band; the company pages are a profile section (account and the guest «المزيد»). |
+| #317 | Docs | HANDOFF after #316. |
+| #318 | Admin sidebar (`apps/web-admin`) | `NavSections` is an accordion: one section open at a time (the page's own section is always the open one; the last choice is kept in `localStorage` key `sidebar.openSection` when the page has no section). Each header has an icon tile (`SECTION_ICONS` in `lib/nav.ts`), the page count and the chevron; a closed section with a waiting badge shows a gold dot. `NavLink` rows are 36px with the item's icon, no rings, and a gold bar on the guide line for the active page. Closed sections stay in the DOM (`visibility: hidden` after the fold) so the e2e checks that count nav links keep working. Replaces the U5 "text + ring, no icons" rule for the sidebar (owner-approved). |
 
 **Shared kit (now in `packages/core/lib/src/kit/`, exported by `core.dart`):** `home_kit.dart` (`HomeListHero`, `HomeHeroButton`, `HomeSearchField`, `HomePills`, `HomeBand`, `HomeSection` with a `horizontal` space, `HomeActions`, `HomeOverlap`, `homeCard`, `homeDisplay`, `homeCompact`…), `filter_kit.dart`, `catalog_kit.dart` (`CatalogPageHero`, `CatalogCover`, `CatalogBadge`), `profile_kit.dart` (`ProfileItem`, `ProfileSection`, `ProfileLogout`) and `widgets/app_floating_nav.dart`. The staff app keeps only what needs its own pieces: `HomeHero` (the notifications bell) and `ProfileHero` (its router). Staff files no longer import these kits; they get them from `core`.
 
