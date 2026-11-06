@@ -1,7 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-import '../home_kit/home_kit.dart';
 import 'admin_home_data.dart';
 
 /// A thin bar split in coloured parts by their share of the whole.

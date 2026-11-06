@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../catalog/domain/repositories/staff_catalog_repository.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/repositories/installments_repository.dart';
 import 'calculator_unit_plans.dart';
 

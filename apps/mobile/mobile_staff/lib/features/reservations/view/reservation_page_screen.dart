@@ -5,11 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/reservation_status_label.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contract_page_screen.dart' show ContractParty, KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
-import '../../dashboard/home_kit/filter_kit.dart' show FilterSegments, FilterOption;
 import '../../e_sign/presentation/signature_section.dart';
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;

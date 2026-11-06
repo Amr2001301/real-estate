@@ -9464,4 +9464,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brkConfirmHint => 'Do you want to do this?';
+
+  @override
+  String ctProjectsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n projects',
+      one: '1 project',
+      zero: 'No projects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ctUnitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+      zero: 'No units',
+    );
+    return '$_temp0';
+  }
 }

@@ -5,10 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../catalog/units_list/units_list_screen.dart';
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import 'contracts_data.dart';
 
 /// The contracts list (owner-approved design, 2026-11-04), as the website's

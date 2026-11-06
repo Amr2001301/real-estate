@@ -13,7 +13,6 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_detail_cubit.dart';
 import '../maintenance_format.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _navyDeep = Color(0xFF0B1726);

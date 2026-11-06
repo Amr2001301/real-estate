@@ -5,8 +5,6 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 
 import '../../common/staff_list_skeleton.dart';
-import '../dashboard/home_kit/filter_kit.dart';
-import '../dashboard/home_kit/home_kit.dart';
 import 'financial_report_screen.dart' show comparisonMonths, percentChange, previousRange;
 
 /// The sales report, as on the website's «التقارير»: the period's sales,

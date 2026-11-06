@@ -1,7 +1,6 @@
-import 'package:core/core.dart';
+import '../../core.dart';
 import 'package:flutter/material.dart';
 
-import '../../dashboard/home_kit/home_kit.dart';
 
 /// Pieces shared by the catalog pages (projects, units, a project, a unit),
 /// in the homes' look (owner-approved designs, 2026-11-04).

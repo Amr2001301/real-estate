@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../data/notification_preferences_api.dart';
 
 /// Per-group e-mail / phone switches (design n2). Each change is saved at once

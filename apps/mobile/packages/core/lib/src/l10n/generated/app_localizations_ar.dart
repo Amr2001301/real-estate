@@ -9503,4 +9503,32 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brkConfirmHint => 'هل تريد تنفيذ هذا الإجراء؟';
+
+  @override
+  String ctProjectsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n مشروعًا',
+      few: '$n مشاريع',
+      two: 'مشروعان',
+      one: 'مشروع واحد',
+      zero: 'لا مشاريع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ctUnitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة',
+      few: '$n وحدات',
+      two: 'وحدتان',
+      one: 'وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
 }

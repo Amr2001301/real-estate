@@ -29,9 +29,8 @@ class CompareSelectionBar extends StatelessWidget {
 
         // Clear the iOS floating dock (≈ inset + 66 tall); on Android the
         // in-slot bar sits below the body, so only a small gap is needed.
-        final lift = context.isApplePlatform
-            ? MediaQuery.paddingOf(context).bottom + 72
-            : AppSpacing.sm;
+        // The shell lifts this bar clear of the floating navigation bar.
+        const lift = AppSpacing.sm;
 
         return Padding(
           padding: EdgeInsets.fromLTRB(

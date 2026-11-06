@@ -7,7 +7,6 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../../contracts/create/manual_contract_screen.dart' show PickSheet;
 import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/sales_performance.dart';
 import '../cubit/team_targets_cubit.dart';
 import '../period.dart';

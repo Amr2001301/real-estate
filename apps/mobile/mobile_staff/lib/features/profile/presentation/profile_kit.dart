@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../dashboard/home_kit/home_kit.dart';
 
 /// The profile pages' building blocks (staff and broker), in the look of the
 /// redesigned homes: the navy hero with the person, sections of rows in

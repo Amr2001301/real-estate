@@ -7,9 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
 import '../../../common/staff_share.dart';
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
-import '../kit/catalog_kit.dart';
 import 'units_list_data.dart';
 
 /// The units list (owner-approved design, 2026-11-04), as the website's
