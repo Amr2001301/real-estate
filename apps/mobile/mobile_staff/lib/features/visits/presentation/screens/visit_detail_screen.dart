@@ -510,7 +510,7 @@ class _InfoRow extends StatelessWidget {
         Container(
           width: 38,
           height: 38,
-          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(12)),
           child: Icon(icon, size: 19, color: AppPalette.gold600),
         ),
         const SizedBox(width: 12),

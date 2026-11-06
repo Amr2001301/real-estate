@@ -276,7 +276,7 @@ class _About extends StatelessWidget {
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(9)),
+                  decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(9)),
                   child: const Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 8),
@@ -344,7 +344,7 @@ class _Phases extends StatelessWidget {
                 Container(
                   width: 34,
                   height: 34,
-                  decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
+                  decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
                   child: const Icon(Icons.domain_rounded, size: 18, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 10),

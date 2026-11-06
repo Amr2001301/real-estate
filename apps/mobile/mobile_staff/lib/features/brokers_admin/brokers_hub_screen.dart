@@ -419,7 +419,7 @@ class _BrokerCard extends StatelessWidget {
                       : Container(
                           width: 44,
                           height: 44,
-                          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
                           child: Icon(brokerTabIcon(tab), size: 21, color: AppPalette.gold500),
                         ),
                   const SizedBox(width: 11),

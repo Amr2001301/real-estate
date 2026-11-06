@@ -657,8 +657,8 @@ class HomeSection extends StatelessWidget {
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: AppPalette.gold50,
-                    border: Border.all(color: AppPalette.gold100),
+                    color: homeTint(context),
+                    border: Border.all(color: homeTintBorder(context)),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(icon, size: 16, color: AppPalette.gold500),
@@ -1190,7 +1190,7 @@ class HomeActivityList extends StatelessWidget {
                       Container(
                         width: 34,
                         height: 34,
-                        decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
+                        decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
                         child: Icon(items[i].icon, size: 18, color: AppPalette.gold500),
                       ),
                       const SizedBox(width: 11),

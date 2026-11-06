@@ -829,7 +829,7 @@ class _Card extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, size: 19, color: AppPalette.gold600),
               ),
               const SizedBox(width: AppSpacing.sm),

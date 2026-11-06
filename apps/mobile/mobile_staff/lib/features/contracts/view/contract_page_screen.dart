@@ -664,7 +664,7 @@ class _Payments extends StatelessWidget {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
+                decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
                 child: const Icon(Icons.payments_rounded, size: 18, color: AppPalette.gold500),
               ),
               const SizedBox(width: 10),

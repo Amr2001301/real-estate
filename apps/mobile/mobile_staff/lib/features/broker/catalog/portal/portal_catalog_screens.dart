@@ -321,8 +321,8 @@ class _Mini extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
-        color: AppPalette.gold50,
-        border: Border.all(color: AppPalette.gold100),
+        color: homeTint(context),
+        border: Border.all(color: homeTintBorder(context)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -636,7 +636,7 @@ class _PortalProjectPageState extends State<PortalProjectPage> {
                             Container(
                               width: 28,
                               height: 28,
-                              decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(9)),
+                              decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(9)),
                               child: const Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
                             ),
                             const SizedBox(width: 8),

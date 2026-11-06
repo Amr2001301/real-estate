@@ -431,7 +431,7 @@ class _Primary extends StatelessWidget {
         child: Container(
           height: 42,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(13)),
+          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(13)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 18, color: AppPalette.gold600),
             const SizedBox(width: 7),

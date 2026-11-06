@@ -142,10 +142,10 @@ class _Notice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_rounded, size: 19, color: Color(0xFF8A5A12)),
+          Icon(Icons.info_rounded, size: 19, color: homeIsDark(context) ? AppPalette.gold300 : const Color(0xFF8A5A12)),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
-            child: Text(text, style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF6B4510))),
+            child: Text(text, style: TextStyle(fontSize: 12.5, height: 1.5, color: homeIsDark(context) ? AppPalette.gold200 : const Color(0xFF6B4510))),
           ),
         ],
       ),

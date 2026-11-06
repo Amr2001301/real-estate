@@ -86,7 +86,7 @@ class _TargetsScreenState extends State<TargetsScreen> {
                                     Container(
                                       width: 42,
                                       height: 42,
-                                      decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                                      decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
                                       child: const Icon(Icons.track_changes_rounded, size: 21, color: AppPalette.gold500),
                                     ),
                                     const SizedBox(width: 11),
@@ -139,7 +139,7 @@ class _Progress extends StatelessWidget {
               Container(
                 width: 42,
                 height: 42,
-                decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
                 child: const Icon(Icons.flag_outlined, size: 21, color: AppPalette.gold500),
               ),
               const SizedBox(width: 12),
