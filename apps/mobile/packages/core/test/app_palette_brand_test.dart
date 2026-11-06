@@ -58,4 +58,25 @@ void main() {
     AppPalette.applyBrand();
     expect(all(), platform);
   });
+
+  // Dark-gold text, warm golds and browns followed a fixed gold, not the accent.
+  test("every warm shade follows the company's accent and returns with no brand", () {
+    List<Color> all() => [
+          AppPalette.goldInk, AppPalette.goldWarm, AppPalette.goldWarm2, AppPalette.goldDeepA,
+          AppPalette.goldDeepB, AppPalette.goldBrown1, AppPalette.goldBrown2, AppPalette.goldBrown3,
+          AppPalette.goldBrown4, AppPalette.goldPale,
+        ];
+    AppPalette.applyBrand();
+    final platform = all();
+    expect(AppPalette.goldInk, const Color(0xFF9A6F1E));
+    expect(AppPalette.goldPale, const Color(0xFFFBD27A));
+    AppPalette.applyBrand(accent: const Color(0xFFEC4899));
+    final brand = all();
+    for (var i = 0; i < brand.length; i++) {
+      expect(brand[i], isNot(platform[i]), reason: 'shade $i stayed gold');
+      expect((brand[i].r * 255).round(), greaterThan((brand[i].g * 255).round()));
+    }
+    AppPalette.applyBrand();
+    expect(all(), platform);
+  });
 }

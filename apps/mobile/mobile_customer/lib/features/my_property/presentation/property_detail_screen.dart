@@ -1398,7 +1398,7 @@ class _DonutPainter extends CustomPainter {
 
     final solidPaint = Paint()
       ..shader = LinearGradient(
-        colors: [Color(0xFFCFAA52), AppPalette.gold500],
+        colors: [AppPalette.goldWarm, AppPalette.gold500],
       ).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5

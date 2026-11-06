@@ -312,7 +312,7 @@ class _ContractCard extends StatelessWidget {
                 ),
                 child: Icon(
                   AppIcons.contract,
-                  color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+                  color: dark ? AppPalette.gold300 : AppPalette.goldInk,
                   size: 24,
                 ),
               ),

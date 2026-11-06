@@ -384,9 +384,9 @@ List<Color> _typeGradient(DepositType type) => switch (type) {
           AppPalette.navyInk,
         ],
       DepositType.finalPayment => [
-          const Color(0xFF7A5C1E),
-          const Color(0xFF5A4214),
-          const Color(0xFF3D2800),
+          AppPalette.goldBrown1,
+          AppPalette.goldBrown2,
+          AppPalette.goldBrown3,
         ],
       DepositType.fee => [
           const Color(0xFF7A2E1E),
@@ -400,7 +400,7 @@ Color _typeAccent(DepositType type) => switch (type) {
       DepositType.bookingAmount => const Color(0xFF4ADE80),
       DepositType.downPayment => AppPalette.gold300,
       DepositType.installment => const Color(0xFF93C5FD),
-      DepositType.finalPayment => const Color(0xFFFBD27A),
+      DepositType.finalPayment => AppPalette.goldPale,
       DepositType.fee => const Color(0xFFFCA5A5),
       DepositType.unknown => AppPalette.gold300,
     };

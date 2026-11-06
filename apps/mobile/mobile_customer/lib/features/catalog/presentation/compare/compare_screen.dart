@@ -227,9 +227,9 @@ class _IdentityCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                   AppPalette.gold400,
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                 ],
               ),
               borderRadius: BorderRadius.circular(999),
@@ -764,7 +764,7 @@ class _Step extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x44B8941F),
+                        color: AppPalette.gold400.withValues(alpha: 0.27),
                         blurRadius: 6,
                         offset: Offset(0, 2),
                       ),

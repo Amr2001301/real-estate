@@ -201,7 +201,7 @@ class _PortfolioPill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFC8A24B), AppPalette.gold500],
+              colors: [AppPalette.gold400, AppPalette.gold500],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -421,7 +421,7 @@ class _CardHeader extends StatelessWidget {
             ),
             child: Icon(
               Icons.domain_rounded,
-              color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+              color: dark ? AppPalette.gold300 : AppPalette.goldInk,
               size: 26,
             ),
           ),
@@ -469,7 +469,7 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ownedColor = dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
-    final reservedColor = dark ? AppPalette.gold300 : const Color(0xFF9A6F1E);
+    final reservedColor = dark ? AppPalette.gold300 : AppPalette.goldInk;
     final dotColor = owned ? ownedColor : reservedColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

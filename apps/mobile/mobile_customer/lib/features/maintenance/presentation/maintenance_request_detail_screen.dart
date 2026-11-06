@@ -265,7 +265,7 @@ class _SummaryCard extends StatelessWidget {
 Color _lightAccent(MaintenanceStatus s) => switch (s) {
       MaintenanceStatus.inProgress => const Color(0xFF1D4ED8),
       MaintenanceStatus.open || MaintenanceStatus.assigned =>
-        const Color(0xFF9A6F1E),
+        AppPalette.goldInk,
       _ => const Color(0xFF15803D),
     };
 

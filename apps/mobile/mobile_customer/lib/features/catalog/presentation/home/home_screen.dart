@@ -272,10 +272,10 @@ class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
                   opacity: expandedAlpha,
                   child: Container(
                     width: 200, height: 200,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
-                        colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
+                        colors: [AppPalette.gold400.withValues(alpha: 0.13), AppPalette.gold400.withValues(alpha: 0.00)],
                       ),
                     ),
                   ),

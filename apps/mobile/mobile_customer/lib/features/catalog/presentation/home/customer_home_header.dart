@@ -293,7 +293,7 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFCFAA52), AppPalette.gold500],
+          colors: [AppPalette.goldWarm, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

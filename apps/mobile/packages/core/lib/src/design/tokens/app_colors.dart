@@ -37,6 +37,32 @@ abstract final class AppPalette {
     Color(0xFF1E3451), // accent2
   ];
   static List<Color> _s = _shades;
+
+  // Warm accent shades (dark gold text, deeper/lighter golds, browns) — cut from
+  // the company's accent; the platform values are what the screens always had.
+  static const _goldShades = [
+    Color(0xFF9A6F1E), // ink
+    Color(0xFFCFAA52), // warm
+    Color(0xFFC99A2E), // warm2
+    Color(0xFFB07818), // deepA
+    Color(0xFF8A5F10), // deepB
+    Color(0xFF7A5C1E), // brown1
+    Color(0xFF5A4214), // brown2
+    Color(0xFF3D2800), // brown3
+    Color(0xFF7C5200), // brown4
+    Color(0xFFFBD27A), // pale
+  ];
+  static List<Color> _gs = _goldShades;
+  static Color get goldInk => _gs[0];
+  static Color get goldWarm => _gs[1];
+  static Color get goldWarm2 => _gs[2];
+  static Color get goldDeepA => _gs[3];
+  static Color get goldDeepB => _gs[4];
+  static Color get goldBrown1 => _gs[5];
+  static Color get goldBrown2 => _gs[6];
+  static Color get goldBrown3 => _gs[7];
+  static Color get goldBrown4 => _gs[8];
+  static Color get goldPale => _gs[9];
   static Color get navyDeep => _s[0];
   static Color get navyMid => _s[1];
   static Color get navyLight => _s[2];
@@ -110,8 +136,21 @@ abstract final class AppPalette {
       }
       const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
       _g = [mix(a!, w, 0.9), mix(a, w, 0.8), mix(a, w, 0.55), mix(a, w, 0.22), a, mix(a, k, 0.1), mix(a, k, 0.22)];
+      _gs = [
+        mix(a, k, 0.38),
+        mix(a, w, 0.06),
+        mix(a, k, 0.04),
+        mix(a, k, 0.12),
+        mix(a, k, 0.3),
+        mix(a, k, 0.48),
+        mix(a, k, 0.65),
+        mix(a, k, 0.8),
+        mix(a, k, 0.42),
+        mix(a, w, 0.45),
+      ];
     } else {
       _g = _gold;
+      _gs = _goldShades;
     }
   }
 

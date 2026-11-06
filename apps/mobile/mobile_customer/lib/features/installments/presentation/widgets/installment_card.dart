@@ -62,7 +62,7 @@ class InstallmentCard extends StatelessWidget {
       InstallmentStatus.paid => paid,
       InstallmentStatus.overdue => overdue,
       _ => make(
-        const Color(0xFF9A6F1E),
+        AppPalette.goldInk,
         _pendingAccent,
         AppIcons.installments,
       ),

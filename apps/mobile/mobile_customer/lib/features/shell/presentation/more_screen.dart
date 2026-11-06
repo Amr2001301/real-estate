@@ -84,7 +84,7 @@ class MoreScreen extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFFC99A2E), AppPalette.gold400],
+                          colors: [AppPalette.goldWarm2, AppPalette.gold400],
                         ),
                         label: l10n.galleryToggleLanguage,
                         subtitle: 'العربية  ·  English',
@@ -161,10 +161,10 @@ class _MoreHero extends StatelessWidget {
             child: Container(
               width: 200,
               height: 200,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x2AC8A24B), Color(0x00C8A24B)],
+                  colors: [AppPalette.gold400.withValues(alpha: 0.16), AppPalette.gold400.withValues(alpha: 0.00)],
                   stops: [0.0, 0.65],
                 ),
               ),
@@ -177,10 +177,10 @@ class _MoreHero extends StatelessWidget {
             child: Container(
               width: 160,
               height: 160,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x18C8A24B), Color(0x00C8A24B)],
+                  colors: [AppPalette.gold400.withValues(alpha: 0.09), AppPalette.gold400.withValues(alpha: 0.00)],
                   stops: [0.0, 0.7],
                 ),
               ),
@@ -276,7 +276,7 @@ class _BenefitStrip extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFC8A24B), AppPalette.gold400],
+                colors: [AppPalette.gold400, AppPalette.gold400],
               ),
             ),
           ),
@@ -297,10 +297,10 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.timeline_rounded,
               label: context.l10n.moreBenefitTrack,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFB07818), Color(0xFF8A5F10)],
+                colors: [AppPalette.goldDeepA, AppPalette.goldDeepB],
               ),
             ),
           ),

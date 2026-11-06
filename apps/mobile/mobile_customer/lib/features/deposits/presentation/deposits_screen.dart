@@ -93,9 +93,9 @@ class _DepositsScreenState extends State<DepositsScreen> {
                   _FilterItem(
                     key: DepositType.finalPayment.name,
                     label: l10n.depositTypeFinal,
-                    dotColor: const Color(0xFFFBD27A),
-                    activeGradient: const [
-                      Color(0xFF7A5C1E),
+                    dotColor: AppPalette.goldPale,
+                    activeGradient: [
+                      AppPalette.goldBrown1,
                       Color(0xFF4A3610),
                     ],
                     count: countOf(DepositType.finalPayment),
@@ -384,15 +384,15 @@ class _DepositCard extends StatelessWidget {
     DepositType.bookingAmount =>
       dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D),
     DepositType.downPayment =>
-      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+      dark ? AppPalette.gold300 : AppPalette.goldInk,
     DepositType.installment =>
       dark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
     DepositType.finalPayment =>
-      dark ? const Color(0xFFFBD27A) : const Color(0xFFB45309),
+      dark ? AppPalette.goldPale : const Color(0xFFB45309),
     DepositType.fee =>
       dark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
     DepositType.unknown =>
-      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+      dark ? AppPalette.gold300 : AppPalette.goldInk,
   };
 
   @override

@@ -361,7 +361,7 @@ class _FavoriteCard extends StatelessWidget {
                 height: 2,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppPalette.gold400, Color(0x00B8941F)],
+                    colors: [AppPalette.gold400, AppPalette.gold400.withValues(alpha: 0.00)],
                   ),
                   borderRadius: BorderRadius.circular(999),
                 ),

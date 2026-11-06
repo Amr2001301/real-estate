@@ -70,10 +70,10 @@ class AuthHeader extends StatelessWidget {
               child: Container(
                 width: 240,
                 height: 240,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x28C8A24B), Color(0x00C8A24B)],
+                    colors: [AppPalette.gold400.withValues(alpha: 0.16), AppPalette.gold400.withValues(alpha: 0.00)],
                     stops: [0.0, 0.65],
                   ),
                 ),
@@ -86,10 +86,10 @@ class AuthHeader extends StatelessWidget {
               child: Container(
                 width: 160,
                 height: 160,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x14C8A24B), Color(0x00C8A24B)],
+                    colors: [AppPalette.gold400.withValues(alpha: 0.08), AppPalette.gold400.withValues(alpha: 0.00)],
                     stops: [0.0, 0.7],
                   ),
                 ),
@@ -167,9 +167,9 @@ class AuthHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Color(0x00B8941F),
+                          AppPalette.gold400.withValues(alpha: 0.00),
                           AppPalette.gold400,
-                          Color(0x00B8941F),
+                          AppPalette.gold400.withValues(alpha: 0.00),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(999),

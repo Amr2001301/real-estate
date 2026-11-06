@@ -683,7 +683,7 @@ class _CardHeader extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     final dotColor = owned
         ? (dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D))
-        : (dark ? AppPalette.gold300 : const Color(0xFF9A6F1E));
+        : (dark ? AppPalette.gold300 : AppPalette.goldInk);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -702,7 +702,7 @@ class _CardHeader extends StatelessWidget {
             ),
             child: Icon(
               Icons.domain_rounded,
-              color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+              color: dark ? AppPalette.gold300 : AppPalette.goldInk,
               size: 26,
             ),
           ),

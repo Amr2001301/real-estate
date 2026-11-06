@@ -586,8 +586,8 @@ class _PhotoSourceSheet extends StatelessWidget {
                 const SizedBox(height: 12),
                 _SourceCard(
                   icon: Icons.photo_library_rounded,
-                  iconGradient: const LinearGradient(
-                    colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                  iconGradient: LinearGradient(
+                    colors: [AppPalette.goldBrown4, AppPalette.goldBrown3],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
