@@ -1,4 +1,4 @@
-# Handoff — where the work stands (2026-11-05, after #302)
+# Handoff — where the work stands (2026-11-06, after #311)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
@@ -113,11 +113,17 @@
   2. **تطبيق العملاء صفحة صفحة** بنفس شكل تطبيق الموظفين، مع الخط والوضع الليلي (CU-0، CU-1…n).
   3. **قايمة اختبار الجهاز الحقيقي** (`docs/staff-app-device-test.md`) وقرارات الإصدار اللي عليك (REL1).
 
+**بعد كده (5–6 نوفمبر، #303–#311، كله مدموج):** القسم **2n** تحت. الأكونت التاني كمّل لما الليمت خلص هنا، وده اللي اتعمل:
+- **حجم الخط في تطبيق الموظفين (#304):** أصغر خط بقى 12 وفوقه تكبير 1.1 للنص كله (مهمة FS1 خلصت).
+- **تطبيق العملاء بنفس شكل تطبيق الموظفين (#305–#311):** حجم الخط، مركز المالية، الأقساط والمدفوعات والعقود كأنها كروت قوائم، كارت «وحدتي»، شاشات الصيانة، طلبات الزيارة (ومعاها سبب التأجيل في شيت) والإشعارات، المفضلة، اسم الملف الشخصي، وكارت العقار في الرئيسية. كلها بتقرا كويس في الوضع الليلي.
+- **اللي فاضل في تطبيق العملاء (اتأكد بالتصوير بحساب عميل):** الكتالوج (الرئيسية والمشاريع والوحدات وصفحاتهم والمقارنة)، صفحات العقد وكشف الحساب والدفعة وإرسال الإثبات، طلب الزيارة وطلب المعلومات وصفحة طلب الصيانة، الملف الشخصي وتفضيلات الإشعارات و«المزيد»، المساعد، الصفحات التعريفية، وتسجيل الدخول. التفاصيل في القسم 2n.
+- **لسه عليك:** قرارات الإصدار (REL1) وقايمة اختبار الجهاز (`docs/staff-app-device-test.md`)، والنشر على السيرفر.
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #302 مدموج. **ابدأ بالقسم 2m** (آخر جدول والمهام الجديدة)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #311 مدموج. **ابدأ بالقسم 2n** (آخر جدول والمهام الجديدة)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -615,6 +621,35 @@ Same method as 2k/2l: one PR per part, a screenshot from a real web build, merge
 **Next (owner's order):** DOC1 (this file), FS1, then CU-0 and the customer app group by group, DK1 and REL1 on the side.
 
 ---
+
+### 2n. #303–#311 (2026-11-05 → 2026-11-06) — readable text, and the customer app in the staff look
+
+Done by the other account while this one was out of limit; recorded here from the merged PRs.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #303 | Docs | HANDOFF through #302; `docs/staff-app-device-test.md` (the real-device checklist and what the release still needs from outside the code). |
+| #304 | FS1 — staff text size | `lib/app.dart`: a floor of 12 on the smallest text and a 1.1 text scale; about sixty files raised from 10–11.5. |
+| #305 | Customer app: text size + finance hub | The same floor and scale in `mobile_customer/lib/app.dart`; the finance hub as list cards. |
+| #306 | Installments, payments, contracts | `InstallmentCard`, the payments list and the contracts list as list cards in the staff look. |
+| #307 | «وحدتي» | `my_property_screen.dart` as a property card. |
+| #308 | Maintenance | The list, the request page and the new-request form in the staff look, readable on dark. |
+| #309 | Visit requests, notifications | `my_requests_screen.dart` and the notifications page in the staff look, readable on dark. |
+| #310 | Home property card, favourites, profile | The home dashboard's property card, the favourites page and the profile name, readable on dark. |
+| #311 | Reschedule sheet | The reschedule reason is a bottom sheet; readable quick actions on the home card. |
+
+**State of the customer app (checked on screen 2026-11-06, a web build logged in as a demo customer; the file lists are from `git show --stat` of #305–#311):**
+- **In the staff look (band, pills, list cards; readable on dark):** finance hub, installments, payments, contracts list, «وحدتي», maintenance list and new-request form, visit requests, notifications, favourites, home property card, the profile name.
+- **Not touched yet (only the font floor changed), so still the older strip-and-white-body pages:**
+  1. **Catalog:** home (guest hero and banners), projects list, units list, project page, unit page, compare (and its empty state), and the unit/project filter sheets.
+  2. **Money detail pages:** contract page, statement («كشف الحساب»), payment page, the installment proof form («إرسال إثبات الدفع»).
+  3. **Requests and forms:** maintenance request page (the new-request form is done), visit request form, information request form.
+  4. **Account:** the profile page (a navy strip over a white card) and its edit form, notification preferences, «المزيد» / the account menu.
+  5. **Other:** the assistant chat, the content pages («من نحن» and the rest of `/pages/:slug`), documents, and sign-in (login, OTP, register, forgot password).
+- **Next:** one PR per group in the order above (the catalog is the most visible), mockup from real data approved first.
+- **QA notes for a new container:** the customer app has no `web/` folder in the repo (`flutter create . --platforms web` makes one, do not commit it); build with `--no-web-resources-cdn` (CanvasKit from gstatic is blocked here); the API's `CORS_ORIGINS` must list the web port; customers have no password, so set one for a demo customer by hand (argon2 hash in `User.passwordHash`) and sign in by e-mail in the app.
+
+**Still open from 2m:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps).
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
 
