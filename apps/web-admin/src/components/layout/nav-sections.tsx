@@ -176,7 +176,7 @@ function Section({
   const waiting = section.items.some((i) => (i.badge ?? 0) > 0);
   const panel = `nav-panel-${section.key}`;
   return (
-    <div className={cn('rounded-2xl transition-colors duration-200', isOpen && 'bg-white/[0.03]')}>
+    <div>
       <button
         type="button"
         onClick={onToggle}
@@ -185,7 +185,7 @@ function Section({
         data-testid="nav-section"
         className={cn(
           'flex h-11 w-full items-center gap-2.5 rounded-xl px-2 text-start text-[14px] transition-colors duration-150',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
+          'focus-visible:outline-none focus-visible:bg-white/[0.06]',
           isOpen ? 'font-bold text-white' : 'font-medium text-sidebar-text hover:bg-white/[0.04] hover:text-white/90',
         )}
       >
@@ -193,16 +193,13 @@ function Section({
           aria-hidden
           className={cn(
             'grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150',
-            isOpen ? 'bg-[#D8B66A]/[0.15] text-[#D8B66A]' : 'bg-white/[0.05] text-sidebar-text-muted',
+            isOpen ? 'text-[#D8B66A]' : 'text-sidebar-text-muted',
           )}
         >
           <Icon name={section.iconKey} />
         </span>
         <span className="flex-1 truncate">{section.title}</span>
         {!isOpen && waiting && <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-[#D8B66A]" />}
-        <span aria-hidden className="rounded-full bg-white/[0.05] px-1.5 text-[11px] font-medium tabular-nums text-sidebar-text-muted">
-          {section.items.length}
-        </span>
         <ChevronDown
           aria-hidden
           className={cn(
