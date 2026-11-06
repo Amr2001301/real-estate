@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
+import '../../../common/request_kit.dart';
 import '../data/notification_preferences_api.dart';
 
 /// Per-group e-mail / push switches. Each change is saved at once and put
@@ -68,28 +69,25 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
                 : prefs == null
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xl + MediaQuery.paddingOf(context).bottom),
                     children: [
-                      Text(t.hint, style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: AppSpacing.md),
+                      Text(t.hint, style: TextStyle(fontSize: 13.5, height: 1.5, color: context.appColors.inkMuted)),
                       for (final group in prefGroups)
-                        Card(
-                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        RequestStep(
+                          icon: _groupIcon(group),
+                          title: t.groups[group]!,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsetsDirectional.fromSTEB(
-                                  AppSpacing.md,
-                                  AppSpacing.md,
-                                  AppSpacing.md,
-                                  0,
-                                ),
-                                child: Text(t.groups[group]!, style: Theme.of(context).textTheme.titleSmall),
-                              ),
                               for (final channel in prefChannels)
                                 SwitchListTile(
-                                  title: Text(channel == 'email' ? t.email : t.push),
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  secondary: Icon(
+                                    channel == 'email' ? Icons.mail_outline_rounded : Icons.phone_iphone_rounded,
+                                    size: 20,
+                                    color: AppPalette.gold500,
+                                  ),
+                                  title: Text(channel == 'email' ? t.email : t.push, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                                   value: prefs[channel]![group]!,
                                   onChanged: _saving ? null : (v) => _toggle(channel, group, v),
                                 ),
@@ -104,6 +102,13 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     );
   }
 }
+
+IconData _groupIcon(String group) => switch (group) {
+      'sales' => Icons.event_available_rounded,
+      'finance' => Icons.payments_rounded,
+      'maintenance' => Icons.build_rounded,
+      _ => Icons.person_rounded,
+    };
 
 class _Texts {
   const _Texts({

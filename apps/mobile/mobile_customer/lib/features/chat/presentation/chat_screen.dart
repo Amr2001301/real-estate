@@ -100,36 +100,30 @@ class _ChatScreenState extends State<ChatScreen> {
                           context.read<ChatBloc>().add(const ChatStarted()),
                     );
                   }
+                  final welcome = state.messages.length <= 1 && !state.sending;
                   return Column(
                     children: [
-                      // Message list
                       Expanded(
-                        child: ListView.separated(
-                          controller: _scroll,
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.lg,
-                            AppSpacing.md,
-                          ),
-                          itemCount:
-                              state.messages.length + (state.sending ? 1 : 0),
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.lg),
-                          itemBuilder: (context, i) {
-                            if (i >= state.messages.length) {
-                              return const _TypingBubble();
-                            }
-                            return ChatBubble(message: state.messages[i]);
-                          },
-                        ),
+                        child: welcome
+                            ? _Welcome(
+                                greeting: state.messages.firstOrNull?.content ?? '',
+                                replies: state.quickReplies,
+                              )
+                            : ListView.separated(
+                                controller: _scroll,
+                                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.md),
+                                itemCount: state.messages.length + (state.sending ? 1 : 0),
+                                separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+                                itemBuilder: (context, i) {
+                                  if (i >= state.messages.length) return const _TypingBubble();
+                                  return ChatBubble(message: state.messages[i]);
+                                },
+                              ),
                       ),
-                      // Quick-reply pills
-                      if (state.quickReplies.isNotEmpty) ...[
+                      if (!welcome && state.quickReplies.isNotEmpty) ...[
                         QuickReplies(replies: state.quickReplies),
                         const SizedBox(height: AppSpacing.xs),
                       ],
-                      // Input bar
                       _InputBar(
                         controller: _input,
                         onSend: _send,
@@ -143,6 +137,39 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The first screen: a gold mark, the assistant's greeting and what to ask.
+class _Welcome extends StatelessWidget {
+  const _Welcome({required this.greeting, required this.replies});
+  final String greeting;
+  final List<String> replies;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.md),
+      children: [
+        Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(colors: [AppPalette.gold500, AppPalette.gold300], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              boxShadow: [BoxShadow(color: AppPalette.gold400.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(0, 6))],
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: AppPalette.navy, size: 32),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(greeting, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, height: 1.6, fontWeight: FontWeight.w700, color: c.inkStrong)),
+        const SizedBox(height: AppSpacing.lg),
+        ChatSuggestions(replies: replies),
+      ],
     );
   }
 }
@@ -184,67 +211,18 @@ class _TypingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final c = context.appColors;
     return Align(
-      alignment: AlignmentDirectional.centerStart,
+      alignment: AlignmentDirectional.centerEnd,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 3,
-        ),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(AppRadii.xl),
-            topRight: Radius.circular(AppRadii.xl),
-            bottomLeft: Radius.circular(AppRadii.xs),
-            bottomRight: Radius.circular(AppRadii.xl),
-          ),
-          border: Border.all(
-            color: colors.hairline.withValues(alpha: 0.5),
-            width: 0.6,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: const SizedBox(width: 44, height: 14, child: _GoldDots()),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.hairline), borderRadius: BorderRadius.circular(18)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: c.brandGold)),
+          const SizedBox(width: AppSpacing.xs),
+          Text(context.l10n.assistantThinking, style: TextStyle(fontSize: 13, color: c.inkMuted)),
+        ]),
       ),
-    );
-  }
-}
-
-class _GoldDots extends StatelessWidget {
-  const _GoldDots();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        for (var i = 0; i < 3; i++)
-          Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppPalette.gold400,
-                  shape: BoxShape.circle,
-                ),
-              )
-              .animate(onPlay: (c) => c.repeat(reverse: true))
-              .scaleXY(
-                begin: 0.55,
-                end: 1.0,
-                delay: (i * 200).ms,
-                duration: 380.ms,
-                curve: Curves.easeInOut,
-              )
-              .fadeIn(begin: 0.3, delay: (i * 200).ms, duration: 380.ms),
-      ],
     );
   }
 }
@@ -254,11 +232,7 @@ class _GoldDots extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({
-    required this.controller,
-    required this.onSend,
-    required this.sending,
-  });
+  const _InputBar({required this.controller, required this.onSend, required this.sending});
 
   final TextEditingController controller;
   final void Function([String?]) onSend;
@@ -266,129 +240,59 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xs,
-          AppSpacing.lg,
-          AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: AppRadii.pillAll,
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                minLines: 1,
-                maxLines: 4,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: colors.inkStrong),
-                decoration: InputDecoration(
-                  hintText: context.l10n.chatInputHint,
-                  hintStyle: TextStyle(
-                    color: colors.inkMuted.withValues(alpha: 0.6),
-                    fontSize: 14,
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.xs,
-                    AppSpacing.md,
-                  ),
-                ),
+    final c = context.appColors;
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm + bottom),
+      decoration: BoxDecoration(color: c.canvas, border: Border(top: BorderSide(color: c.hairline))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              minLines: 1,
+              maxLines: 4,
+              maxLength: 2000,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onSend(),
+              style: TextStyle(fontSize: 14, color: c.ink),
+              decoration: InputDecoration(
+                hintText: context.l10n.chatInputHint,
+                counterText: '',
+                isDense: true,
+                filled: true,
+                fillColor: c.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide(color: c.hairline, width: 1.5)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: BorderSide(color: c.hairline, width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(99), borderSide: const BorderSide(color: AppPalette.gold400)),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
-              child: _SendButton(
-                onTap: sending ? null : () => onSend(),
-                sending: sending,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SendButton extends StatelessWidget {
-  const _SendButton({this.onTap, required this.sending});
-  final VoidCallback? onTap;
-  final bool sending;
-
-  @override
-  Widget build(BuildContext context) {
-    final active = onTap != null && !sending;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          gradient: active
-              ? const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                )
-              : LinearGradient(
-                  colors: [
-                    context.appColors.hairline,
-                    context.appColors.hairline,
-                  ],
-                ),
-          shape: BoxShape.circle,
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: AppPalette.gold400.withValues(alpha: 0.40),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: sending
-            ? const Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    color: AppPalette.navy,
-                    strokeWidth: 2,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              final can = !sending && value.text.trim().isNotEmpty;
+              return GestureDetector(
+                onTap: can ? () => onSend() : null,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: can || sending ? 1 : 0.45,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppPalette.gold400),
+                    child: sending
+                        ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                        : const Icon(Icons.send_rounded, color: AppPalette.navy, size: 20),
                   ),
                 ),
-              )
-            : const Icon(
-                Icons.arrow_upward_rounded,
-                color: AppPalette.navy,
-                size: 20,
-              ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
