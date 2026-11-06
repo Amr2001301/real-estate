@@ -315,6 +315,16 @@ describe('POST /reservations — dto.leadId generic lead safety check', () => {
     expect(res.body.message).toMatch(/committed activities/i);
   });
 
+  it('only a visit for ANOTHER unit commits the lead: the query excludes this unit (F-022)', async () => {
+    const mock = makePrismaMock({ stage: LeadStage.INTERESTED, unitInterestId: null, projectInterestId: null });
+    mock.visitAppointment.findFirst.mockResolvedValue(null); // no visit for any other unit
+    app = await buildApp(mock);
+    const res = await request(app.getHttpServer()).post('/reservations').send(BASE_BODY);
+    expect(res.status).toBe(201);
+    const where = (mock.visitAppointment.findFirst.mock.calls[0] as unknown[])[0] as { where: Record<string, unknown> };
+    expect(where.where).toEqual({ leadId: expect.any(String), unitId: { not: BASE_BODY.unitId } });
+  });
+
   it('rejects 400 when generic lead has a linked contract', async () => {
     const mock = makePrismaMock({ stage: LeadStage.INTERESTED, unitInterestId: null, projectInterestId: null });
     mock.contract.findFirst.mockResolvedValue({ id: 'existing-contract' });
