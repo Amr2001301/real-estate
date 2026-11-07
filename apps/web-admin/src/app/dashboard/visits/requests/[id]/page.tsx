@@ -14,6 +14,7 @@ import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/component
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,13 +23,7 @@ interface VisitRequestDetail extends VisitRequest {
 }
 
 function initials(name: string): string {
-  // Words that start with a letter only: "E2E Visitor 1792…" reads EV, not E1.
-  const parts = name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
-  if (!parts.length || name === '—') return '؟';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  // Skip the Arabic article: "رامي الشريف" reads رش, not را.
-  const lead = (w: string) => (w.length > 3 && w.startsWith('ال') ? w.charAt(2) : w.charAt(0));
-  return (lead(parts[0]!) + lead(parts[parts.length - 1]!)).toUpperCase();
+  return sharedInitials(name, { single: 1, fallback: '؟' });
 }
 
 export default async function VisitRequestDetailPage({
