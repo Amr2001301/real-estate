@@ -8,7 +8,7 @@
  * Kept on purpose: the left/right marks (U+200E/U+200F) and the zero-width
  * joiners (U+200C/U+200D), which ordinary Arabic and Persian writing uses.
  */
-const SPOOFING = /[‪-‮⁦-⁩​﻿]/g;
+const SPOOFING = /[\u202A-\u202E\u2066-\u2069\u200B\uFEFF]/g;
 
 export function cleanPersonName(value: unknown): unknown {
   if (typeof value !== 'string') return value;
