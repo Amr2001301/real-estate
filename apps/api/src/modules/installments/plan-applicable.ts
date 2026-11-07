@@ -35,7 +35,6 @@ export async function loadApplicablePlans(
       projectId,
       status: PlanTemplateStatus.ACTIVE,
       OR: [{ unitId }, { unitId: null }],
-      ...(opts.publicOnly ? { visibility: 'PUBLIC' } : {}),
     },
     include: APPLICABLE_PLAN_INCLUDE,
     orderBy: { createdAt: 'asc' },
@@ -45,9 +44,13 @@ export async function loadApplicablePlans(
     { id: unit.id, type: unit.type, price: unit.price, projectId },
     opts.now ?? new Date(),
   );
+  // Priority is decided on every live plan; only then is visibility applied. A unit
+  // whose own plan is sales-only offers customers nothing — the project's plan must
+  // not show through it.
+  const visible = opts.publicOnly ? picked.filter((p) => p.visibility === 'PUBLIC') : picked;
   return {
     unit: { id: unit.id, type: unit.type, price: unit.price, projectId },
     scope: scope as PlanScope | null,
-    plans: picked.map((p) => materializePlan(p, unit.price)),
+    plans: visible.map((p) => materializePlan(p, unit.price)),
   };
 }

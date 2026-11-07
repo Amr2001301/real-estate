@@ -31,7 +31,7 @@ function decimal(n: number) {
 }
 
 interface Fixture {
-  plans: Array<{ id: string; unitId: string | null; reservationAmount: Prisma.Decimal }>;
+  plans: Array<{ id: string; unitId: string | null; reservationAmount: Prisma.Decimal; visibility?: string }>;
 }
 
 function makeService(fixture: Fixture) {
@@ -90,6 +90,7 @@ function makeService(fixture: Fixture) {
           id: p.id,
           name: `خطة ${p.id.slice(0, 4)}`,
           status: 'ACTIVE',
+          visibility: p.visibility ?? 'PUBLIC',
           projectId: PROJECT_ID,
           unitId: p.unitId,
           unitTypes: [],
@@ -265,5 +266,16 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
     });
     await svc.createForActor(baseInput);
     expect(createdReservation.data?.installmentPlanTemplateId).toBe(PLAN_ID);
+  });
+
+  // A unit whose own plan is sales-only offers brokers nothing: the project's plan must not show through.
+  it("a unit's sales-only plan hides the project's public plan from brokers", async () => {
+    const { svc } = makeService({
+      plans: [
+        { id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000), visibility: 'SALES_ONLY' },
+        { id: 'd5555555-5555-4555-8555-555555555555', unitId: null, reservationAmount: decimal(30000) },
+      ],
+    });
+    await expect(svc.createForActor(baseInput)).rejects.toThrow(/لا توجد خطة دفع متاحة للوسطاء/);
   });
 });
