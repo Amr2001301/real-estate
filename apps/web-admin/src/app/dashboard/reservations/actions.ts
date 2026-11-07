@@ -401,3 +401,27 @@ export async function updateReservationBookingAction(
   revalidatePath(`/dashboard/reservations/${id}`);
   return {};
 }
+
+export interface ApplicablePlans {
+  scope: 'UNIT' | 'TYPE' | 'PROJECT' | null;
+  plans: {
+    id: string;
+    name: string;
+    scope: 'UNIT' | 'TYPE' | 'PROJECT';
+    netPrice: number;
+    reservationAmount: number;
+    downPaymentAmount: number;
+    durationOptions: { id: string; durationMonths: number; increasePercentage: string | number }[];
+  }[];
+}
+
+/** The plans a unit takes (its own > its type's > the project's), worked out on its price. */
+export async function getApplicablePlansAction(unitId: string): Promise<ApplicablePlans | null> {
+  if (!unitId) return null;
+  try {
+    return await api.get<ApplicablePlans>(`/installment-plan-templates/applicable/${encodeURIComponent(unitId)}`);
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return null;
+  }
+}

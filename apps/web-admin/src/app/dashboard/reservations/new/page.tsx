@@ -1,8 +1,7 @@
 import Link from 'next/link';
-import { api, safe } from '@/lib/api';
+import { safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
-import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
 import { getReportsCurrency } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
@@ -19,12 +18,9 @@ export default async function NewReservationPage() {
   // preloading them here capped each list at 200 records.
   const session = await getSession();
   const canChooseSeller = session?.role === 'ADMIN';
-  const [salesRes, plansRes] = await Promise.all([
-    canChooseSeller ? safe(staffOptions(['SALES', 'SALES_MANAGER'])) : Promise.resolve({ data: null }),
-    safe(api.get<Paged<InstallmentPlanTemplate>>(
-      '/installment-plan-templates?status=ACTIVE&pageSize=200',
-    )),
-  ]);
+  const salesRes = canChooseSeller
+    ? await safe(staffOptions(['SALES', 'SALES_MANAGER']))
+    : { data: null };
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -78,20 +74,6 @@ export default async function NewReservationPage() {
         canChooseSeller={canChooseSeller}
         currency={currency}
         salesOptions={salesRes.data?.data ?? []}
-        plans={(plansRes.data?.data ?? []).map((p) => ({
-          id: p.id,
-          name: p.name,
-          netPrice: p.netPrice,
-          reservationAmount: p.reservationAmount,
-          downPaymentAmount: p.downPaymentAmount,
-          durationOptions: (p.durationOptions ?? []).map((o) => ({
-            id: o.id,
-            durationMonths: o.durationMonths,
-            increasePercentage: o.increasePercentage,
-          })),
-          projectId: p.projectId,
-          unitId: p.unitId,
-        }))}
         locale={locale}
       />
     </div>
