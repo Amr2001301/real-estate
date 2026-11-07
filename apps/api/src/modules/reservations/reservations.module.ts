@@ -1699,6 +1699,17 @@ export class ReservationsService {
             },
           })
         : null;
+      // The status flips to PAID once: only the call that flips it tells the customer
+      // and the rep (F-057 — confirming again, or six confirms at once, sent six
+      // «booking paid» notices for one payment).
+      let firstPaid = false;
+      if (!instrument) {
+        const flipped = await tx.reservation.updateMany({
+          where: { id, bookingPaymentStatus: { not: ReservationBookingPaymentStatus.PAID } },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PAID, bookingPaidAt: paidAt },
+        });
+        firstPaid = flipped.count === 1;
+      }
       const updated = await tx.reservation.update({
         where: { id },
         data: instrument
@@ -1744,10 +1755,12 @@ export class ReservationsService {
             : { verified: true }),
         },
       });
-      return updated;
-    }).then(async (updated) => {
+      return { updated, firstPaid };
+    }).then(async ({ updated, firstPaid }) => {
       // A cheque is not money yet: the "booking paid" notice waits for it.
       if (byCheque) return updated;
+      // Already paid: nothing new to tell anyone.
+      if (!firstPaid) return updated;
       // P4 — event: booking payment confirmed. Notify customer + sales rep.
       const payload = await this.buildReservationPayload(updated.id);
       await this.notifications.sendToUsers(

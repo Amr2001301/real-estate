@@ -631,6 +631,29 @@ describe('Reservations · conversion workflow', () => {
     expect(activityArgs.data.type).toBe('BOOKING_PAYMENT_CONFIRMED');
   });
 
+  // F-057: «booking paid» is told once — to the customer and the rep — when the status flips,
+  // not on every confirm (six parallel confirms sent six notices for one payment).
+  it('tells the customer and the rep once when the booking is first confirmed paid', async () => {
+    fixture.reservation.status = 'PENDING';
+    fixture.reservation.bookingPaymentStatus = 'UNPAID';
+    fixture.reservation.bookingAmount = decimal(1500);
+    mock.reservation.updateMany.mockResolvedValueOnce({ count: 1 });
+    await request(app.getHttpServer()).post(PATH_BOOKING_CONFIRM).send({}).expect(201);
+    const codes = mock.notification.create.mock.calls.map((c) => (c[0] as { data: { templateCode: string } }).data.templateCode);
+    expect(codes).toContain('reservation_booking_paid');
+  });
+
+  it('says nothing when the booking was already paid (a repeat or a parallel confirm)', async () => {
+    fixture.reservation.status = 'PENDING';
+    fixture.reservation.bookingPaymentStatus = 'UNPAID';
+    fixture.reservation.bookingAmount = decimal(1500);
+    // Another request already flipped it: this one flips nothing.
+    mock.reservation.updateMany.mockResolvedValueOnce({ count: 0 });
+    await request(app.getHttpServer()).post(PATH_BOOKING_CONFIRM).send({}).expect(201);
+    const codes = mock.notification.create.mock.calls.map((c) => (c[0] as { data: { templateCode: string } }).data.templateCode);
+    expect(codes).not.toContain('reservation_booking_paid');
+  });
+
   it('rejects booking payment confirm when reservation is already CONVERTED (400)', async () => {
     fixture.reservation.status = 'CONVERTED';
     await request(app.getHttpServer())
