@@ -76,7 +76,7 @@ Not yet done: second company in parallel (isolation), the variant matrix, per-ro
 - **Input:** XSS payloads in a name and a message render as text, nothing executes (checked on 5 admin pages); SQL-injection strings are stored inert; 100 KB body → 413; empty/invalid phone → 400 with a clear message; emoji OK; NUL → 500 (F-045).
 - **Auth:** tampered payload / companyId, `alg: none`, stripped signature, refresh-as-access, access-as-refresh → 401; refresh reuse refused; 5th wrong login in a minute → 429; CORS refuses an unknown origin.
 | F-048 | 3 | Admin | Lead / customer pages (avatar) | 1 company | Open a lead whose name starts with an emoji | The page renders | React **hydration error** (console + page regenerates on the client): five separate `initials()` helpers (`avatar.tsx`, `lead-card.tsx`, `sidebar.tsx`, `cockpit.tsx`, `list-cells.tsx`) cut the first character by UTF-16 unit, splitting the emoji's surrogate pair (server and client then disagree). Same helpers cause F-010 («ال» article used as the initial) | Medium | fixed (one shared `initials()` by code point that skips «ال», replacing 15 copies and 2 bare `charAt(0)` avatars; Playwright unit spec) | |
-| F-049 | 3 | Admin | Projects list on a phone (390 px) | 1 company | Open `/dashboard/projects` | No horizontal scroll | The page scrolls sideways | Low | open | |
+| F-049 | 3 | Admin | Projects list on a phone (390 px) | 1 company | Open `/dashboard/projects` | No horizontal scroll | **Not a defect** — checked: the page cannot scroll sideways (`scrollX` 0, body and document `scrollLeft` 0); the table scrolls inside its own card as designed. The sweep flagged it because `document.scrollWidth` is inflated by the RTL inner scroller | — | not a defect | |
 
 ## Run 1 — UI sweep (2026-11-07)
 
