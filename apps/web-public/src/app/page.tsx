@@ -92,7 +92,7 @@ export default async function HomePage() {
       <HomeBanner locale={locale} />
       <FeaturedUnits result={units} locale={locale} />
       <WhyChooseUs locale={locale} />
-      <MobileAppPromo />
+      <MobileAppPromo locale={locale} />
       <HowWeHelp locale={locale} />
       <HomeContact locale={locale} />
       <LeadCtaBand locale={locale} />

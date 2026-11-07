@@ -11,7 +11,7 @@ import type { Locale } from '@/lib/locale';
 
 export function ProjectShowcaseCard({ project, locale = 'ar' }: { project: PublicProjectListItem; locale?: Locale }) {
   const t = extraT(locale).projectCard;
-  const name = pickAr(project.name, t.defaultName);
+  const name = pickAr(project.name, t.defaultName, locale);
 
   return (
     <div className="relative h-full">
@@ -35,13 +35,13 @@ export function ProjectShowcaseCard({ project, locale = 'ar' }: { project: Publi
         <div className="absolute inset-x-0 bottom-0 p-5">
           <div className="flex items-center gap-1.5 text-sm text-white/80">
             <MapPin className="h-3.5 w-3.5 text-gold-200" aria-hidden />
-            {cityLabel(project.city)}
+            {cityLabel(project.city, locale)}
           </div>
           <h3 className="mt-1.5 line-clamp-1 text-xl font-bold text-white">{name}</h3>
           <div className="mt-3 flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
               <Home className="h-3.5 w-3.5 text-gold-200" aria-hidden />
-              {formatNumber(project.availableUnitsCount)}{' '}
+              {formatNumber(project.availableUnitsCount, locale)}{' '}
               {project.availableUnitsCount === 1 ? t.unitOne : t.unitMany}
             </span>
             <span className="text-sm font-semibold text-gold-200 transition-opacity group-hover:opacity-80">
