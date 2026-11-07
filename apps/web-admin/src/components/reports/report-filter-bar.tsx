@@ -122,8 +122,10 @@ export function ReportFilterBar({
   try {
     const from = new Date(`${defaultDateFrom}T00:00:00Z`);
     const to = new Date(`${defaultDateTo}T00:00:00Z`);
-    rangeText = new Intl.DateTimeFormat(intlLocale(locale), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-      .formatRange(from, to);
+    // Not formatRange(): the server's ICU and the browser's space the dash differently,
+    // which failed hydration on the English reports page.
+    const fmt = new Intl.DateTimeFormat(intlLocale(locale), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    rangeText = `${fmt.format(from)} – ${fmt.format(to)}`;
   } catch {
     rangeText = `${defaultDateFrom} – ${defaultDateTo}`;
   }

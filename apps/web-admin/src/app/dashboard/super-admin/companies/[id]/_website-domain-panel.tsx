@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { Globe, Loader2, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { readError } from '@/components/ai/ai-strings';
 import { domainT } from '@/components/website-domain/messages';
 import {
@@ -17,7 +17,7 @@ import {
 
 // «دومين الموقع»: the platform owner connects the company's website domain.
 export function CompanyWebsiteDomainPanel({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => domainT(locale), [locale]);
   const base = `/api-proxy/super-admin/companies/${companyId}/domains`;
   const [domains, setDomains] = useState<DomainView[] | null>(null);

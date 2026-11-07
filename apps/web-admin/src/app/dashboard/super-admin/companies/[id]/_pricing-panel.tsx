@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { pricingT } from '@/messages/super-admin';
 
 interface PricingPackage {
@@ -33,7 +33,7 @@ function fmt(val: string | null, currency: string) {
 }
 
 export function CompanyPricingPanel({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => pricingT(locale), [locale]);
 
   const [packages, setPackages] = useState<PricingPackage[]>([]);

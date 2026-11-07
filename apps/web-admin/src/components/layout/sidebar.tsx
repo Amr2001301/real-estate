@@ -35,7 +35,7 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
         {user.role === 'BROKER' ? (
           <Brand theme="dark" href="/portal" subtitle={locale === 'en' ? 'Broker portal' : 'بوابة الوسطاء'} />
         ) : (
-          <Brand theme="dark" />
+          <Brand theme="dark" subtitle={locale === 'en' ? 'Admin portal' : 'بوابة المسؤولين'} />
         )}
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { Printer, CheckCircle2, Sparkles, Shield, Zap, Crown, Layers } from 'lucide-react';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { pricingT } from '@/messages/super-admin';
 import { Button } from '@/components/ui/button';
 
@@ -44,7 +44,7 @@ const TIER_ICON: Record<string, React.ReactNode> = {
 };
 
 export default function PricingPdfPage() {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m      = useMemo(() => pricingT(locale), [locale]);
   const isRtl  = locale !== 'en';
 

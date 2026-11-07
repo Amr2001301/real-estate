@@ -4,7 +4,7 @@ import { CURRENCY_OPTIONS } from '@/lib/currency-format';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, AlertCircle } from 'lucide-react';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { saT } from '@/messages/super-admin';
 import { Field } from '@/components/form/field';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { PremiumPageHero, PremiumFormLayout, PremiumFormPanel } from '@/componen
 
 export default function NewCompanyPage() {
   const router = useRouter();
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => saT(locale).newCompany, [locale]);
 
   const [pending, startTransition] = useTransition();

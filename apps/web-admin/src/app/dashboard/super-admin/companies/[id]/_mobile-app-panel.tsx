@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { PremiumSectionCard } from '@/components/premium';
 import { MediaUploader } from '@/components/media-uploader';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import type { Locale } from '@/lib/locale';
 import { readError } from '@/components/ai/ai-strings';
 
@@ -106,7 +106,7 @@ function suggestPackageId(slug: string) {
 
 // The company's own customer app: its store name, package id, icon and status.
 export function CompanyMobileAppPanel({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => t(locale), [locale]);
   const [account, setAccount] = useState<Account | null>(null);
   const [editing, setEditing] = useState(false);

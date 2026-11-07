@@ -86,6 +86,9 @@ Not yet done: second company in parallel (isolation), the variant matrix, per-ro
 | F-056 | 3 | All users | Rate limits behind a proxy | production topology | Send sign-in / OTP requests from different people through the host's proxy | Each person has their own limit | The limits (login 5/min, OTP 3/min, global 100/min) are keyed on the socket address and the API never trusted a proxy header: behind any host proxy every user of every company shares one address, so one bucket (3 OTP requests a minute for the whole platform), and the address in audit/session lists is the proxy's. A client also cannot be told from another | High (availability at scale, not a leak) | fixed in code (`TRUST_PROXY_HOPS` = how many proxies to trust, default 0 = none so a client cannot choose its own address; refuses a bad value; 3 tests; documented in `.env.example` and the hosting backlog item). **To do at deployment:** set the host's real hop count (and for the web apps — which call the API from their server and forward the browser address in `X-Forwarded-For` — decide how that hop is trusted) | |
 | F-057 | 3 | Customer / Sales | Booking payment confirmed | 1 company | Confirm a booking payment twice, or six times at once | One «booking paid» notice | Every confirm told the customer and the rep again: six parallel confirms left 6 identical notices for one payment (one deposit, correctly) | Low | fixed (the status flips to PAID with a conditional update; only the call that flips it notifies; test fails without the fix) | |
 | F-058 | 3 | Admin | Audit log — data exports | 1 company | Download a report / unit list as CSV, XLSX or PDF, then read the audit log | A row: who, what, which filters | The interceptor logged only POST / PATCH / PUT / DELETE: a download is a GET, so bulk customer and money data could leave with no trace (only the one `DATA_EXPORT` screen was audited) | Medium (security / accountability) | fixed (a GET on `…/export[.csv|.xlsx|.pdf]` writes an `EXPORT` row with the actor, the path and the filters; 4 tests, 2 fail without the fix) | |
+| F-059 | 3 | Manager / Sales | Leads board | 1 company | Open the lead board as a rep or manager | No console error | React hydration mismatch (`aria-describedby="DndDescribedBy-0"` vs `-3`): the drag-and-drop context had no stable id | Low | fixed — `DndContext id="lead-pipeline-board"` | |
+| F-060 | 3 | Admin | English screens: assistant, reports | 1 company | Switch to English, open the AI assistant and the reports page | The page loads cleanly | «Hydration failed»: client components read the locale cookie in the browser (server rendered Arabic), and the reports period used `formatRange` whose dash spacing differs between server and browser ICU | Medium | fixed — `LocaleProvider` hands the server's locale to client components (`useClientLocale`); the period is built without `formatRange` | |
+| F-061 | 3 | Admin | English screens: shell, lead board, dashboard | 1 company | Switch to English, open the dashboard and the lead board | All English | Hard-coded Arabic: the sidebar subtitle «بوابة المسؤولين», the six lead-stage column names (and their toast / aria texts), the dashboard activity feed («عقد جديد», «دفعة جديدة»…) and the six chart months came from the API in Arabic | Low | fixed — English labels by type / month key (`activity-labels`), locale-aware board and sidebar | |
 
 ## Run 1 — UI sweep (2026-11-07)
 
@@ -134,6 +137,20 @@ Read back from the `Notification` table of the QA database (226 audit rows, ~190
 - **Audit log.** Every mutating call is logged with actor, entity and the masked response; searched all rows for password / token / secret / OTP keys: none (the only hits are `code` of units and phases). Rows without an actor are the anonymous public calls; rows without a company are the super admin's. Exports were missing (F-058, fixed).
 - **CSRF — pass by design.** The API never reads a cookie (Bearer only); the web apps keep the tokens in `httpOnly`, `SameSite=Lax` cookies and call the API from their server, so a cross-site request carries no credential the API accepts.
 - **Private files.** Downloads are presigned and expire after 5 minutes, uploads after 5 minutes; whether the storage itself refuses an expired or unsigned link cannot be proven on the local S3 stand-in (moto): to check on MinIO / R2.
+
+## Run 2 — screens of every role (2026-11-07)
+
+Method: a script signs in as each role and opens every link of its navigation (plus the settings hub), recording status, console errors, failed requests, page errors and horizontal overflow. Variants: Arabic desktop, English desktop, Arabic phone width, Arabic dark.
+
+| Role | Pages | Result |
+|---|---|---|
+| Admin | 37 | clean in all four variants after F-060 / F-061 |
+| Sales manager | 24 | clean (F-059 on the lead board, fixed) |
+| Sales | 20 | clean (F-059, fixed) |
+| Broker (portal) | 11 | clean |
+| Maintenance supervisor | landing page | by design: the account works in the mobile app; the web shows an explanation and a sign-out |
+
+Not a defect: on a phone, the projects page reports a document overflow caused by an absolutely positioned screen-reader-only label; nothing is visible or scrollable (the table card now contains it).
 
 ## Run 2 — the master cycle from an empty database (2026-11-07)
 
