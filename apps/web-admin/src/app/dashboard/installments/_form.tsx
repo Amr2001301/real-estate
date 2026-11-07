@@ -231,6 +231,9 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
 
   const useDurationModel = durationOptions.length > 0;
 
+  // A plan without a booking amount cannot be used to book a unit (F-020), cash or not.
+  const reservationMissing = reservation <= 0;
+
   const reservationAmountError =
     useDurationModel && reservation <= 0
       ? m.errorReservationZero
@@ -521,6 +524,13 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
                 {...numericInputProps(reservationAmountValue, setReservationAmountValue, { allowEmpty: true })}
               />
             </Field>
+
+            {reservationMissing && (
+              <div data-testid="reservation-required" className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>{m.errorReservationRequired}</p>
+              </div>
+            )}
 
             {reservation > 0 && (
               <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
@@ -914,7 +924,7 @@ export default function PlanForm({ projects, initialData, mode, currency, locale
       <FormFooter
         sticky
         primary={
-          <SubmitButton pendingLabel={m.submitPending}>
+          <SubmitButton pendingLabel={m.submitPending} disabled={reservationMissing}>
             {mode === 'create' ? m.submitCreate : m.submitEdit}
           </SubmitButton>
         }
