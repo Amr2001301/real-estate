@@ -141,3 +141,14 @@ test.describe('Admin broker reservation — lead and unit pickers', () => {
     await pickFirst(page, 'unitId');
   });
 });
+
+test.describe('New installment plan — booking amount (F-020)', () => {
+  test('a plan without a booking amount says so and cannot be saved', async ({ page }) => {
+    await gotoReady(page, '/dashboard/installments/new?scope=unit');
+    await page.locator('#reservationAmountValue').fill('0');
+    await expect(page.getByTestId('reservation-required')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'إنشاء الخطة' })).toBeDisabled();
+    await page.locator('#reservationAmountValue').fill('50000');
+    await expect(page.getByTestId('reservation-required')).toHaveCount(0);
+  });
+});

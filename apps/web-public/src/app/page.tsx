@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Hero } from '@/components/home/Hero';
@@ -34,9 +34,17 @@ const REVALIDATE = 60;
 
 export default async function HomePage() {
   const tenant = await getResolvedTenant();
-  if (!tenant) notFound();
-
   const locale = await getLocale();
+  if (!tenant) {
+    // No company behind this address: say so, instead of the generic «page not found» (F-001).
+    const u = siteT(locale).siteUnavailable;
+    return (
+      <Container className="flex min-h-[60vh] flex-col items-center justify-center py-24 text-center">
+        <h1 data-testid="site-unavailable" className="text-display-2 text-ink-strong">{u.title}</h1>
+        <p className="mt-3 max-w-md text-ink-muted">{u.message}</p>
+      </Container>
+    );
+  }
   const [projects, units, cities, banners] = await Promise.all([
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published

@@ -531,6 +531,11 @@ const SITE_MESSAGES = {
     },
 
     // ── Not found ────────────────────────────────────────────────────────────────
+    siteUnavailable: {
+      title: 'هذا الموقع غير متاح حاليًا',
+      message: 'تعذّر العثور على الشركة المرتبطة بهذا العنوان. تأكد من الرابط أو تواصل مع الجهة التي أعطتك إياه.',
+    },
+
     notFound: {
       code: '٤٠٤',
       title: 'لم نتمكن من العثور على هذه الصفحة',
@@ -1451,6 +1456,11 @@ const SITE_MESSAGES = {
         loginPrompt: 'Want to access your account?',
         loginLabel: 'Log in',
       },
+    },
+
+    siteUnavailable: {
+      title: 'This site is not available right now',
+      message: 'We could not find the company behind this address. Check the link or contact whoever gave it to you.',
     },
 
     notFound: {
