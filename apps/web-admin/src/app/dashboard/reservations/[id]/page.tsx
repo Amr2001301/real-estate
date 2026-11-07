@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { upfrontTotal } from '@/lib/upfront-total';
 import { getLetterhead } from '@/lib/letterhead';
 import { companyNameOf } from '@/components/print/PrintDocument';
 import { SignatureCard, type SignatureRequestView } from './_components/signature-card';
@@ -117,6 +118,7 @@ export default async function ReservationDetailPage({
   const steps = journeySteps(reservation, m);
   const down = Number(reservation.snapshotDownPaymentAmount ?? 0);
   const financed = Number(reservation.snapshotFinancedAmount ?? 0);
+  const upfront = upfrontTotal(bookingAmount, down);
   const downPct = down + financed > 0 ? Math.round((down / (down + financed)) * 100) : 0;
 
   return (
@@ -421,6 +423,15 @@ export default async function ReservationDetailPage({
                       />
                     )}
                   </div>
+
+                  {upfront != null && (
+                    <p data-testid="reservation-upfront-total" className="text-[13px] text-slate-600">
+                      {m.upfrontTotalLabel}{' '}
+                      <span className="font-semibold tabular-nums text-slate-900" dir="ltr">
+                        {nf(upfront)} {symbol}
+                      </span>
+                    </p>
+                  )}
 
                   {down + financed > 0 && (
                     <div>
