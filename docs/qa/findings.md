@@ -57,7 +57,7 @@ Done end to end through the UI (SQL/API only to verify): website lead → visit 
 
 Not yet done: second company in parallel (isolation), the variant matrix, per-role screen sweeps, the breadth checks, the second clean run from an empty database.
 | F-042 | 2 | Customer | Customer app screens | 1 company | Company accent = pink: open the notifications, the «المزيد» tiles, deposits, contracts, my property | Warm shades in the company accent | About 80 fixed gold / brown shades (dark-gold text, deeper golds, browns, translucent gold glows, the maintenance icon) stayed the platform gold | Medium (identity) | fixed (shades are cut from the accent in AppPalette; platform values unchanged; test) | |
-| F-043 | 2 | Manager / Sales | Deposits | 1 company | A manager or rep opens the payments list, then a payment | The detail opens | `GET /deposits` is allowed (200) but `GET /deposits/:id` is 403 for both, so the list shows rows whose detail the viewer cannot open | Low | open (owner decision: should a rep or manager open the detail of the payments the list shows them, scoped to their own contracts, or should the list stop linking? The detail carries the proof and the reverse action) | |
+| F-043 | 2 | Manager / Sales | Deposits | 1 company | A manager or rep opens the payments list, then a payment | The detail opens | `GET /deposits` is allowed (200) but `GET /deposits/:id` is 403 for both, so the list shows rows whose detail the viewer cannot open | Low | fixed — a rep or manager opens the read-only detail of the payments the list shows them (own / team sales only, 404 otherwise); reversal and the documents card stay admin-only; tests in deposits-permissions.spec | |
 
 ## Run 1 — isolation and permissions (2026-11-07)
 

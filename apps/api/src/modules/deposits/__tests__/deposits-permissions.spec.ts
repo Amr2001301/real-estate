@@ -219,10 +219,27 @@ describe('Deposits module · permissions enforcement', () => {
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
     });
 
-    it('SALES is blocked from GET /deposits/:id at @Roles (detail is admin-only)', async () => {
+    // F-043: the list shows a rep their own payments, so the detail opens too — read-only, scoped.
+    it('SALES opens the detail of a payment of their own sale (200, not reversible)', async () => {
       FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: ['deposits:read'] };
-      const res = await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(403);
-      expect(res.body.message).toBe('Insufficient role');
+      prismaMock.deposit.findFirst.mockResolvedValueOnce({
+        id: ID, amount: '0', paidAt: new Date(), type: 'INSTALLMENT', reviewStatus: 'NO_PROOF', verified: true, deletedAt: null,
+      });
+      const res = await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(200);
+      expect(res.body.reversible).toBe(false);
+      const where = prismaMock.deposit.findFirst.mock.calls[0]![0].where;
+      expect(JSON.stringify(where)).toContain('sales-2'); // limited to their own sales
+    });
+
+    it("SALES gets 404, not 403, for someone else's payment — its existence is not revealed", async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: ['deposits:read'] };
+      prismaMock.deposit.findFirst.mockResolvedValueOnce(null);
+      await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(404);
+    });
+
+    it('SALES without deposits:read is still refused', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: [] };
+      await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(403);
     });
 
     it('CUSTOMER is blocked from GET /deposits/:id at @Roles', async () => {

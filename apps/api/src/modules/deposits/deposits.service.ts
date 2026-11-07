@@ -221,12 +221,26 @@ export class DepositsService {
     }
   }
 
-  async findOne(id: string) {
-    const deposit = await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
+  /**
+   * `salesIds` limits the read to the payments of those reps' sales (the same rule
+   * as the list, PRM2); a payment outside it is «not found», not «forbidden», so
+   * its existence is not revealed. `canReverse` is false for a read-only viewer.
+   */
+  async findOne(id: string, opts: { salesIds?: string[]; canReverse?: boolean } = {}) {
+    const { salesIds, canReverse = true } = opts;
+    const deposit = salesIds
+      ? await this.prisma.deposit.findFirst({
+          where: {
+            id,
+            OR: [{ contract: { reservation: { salesId: { in: salesIds } } } }, { reservation: { salesId: { in: salesIds } } }],
+          },
+          include: DEPOSIT_INCLUDE,
+        })
+      : await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
     if (!deposit) throw new NotFoundException('Deposit not found');
     // Lets the admin page offer "reverse" only when POST /reverse would succeed.
     const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
-    const reversible = !!d && !d.deletedAt && (await this.stillPays(d));
+    const reversible = canReverse && !!d && !d.deletedAt && (await this.stillPays(d));
     return { ...withDepositState(deposit), reversible };
   }
 
