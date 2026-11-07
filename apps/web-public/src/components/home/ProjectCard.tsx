@@ -8,9 +8,12 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Badge } from '@/components/ui/Badge';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-export function ProjectCard({ project }: { project: PublicProjectListItem }) {
-  const name = pickAr(project.name, 'مشروع');
+export function ProjectCard({ project, locale = 'ar' }: { project: PublicProjectListItem; locale?: Locale }) {
+  const t = extraT(locale).projectCard;
+  const name = pickAr(project.name, t.defaultName);
   const description = pickAr(project.description);
   const units = project.availableUnitsCount;
 
@@ -26,7 +29,7 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
           {project.featured && (
             <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
               <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden />
-              مميز
+              {t.featured}
             </span>
           )}
         </div>
@@ -43,13 +46,13 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
           <div className="mt-auto flex items-center justify-between pt-6">
             {units > 0 ? (
               <Badge tone="gold">
-                {formatNumber(units)} {units === 1 ? 'وحدة متاحة' : 'وحدات متاحة'}
+                {formatNumber(units)} {units === 1 ? t.unitOne : t.unitMany}
               </Badge>
             ) : (
-              <Badge tone="neutral">لا وحدات متاحة</Badge>
+              <Badge tone="neutral">{t.none}</Badge>
             )}
             <span className="text-sm font-semibold text-ink-strong transition-colors group-hover:text-gold-600">
-              تفاصيل المشروع
+              {t.details}
             </span>
           </div>
         </div>

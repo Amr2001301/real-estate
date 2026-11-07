@@ -1,5 +1,7 @@
 import { MapPin, Home, BadgeCheck, Compass } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
 interface Fact {
   icon: React.ComponentType<{ className?: string }>;
@@ -12,14 +14,16 @@ interface ProjectFactsProps {
   availableUnitsCount: number;
   featured: boolean;
   hasCoords: boolean;
+  locale?: Locale;
 }
 
-export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }: ProjectFactsProps) {
+export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords, locale = 'ar' }: ProjectFactsProps) {
+  const t = extraT(locale).projectFacts;
   const facts: Fact[] = [];
-  if (city) facts.push({ icon: MapPin,    label: 'المدينة',          value: city });
-  facts.push({           icon: Home,       label: 'الوحدات المتاحة', value: `${formatNumber(availableUnitsCount)} وحدة` });
-  facts.push({           icon: BadgeCheck, label: 'الحالة',           value: featured ? 'مشروع مميز' : 'متاح' });
-  if (hasCoords) facts.push({ icon: Compass, label: 'الموقع',        value: 'متوفر على الخريطة' });
+  if (city) facts.push({ icon: MapPin,    label: t.city,          value: city });
+  facts.push({           icon: Home,       label: t.units, value: t.unitsValue(formatNumber(availableUnitsCount)) });
+  facts.push({           icon: BadgeCheck, label: t.status,           value: featured ? t.featuredValue : t.availableValue });
+  if (hasCoords) facts.push({ icon: Compass, label: t.location,        value: t.onMap });
 
   return (
     <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
@@ -27,7 +31,7 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }:
       {/* Card header */}
       <div className="flex items-center gap-2.5 border-b border-hairline px-5 py-4">
         <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden />
-        <h3 className="text-[13px] font-semibold text-ink-strong">تفاصيل المشروع</h3>
+        <h3 className="text-[13px] font-semibold text-ink-strong">{t.title}</h3>
       </div>
 
       {/* Fact rows — 2-line layout: muted label / bold value */}

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -52,11 +52,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   if (sort) params.set('sort', sort);
 
   const [result, citiesResult, locale] = await Promise.all([
-    safeFetch<Paginated<PublicProjectListItem>>(
+    apiFetch<Paginated<PublicProjectListItem>>(
       `/public/projects?${params.toString()}`,
       { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     ),
-    safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
+    apiFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
   const m = siteT(locale);
@@ -121,7 +121,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
               )}
               <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
                 {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ProjectCard key={project.id} project={project} locale={locale} />
                 ))}
               </Stagger>
               {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}

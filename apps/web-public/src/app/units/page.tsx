@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -98,10 +98,10 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (sort) apiParams.set('sort', sort);
 
   const [result, locale, typesRes] = await Promise.all([
-    safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    apiFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     getLocale(),
     // The company's own unit types (F10) for the type filter.
-    safeFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', {
+    apiFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),

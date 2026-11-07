@@ -6,9 +6,12 @@ import { pickAr, formatNumber, cityLabel } from '@/lib/format';
 import type { PublicProjectListItem } from '@/lib/api-types';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-export function ProjectShowcaseCard({ project }: { project: PublicProjectListItem }) {
-  const name = pickAr(project.name, 'مشروع');
+export function ProjectShowcaseCard({ project, locale = 'ar' }: { project: PublicProjectListItem; locale?: Locale }) {
+  const t = extraT(locale).projectCard;
+  const name = pickAr(project.name, t.defaultName);
 
   return (
     <div className="relative h-full">
@@ -25,7 +28,7 @@ export function ProjectShowcaseCard({ project }: { project: PublicProjectListIte
         />
         {project.featured && (
           <span className="absolute right-4 top-4 rounded-full bg-gold-400 px-3 py-1 text-xs font-semibold text-navy shadow-soft">
-            مميز
+            {t.featured}
           </span>
         )}
 
@@ -39,10 +42,10 @@ export function ProjectShowcaseCard({ project }: { project: PublicProjectListIte
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
               <Home className="h-3.5 w-3.5 text-gold-200" aria-hidden />
               {formatNumber(project.availableUnitsCount)}{' '}
-              {project.availableUnitsCount === 1 ? 'وحدة متاحة' : 'وحدات متاحة'}
+              {project.availableUnitsCount === 1 ? t.unitOne : t.unitMany}
             </span>
             <span className="text-sm font-semibold text-gold-200 transition-opacity group-hover:opacity-80">
-              عرض المشروع
+              {t.view}
             </span>
           </div>
         </div>

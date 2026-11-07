@@ -1,5 +1,5 @@
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -49,18 +49,18 @@ export default async function HomePage() {
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
-    safeFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=8', {
+    apiFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=8', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
     // Homepage shows 6 featured units (two rows); the full catalogue lives on /units.
-    safeFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', {
+    apiFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
     // The company's own project cities (the search offered Saudi cities to
     // every tenant, an Egyptian developer's included — F37).
-    safeFetch<{ cities: string[] }>('/public/projects/cities', {
+    apiFetch<{ cities: string[] }>('/public/projects/cities', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),

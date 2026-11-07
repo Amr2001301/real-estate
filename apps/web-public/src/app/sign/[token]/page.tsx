@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getLocale } from '@/lib/locale';
 import { getResolvedTenant } from '@/lib/tenant';
 import { Container } from '@/components/ui/Container';
@@ -14,7 +14,7 @@ export default async function SignPage({ params }: { params: Promise<{ token: st
   const { token } = await params;
   const [tenant, locale] = await Promise.all([getResolvedTenant(), getLocale()]);
   if (!tenant) notFound();
-  const res = await safeFetch<SignView>(`/public/e-sign/${encodeURIComponent(token)}`, {
+  const res = await apiFetch<SignView>(`/public/e-sign/${encodeURIComponent(token)}`, {
     tenantSlug: tenant.slug,
     cache: 'no-store',
   });

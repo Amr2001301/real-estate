@@ -1,6 +1,6 @@
 import { Scale } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import type { PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -47,7 +47,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
 
   const [results, locale] = await Promise.all([
     Promise.all(
-      ids.map((id) => safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug })),
+      ids.map((id) => apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug })),
     ),
     getLocale(),
   ]);

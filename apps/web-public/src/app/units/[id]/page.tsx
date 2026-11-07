@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -48,7 +48,7 @@ const DEFAULT_STATUS_TONE: StatusMeta['tone'] = 'success';
 type Params = Promise<{ id: string }>;
 
 function fetchUnit(id: string, tenantSlug: string) {
-  return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
+  return apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
 function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة'): string {
@@ -144,7 +144,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
   let similarUnits: PublicUnit[] = [];
   if (unit.project) {
-    const sim = await safeFetch<Paginated<PublicUnit>>(
+    const sim = await apiFetch<Paginated<PublicUnit>>(
       `/public/units?projectId=${unit.project.id}&pageSize=4`,
       { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     );
