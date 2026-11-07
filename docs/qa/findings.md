@@ -57,3 +57,10 @@ Done end to end through the UI (SQL/API only to verify): website lead → visit 
 
 Not yet done: second company in parallel (isolation), the variant matrix, per-role screen sweeps, the breadth checks, the second clean run from an empty database.
 | F-042 | 2 | Customer | Customer app screens | 1 company | Company accent = pink: open the notifications, the «المزيد» tiles, deposits, contracts, my property | Warm shades in the company accent | About 80 fixed gold / brown shades (dark-gold text, deeper golds, browns, translucent gold glows, the maintenance icon) stayed the platform gold | Medium (identity) | fixed (shades are cut from the accent in AppPalette; platform values unchanged; test) | |
+| F-043 | 2 | Manager / Sales | Deposits | 1 company | A manager or rep opens the payments list, then a payment | The detail opens | `GET /deposits` is allowed (200) but `GET /deposits/:id` is 403 for both, so the list shows rows whose detail the viewer cannot open | Low | open (check the web link/permission for the view) | |
+
+## Run 1 — isolation and permissions (2026-11-07)
+
+- **Tenant isolation: pass.** Company B's admin: every A object by id → 404, with a spoofed `X-Tenant-Slug: default` → 403, no write allowed; B's lists, reports (0), documents, audit log (own 2 rows) show nothing of A. A customer token on B's tenant → 403 `TENANT_CONTEXT_MISMATCH`; a customer token on staff endpoints → 403.
+- **Role matrix (API): pass.** Maintenance supervisor and broker: 403 on every admin/staff endpoint (reads and writes); manager and sales: 403 on users, settings, audit, reports, brokers, payouts; sales2 (no deals) sees 0 leads / contracts / reservations / deposits, sales1 only their own, manager his team's.
+- **Process note.** While probing, an admin-token call to the real cancel and delete endpoints cancelled CON-2026-0001 and soft-deleted sales1 in the QA database. Restored by SQL in one transaction (contract ACTIVE, 85 instalments back to PENDING/OVERDUE, cancellation row removed, user active); a stray «cancelled» notification to the customer remains. Probes now use non-existent ids for mutations.
