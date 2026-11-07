@@ -1,12 +1,18 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
+import { SECURITY_HEADERS } from './security-headers';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Do not announce the framework (F-047).
+  poweredByHeader: false,
   typedRoutes: true,
   // Emit a self-contained server bundle at .next/standalone for Docker images.
   // Local `next dev` / `next start` are unaffected.
   output: 'standalone',
+  async headers() {
+    return [{ source: '/:path*', headers: [...SECURITY_HEADERS] }];
+  },
   async rewrites() {
     const api = process.env.API_BASE_URL ?? 'http://localhost:4000';
     return [

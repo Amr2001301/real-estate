@@ -1,8 +1,11 @@
 import type { NextConfig } from 'next';
 import { withSentryConfig } from '@sentry/nextjs/config';
+import { SECURITY_HEADERS } from './security-headers';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // Do not announce the framework (F-047).
+  poweredByHeader: false,
   typedRoutes: true,
   output: 'standalone',
   // jsdom (pulled in by isomorphic-dompurify) uses fs.readFileSync for its
@@ -13,6 +16,9 @@ const config: NextConfig = {
     // Default is 1mb — avatar uploads flow through a server action, so the
     // multipart body must fit. Mirrors the 5MB cap enforced by the backend.
     serverActions: { bodySizeLimit: '5mb' },
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: [...SECURITY_HEADERS] }];
   },
   async rewrites() {
     const api = process.env.API_BASE_URL ?? 'http://localhost:4000';
