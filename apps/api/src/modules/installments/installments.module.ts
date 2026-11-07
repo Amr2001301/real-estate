@@ -104,6 +104,8 @@ import { LATE_FEE_SETTING_KEYS, lateFeesDue, resolveLateFeeSettings } from './la
 import { feeDueDate, feePaymentDays } from './fee-settings';
 import { addMonths } from '../../common/utils/add-months';
 import { assertDiscountAllowed, discountPct } from './discount-policy';
+import { isLive, materializePlan, scopeOf, scopedPlanProblem } from './plan-scope';
+import { loadApplicablePlans } from './plan-applicable';
 import { COMPANY_TIMEZONE_DEFAULT, companyTimeZone, companyTimeZones, startOfLocalToday } from '../../common/time/company-timezone';
 
 /**
@@ -153,8 +155,14 @@ class CreatePlanTemplateDto {
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string;
   @IsUUID() projectId!: string;
-  @IsUUID() unitId!: string;
-  @IsNumber() @IsPositive() totalPrice!: number;
+  /** A unit's own plan. Without one the plan is a PROJECT plan (priced by percentages). */
+  @IsOptional() @IsUUID() unitId?: string;
+  /** Project plan only: UnitType codes it is limited to; empty / absent = every unit of the project. */
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @IsString({ each: true }) unitTypes?: string[];
+  /** The plan is offered only from / until these dates. */
+  @IsOptional() @IsDateString() validFrom?: string;
+  @IsOptional() @IsDateString() validTo?: string;
+  @ValidateIf((o: { unitId?: string }) => !!o.unitId) @IsNumber() @IsPositive() totalPrice?: number;
   @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
   @IsOptional() @IsEnum(DownPaymentType) discountType?: DownPaymentType;
   @IsOptional() @IsNumber() @Min(0) discountValue?: number;
@@ -188,6 +196,10 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() unitId?: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @IsString({ each: true }) unitTypes?: string[];
+  /** null clears the date (the plan is then open on that side). */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsDateString() validFrom?: string | null;
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsDateString() validTo?: string | null;
   @IsOptional() @IsNumber() @IsPositive() totalPrice?: number;
   @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
   @IsOptional() @IsEnum(DownPaymentType) discountType?: DownPaymentType;
@@ -813,6 +825,36 @@ function assertCashPlanShape(dto: {
   }
 }
 
+/** The plan's validity window from the two dates of a payload (either may be absent / null). */
+function parseValidity(
+  from: string | null | undefined,
+  to: string | null | undefined,
+): { from: Date | null; to: Date | null } {
+  const f = from ? new Date(from) : null;
+  const t = to ? new Date(to) : null;
+  if (f && t && t < f) throw new BadRequestException('تاريخ نهاية الصلاحية قبل تاريخ البداية');
+  return { from: f, to: t };
+}
+
+/** A plan's money as plain numbers (for the `sample` of a project plan). */
+function sampleAmounts(p: {
+  totalPrice: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  netPrice: Prisma.Decimal;
+  reservationAmount: Prisma.Decimal;
+  downPaymentAmount: Prisma.Decimal;
+  finalPaymentAmount: Prisma.Decimal | null;
+}) {
+  return {
+    totalPrice: Number(p.totalPrice),
+    discountAmount: Number(p.discountAmount),
+    netPrice: Number(p.netPrice),
+    reservationAmount: Number(p.reservationAmount),
+    downPaymentAmount: Number(p.downPaymentAmount),
+    finalPaymentAmount: Number(p.finalPaymentAmount ?? 0),
+  };
+}
+
 function computeDownPaymentAmount(
   netPrice: number,
   type: DownPaymentType,
@@ -1179,7 +1221,14 @@ export class PlanTemplatesService {
     ]);
 
     return {
-      data,
+      // `scope` for every plan; a project / unit-type plan also gets `sample`: its
+      // amounts on a price of 100, for clients that read only the shares (down
+      // payment %, durations). Real amounts come from `applicable/:unitId`.
+      data: data.map((p) => ({
+        ...p,
+        scope: scopeOf(p),
+        ...(p.unitId || !p.percentPriced ? {} : { sample: sampleAmounts(materializePlan(p, 100)) }),
+      })),
       meta: {
         page,
         pageSize,
@@ -1242,13 +1291,12 @@ export class PlanTemplatesService {
    * broker shows the customer what the customer would see).
    */
   async customerPlansForUnit(unitId: string) {
-    const companyId = getRequiredCompanyId();
-    const plans = await this.prisma.installmentPlanTemplate.findMany({
-      where: { companyId, unitId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
-      orderBy: { createdAt: 'asc' },
-      include: CUSTOMER_PLAN_INCLUDE,
-    });
-    return plans.map((p) => serializePublicPlan(p));
+    const found = await loadApplicablePlans(this.prisma, unitId, { publicOnly: true });
+    if (!found) return [];
+    // A project / unit-type plan is already worked out on this unit's price.
+    return found.plans.map((p) =>
+      serializePublicPlan({ ...p, scheduleItems: p.scheduleItems.filter((i) => i.paymentType === PlanPaymentType.INSTALLMENT).slice(0, 1) }),
+    );
   }
 
   /** The project's offers from the plans customers may see (caller checks access). */
@@ -1258,7 +1306,11 @@ export class PlanTemplatesService {
       where: { companyId, projectId, status: PlanTemplateStatus.ACTIVE, visibility: 'PUBLIC' },
       include: CUSTOMER_PLAN_INCLUDE,
     });
-    return summarizePublicPlans(plans.map((p) => serializePublicPlan(p)));
+    const now = new Date();
+    // A project / unit-type plan's shares do not depend on the price: worked out on 100.
+    return summarizePublicPlans(
+      plans.filter((p) => isLive(p, now)).map((p) => serializePublicPlan(materializePlan(p, 100))),
+    );
   }
 
   async stats() {
@@ -1283,8 +1335,34 @@ export class PlanTemplatesService {
       },
     });
     if (!plan) throw new NotFoundException('Installment plan template not found');
+    const companyId = getRequiredCompanyId();
+    const [reservationsInUse, reservationsTotal, unitsInScope] = await Promise.all([
+      this.prisma.reservation.count({
+        where: {
+          installmentPlanTemplateId: id,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+      }),
+      this.prisma.reservation.count({ where: { installmentPlanTemplateId: id, deletedAt: null } }),
+      plan.unitId
+        ? Promise.resolve(1)
+        : this.prisma.unit.count({
+            where: {
+              companyId,
+              building: { phase: { projectId: plan.projectId } },
+              ...(plan.unitTypes.length > 0 ? { type: { in: plan.unitTypes } } : {}),
+            },
+          }),
+    ]);
     return {
       ...plan,
+      scope: scopeOf(plan),
+      // For the edit screen: open reservations block changing the terms; the
+      // finished ones keep the numbers they were priced on (the reservation holds a snapshot).
+      reservationsInUse,
+      reservationsTotal,
+      unitsInScope,
       durationOptions: enrichDurationOptions(plan.durationOptions, {
         netPrice: plan.netPrice,
         reservationAmount: plan.reservationAmount,
@@ -1338,9 +1416,15 @@ export class PlanTemplatesService {
   }
 
   async create(dto: CreatePlanTemplateDto, userId: string) {
+    if (!dto.unitId) return this.createScoped(dto, userId);
+    if (dto.unitTypes && dto.unitTypes.length > 0) {
+      throw new BadRequestException('أنواع الوحدات تخص خطة المشروع فقط — خطة الوحدة مرتبطة بوحدة واحدة');
+    }
+    if (dto.totalPrice === undefined) throw new BadRequestException('السعر الإجمالي مطلوب لخطة الوحدة');
+    const validity = parseValidity(dto.validFrom, dto.validTo);
     await this.validateUnit(dto.unitId, dto.projectId);
 
-    if (dto.unitId) {
+    {
       const duplicate = await this.prisma.installmentPlanTemplate.findFirst({
         where: { unitId: dto.unitId },
         select: { id: true },
@@ -1427,6 +1511,8 @@ export class PlanTemplatesService {
             : null,
           status: dto.status ?? PlanTemplateStatus.DRAFT,
           visibility: dto.visibility ?? 'SALES_ONLY',
+          validFrom: validity.from,
+          validTo: validity.to,
           createdById: userId,
         },
       });
@@ -1463,6 +1549,251 @@ export class PlanTemplatesService {
     return created;
   }
 
+  // ── Project / unit-type plans (priced by percentages, worked out per unit) ──
+
+  /** The project, and the UnitType codes a project plan names, must be the company's. */
+  private async assertScope(projectId: string, unitTypes: string[] | undefined): Promise<string[]> {
+    const companyId = getRequiredCompanyId();
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, companyId }, select: { id: true } });
+    if (!project) throw new BadRequestException('المشروع غير موجود');
+    const codes = [...new Set((unitTypes ?? []).map((c) => c.trim()).filter(Boolean))];
+    if (codes.length > 0) {
+      const found = await this.prisma.unitType.findMany({
+        where: { companyId, code: { in: codes }, active: true },
+        select: { code: true },
+      });
+      const missing = codes.filter((c) => !found.some((f) => f.code === c));
+      if (missing.length > 0) throw new BadRequestException(`نوع وحدة غير معروف: ${missing.join('، ')}`);
+    }
+    return codes;
+  }
+
+  /** Percent-based terms of a project plan, checked (plan-scope.ts); returns what to store. */
+  private scopedTerms(
+    t: {
+      isCash: boolean;
+      discountType?: DownPaymentType;
+      discountValue?: number;
+      reservationAmountType?: DownPaymentType;
+      reservationAmountValue?: number;
+      downPaymentType?: DownPaymentType;
+      downPaymentValue?: number;
+      finalPaymentAmount?: number | null;
+    },
+  ) {
+    const discType = t.discountType ?? DownPaymentType.PERCENTAGE;
+    const discValue = t.discountValue ?? 0;
+    const resvType = t.reservationAmountType ?? DownPaymentType.FIXED;
+    const resvValue = t.reservationAmountValue ?? 0;
+    const dpType = t.isCash ? DownPaymentType.FIXED : (t.downPaymentType ?? DownPaymentType.PERCENTAGE);
+    const dpValue = t.isCash ? 0 : (t.downPaymentValue ?? 0);
+    const problem = scopedPlanProblem({
+      isCash: t.isCash,
+      discountType: discType,
+      discountValue: discValue,
+      reservationAmountType: resvType,
+      reservationAmountValue: resvValue,
+      downPaymentType: dpType,
+      downPaymentValue: dpValue,
+      finalPaymentAmount: t.finalPaymentAmount,
+    });
+    if (problem) throw new BadRequestException(problem);
+    return { discType, discValue, resvType, resvValue, dpType, dpValue };
+  }
+
+  private async createScoped(dto: CreatePlanTemplateDto, userId: string) {
+    const unitTypes = await this.assertScope(dto.projectId, dto.unitTypes);
+    const validity = parseValidity(dto.validFrom, dto.validTo);
+    const isCash = dto.isCash === true;
+    if (isCash) assertCashPlanShape(dto);
+    const terms = this.scopedTerms({
+      isCash,
+      discountType: dto.discountType,
+      discountValue: dto.discountValue,
+      reservationAmountType: dto.reservationAmountType,
+      reservationAmountValue: dto.reservationAmountValue ?? dto.reservationAmount,
+      downPaymentType: dto.downPaymentType,
+      downPaymentValue: dto.downPaymentValue,
+      finalPaymentAmount: dto.finalPaymentAmount,
+    });
+    const durationRows = buildDurationOptionRows(dto.durationOptions);
+    if (!isCash && durationRows.length === 0) {
+      throw new BadRequestException('خطة المشروع تحتاج خيار مدة واحدًا على الأقل');
+    }
+    // The company's discount cap, on a price of 100.
+    await assertDiscountAllowed(this.prisma, {
+      companyId: getRequiredCompanyId(),
+      actorId: userId,
+      pct: terms.discValue,
+      listPrice: 100,
+      salePrice: 100 - terms.discValue,
+      entityType: 'InstallmentPlanTemplate',
+      entityId: null,
+    });
+
+    const createdId = await this.prisma.$transaction(async (tx) => {
+      const plan = await tx.installmentPlanTemplate.create({
+        data: {
+          name: dto.name,
+          description: dto.description,
+          projectId: dto.projectId,
+          unitId: null,
+          percentPriced: true,
+          unitTypes,
+          validFrom: validity.from,
+          validTo: validity.to,
+          // Raw money stays 0: a project plan is read only through its percentages,
+          // worked out on each unit's price (plan-scope.ts).
+          totalPrice: new Prisma.Decimal(0),
+          discountAmount: new Prisma.Decimal(0),
+          discountType: terms.discType,
+          discountValue: new Prisma.Decimal(terms.discValue),
+          netPrice: new Prisma.Decimal(0),
+          reservationAmount: new Prisma.Decimal(terms.resvType === DownPaymentType.FIXED ? terms.resvValue : 0),
+          reservationAmountType: terms.resvType,
+          reservationAmountValue: new Prisma.Decimal(terms.resvValue),
+          downPaymentType: terms.dpType,
+          downPaymentValue: new Prisma.Decimal(terms.dpValue),
+          downPaymentAmount: new Prisma.Decimal(0),
+          installmentsCount: null,
+          isCash,
+          frequency: dto.frequency,
+          startDateRule: dto.startDateRule,
+          manualStartDate: dto.manualStartDate ? new Date(dto.manualStartDate) : null,
+          finalPaymentAmount: null,
+          status: dto.status ?? PlanTemplateStatus.DRAFT,
+          visibility: dto.visibility ?? 'SALES_ONLY',
+          createdById: userId,
+        },
+      });
+      if (durationRows.length > 0) {
+        await tx.installmentPlanDurationOption.createMany({ data: durationRows.map((r) => ({ ...r, planId: plan.id })) });
+      }
+      return plan.id;
+    });
+    const created = await this.findOne(createdId);
+    if (created.status === PlanTemplateStatus.ACTIVE) await this.notifyPlanCreated(createdId);
+    return created;
+  }
+
+  private async updateScoped(
+    id: string,
+    dto: UpdatePlanTemplateDto,
+    existing: Awaited<ReturnType<PlanTemplatesService['findOne']>>,
+    actorId: string,
+  ) {
+    if (dto.unitId) throw new BadRequestException('لا يمكن تحويل خطة المشروع إلى خطة وحدة — أنشئ خطة جديدة');
+    if (dto.projectId && dto.projectId !== existing.projectId) {
+      throw new BadRequestException('لا يمكن نقل الخطة إلى مشروع آخر — أنشئ خطة جديدة');
+    }
+    if (dto.isCash !== undefined && dto.isCash !== existing.isCash) {
+      throw new BadRequestException('لا يمكن تحويل الخطة بين كاش وتقسيط — أنشئ خطة جديدة');
+    }
+    const isCash = existing.isCash;
+    if (isCash) assertCashPlanShape(dto);
+    const unitTypes = dto.unitTypes !== undefined ? await this.assertScope(existing.projectId, dto.unitTypes) : existing.unitTypes;
+    const validity = parseValidity(
+      dto.validFrom !== undefined ? dto.validFrom : existing.validFrom?.toISOString(),
+      dto.validTo !== undefined ? dto.validTo : existing.validTo?.toISOString(),
+    );
+    const terms = this.scopedTerms({
+      isCash,
+      discountType: dto.discountType ?? existing.discountType,
+      discountValue: dto.discountValue ?? Number(existing.discountValue),
+      reservationAmountType: dto.reservationAmountType ?? existing.reservationAmountType,
+      reservationAmountValue: dto.reservationAmountValue ?? dto.reservationAmount ?? Number(existing.reservationAmountValue),
+      downPaymentType: dto.downPaymentType ?? existing.downPaymentType,
+      downPaymentValue: dto.downPaymentValue ?? Number(existing.downPaymentValue),
+      finalPaymentAmount: dto.finalPaymentAmount,
+    });
+    const explicit = dto.durationOptions !== undefined;
+    const durationRows = explicit ? buildDurationOptionRows(dto.durationOptions) : [];
+    const willHaveDurations = explicit ? durationRows.length > 0 : existing.durationOptions.length > 0;
+    if (!isCash && !willHaveDurations) throw new BadRequestException('خطة المشروع تحتاج خيار مدة واحدًا على الأقل');
+    if (terms.discValue !== Number(existing.discountValue)) {
+      await assertDiscountAllowed(this.prisma, {
+        companyId: getRequiredCompanyId(),
+        actorId,
+        pct: terms.discValue,
+        listPrice: 100,
+        salePrice: 100 - terms.discValue,
+        entityType: 'InstallmentPlanTemplate',
+        entityId: id,
+      });
+    }
+    const updatedId = await this.prisma.$transaction(async (tx) => {
+      await tx.installmentPlanTemplate.update({
+        where: { id },
+        data: {
+          name: dto.name ?? existing.name,
+          description: dto.description ?? existing.description ?? null,
+          unitTypes,
+          validFrom: validity.from,
+          validTo: validity.to,
+          discountType: terms.discType,
+          discountValue: new Prisma.Decimal(terms.discValue),
+          reservationAmount: new Prisma.Decimal(terms.resvType === DownPaymentType.FIXED ? terms.resvValue : 0),
+          reservationAmountType: terms.resvType,
+          reservationAmountValue: new Prisma.Decimal(terms.resvValue),
+          downPaymentType: terms.dpType,
+          downPaymentValue: new Prisma.Decimal(terms.dpValue),
+          frequency: dto.frequency ?? existing.frequency,
+          startDateRule: dto.startDateRule ?? existing.startDateRule,
+          manualStartDate:
+            dto.manualStartDate !== undefined
+              ? new Date(dto.manualStartDate)
+              : existing.manualStartDate,
+          status: dto.status ?? existing.status,
+          ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
+        },
+      });
+      if (explicit) {
+        await tx.installmentPlanDurationOption.deleteMany({ where: { planId: id } });
+        if (durationRows.length > 0) {
+          await tx.installmentPlanDurationOption.createMany({ data: durationRows.map((r) => ({ ...r, planId: id })) });
+        }
+      }
+      return id;
+    });
+    return this.findOne(updatedId);
+  }
+
+  /**
+   * The plans a unit takes, by scope priority (unit's own > its type's >
+   * the project's), with project / type plans worked out on the unit's price.
+   * `publicOnly` keeps what customers may see.
+   */
+  async applicableForUnit(unitId: string, opts: { publicOnly?: boolean } = {}) {
+    const found = await loadApplicablePlans(this.prisma, unitId, opts);
+    if (!found) throw new NotFoundException('Unit not found');
+    return {
+      unit: { id: found.unit.id, type: found.unit.type, price: Number(found.unit.price) },
+      scope: found.scope,
+      plans: found.plans.map((p) => ({
+        id: p.id,
+        name: p.name,
+        scope: scopeOf(p),
+        isCash: p.isCash,
+        validFrom: p.validFrom,
+        validTo: p.validTo,
+        totalPrice: Number(p.totalPrice),
+        discountAmount: Number(p.discountAmount),
+        netPrice: Number(p.netPrice),
+        reservationAmount: Number(p.reservationAmount),
+        downPaymentAmount: Number(p.downPaymentAmount),
+        finalPaymentAmount: Number(p.finalPaymentAmount ?? 0),
+        installmentsCount: p.installmentsCount,
+        frequency: p.frequency,
+        durationOptions: enrichDurationOptions(p.durationOptions, {
+          netPrice: p.netPrice,
+          reservationAmount: p.reservationAmount,
+          downPaymentAmount: p.downPaymentAmount,
+          finalPaymentAmount: p.finalPaymentAmount,
+        }),
+      })),
+    };
+  }
+
   /** Resolve project name + send `installment_plan_created` to all SALES
    *  and SALES_MANAGER users. Errors are silently swallowed by the helper. */
   private async notifyPlanCreated(planId: string): Promise<void> {
@@ -1490,7 +1821,7 @@ export class PlanTemplatesService {
     // (or replacing its durations, which unlinks the reservations' choice)
     // would convert those reservations on numbers nobody agreed to.
     const termsChange = Object.keys(dto).some(
-      (k) => !['name', 'description', 'status', 'visibility'].includes(k) && (dto as Record<string, unknown>)[k] !== undefined,
+      (k) => !['name', 'description', 'status', 'visibility', 'validFrom', 'validTo', 'unitTypes'].includes(k) && (dto as Record<string, unknown>)[k] !== undefined,
     );
     if (termsChange) {
       const inUse = await this.prisma.reservation.count({
@@ -1505,6 +1836,10 @@ export class PlanTemplatesService {
       }
     }
 
+    if (!existing.unitId && existing.percentPriced) return this.updateScoped(id, dto, existing, actorId);
+    if (dto.unitTypes && dto.unitTypes.length > 0) {
+      throw new BadRequestException('أنواع الوحدات تخص خطة المشروع فقط');
+    }
     const resolvedProjectId = dto.projectId ?? existing.projectId;
     const resolvedUnitId = dto.unitId ?? existing.unitId;
     if (!resolvedUnitId) throw new BadRequestException('يرجى اختيار الوحدة');
@@ -1638,6 +1973,15 @@ export class PlanTemplatesService {
             : null,
           status: merged.status ?? PlanTemplateStatus.DRAFT,
           ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
+          ...(dto.validFrom !== undefined || dto.validTo !== undefined
+            ? (() => {
+                const v = parseValidity(
+                  dto.validFrom !== undefined ? dto.validFrom : existing.validFrom?.toISOString(),
+                  dto.validTo !== undefined ? dto.validTo : existing.validTo?.toISOString(),
+                );
+                return { validFrom: v.from, validTo: v.to };
+              })()
+            : {}),
         },
       });
 
@@ -2284,6 +2628,15 @@ class PlanTemplatesController {
   @Get('stats')
   stats() {
     return this.svc.stats();
+  }
+
+  // The plans a unit takes (its own, else its type's, else the project's), already
+  // worked out on its price. Literal path: declared before ':id'.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('installments:read')
+  @Get('applicable/:unitId')
+  applicable(@Param('unitId', ParseUUIDPipe) unitId: string) {
+    return this.svc.applicableForUnit(unitId);
   }
 
   // Pure server-side formula evaluation — no DB access, always in sync with

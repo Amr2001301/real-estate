@@ -2412,6 +2412,17 @@ model InstallmentPlanTemplate {
   isCash                 Boolean              @default(false)
   visibility             String               @default("SALES_ONLY")
   status                 PlanTemplateStatus   @default(DRAFT)
+  // Scope. A plan with a unitId is that unit's own plan (absolute amounts at the
+  // unit's price). Without one it applies to the project's units; `unitTypes`
+  // (UnitType codes of the company) narrows it to those types, empty = every unit.
+  // `percentPriced`: the plan holds percentages and is worked out per unit at
+  // reservation time (a project plan made on the project-plans screen). A unit-less
+  // plan without it is an older one with absolute amounts and is used as stored.
+  percentPriced          Boolean              @default(false)
+  unitTypes              String[]             @default([])
+  // The plan is offered only between these dates (either may be open).
+  validFrom              DateTime?
+  validTo                DateTime?
   createdById            String               @db.Uuid
   createdBy              User                 @relation("PlanTemplateCreator", fields: [createdById], references: [id])
   createdAt              DateTime             @default(now())

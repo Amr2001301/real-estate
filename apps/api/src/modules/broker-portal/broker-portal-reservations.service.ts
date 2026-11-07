@@ -1,3 +1,4 @@
+import { loadApplicablePlans } from '../installments/plan-applicable';
 import {
   BadRequestException,
   ConflictException,
@@ -590,41 +591,30 @@ export class BrokerPortalReservationsService {
   // ── Internal helpers ────────────────────────────────────────────────────
 
   /**
-   * Applicable active installment plans for a unit: a unit-specific plan, or a
-   * project-wide plan (unitId = null) for the unit's project, with a positive
-   * reservation amount. Unit-specific plans are returned first. This is the
-   * single source of truth for a reservation's booking amount.
+   * The plans a broker may book a unit on: the plans customers see (PUBLIC,
+   * ACTIVE, inside their dates) of the most specific scope that has any — the
+   * unit's own, else its unit type's, else the project's — already worked out on
+   * the unit's price (installments/plan-scope.ts), with a positive booking amount.
+   * Several plans of that scope are all offered. This is the single source of
+   * truth for a reservation's booking amount.
    */
-  private async listApplicablePlans(unitId: string, projectId: string) {
-    const plans = await this.prisma.installmentPlanTemplate.findMany({
-      where: {
-        status: PlanTemplateStatus.ACTIVE,
-        // A broker books on the plans customers see (owner, 2026-11-03);
-        // sales-only plans and offers stay with the company's sales team.
-        visibility: 'PUBLIC',
-        projectId,
-        reservationAmount: { gt: 0 },
-        OR: [{ unitId }, { unitId: null }],
-      },
-      select: {
-        id: true,
-        name: true,
-        unitId: true,
-        reservationAmount: true,
-        downPaymentAmount: true,
-        durationOptions: {
-          select: { id: true, durationMonths: true, increasePercentage: true },
-          orderBy: { order: 'asc' },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    // Unit-specific plans take precedence over project-wide ones.
-    return plans.sort((a, b) => {
-      if (a.unitId && !b.unitId) return -1;
-      if (!a.unitId && b.unitId) return 1;
-      return 0;
-    });
+  private async listApplicablePlans(unitId: string, _projectId: string) {
+    const found = await loadApplicablePlans(this.prisma, unitId, { publicOnly: true });
+    if (!found) return [];
+    return found.plans
+      .filter((p) => p.reservationAmount.gt(0))
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        unitId: p.unitId,
+        reservationAmount: p.reservationAmount,
+        downPaymentAmount: p.downPaymentAmount,
+        durationOptions: p.durationOptions.map((o) => ({
+          id: o.id,
+          durationMonths: o.durationMonths,
+          increasePercentage: o.increasePercentage,
+        })),
+      }));
   }
 
   /**

@@ -232,7 +232,7 @@ export class ProjectsService {
   async remove(id: string) {
     await this.assertExists(id);
 
-    const [reservations, contracts, maintenance, activeUnits, visitRequests] =
+    const [reservations, contracts, maintenance, activeUnits, visitRequests, planTemplates] =
       await this.prisma.$transaction([
         this.prisma.reservation.count({
           where: { unit: { building: { phase: { projectId: id } } } },
@@ -250,6 +250,8 @@ export class ProjectsService {
           },
         }),
         this.prisma.visitRequest.count({ where: { projectId: id } }),
+        // The project's plans — its units' own and the project-level ones (no unit).
+        this.prisma.installmentPlanTemplate.count({ where: { projectId: id } }),
       ]);
 
     const blockers: string[] = [];
@@ -258,6 +260,7 @@ export class ProjectsService {
     if (maintenance > 0) blockers.push(`${maintenance} طلب صيانة`);
     if (activeUnits > 0) blockers.push(`${activeUnits} وحدة محجوزة أو مباعة`);
     if (visitRequests > 0) blockers.push(`${visitRequests} طلب زيارة`);
+    if (planTemplates > 0) blockers.push(`${planTemplates} خطة تقسيط`);
 
     if (blockers.length > 0) {
       throw new ConflictException(

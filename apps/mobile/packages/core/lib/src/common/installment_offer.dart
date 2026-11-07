@@ -164,7 +164,12 @@ String percentLabel(double pct) => '\u2066${percentText(pct)}%\u2069';
 /// in duration-calc.ts): the remainder after booking, down payment and final
 /// payment, raised by the duration's increase, split into whole cents with
 /// the last instalment taking the rest.
-InstallmentOffer installmentOfferFromTemplateJson(Map<String, dynamic> json) {
+InstallmentOffer installmentOfferFromTemplateJson(Map<String, dynamic> raw) {
+  // A project / unit-type plan holds percentages: its list row carries `sample`, its
+  // amounts on a price of 100 — right for the shares (down payment %, durations); the
+  // real amounts of a unit come from the plans a unit takes (`applicable/:unitId`).
+  final sample = raw['sample'];
+  final json = sample is Map<String, dynamic> ? {...raw, ...sample} : raw;
   final net = _num(json['netPrice']);
   final booking = _num(json['reservationAmount']);
   final down = _num(json['downPaymentAmount']);

@@ -10,6 +10,10 @@ abstract interface class InstallmentsRemoteDataSource {
 
   /// The project's plan templates as the API sends them (for a unit's offers).
   Future<List<Map<String, dynamic>>> listTemplatesJson({required String projectId});
+
+  /// The plans a unit takes (its own, else its type's, else the project's), already
+  /// worked out on its price (`GET /installment-plan-templates/applicable/:unitId`).
+  Future<List<Map<String, dynamic>>> applicableTemplatesJson({required String unitId});
 }
 
 class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
@@ -63,5 +67,11 @@ class InstallmentsRemoteDataSourceImpl implements InstallmentsRemoteDataSource {
       queryParameters: {'page': 1, 'pageSize': 100, 'projectId': projectId, 'status': 'ACTIVE'},
     );
     return ((res.data?['data'] as List?) ?? const []).whereType<Map<String, dynamic>>().toList();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> applicableTemplatesJson({required String unitId}) async {
+    final res = await _dio.get<Map<String, dynamic>>('/installment-plan-templates/applicable/$unitId');
+    return ((res.data?['plans'] as List?) ?? const []).whereType<Map<String, dynamic>>().toList();
   }
 }
