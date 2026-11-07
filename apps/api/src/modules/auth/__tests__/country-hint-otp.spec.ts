@@ -6,7 +6,7 @@
  * fallback is 'SA', not 'EG'. The auth service passes that value directly to
  * canonicalPhone() as the country hint. Egyptian local numbers (01XXXXXXXXX)
  * are not valid Saudi numbers, so canonicalPhone('01...', 'SA') = null, which
- * causes requestOtpV2 / verifyOtpV2 to throw 400 "Invalid phone number".
+ * causes requestOtpV2 / verifyOtpV2 to throw 400 "رقم الهاتف غير صالح".
  *
  * Concrete failure path:
  *   1. Importer creates customer with phone stored as '+201012345678' (E.164).
@@ -14,7 +14,7 @@
  *   3. Server calls requestOtpV2(companyId, 'SA', '01012345678').
  *   4. canonicalPhone('01012345678') = null  (no + prefix)
  *      canonicalPhone('01012345678', 'SA') = null  (invalid SA number)
- *   5. BadRequestException('Invalid phone number') — customer is locked out.
+ *   5. BadRequestException('رقم الهاتف غير صالح') — customer is locked out.
  *
  * The tests below are CURRENTLY RED. They assert correct behaviour.
  * Fixing the `?? 'SA'` fallback to `?? 'EG'` (and the schema default) makes
@@ -220,4 +220,27 @@ test('OTP verify with local Egyptian format and correct EG hint succeeds', async
 
   const result = await service.verifyOtpV2(COMPANY_EG, 'EG', EG_PHONE_LOCAL, '777777');
   expect(result.tokens.accessToken).toBe('tok');
+});
+
+// F-027 / F-023: the customer app shows the server's message as it is, so what the
+// OTP flow refuses with must be Arabic, not «Please wait before requesting another code».
+describe('OTP refusals read in Arabic', () => {
+  const arabic = /[؀-ۿ]/;
+
+  test('a second code within the minute', async () => {
+    const { service, otpStore } = makeService();
+    otpStore.push({ id: 'otp-1', phone: EG_PHONE_E164, codeHash: hash6('111111'), consumed: false, attempts: 0, expiresAt: new Date(Date.now() + 600_000), companyId: COMPANY_EG, createdAt: new Date() });
+    await expect(service.requestOtpV2(COMPANY_EG, 'EG', EG_PHONE_LOCAL)).rejects.toThrow(arabic);
+  });
+
+  test('a code that does not exist or has expired', async () => {
+    const { service } = makeService();
+    await expect(service.verifyOtpV2(COMPANY_EG, 'EG', EG_PHONE_LOCAL, '000000')).rejects.toThrow(arabic);
+  });
+
+  test('a wrong code', async () => {
+    const { service, otpStore } = makeService();
+    otpStore.push({ id: 'otp-2', phone: EG_PHONE_E164, codeHash: hash6('222222'), consumed: false, attempts: 0, expiresAt: new Date(Date.now() + 600_000), companyId: COMPANY_EG });
+    await expect(service.verifyOtpV2(COMPANY_EG, 'EG', EG_PHONE_LOCAL, '999999')).rejects.toThrow(arabic);
+  });
 });
