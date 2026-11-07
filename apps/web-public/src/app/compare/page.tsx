@@ -1,5 +1,5 @@
 import { Scale } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import type { PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -19,11 +19,9 @@ import { CompareView } from '@/components/compare/CompareView';
 const MAX = 3;
 const REVALIDATE = 60;
 
-export const metadata = buildMetadata({
-  title: 'مقارنة الوحدات',
-  description: 'قارن بين الوحدات المختارة جنبًا إلى جنب — السعر والمساحة والغرف والمزيد في مكان واحد.',
-  robots: { index: false, follow: true },
-});
+export async function generateMetadata() {
+  return pageMeta('compare', { robots: { index: false, follow: true } });
+}
 
 type SearchParams = Promise<{ ids?: string | string[] }>;
 

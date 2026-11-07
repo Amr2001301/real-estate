@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   CalendarClock, CheckCircle2, Clock, AlertCircle, Building2, Home, Upload, Wallet,
 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -24,11 +24,9 @@ import { cn } from '@/lib/cn';
 import { accountT } from '@/messages/account';
 import type { Locale } from '@/lib/locale';
 
-export const metadata = buildMetadata({
-  title: 'الأقساط',
-  description: 'جدول أقساط عقودك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('installments', { robots: { index: false, follow: false } });
+}
 
 const STATUS_TONES: Record<MeInstallment['status'], 'success' | 'accent' | 'muted' | 'error'> = {
   PENDING: 'accent',

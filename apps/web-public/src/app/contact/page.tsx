@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, unitTypeLabel } from '@/lib/format';
@@ -13,12 +13,9 @@ import { PageHero } from '@/components/layout/PageHero';
 import { ContactForm, type ContactContext } from '@/components/contact/ContactForm';
 import { ContactSupport } from '@/components/contact/ContactSupport';
 
-export const metadata = buildMetadata({
-  path: '/contact',
-  title: 'تواصل معنا',
-  description:
-    'تواصل مع فريق ديفورا لطلب المعلومات أو حجز زيارة — نحن هنا لمساعدتك في اختيار المشروع أو الوحدة الأنسب لاحتياجك.',
-});
+export async function generateMetadata() {
+  return pageMeta('contact', { path: '/contact' });
+}
 
 const REVALIDATE = 60;
 

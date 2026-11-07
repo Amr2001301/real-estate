@@ -22,7 +22,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -58,11 +58,9 @@ import type { Locale } from '@/lib/locale';
 import { JourneyTracker } from '@/components/account/JourneyTracker';
 import { ContactSpecialist } from '@/components/account/ContactSpecialist';
 
-export const metadata = buildMetadata({
-  title: 'لوحة الحساب',
-  description: 'منطقة العميل في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('account', { robots: { index: false, follow: false } });
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

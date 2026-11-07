@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
@@ -19,12 +19,9 @@ import { UnitsFilterBar, type UnitsFilterValues } from '@/components/units/Units
 import { UnitsExplorer } from '@/components/units/UnitsExplorer';
 import { derivePriceValue, deriveAreaValue } from '@/lib/unit-filters';
 
-export const metadata = buildMetadata({
-  path: '/units',
-  title: 'الوحدات المتاحة',
-  description:
-    'تصفّح مجموعة مختارة من الشقق والفيلات الفاخرة المتاحة — مواصفات راقية وأسعار شفافة وإمكانية المقارنة بين الوحدات.',
-});
+export async function generateMetadata() {
+  return pageMeta('units', { path: '/units' });
+}
 
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
