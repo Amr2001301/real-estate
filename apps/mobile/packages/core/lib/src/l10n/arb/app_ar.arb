@@ -470,6 +470,7 @@
   "maintenanceNoAttachments": "لم تُرفق صور أو مستندات بعد.",
   "maintenanceUnitLabel": "أيّ وحدة؟",
   "maintenanceUnitRequired": "يرجى اختيار وحدة.",
+  "maintenanceBeforeHandover": "تُفتح طلبات الصيانة بعد تسليم الوحدة. سنُعلمك فور تسليم وحدتك.",
   "maintenanceNoUnitsTitle": "لا توجد وحدات",
   "maintenanceNoUnitsMessage": "ليست لديك وحدات لتقديم طلب صيانة لها بعد.",
   "maintenanceCategoryLabel": "ما الذي يحتاج إلى صيانة؟",

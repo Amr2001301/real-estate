@@ -1330,6 +1330,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maintenanceUnitRequired => 'يرجى اختيار وحدة.';
 
   @override
+  String get maintenanceBeforeHandover =>
+      'تُفتح طلبات الصيانة بعد تسليم الوحدة. سنُعلمك فور تسليم وحدتك.';
+
+  @override
   String get maintenanceNoUnitsTitle => 'لا توجد وحدات';
 
   @override

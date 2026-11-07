@@ -66,6 +66,21 @@ void main() {
       expect(entity.totalMonths, 24);
     });
 
+    test('handedOver follows the handover record (F-035)', () {
+      final handed = PropertyRowDto.fromJson({
+        ..._contractJson(signedAt: '2026-01-02T00:00:00.000Z'),
+        'handover': {'handedOverAt': '2026-03-01T00:00:00.000Z'},
+      }).toEntity();
+      final notYet = PropertyRowDto.fromJson({
+        ..._contractJson(signedAt: '2026-01-02T00:00:00.000Z'),
+        'handover': null,
+      }).toEntity();
+      final older = PropertyRowDto.fromJson(_contractJson(signedAt: '2026-01-02T00:00:00.000Z')).toEntity();
+      expect(handed.handedOver, isTrue);
+      expect(notYet.handedOver, isFalse);
+      expect(older.handedOver, isTrue, reason: 'an API without the key must not block requests');
+    });
+
     test('unsigned contract maps to pending', () {
       final entity = PropertyRowDto.fromJson(_contractJson()).toEntity();
       expect(entity.status, PropertyStatus.pending);

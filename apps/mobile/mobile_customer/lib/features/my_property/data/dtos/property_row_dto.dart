@@ -9,6 +9,7 @@ class PropertyRowDto {
     required this.unitCode,
     required this.unitType,
     required this.signed,
+    this.handedOver = true,
     this.contractNumber,
     this.projectId,
     this.projectNameAr,
@@ -24,6 +25,9 @@ class PropertyRowDto {
   final String unitCode;
   final String unitType;
   final bool signed;
+
+  /// The unit was handed over (a handover record exists). Maintenance opens then.
+  final bool handedOver;
   final String? contractNumber;
   final String? projectId;
   final String? projectNameAr;
@@ -54,6 +58,8 @@ class PropertyRowDto {
       projectNameAr: projectName.ar,
       projectNameEn: projectName.en,
       signed: json['signedAt'] != null,
+      // An older API without the key reads as handed over, so nothing is blocked.
+      handedOver: json.containsKey('handover') ? json['handover'] != null : true,
       signedAt: json['signedAt'] as String?,
       reservationNumber: reservation?['reservationNumber'] as String?,
       monthlyAmount: plan?['monthlyAmount']?.toString(),
