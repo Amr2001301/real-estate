@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { Select, Textarea, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 export interface SelectOption {
   id: string;
@@ -28,13 +30,13 @@ interface Attachment {
 const ATTACH_ACCEPT = 'image/png,image/jpeg,image/webp,application/pdf';
 const ATTACH_ALLOWED = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 const ATTACH_MAX_COUNT = 5;
-const ATTACH_MAX_BYTES = 5 * 1024 * 1024; // 5 MB — matches the "٥ ميجابايت" hint.
+const ATTACH_MAX_BYTES = 5 * 1024 * 1024; // 5 MB — matches the size hint.
 
-/** Arabic byte formatter for the selected-file rows. */
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} بايت`;
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} كيلوبايت`;
-  return `${(n / (1024 * 1024)).toFixed(1)} ميجابايت`;
+/** Byte formatter for the selected-file rows (language from messages/account.ts). */
+function formatBytes(n: number, t: ReturnType<typeof accountT>['maintenanceForm']): string {
+  if (n < 1024) return t.bytes(n);
+  if (n < 1024 * 1024) return t.kb(Math.round(n / 1024));
+  return t.mb((n / (1024 * 1024)).toFixed(1));
 }
 
 /**
@@ -52,6 +54,7 @@ export function MaintenanceRequestForm({
   initialUnitId?: string;
 }) {
   const router = useRouter();
+  const t = accountT(useSiteLocale()).maintenanceForm;
   const [unitId, setUnitId] = useState(initialUnitId);
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
@@ -86,15 +89,15 @@ export function MaintenanceRequestForm({
 
     for (const file of incoming) {
       if (next.length >= ATTACH_MAX_COUNT) {
-        messages.push(`يمكن إرفاق ${ATTACH_MAX_COUNT} ملفات كحد أقصى.`);
+        messages.push(t.maxFiles(ATTACH_MAX_COUNT));
         break;
       }
       if (!ATTACH_ALLOWED.includes(file.type)) {
-        messages.push(`نوع الملف غير مدعوم: ${file.name}. المسموح: PNG وJPG وWEBP وPDF.`);
+        messages.push(t.badType(file.name));
         continue;
       }
       if (file.size > ATTACH_MAX_BYTES) {
-        messages.push(`الملف كبير جدًا: ${file.name}. الحد الأقصى ٥ ميجابايت.`);
+        messages.push(t.tooBig(file.name));
         continue;
       }
       // Skip exact duplicates (same name + size) silently.
@@ -135,9 +138,9 @@ export function MaintenanceRequestForm({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!unitId) e.unitId = 'يرجى اختيار الوحدة.';
-    if (!categoryId) e.categoryId = 'يرجى اختيار فئة الصيانة.';
-    if (description.trim().length < 5) e.description = 'يرجى كتابة وصف للمشكلة لا يقل عن ٥ أحرف.';
+    if (!unitId) e.unitId = t.pickUnit;
+    if (!categoryId) e.categoryId = t.pickCategory;
+    if (description.trim().length < 5) e.description = t.descMin;
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -168,7 +171,7 @@ export function MaintenanceRequestForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
-      <Field label="الوحدة" required>
+      <Field label={t.unit} required>
         <Select
           value={unitId}
           onChange={(e) => {
@@ -177,7 +180,7 @@ export function MaintenanceRequestForm({
           }}
           invalid={!!errors.unitId}
         >
-          <option value="">اختر الوحدة</option>
+          <option value="">{t.chooseUnit}</option>
           {units.map((u) => (
             <option key={u.id} value={u.id}>
               {u.label}
@@ -187,7 +190,7 @@ export function MaintenanceRequestForm({
         <FormError>{errors.unitId}</FormError>
       </Field>
 
-      <Field label="فئة الصيانة" required>
+      <Field label={t.category} required>
         <Select
           value={categoryId}
           onChange={(e) => {
@@ -196,7 +199,7 @@ export function MaintenanceRequestForm({
           }}
           invalid={!!errors.categoryId}
         >
-          <option value="">اختر الفئة</option>
+          <option value="">{t.chooseCategory}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
@@ -206,7 +209,7 @@ export function MaintenanceRequestForm({
         <FormError>{errors.categoryId}</FormError>
       </Field>
 
-      <Field label="وصف المشكلة" required>
+      <Field label={t.description} required>
         <Textarea
           value={description}
           onChange={(e) => {
@@ -214,13 +217,13 @@ export function MaintenanceRequestForm({
             if (status !== 'idle') setStatus('idle');
           }}
           invalid={!!errors.description}
-          placeholder="اشرح المشكلة بالتفصيل ليتمكن فريقنا من مساعدتك..."
+          placeholder={t.descriptionHint}
         />
         <FormError>{errors.description}</FormError>
       </Field>
 
       {/* Attachments — optional drag-and-drop / browse */}
-      <Field label="المرفقات (اختياري)">
+      <Field label={t.attachments}>
         <label
           onDragOver={(e) => {
             e.preventDefault();
@@ -253,9 +256,9 @@ export function MaintenanceRequestForm({
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-200">
             <UploadCloud className="h-5 w-5" aria-hidden />
           </span>
-          <p className="text-xs font-bold text-ink-strong">اسحب الصور أو الملفات هنا أو تصفح من جهازك</p>
+          <p className="text-xs font-bold text-ink-strong">{t.drop}</p>
           <p className="text-[10px] font-medium text-ink-muted">
-            يدعم PNG, JPG, PDF حتى ٥ ميجابايت — حتى {ATTACH_MAX_COUNT} ملفات
+            {t.support(ATTACH_MAX_COUNT)}
           </p>
         </label>
 
@@ -280,12 +283,12 @@ export function MaintenanceRequestForm({
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs font-bold text-ink-strong">{a.file.name}</span>
-                  <span className="block text-[10px] font-medium text-ink-muted">{formatBytes(a.file.size)}</span>
+                  <span className="block text-[10px] font-medium text-ink-muted">{formatBytes(a.file.size, t)}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => removeFile(a.id)}
-                  aria-label={`إزالة ${a.file.name}`}
+                  aria-label={t.remove(a.file.name)}
                   className="shrink-0 rounded-lg p-1 text-ink-muted transition-colors hover:bg-error/10 hover:text-error"
                 >
                   <X className="h-4 w-4" aria-hidden />
@@ -301,11 +304,11 @@ export function MaintenanceRequestForm({
 
       <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={status === 'submitting'}>
         {status === 'submitting' ? (
-          'جارٍ الإرسال...'
+          t.sending
         ) : (
           <>
             <Send className="h-5 w-5" aria-hidden />
-            إرسال الطلب
+            {t.submit}
           </>
         )}
       </Button>

@@ -4,6 +4,7 @@
  * has no Arabic letters.
  */
 import { accountT } from '../messages/account';
+import { actionT } from '../messages/account-actions';
 import { notificationTitle } from '../lib/notification-title';
 
 function shape(v: unknown, path = ''): string[] {
@@ -31,5 +32,11 @@ describe('account messages', () => {
     expect(notificationTitle('visit_scheduled', undefined, 'en')).toBe('Your visit was scheduled');
     expect(notificationTitle('visit_scheduled', undefined, 'ar')).toBe('تم جدولة زيارتك');
     expect(notificationTitle('something_new', undefined, 'en')).toBe('New notification');
+  });
+
+  it('the server-action error messages have the same keys and no Arabic in English', () => {
+    expect(shape(actionT('en')).sort()).toEqual(shape(actionT('ar')).sort());
+    expect(JSON.stringify(actionT('en'))).not.toMatch(/[\u0600-\u06FF]/);
+    expect(actionT('en').fileTooBig('a.png')).toBe('The file "a.png" is too large — 5 MB at most.');
   });
 });
