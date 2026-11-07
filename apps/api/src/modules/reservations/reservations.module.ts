@@ -471,6 +471,7 @@ export class ReservationsService {
         status: true,
         projectId: true,
         unitId: true,
+        percentPriced: true,
         unitTypes: true,
         validFrom: true,
         validTo: true,

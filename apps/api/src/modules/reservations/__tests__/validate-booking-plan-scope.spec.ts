@@ -12,6 +12,7 @@ function planRow(over: Record<string, unknown> = {}) {
     status: 'ACTIVE',
     projectId: 'proj-1',
     unitId: null,
+    percentPriced: true,
     unitTypes: [],
     validFrom: null,
     validTo: null,
@@ -76,6 +77,23 @@ describe('ReservationsService.validateBookingPlan — project / unit-type plans'
     await expect(service(planRow(), { price: 1, type: 'x' }).validateBookingPlan('plan-1', 'u1', 'proj-OTHER')).rejects.toThrow(/مشروع/);
     await expect(service(planRow({ status: 'DRAFT' }), { price: 1, type: 'x' }).validateBookingPlan('plan-1', 'u1', 'proj-1')).rejects.toThrow(/غير مفعّلة/);
     await expect(service(planRow({ unitId: 'other-unit' }), { price: 1, type: 'x' }).validateBookingPlan('plan-1', 'u1', 'proj-1')).rejects.toThrow(/وحدة مختلفة/);
+  });
+
+  it('an older unit-less plan (absolute amounts) is used exactly as stored — nothing is worked out', async () => {
+    const legacy = planRow({
+      percentPriced: false,
+      discountType: 'FIXED',
+      discountValue: D(0),
+      netPrice: D(1_000_000),
+      reservationAmount: D(50_000),
+      reservationAmountType: 'FIXED',
+      reservationAmountValue: D(0),
+      downPaymentAmount: D(200_000),
+    });
+    const out = await service(legacy, { price: 3_600_000, type: '2BR' }).validateBookingPlan('plan-1', 'u1', 'proj-1');
+    expect(out.reservationAmount.toString()).toBe('50000');
+    expect(out.netPrice.toString()).toBe('1000000');
+    expect(out.downPaymentAmount.toString()).toBe('200000');
   });
 
   it("a unit's own plan keeps its stored amounts (and the stale-price guard)", async () => {

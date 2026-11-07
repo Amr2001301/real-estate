@@ -128,6 +128,7 @@ function makePrismaMock() {
     contract: { count: jest.fn().mockResolvedValue(0) },
     maintenanceRequest: { count: jest.fn().mockResolvedValue(0) },
     visitRequest: { count: jest.fn().mockResolvedValue(0) },
+    installmentPlanTemplate: { count: jest.fn().mockResolvedValue(0) },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
@@ -391,6 +392,18 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
         .delete('/projects/a1111111-1111-4111-8111-111111111111')
         .expect(200);
       expect(mock.project.delete).toHaveBeenCalled();
+    });
+
+    // F-019 / F-039: a project-level plan has no unit, so it would not stop the delete
+    // through the units — and the project's foreign key would answer with a 500.
+    it('a project that still has instalment plans (even project-level ones) is not deleted: 409', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.installmentPlanTemplate.count.mockResolvedValueOnce(2);
+      const res = await request(app.getHttpServer())
+        .delete('/projects/a1111111-1111-4111-8111-111111111111')
+        .expect(409);
+      expect(res.body.message).toMatch(/2 خطة تقسيط/);
+      expect(mock.project.delete).not.toHaveBeenCalled();
     });
 
     it('SALES with projects:update → let in by the code (PRM)', async () => {

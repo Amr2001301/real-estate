@@ -836,6 +836,25 @@ function parseValidity(
   return { from: f, to: t };
 }
 
+/** A plan's money as plain numbers (for the `sample` of a project plan). */
+function sampleAmounts(p: {
+  totalPrice: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  netPrice: Prisma.Decimal;
+  reservationAmount: Prisma.Decimal;
+  downPaymentAmount: Prisma.Decimal;
+  finalPaymentAmount: Prisma.Decimal | null;
+}) {
+  return {
+    totalPrice: Number(p.totalPrice),
+    discountAmount: Number(p.discountAmount),
+    netPrice: Number(p.netPrice),
+    reservationAmount: Number(p.reservationAmount),
+    downPaymentAmount: Number(p.downPaymentAmount),
+    finalPaymentAmount: Number(p.finalPaymentAmount ?? 0),
+  };
+}
+
 function computeDownPaymentAmount(
   netPrice: number,
   type: DownPaymentType,
@@ -1202,7 +1221,14 @@ export class PlanTemplatesService {
     ]);
 
     return {
-      data,
+      // `scope` for every plan; a project / unit-type plan also gets `sample`: its
+      // amounts on a price of 100, for clients that read only the shares (down
+      // payment %, durations). Real amounts come from `applicable/:unitId`.
+      data: data.map((p) => ({
+        ...p,
+        scope: scopeOf(p),
+        ...(p.unitId || !p.percentPriced ? {} : { sample: sampleAmounts(materializePlan(p, 100)) }),
+      })),
       meta: {
         page,
         pageSize,
@@ -1612,6 +1638,7 @@ export class PlanTemplatesService {
           description: dto.description,
           projectId: dto.projectId,
           unitId: null,
+          percentPriced: true,
           unitTypes,
           validFrom: validity.from,
           validTo: validity.to,
@@ -1754,6 +1781,9 @@ export class PlanTemplatesService {
         netPrice: Number(p.netPrice),
         reservationAmount: Number(p.reservationAmount),
         downPaymentAmount: Number(p.downPaymentAmount),
+        finalPaymentAmount: Number(p.finalPaymentAmount ?? 0),
+        installmentsCount: p.installmentsCount,
+        frequency: p.frequency,
         durationOptions: enrichDurationOptions(p.durationOptions, {
           netPrice: p.netPrice,
           reservationAmount: p.reservationAmount,
@@ -1806,7 +1836,7 @@ export class PlanTemplatesService {
       }
     }
 
-    if (!existing.unitId) return this.updateScoped(id, dto, existing, actorId);
+    if (!existing.unitId && existing.percentPriced) return this.updateScoped(id, dto, existing, actorId);
     if (dto.unitTypes && dto.unitTypes.length > 0) {
       throw new BadRequestException('أنواع الوحدات تخص خطة المشروع فقط');
     }

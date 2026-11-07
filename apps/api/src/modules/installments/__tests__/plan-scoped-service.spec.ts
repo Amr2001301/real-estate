@@ -19,6 +19,7 @@ function make(opts: { unitTypes?: string[]; existing?: Record<string, unknown> }
     description: null,
     projectId: PROJECT,
     unitId: null,
+    percentPriced: true,
     unitTypes: [],
     status: 'DRAFT',
     isCash: false,
@@ -60,6 +61,8 @@ function make(opts: { unitTypes?: string[]; existing?: Record<string, unknown> }
         return { id: 'plan-new' };
       }),
       update: jest.fn().mockResolvedValue({}),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
     },
     installmentPlanDurationOption: {
       createMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -90,7 +93,7 @@ describe('PlanTemplatesService.create — a project plan (no unit)', () => {
     const { svc, created } = make();
     await svc.create(base as never, 'admin-1');
     expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({ unitId: null, unitTypes: [] });
+    expect(created[0]).toMatchObject({ unitId: null, percentPriced: true, unitTypes: [] });
     expect(String(created[0]!.totalPrice)).toBe('0');
     expect(String(created[0]!.netPrice)).toBe('0');
     expect(String(created[0]!.discountValue)).toBe('5');
@@ -142,5 +145,29 @@ describe('PlanTemplatesService.findOne — for the edit screen', () => {
     prisma.reservation.count.mockResolvedValueOnce(2).mockResolvedValueOnce(9);
     const plan = await svc.findOne('plan-new');
     expect(plan).toMatchObject({ scope: 'PROJECT', unitsInScope: 12, reservationsInUse: 2, reservationsTotal: 9 });
+  });
+});
+
+describe('PlanTemplatesService.list — what clients read', () => {
+  it('gives every plan its scope, and a project plan its amounts on a price of 100', async () => {
+    const { svc, prisma } = make();
+    const unitPlan = { id: 'u', unitId: 'unit-1', unitTypes: [], isCash: false };
+    const projectPlan = {
+      id: 'p', unitId: null, percentPriced: true, unitTypes: [], isCash: false,
+      totalPrice: D(0), discountAmount: D(0), discountType: 'PERCENTAGE', discountValue: D(5), netPrice: D(0),
+      reservationAmount: D(0), reservationAmountType: 'PERCENTAGE', reservationAmountValue: D(2),
+      downPaymentType: 'PERCENTAGE', downPaymentValue: D(10), downPaymentAmount: D(0), finalPaymentAmount: null,
+    };
+    prisma.installmentPlanTemplate.findMany.mockResolvedValueOnce([unitPlan, projectPlan]);
+    prisma.installmentPlanTemplate.count.mockResolvedValueOnce(2);
+    const out = await svc.list({ page: 1, pageSize: 20, role: 'ADMIN' as never });
+    expect(out.data[0]).toMatchObject({ id: 'u', scope: 'UNIT' });
+    expect('sample' in out.data[0]!).toBe(false);
+    expect(out.data[1]).toMatchObject({ id: 'p', scope: 'PROJECT' });
+    expect((out.data[1] as { sample: { netPrice: number; reservationAmount: number; downPaymentAmount: number } }).sample).toMatchObject({
+      netPrice: 95,
+      reservationAmount: 2,
+      downPaymentAmount: 9.5,
+    });
   });
 });

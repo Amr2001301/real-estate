@@ -78,6 +78,8 @@ export function pickApplicablePlans<P extends ScopedPlanFields>(
 
 export interface PlanMoney {
   unitId: string | null;
+  /** The plan holds percentages (a project plan made on the project-plans screen). */
+  percentPriced: boolean;
   totalPrice: Prisma.Decimal;
   discountAmount: Prisma.Decimal;
   discountType: 'FIXED' | 'PERCENTAGE';
@@ -98,17 +100,19 @@ const cents = (d: Prisma.Decimal) => d.toDecimalPlaces(2);
 
 /**
  * The plan's amounts on a given unit price. A unit's own plan already holds
- * absolute amounts and comes back unchanged. A TYPE / PROJECT plan holds
- * percentages, worked out here:
+ * absolute amounts and comes back unchanged — so does an older unit-less plan
+ * (`percentPriced` false). A percent-priced TYPE / PROJECT plan is worked out here:
  *   total       = the unit's price
  *   discount    = % of the price
  *   net         = total − discount
  *   booking     = % of the unit's price (what the reservation charges) or the fixed amount
  *   down payment= % of net (cash: everything the booking leaves)
- * and no final payment (a fixed balloon does not scale across prices).
+ * and no final payment for a new project plan (a fixed balloon does not scale
+ * across prices).
  */
 export function materializePlan<T extends PlanMoney>(plan: T, unitPrice: Prisma.Decimal.Value): T {
-  if (plan.unitId) return plan;
+  // A unit's own plan, and an older unit-less plan (absolute amounts), are used as stored.
+  if (plan.unitId || !plan.percentPriced) return plan;
   const total = D(unitPrice);
   const discount = cents(plan.discountType === 'PERCENTAGE' ? total.mul(plan.discountValue).div(100) : D(plan.discountValue));
   const net = total.sub(discount);
@@ -125,7 +129,8 @@ export function materializePlan<T extends PlanMoney>(plan: T, unitPrice: Prisma.
     netPrice: net,
     reservationAmount: booking,
     downPaymentAmount: down,
-    finalPaymentAmount: null,
+    // A new project plan has none (scopedPlanProblem); an older unit-less plan keeps its own.
+    finalPaymentAmount: plan.finalPaymentAmount,
   };
 }
 

@@ -24,9 +24,10 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
 
   @override
   Future<Result<List<InstallmentOffer>>> unitOffers({required String projectId, required String unitId}) =>
+      // The API picks the plans (the unit's own, else its type's, else the project's) and
+      // works a project plan out on this unit's price.
       guardApiCall(() async => [
-            for (final j in await _remote.listTemplatesJson(projectId: projectId))
-              if (j['status'] == 'ACTIVE' && (j['unit'] as Map?)?['id'] == unitId) installmentOfferFromTemplateJson(j),
+            for (final j in await _remote.applicableTemplatesJson(unitId: unitId)) installmentOfferFromTemplateJson(j),
           ]);
 
   @override

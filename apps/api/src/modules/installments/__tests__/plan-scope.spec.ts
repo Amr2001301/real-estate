@@ -17,6 +17,7 @@ function plan(over: Partial<ScopedPlanFields & PlanMoney> & { id?: string } = {}
   return {
     id: 'p',
     unitId: null,
+    percentPriced: true,
     projectId: 'proj-1',
     unitTypes: [],
     status: 'ACTIVE',
@@ -105,7 +106,11 @@ describe('materializePlan — percentages on the unit price', () => {
     expect(m.netPrice.toString()).toBe('3420000');
     expect(m.reservationAmount.toString()).toBe('72000'); // 2% of the price (what a reservation charges)
     expect(m.downPaymentAmount.toString()).toBe('342000'); // 10% of net
-    expect(m.finalPaymentAmount).toBeNull();
+    expect(m.finalPaymentAmount).toBeNull(); // a new project plan has none
+  });
+
+  it('an older unit-less plan keeps the final payment it has', () => {
+    expect(materializePlan(plan({ finalPaymentAmount: D(100_000) }), 3_600_000).finalPaymentAmount?.toString()).toBe('100000');
   });
 
   it('the same plan on a cheaper unit scales', () => {
@@ -126,6 +131,11 @@ describe('materializePlan — percentages on the unit price', () => {
     expect(m.reservationAmount.toString()).toBe('20000');
     expect(m.downPaymentAmount.toString()).toBe('930000');
     expect(m.reservationAmount.add(m.downPaymentAmount).toString()).toBe(m.netPrice.toString());
+  });
+
+  it('an older unit-less plan (absolute amounts, not percent-priced) is used as stored', () => {
+    const legacy = plan({ percentPriced: false, netPrice: D(1_000_000), reservationAmount: D(50_000), downPaymentAmount: D(200_000) });
+    expect(materializePlan(legacy, 3_600_000)).toBe(legacy);
   });
 
   it("a unit's own plan comes back unchanged", () => {
