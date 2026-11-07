@@ -104,8 +104,8 @@ export default async function AccountMaintenanceDetailPage({
     );
   }
 
-  const categoryName = req.category ? pickAr(req.category.name) : '';
-  const unitLabel = req.unit ? `${unitTypeLabel(req.unit.type)} · ${req.unit.code}` : '—';
+  const categoryName = req.category ? pickAr(req.category.name, '', locale) : '';
+  const unitLabel = req.unit ? `${unitTypeLabel(req.unit.type, null, locale)} · ${req.unit.code}` : '—';
 
   return (
     <div className="space-y-6">

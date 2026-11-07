@@ -9,17 +9,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
+import { pickAr, cityLabel, unitTypeLabel, formatDateTimeShort } from '@/lib/format';
 import type { MeInfoRequest } from '@/lib/api-types';
 import { Badge } from '@/components/ui/Badge';
-
-function formatDateTime(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 /**
  * One ticket line: gold icon chip + stacked label/value — identical to the
@@ -46,17 +40,19 @@ function TicketRow({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
  * carries no reply/status field, so the badge reflects the inquiry's real
  * CONTEXT (unit / project / general) rather than a fabricated status.
  */
-export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
-  const projectName = request.project ? pickAr(request.project.name) : '';
-  const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type)} · ${request.unit.code}` : '';
-  const title = projectName || unitLabel || 'استفسار عام';
-  const subtitle = projectName ? unitLabel || cityLabel(request.project?.city) : '';
+export async function InfoRequestCard({ request }: { request: MeInfoRequest }) {
+  const locale = await getLocale();
+  const ti = accountT(locale).info;
+  const projectName = request.project ? pickAr(request.project.name, '', locale) : '';
+  const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type, null, locale)} · ${request.unit.code}` : '';
+  const title = projectName || unitLabel || ti.general;
+  const subtitle = projectName ? unitLabel || cityLabel(request.project?.city, locale) : '';
 
   const badge: { label: string; Icon: LucideIcon; tone: 'gold' | 'neutral' } = request.unit
-    ? { label: 'وحدة', Icon: Home, tone: 'gold' }
+    ? { label: ti.unit, Icon: Home, tone: 'gold' }
     : request.project
-      ? { label: 'مشروع', Icon: Building2, tone: 'gold' }
-      : { label: 'عام', Icon: MessageSquareText, tone: 'neutral' };
+      ? { label: ti.project, Icon: Building2, tone: 'gold' }
+      : { label: ti.generic, Icon: MessageSquareText, tone: 'neutral' };
 
   const detailHref: Route | null = request.unit
     ? (routes.unit(request.unit.id) as Route)
@@ -77,7 +73,7 @@ export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
 
       {/* Stretched link: whole card navigates when tied to a property. */}
       {detailHref && (
-        <Link href={detailHref} aria-label={`عرض تفاصيل ${title}`} className="absolute inset-0 z-[1]" />
+        <Link href={detailHref} aria-label={ti.viewDetails(title)} className="absolute inset-0 z-[1]" />
       )}
 
       {/* ── Header: title (start) ⟷ context badge (end) ── */}
@@ -100,7 +96,7 @@ export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
       {/* ── Inquiry Ticket ── */}
       <div className="mt-4 space-y-4 rounded-xl border border-hairline bg-surface-soft/60 p-4">
         <div className="space-y-3.5">
-          <TicketRow icon={Clock} label="تاريخ الإرسال" value={formatDateTime(request.createdAt)} />
+          <TicketRow icon={Clock} label={ti.sentAt} value={formatDateTimeShort(request.createdAt, locale)} />
         </div>
 
         {/* Inquiry message — speech-bubble, primary space */}

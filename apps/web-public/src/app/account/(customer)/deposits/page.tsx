@@ -114,7 +114,7 @@ export default async function AccountDepositsPage() {
                   <Price value={totals.totalAmount} />
                 </div>
                 <span className="mt-1 inline-block rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-                  {formatNumber(totals.count)} {m.depositLabel}
+                  {formatNumber(totals.count, locale)} {m.depositLabel}
                 </span>
               </div>
 

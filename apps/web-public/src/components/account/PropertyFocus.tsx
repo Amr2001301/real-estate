@@ -2,19 +2,12 @@ import { Home, Building2, Wrench, CheckCircle2 } from 'lucide-react';
 import { Price } from '@/components/currency/CurrencyProvider';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
-import { pickAr, unitTypeLabel, formatNumber } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatNumber, formatDateShort } from '@/lib/format';
 import type { MeContract, MeInstallment } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'long' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 /** Strict vertical micro-stack used inside the contract sub-grid. */
 function Stat({ label, value }: { label: string; value: string }) {
@@ -37,7 +30,7 @@ const SECONDARY_PILL =
  * Owner-first after-sales card: a 65/35 split — the asset & contract identity
  * panel (start) and an isolated next-payment invoice box (end).
  */
-export function PropertyFocus({
+export async function PropertyFocus({
   contract,
   nextInstallment,
   unpaidCount,
@@ -46,11 +39,14 @@ export function PropertyFocus({
   nextInstallment: MeInstallment | null;
   unpaidCount: number;
 }) {
+  const locale = await getLocale();
+  const t = accountT(locale).focus;
+  const formatDate = (iso: string | null) => formatDateShort(iso, locale);
   const unit = contract.unit;
   const project = unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name) : '';
-  const unitLabel = unit ? `${unitTypeLabel(unit.type)} · ${unit.code}` : '';
-  const title = projectName || unitLabel || 'وحدتك';
+  const projectName = project ? pickAr(project.name, '', locale) : '';
+  const unitLabel = unit ? `${unitTypeLabel(unit.type, null, locale)} · ${unit.code}` : '';
+  const title = projectName || unitLabel || t.yours;
   const plan = contract.installmentPlan;
   const overdue = nextInstallment?.status === 'OVERDUE';
 
@@ -82,12 +78,12 @@ export function PropertyFocus({
 
           {/* Contract sub-grid */}
           <div className="my-2 grid grid-cols-3 gap-4 border-y border-hairline/80 py-4">
-            <Stat label="رقم العقد" value={contract.contractNumber ?? '—'} />
+            <Stat label={t.contractNo} value={contract.contractNumber ?? '—'} />
             <Stat
-              label="تاريخ التوقيع"
-              value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'}
+              label={t.signedAt}
+              value={contract.signedAt ? formatDate(contract.signedAt) : t.unsigned}
             />
-            {plan && <Stat label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
+            {plan && <Stat label={t.plan} value={t.months(formatNumber(plan.totalMonths, locale))} />}
           </div>
         </div>
 
@@ -101,14 +97,14 @@ export function PropertyFocus({
               className={SECONDARY_PILL}
             >
               <Wrench className="h-4 w-4" aria-hidden />
-              طلب صيانة
+              {t.maintenance}
             </ButtonLink>
           )}
           <DocumentDownloadByOwner
             ownerType="CONTRACT"
             ownerId={contract.id}
-            label="عرض العقد PDF"
-            emptyLabel="العقد غير متاح بعد"
+            label={t.viewContract}
+            emptyLabel={t.contractMissing}
             variant="dark"
           />
         </div>
@@ -123,7 +119,7 @@ export function PropertyFocus({
       >
         <div className="flex flex-col items-center">
           <span className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">
-            القسط القادم
+            {t.nextInstallment}
           </span>
 
           {nextInstallment ? (
@@ -133,16 +129,16 @@ export function PropertyFocus({
               </div>
               {overdue ? (
                 <span className="inline-flex items-center rounded-lg bg-error/10 px-2.5 py-1 text-[10px] font-bold text-error shadow-sm">
-                  متأخر — {formatDate(nextInstallment.dueDate)}
+                  {t.overdue(formatDate(nextInstallment.dueDate))}
                 </span>
               ) : (
                 <span className="inline-flex items-center rounded-lg bg-gold-100 px-2.5 py-1 text-[10px] font-bold text-gold-600 shadow-sm">
-                  مستحق في {formatDate(nextInstallment.dueDate)}
+                  {t.dueOn(formatDate(nextInstallment.dueDate))}
                 </span>
               )}
               {unpaidCount > 1 && (
                 <p className="mt-2 text-[11px] text-ink-muted">
-                  {formatNumber(unpaidCount)} أقساط متبقية
+                  {t.remaining(formatNumber(unpaidCount, locale))}
                 </p>
               )}
             </>
@@ -150,9 +146,9 @@ export function PropertyFocus({
             <>
               <div className="my-1 flex items-center gap-1.5 text-base font-bold text-ink-strong">
                 <CheckCircle2 className="h-5 w-5 text-success" aria-hidden />
-                لا أقساط مستحقة
+                {t.noneDue}
               </div>
-              <p className="text-[11px] text-ink-muted">سجلّك خالٍ من المستحقات الحالية.</p>
+              <p className="text-[11px] text-ink-muted">{t.clean}</p>
             </>
           )}
         </div>
@@ -163,7 +159,7 @@ export function PropertyFocus({
           size="sm"
           className="mt-4 h-auto w-full justify-center rounded-xl py-2.5 text-xs font-black tracking-wide shadow-md"
         >
-          {nextInstallment ? 'عرض الأقساط' : 'سجل المدفوعات'}
+          {nextInstallment ? t.viewInstallments : t.payments}
         </ButtonLink>
       </div>
     </div>

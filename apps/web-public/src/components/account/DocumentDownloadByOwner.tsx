@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 /**
  * Owner-keyed signed-download button.
@@ -52,6 +54,7 @@ export function DocumentDownloadByOwner({
    *  DepositCard inline link. */
   variant?: 'pill' | 'compact' | 'dark' | 'inline';
 }) {
+  const t = accountT(useSiteLocale()).docs;
   const [state, setState] = useState<'idle' | 'loading' | 'empty' | 'error'>('idle');
 
   async function handleClick() {
@@ -123,7 +126,7 @@ export function DocumentDownloadByOwner({
               : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-600 hover:border-red-400'
         }
       >
-        تعذر الفتح — حاول مرة أخرى
+        {t.openFailed}
       </button>
     );
   }
@@ -145,7 +148,7 @@ export function DocumentDownloadByOwner({
       ) : (
         <Download className={iconSize} aria-hidden />
       )}
-      {state === 'loading' ? 'جارٍ التحضير...' : label}
+      {state === 'loading' ? t.preparing : label}
     </button>
   );
 }

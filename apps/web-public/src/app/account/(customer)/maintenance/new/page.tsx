@@ -15,6 +15,7 @@ import { InlineNotice } from '@/components/states/InlineNotice';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { MaintenanceRequestForm, type SelectOption } from '@/components/account/MaintenanceRequestForm';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import type { Locale } from '@/lib/locale';
 
 export const metadata = buildMetadata({
   title: 'طلب صيانة جديد',
@@ -29,15 +30,15 @@ function firstStr(v: string | string[] | undefined): string {
 }
 
 /** Build unique owned-unit options from the customer's contracts. */
-function deriveUnitOptions(contracts: MeContract[]): SelectOption[] {
+function deriveUnitOptions(contracts: MeContract[], locale: Locale): SelectOption[] {
   const seen = new Set<string>();
   const options: SelectOption[] = [];
   for (const c of contracts) {
     const unit = c.unit;
     if (!unit || seen.has(unit.id)) continue;
     seen.add(unit.id);
-    const projectName = pickAr(unit.building?.phase?.project?.name ?? {});
-    const label = [projectName, `${unitTypeLabel(unit.type)} · ${unit.code}`].filter(Boolean).join(' — ');
+    const projectName = pickAr(unit.building?.phase?.project?.name ?? {}, '', locale);
+    const label = [projectName, `${unitTypeLabel(unit.type, null, locale)} · ${unit.code}`].filter(Boolean).join(' — ');
     options.push({ id: unit.id, label });
   }
   return options;
@@ -89,8 +90,8 @@ export default async function AccountMaintenanceNewPage({ searchParams }: { sear
     );
   }
 
-  const units = deriveUnitOptions(contractsRes.data);
-  const categoryOptions: SelectOption[] = categories.map((c) => ({ id: c.id, label: pickAr(c.name) || m.categoryLabel }));
+  const units = deriveUnitOptions(contractsRes.data, locale);
+  const categoryOptions: SelectOption[] = categories.map((c) => ({ id: c.id, label: pickAr(c.name, '', locale) || m.categoryLabel }));
 
   // Preselect ?unitId only if the customer actually owns it.
   const initialUnitId = units.some((u) => u.id === requestedUnitId) ? requestedUnitId : '';

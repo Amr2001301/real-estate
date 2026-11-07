@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Star, CheckCircle2, AlertCircle, Clock, ShieldCheck, MessageSquareWarning } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeMaintenanceRequest } from '@/lib/api-types';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
+import { formatDateTimeShort } from '@/lib/format';
 
 /**
  * Phase C — customer-facing maintenance resolution loop: SLA/overdue/unresolved
@@ -15,18 +18,10 @@ import type { MeMaintenanceRequest } from '@/lib/api-types';
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
-function formatDate(iso?: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
-
 function Stars({ value }: { value: number }) {
+  const t = accountT(useSiteLocale()).resolution;
   return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${value} من 5`}>
+    <span className="inline-flex items-center gap-0.5" aria-label={t.outOf(value)}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star key={n} className={cn('h-4 w-4', n <= value ? 'fill-gold-400 text-gold-400' : 'text-hairline')} aria-hidden />
       ))}
@@ -35,6 +30,9 @@ function Stars({ value }: { value: number }) {
 }
 
 export function MaintenanceResolution({ request }: { request: MeMaintenanceRequest }) {
+  const locale = useSiteLocale();
+  const t = accountT(locale).resolution;
+  const formatDate = (iso?: string | null) => formatDateTimeShort(iso, locale);
   const router = useRouter();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -60,12 +58,12 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
   const resolvedBy = request.resolvedBy ?? null;
   const resolvedByLabel =
     resolvedBy === 'BOTH'
-      ? 'أكد الطرفان الحل'
+      ? t.both
       : resolvedBy === 'CUSTOMER'
-        ? 'أكد العميل الحل'
+        ? t.customer
         : resolvedBy === 'SUPERVISOR'
-          ? 'أكد مشرف الصيانة الحل'
-          : 'لم يتم التأكيد بعد';
+          ? t.supervisor
+          : t.none;
   const resolvedByCls =
     resolvedBy === 'BOTH'
       ? 'bg-success/10 text-success ring-1 ring-success/20'
@@ -87,7 +85,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
       startTransition(() => router.refresh());
       return true;
     } catch {
-      setError('تعذّر تنفيذ العملية حاليًا. يُرجى المحاولة مرة أخرى.');
+      setError(t.fail);
       return false;
     } finally {
       setBusy(false);
@@ -97,7 +95,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
   async function onConfirm(e: FormEvent) {
     e.preventDefault();
     if (rating < 1) {
-      setError('يرجى اختيار تقييم من 1 إلى 5 نجوم.');
+      setError(t.pick);
       return;
     }
     await post('confirm-resolution', { rating, note: note.trim() || undefined });
@@ -109,7 +107,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
     <section className="space-y-4 rounded-2xl border border-hairline bg-surface p-6 shadow-sm sm:p-8">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-gold-500" aria-hidden />
-        <h2 className="text-lg font-bold text-ink-strong">متابعة الحل والتقييم</h2>
+        <h2 className="text-lg font-bold text-ink-strong">{t.title}</h2>
       </div>
 
       {/* Status badges */}
@@ -120,27 +118,27 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
         {isOverdue && (
           <span className="inline-flex items-center gap-1 rounded-full bg-error/10 px-2.5 py-1 text-xs font-bold text-error ring-1 ring-error/20">
             <Clock className="h-3.5 w-3.5" aria-hidden />
-            {overdueDays > 0 ? `متأخر ${overdueDays} يوم` : `متأخر ${overdueHours} ساعة`}
+            {overdueDays > 0 ? t.overdueDays(overdueDays) : t.overdueHours(overdueHours)}
           </span>
         )}
         {request.unresolvedAt && (
           <span className="inline-flex items-center rounded-full bg-error/10 px-2.5 py-1 text-xs font-bold text-error ring-1 ring-error/20">
-            لم تُحل
+            {t.unresolved}
           </span>
         )}
         {request.complaintAt && (
           <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-1 text-xs font-bold text-warning ring-1 ring-warning/20">
-            تم تقديم شكوى
+            {t.complained}
           </span>
         )}
       </div>
 
       {/* SLA + confirmation timestamps */}
       <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-xs sm:grid-cols-2">
-        <Meta label="الموعد المستهدف للمعالجة" value={request.dueAt ? formatDate(request.dueAt) : 'يبدأ بعد اعتماد الطلب'} />
-        <Meta label="تأكيد مشرف الصيانة" value={request.supervisorConfirmedResolutionAt ? formatDate(request.supervisorConfirmedResolutionAt) : 'لم يؤكد بعد'} />
-        {request.complaintAt && <Meta label="تاريخ الشكوى" value={formatDate(request.complaintAt)} />}
-        {request.unresolvedAt && <Meta label="تاريخ تصنيفها كغير محلولة" value={formatDate(request.unresolvedAt)} />}
+        <Meta label={t.target} value={request.dueAt ? formatDate(request.dueAt) : t.afterApproval} />
+        <Meta label={t.supervisorConfirm} value={request.supervisorConfirmedResolutionAt ? formatDate(request.supervisorConfirmedResolutionAt) : t.notYet} />
+        {request.complaintAt && <Meta label={t.complaintDate} value={formatDate(request.complaintAt)} />}
+        {request.unresolvedAt && <Meta label={t.unresolvedDate} value={formatDate(request.unresolvedAt)} />}
       </div>
 
       {error && (
@@ -154,7 +152,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
       {canComplain && (
         <div className="border-t border-hairline pt-4">
           <p className="text-xs text-ink-muted">
-            تجاوز طلبك الموعد المستهدف. يمكنك تقديم شكوى ليتابعها فريقنا بأولوية.
+            {t.overdueNote}
           </p>
           <button
             type="button"
@@ -163,7 +161,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
             className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
           >
             <MessageSquareWarning className="h-3.5 w-3.5" aria-hidden />
-            تقديم شكوى
+            {t.complain}
           </button>
         </div>
       )}
@@ -172,27 +170,27 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
       {alreadyConfirmed ? (
         <div className="border-t border-hairline pt-4">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-ink-strong">تقييمك للخدمة</span>
+            <span className="text-xs font-semibold text-ink-strong">{t.yours}</span>
             {request.customerRating ? <Stars value={request.customerRating} /> : null}
           </div>
           {request.customerRatingText && (
             <p className="mt-2 text-xs leading-relaxed text-ink-muted" dir="auto">{request.customerRatingText}</p>
           )}
           <p className="mt-1 text-[11px] text-ink-muted">
-            أكدت الحل في {formatDate(request.customerConfirmedResolutionAt)}
+            {t.confirmedOn(formatDate(request.customerConfirmedResolutionAt))}
           </p>
         </div>
       ) : canConfirm ? (
         <form onSubmit={onConfirm} className="border-t border-hairline pt-4">
-          <p className="text-xs font-semibold text-ink-strong">هل تم حل المشكلة؟ أكّد الحل وقيّم الخدمة</p>
-          <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label="تقييم الخدمة">
+          <p className="text-xs font-semibold text-ink-strong">{t.ask}</p>
+          <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label={t.group}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
                 role="radio"
                 aria-checked={rating === n}
-                aria-label={`${n} نجوم`}
+                aria-label={t.stars(n)}
                 onClick={() => setRating(n)}
                 onMouseEnter={() => setHover(n)}
                 onMouseLeave={() => setHover(0)}
@@ -214,7 +212,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
             onChange={(e) => setNote(e.target.value)}
             maxLength={1000}
             rows={2}
-            placeholder="أضف ملاحظة عن جودة الخدمة (اختياري)"
+            placeholder={t.note}
             className="mt-3 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
             disabled={working}
           />
@@ -224,7 +222,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
             className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
           >
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-            تأكيد الحل وإرسال التقييم
+            {t.confirm}
           </button>
         </form>
       ) : null}

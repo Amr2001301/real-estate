@@ -10,6 +10,8 @@ import {
   confirmVisitAppointmentAction,
   requestVisitRescheduleAction,
 } from '@/lib/account-actions';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 type Mode = 'idle' | 'reason';
 type Status = 'idle' | 'submitting' | 'error';
@@ -29,6 +31,7 @@ interface Props {
  * Errors are localized Arabic — never raw backend detail.
  */
 export function VisitConfirmActions({ appointmentId }: Props) {
+  const t = accountT(useSiteLocale()).visitConfirm;
   const [mode, setMode] = useState<Mode>('idle');
   const [status, setStatus] = useState<Status>('idle');
   const [topError, setTopError] = useState('');
@@ -55,7 +58,7 @@ export function VisitConfirmActions({ appointmentId }: Props) {
     ev.preventDefault();
     const trimmed = reason.trim();
     if (trimmed.length > 0 && trimmed.length < 3) {
-      setReasonError('السبب قصير جدًا — اتركه فارغًا أو اكتب جملة قصيرة.');
+      setReasonError(t.reasonShort);
       return;
     }
     setReasonError('');
@@ -75,12 +78,12 @@ export function VisitConfirmActions({ appointmentId }: Props) {
   if (mode === 'reason') {
     return (
       <form onSubmit={onSubmitReason} noValidate className="mt-4 space-y-3 rounded-xl bg-surface-soft p-4">
-        <Field label="سبب طلب إعادة الجدولة (اختياري)">
+        <Field label={t.reasonLabel}>
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             invalid={!!reasonError}
-            placeholder="مثلاً: لدي ارتباط آخر في هذا الوقت."
+            placeholder={t.reasonHint}
             rows={3}
             maxLength={500}
           />
@@ -91,7 +94,7 @@ export function VisitConfirmActions({ appointmentId }: Props) {
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="primary" size="md" disabled={busy}>
-            {busy ? 'جارٍ الإرسال…' : 'إرسال الطلب'}
+            {busy ? t.sending : t.send}
           </Button>
           <Button
             type="button"
@@ -106,7 +109,7 @@ export function VisitConfirmActions({ appointmentId }: Props) {
               setTopError('');
             }}
           >
-            تراجع
+            {t.back}
           </Button>
         </div>
       </form>
@@ -118,11 +121,11 @@ export function VisitConfirmActions({ appointmentId }: Props) {
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="primary" size="md" onClick={onConfirm} disabled={busy}>
           <CalendarCheck className="h-5 w-5" aria-hidden />
-          {busy ? 'جارٍ التأكيد…' : 'تأكيد الموعد'}
+          {busy ? t.confirming : t.confirm}
         </Button>
         <Button type="button" variant="outline" size="md" onClick={() => setMode('reason')} disabled={busy}>
           <CalendarX className="h-5 w-5" aria-hidden />
-          طلب إعادة جدولة
+          {t.reschedule}
         </Button>
       </div>
       {status === 'error' && topError && <InlineNotice tone="error">{topError}</InlineNotice>}

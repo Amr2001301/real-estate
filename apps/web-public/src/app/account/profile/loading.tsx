@@ -1,10 +1,13 @@
 import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function ProfileLoading() {
+export default async function ProfileLoading() {
+  const t = accountT(await getLocale());
   return (
     <div className="space-y-8">
-      <span className="sr-only">جارٍ التحميل…</span>
+      <span className="sr-only">{t.loading}</span>
       <Skeleton className="h-7 w-40 rounded-full" />
 
       {/* Read-only account info */}

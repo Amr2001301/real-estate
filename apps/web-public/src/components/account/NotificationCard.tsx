@@ -71,7 +71,7 @@ export function NotificationCard({
   locale?: string;
 }) {
   const unread = !notification.read;
-  const title = notificationTitle(notification.templateCode, notification.title);
+  const title = notificationTitle(notification.templateCode, notification.title, locale === 'en' ? 'en' : 'ar');
   const body = notification.body?.trim();
   const { Icon, chip } = notificationVisual(notification.templateCode, title);
   const href = notificationHref(notification.payload);

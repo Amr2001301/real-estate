@@ -130,6 +130,8 @@ async function doFetch(path: string, init?: RequestInit): Promise<Response> {
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
+      // The API answers in the visitor's language (names, categories, titles); a caller's own header wins.
+      'Accept-Language': c.get('site-locale')?.value === 'en' ? 'en' : 'ar',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(tenantSlug ? { 'x-tenant-slug': tenantSlug } : {}),
       ...(init?.headers ?? {}),
