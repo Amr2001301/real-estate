@@ -23,7 +23,7 @@ export default async function PrivacyPage() {
       <PageHero
         eyebrow={m.privacy.eyebrow}
         title={m.privacy.title}
-        subtitle="نوضح هنا كيف نتعامل مع بياناتك. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا."
+        subtitle={m.privacy.subtitle}
       />
 
       <Section tone="canvas">

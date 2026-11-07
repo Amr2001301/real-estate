@@ -86,7 +86,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
             <Footer locale={locale} branding={branding ?? undefined} pages={pages} />
-            <ChatWidget />
+            <ChatWidget locale={locale} />
           </CompanyContactProvider>
           </FavoritesProvider>
           </CurrencyProvider>
