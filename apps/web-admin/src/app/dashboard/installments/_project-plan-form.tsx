@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { formatCurrency } from '@/lib/format';
+import { computeDurationOption } from '@/lib/installment-calc';
 import { currencySymbol } from '@/lib/currency-format';
 import type { InstallmentPlanTemplate, PlanPreview, PlanScopeInfo, Translatable } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
@@ -41,6 +42,21 @@ interface DurationRow {
   key: string;
   months: string;
   pct: string;
+}
+
+function RadioCard({
+  name, value, checked, onChange, disabled, children,
+}: { name?: string; value: string; checked: boolean; onChange: () => void; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <label
+      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+        disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+      } ${checked ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-hairline bg-surface text-muted hover:border-brand-300'}`}
+    >
+      <input type="radio" name={name} value={value} checked={checked} disabled={disabled} onChange={onChange} className="accent-brand-500" />
+      <span>{children}</span>
+    </label>
+  );
 }
 
 const key = () => Math.random().toString(36).slice(2, 10);
@@ -143,6 +159,7 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
   const shown = preview && !('error' in preview) ? preview : null;
   const previewError = preview && 'error' in preview ? preview.error : (shown?.problem ?? null);
   const monthsShown = durationOptions[0]?.durationMonths;
+  const sample = shown?.rows.find((r) => !r.ownPlan) ?? null;
 
   const navSections = [
     { id: 'section-plan', num: '01', label: m.s1Title, sub: m.s1Sub },
@@ -213,21 +230,13 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
               </Select>
             </Field>
 
-            <Field label={m.scope} name="scopeKind">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(['PROJECT', 'TYPE'] as const).map((k) => (
-                  <label
-                    key={k}
-                    className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm text-center transition ${
-                      scopeKind === k ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold' : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                    }`}
-                  >
-                    <input type="radio" className="sr-only" checked={scopeKind === k} onChange={() => setScopeKind(k)} />
-                    {k === 'PROJECT' ? m.scopeProject : m.scopeTypes}
-                  </label>
-                ))}
+            <div>
+              <span className="text-sm font-medium text-slate-700">{m.scope}</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                <RadioCard value="PROJECT" checked={scopeKind === 'PROJECT'} onChange={() => setScopeKind('PROJECT')}>{m.scopeProject}</RadioCard>
+                <RadioCard value="TYPE" checked={scopeKind === 'TYPE'} onChange={() => setScopeKind('TYPE')}>{m.scopeTypes}</RadioCard>
               </div>
-            </Field>
+            </div>
 
             {scopeKind === 'TYPE' && (
               <Field label={m.pickTypes} name="unitTypePicker">
@@ -288,39 +297,51 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
 
         <PremiumFormPanel id="section-pricing" number="02" title={m.s2Title} description={m.s2Sub}>
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-2 gap-2 max-w-md">
-              {[false, true].map((c) => (
-                <label
-                  key={String(c)}
-                  className={`cursor-pointer rounded-xl border px-4 py-2.5 text-sm text-center transition ${
-                    isCash === c ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold' : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                  } ${mode === 'edit' ? 'opacity-60 pointer-events-none' : ''}`}
-                >
-                  <input type="radio" className="sr-only" checked={isCash === c} onChange={() => setIsCash(c)} />
-                  {c ? m.typeCash : m.typeInstallment}
-                </label>
-              ))}
+            <div>
+              <span className="text-sm font-medium text-slate-700">{m.planType}</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                <RadioCard value="INSTALLMENTS" checked={!isCash} disabled={mode === 'edit'} onChange={() => setIsCash(false)}>{m.typeInstallment}</RadioCard>
+                <RadioCard value="CASH" checked={isCash} disabled={mode === 'edit'} onChange={() => setIsCash(true)}>{m.typeCash}</RadioCard>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={m.discount} name="discountValue">
-                <Input id="discountValue" name="discountValue" type="number" min={0} max={100} step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} {...lock} />
-              </Field>
-              {!isCash && (
-                <Field label={m.downPayment} name="downPaymentValue">
-                  <Input id="downPaymentValue" name="downPaymentValue" type="number" min={0} max={100} step="0.01" value={down} onChange={(e) => setDown(e.target.value)} {...lock} />
-                </Field>
-              )}
-              <Field label={m.reservation} name="reservationAmountType">
-                <Select id="reservationAmountType" name="reservationAmountType" value={bookingType} onChange={(e) => setBookingType(e.target.value as 'FIXED' | 'PERCENTAGE')} {...lock}>
-                  <option value="PERCENTAGE">{m.reservationPct}</option>
-                  <option value="FIXED">{m.reservationFixed}</option>
-                </Select>
-              </Field>
-              <Field label={bookingType === 'FIXED' ? m.reservationFixedLabel(symbol) : m.reservationPctLabel} name="reservationAmountValue">
-                <Input id="reservationAmountValue" name="reservationAmountValue" type="number" min={0} step="0.01" value={booking} onChange={(e) => setBooking(e.target.value)} {...lock} />
-              </Field>
+            <Field label={m.discount} name="discountValue" hint={m.discountHint}>
+              <Input id="discountValue" name="discountValue" type="number" min={0} max={100} step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} className="max-w-40" {...lock} />
+            </Field>
+
+            <div>
+              <span className="text-sm font-medium text-slate-700">{m.reservation}</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                <RadioCard name={termsLocked ? undefined : 'reservationAmountType'} value="PERCENTAGE" checked={bookingType === 'PERCENTAGE'} disabled={termsLocked} onChange={() => setBookingType('PERCENTAGE')}>{m.reservationPct}</RadioCard>
+                <RadioCard name={termsLocked ? undefined : 'reservationAmountType'} value="FIXED" checked={bookingType === 'FIXED'} disabled={termsLocked} onChange={() => setBookingType('FIXED')}>{m.reservationFixed}</RadioCard>
+              </div>
             </div>
+            <Field label={bookingType === 'FIXED' ? m.reservationFixedLabel(symbol) : m.reservationPctLabel} name="reservationAmountValue" required>
+              <Input id="reservationAmountValue" name="reservationAmountValue" type="number" min={0} step="0.01" value={booking} onChange={(e) => setBooking(e.target.value)} className="max-w-40" {...lock} />
+            </Field>
+            {!isCash && (
+              <Field label={m.downPayment} name="downPaymentValue" required>
+                <Input id="downPaymentValue" name="downPaymentValue" type="number" min={0} max={100} step="0.01" value={down} onChange={(e) => setDown(e.target.value)} className="max-w-40" {...lock} />
+              </Field>
+            )}
+
+            {sample && (
+              <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
+                <p className="text-brand-700 font-medium">{m.sampleTitle(sample.code, money(sample.price))}</p>
+                <div className="mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    [m.colNet, sample.netPrice],
+                    [m.colBooking, sample.reservationAmount],
+                    ...(isCash ? [] : [[m.colDown, sample.downPaymentAmount]]),
+                  ].map(([l, v]) => (
+                    <div key={String(l)}>
+                      <p className="text-brand-700/80 text-xs">{l}</p>
+                      <p className="text-brand-900 text-base font-bold tabular-nums">{money(Number(v))}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* A disabled control is not submitted: keep the values for the form post. */}
             {termsLocked && (
               <>
@@ -330,7 +351,7 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                 <input type="hidden" name="reservationAmountValue" value={booking} />
               </>
             )}
-            <p className="text-xs text-slate-500">{m.pctOnlyNote}</p>
+            <div className="rounded-xl bg-canvas/40 border border-hairline p-3 text-xs text-slate-600">{m.pctOnlyNote}</div>
           </div>
         </PremiumFormPanel>
 
@@ -343,51 +364,68 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                     <tr>
                       <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">{m.durationMonths}</th>
                       <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">{m.increase}</th>
+                      <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colFinanced}</th>
+                      <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colMonthlyShort}</th>
+                      <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colTotal}</th>
                       <th className="px-3 py-2.5" />
                     </tr>
                   </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.key} className="border-t border-hairline">
-                        <td className="px-3 py-2">
-                          <Input type="number" min={1} max={600} value={r.months} onChange={(e) => setRows((cur) => cur.map((x) => (x.key === r.key ? { ...x, months: e.target.value } : x)))} {...lock} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input type="number" min={0} step="0.01" value={r.pct} onChange={(e) => setRows((cur) => cur.map((x) => (x.key === r.key ? { ...x, pct: e.target.value } : x)))} {...lock} />
-                        </td>
-                        <td className="px-3 py-2 text-end">
-                          {!termsLocked && rows.length > 1 && (
-                            <button type="button" aria-label={m.removeDuration} onClick={() => setRows((cur) => cur.filter((x) => x.key !== r.key))} className="text-slate-400 hover:text-danger-600">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                  <tbody className="divide-y divide-hairline">
+                    {rows.map((r) => {
+                      const months = Number(r.months);
+                      const calc = sample && months > 0
+                        ? computeDurationOption({
+                            netPrice: sample.netPrice,
+                            reservationAmount: sample.reservationAmount,
+                            downPaymentAmount: sample.downPaymentAmount,
+                            durationMonths: months,
+                            increasePercentage: Number(r.pct || 0),
+                          })
+                        : null;
+                      return (
+                        <tr key={r.key} className="hover:bg-canvas/40 transition-colors">
+                          <td className="px-3 py-2">
+                            <Input type="text" inputMode="numeric" placeholder="12" value={r.months} className="max-w-24" disabled={termsLocked}
+                              onChange={(e) => { const v = e.target.value; if (v === '' || /^[0-9]+$/.test(v)) setRows((cur) => cur.map((x) => (x.key === r.key ? { ...x, months: v } : x))); }} />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input type="text" inputMode="decimal" placeholder="0" value={r.pct} className="max-w-28" disabled={termsLocked}
+                              onChange={(e) => { const v = e.target.value; if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v)) setRows((cur) => cur.map((x) => (x.key === r.key ? { ...x, pct: v } : x))); }} />
+                          </td>
+                          <td className="px-3 py-2 text-end tabular-nums text-slate-700">{calc ? money(calc.financedAmount) : '—'}</td>
+                          <td className="px-3 py-2 text-end tabular-nums font-medium">{calc ? money(calc.monthlyInstallment) : '—'}</td>
+                          <td className="px-3 py-2 text-end tabular-nums text-slate-700">{calc ? money(calc.totalPayable) : '—'}</td>
+                          <td className="px-3 py-2 text-end">
+                            {!termsLocked && rows.length > 1 && (
+                              <button type="button" aria-label={m.removeDuration} onClick={() => setRows((cur) => cur.filter((x) => x.key !== r.key))} className="p-1.5 rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+              {sample && <p className="text-xs text-slate-500">{m.durationSampleNote(sample.code)}</p>}
               {!termsLocked && (
                 <div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setRows((cur) => [...cur, { key: key(), months: '', pct: '0' }])}>
-                    <Plus className="h-4 w-4" /> {m.addDuration}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setRows((cur) => [...cur, { key: key(), months: '', pct: '0' }])} leftIcon={<Plus className="h-4 w-4" />}>
+                    {m.addDuration}
                   </Button>
                 </div>
               )}
 
               <div className="flex flex-col gap-2">
                 <p className="text-sm font-medium text-slate-700">{m.startRule}</p>
+                <div className="flex flex-wrap gap-3">
                 {(['AFTER_RESERVATION', 'AFTER_CONTRACT', 'MANUAL'] as const).map((r) => (
-                  <label
-                    key={r}
-                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition ${
-                      startRule === r ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                    }`}
-                  >
-                    <input type="radio" name="startDateRule" value={r} checked={startRule === r} onChange={() => setStartRule(r)} disabled={termsLocked} className="accent-brand-500" />
+                  <RadioCard key={r} name={termsLocked ? undefined : 'startDateRule'} value={r} checked={startRule === r} disabled={termsLocked} onChange={() => setStartRule(r)}>
                     {r === 'AFTER_RESERVATION' ? m.startAfterReservation : r === 'AFTER_CONTRACT' ? m.startAfterContract : m.startManual}
-                  </label>
+                  </RadioCard>
                 ))}
+                </div>
                 {termsLocked && <input type="hidden" name="startDateRule" value={startRule} />}
                 {startRule === 'MANUAL' && (
                   <Field label={m.startManualDate} name="manualStartDate" required>
