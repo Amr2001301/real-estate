@@ -24,9 +24,9 @@ import 'home_cubit.dart';
 
 
 /// Navy depth gradient stops shared by the hero and CTA band.
-const Color _webNavyLight = Color(0xFF24426A);
-const Color _webNavyMid = Color(0xFF14273F);
-const Color _webNavyDeep = Color(0xFF0B1726);
+Color get _webNavyLight => AppPalette.navyLight;
+Color get _webNavyMid => AppPalette.navyMid;
+Color get _webNavyDeep => AppPalette.navyDeep;
 
 /// الرئيسية tab. Guest → marketing home (header + image hero + category pills
 /// + featured projects + units grid + CTA). Authenticated customer → ownership
@@ -232,9 +232,9 @@ class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
   static const double _expandedContent = 120.0;
   static const double _collapsedContent = 64.0;
 
-  static const _navyDeep  = Color(0xFF0B1726);
-  static const _navyMid   = Color(0xFF14273F);
-  static const _navyLight = Color(0xFF243F62);
+  static Color get _navyDeep => AppPalette.navyDeep;
+  static Color get _navyMid => AppPalette.navyMid;
+  static Color get _navyLight => AppPalette.navyLight;
 
   @override double get maxExtent => topPad + _expandedContent;
   @override double get minExtent => topPad + _collapsedContent;
@@ -249,7 +249,7 @@ class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
     return SizedBox.expand(
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [_navyLight, _navyMid, _navyDeep],
@@ -272,10 +272,10 @@ class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
                   opacity: expandedAlpha,
                   child: Container(
                     width: 200, height: 200,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
-                        colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
+                        colors: [AppPalette.gold400.withValues(alpha: 0.13), AppPalette.gold400.withValues(alpha: 0.00)],
                       ),
                     ),
                   ),
@@ -1009,7 +1009,7 @@ class _HomeCtaBand extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              const Positioned.fill(
+              Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(

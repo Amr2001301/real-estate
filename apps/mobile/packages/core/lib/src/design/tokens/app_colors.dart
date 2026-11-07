@@ -17,6 +17,67 @@ abstract final class AppPalette {
   static List<Color> _g = _gold;
   static List<Color> _n = _navy;
 
+  // The deeper / lighter shades the customer app's headers and cards use. The
+  // platform values are what those screens always had; a company's are cut from
+  // its own primary so every header carries its identity, not a fixed navy.
+  static const _shades = [
+    Color(0xFF0B1726), // deep
+    Color(0xFF14273F), // mid
+    Color(0xFF243F62), // light
+    Color(0xFF152236), // card
+    Color(0xFF091524), // darkest
+    Color(0xFF0B1D30), // foot
+    Color(0xFF1E3A62), // bright
+    Color(0xFF0F2137), // mid2
+    Color(0xFF1A3352), // panel
+    Color(0xFF1E3A6E), // hero
+    Color(0xFF0B1F42), // ink
+    Color(0xFF0F1E32), // top
+    Color(0xFF182A43), // accent
+    Color(0xFF1E3451), // accent2
+  ];
+  static List<Color> _s = _shades;
+
+  // Warm accent shades (dark gold text, deeper/lighter golds, browns) — cut from
+  // the company's accent; the platform values are what the screens always had.
+  static const _goldShades = [
+    Color(0xFF9A6F1E), // ink
+    Color(0xFFCFAA52), // warm
+    Color(0xFFC99A2E), // warm2
+    Color(0xFFB07818), // deepA
+    Color(0xFF8A5F10), // deepB
+    Color(0xFF7A5C1E), // brown1
+    Color(0xFF5A4214), // brown2
+    Color(0xFF3D2800), // brown3
+    Color(0xFF7C5200), // brown4
+    Color(0xFFFBD27A), // pale
+  ];
+  static List<Color> _gs = _goldShades;
+  static Color get goldInk => _gs[0];
+  static Color get goldWarm => _gs[1];
+  static Color get goldWarm2 => _gs[2];
+  static Color get goldDeepA => _gs[3];
+  static Color get goldDeepB => _gs[4];
+  static Color get goldBrown1 => _gs[5];
+  static Color get goldBrown2 => _gs[6];
+  static Color get goldBrown3 => _gs[7];
+  static Color get goldBrown4 => _gs[8];
+  static Color get goldPale => _gs[9];
+  static Color get navyDeep => _s[0];
+  static Color get navyMid => _s[1];
+  static Color get navyLight => _s[2];
+  static Color get navyCard => _s[3];
+  static Color get navyDarkest => _s[4];
+  static Color get navyFoot => _s[5];
+  static Color get navyBright => _s[6];
+  static Color get navyMid2 => _s[7];
+  static Color get navyPanel => _s[8];
+  static Color get navyHero => _s[9];
+  static Color get navyInk => _s[10];
+  static Color get navyTop => _s[11];
+  static Color get navyAccent => _s[12];
+  static Color get navyAccent2 => _s[13];
+
   static Color get gold50 => _g[0];
   static Color get gold100 => _g[1];
   static Color get gold200 => _g[2];
@@ -47,8 +108,26 @@ abstract final class AppPalette {
         p = mix(p, const Color(0xFF000000), 0.12);
       }
       _n = [p!, mix(p, const Color(0xFFFFFFFF), 0.07), mix(p, const Color(0xFFFFFFFF), 0.14)];
+      const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
+      _s = [
+        mix(p, k, 0.25),
+        mix(p, w, 0.04),
+        mix(p, w, 0.15),
+        mix(p, w, 0.05),
+        mix(p, k, 0.32),
+        mix(p, k, 0.1),
+        mix(p, w, 0.12),
+        mix(p, k, 0.02),
+        mix(p, w, 0.10),
+        mix(p, w, 0.16),
+        mix(p, k, 0.2),
+        mix(p, k, 0.0),
+        mix(p, w, 0.06),
+        mix(p, w, 0.1),
+      ];
     } else {
       _n = _navy;
+      _s = _shades;
     }
     if (a != null) {
       final base = p ?? _navy[0];
@@ -57,8 +136,21 @@ abstract final class AppPalette {
       }
       const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
       _g = [mix(a!, w, 0.9), mix(a, w, 0.8), mix(a, w, 0.55), mix(a, w, 0.22), a, mix(a, k, 0.1), mix(a, k, 0.22)];
+      _gs = [
+        mix(a, k, 0.38),
+        mix(a, w, 0.06),
+        mix(a, k, 0.04),
+        mix(a, k, 0.12),
+        mix(a, k, 0.3),
+        mix(a, k, 0.48),
+        mix(a, k, 0.65),
+        mix(a, k, 0.8),
+        mix(a, k, 0.42),
+        mix(a, w, 0.45),
+      ];
     } else {
       _g = _gold;
+      _gs = _goldShades;
     }
   }
 

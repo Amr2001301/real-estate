@@ -3,6 +3,7 @@ import 'package:core/core.dart';
 import '../../domain/entities/installment.dart';
 import '../../domain/repositories/installments_repository.dart';
 import '../datasources/installments_remote_data_source.dart';
+import '../dtos/presign_response_dto.dart';
 import '../dtos/proof_deposit_dto.dart';
 import '../mappers/installment_mapper.dart';
 
@@ -95,7 +96,7 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
         amount: params.amount,
         paidAtIso: params.paidAt.toUtc().toIso8601String(),
         paymentMethod: params.method.wire,
-        receiptUrl: presign.publicUrl,
+        receiptUrl: _receiptRef(presign),
         fileName: params.fileName,
         mimeType: params.mimeType,
         sizeBytes: params.bytes.length,
@@ -120,7 +121,7 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
       await _remote.resubmitProof(
         depositId: params.depositId,
         paymentMethod: params.method.wire,
-        receiptUrl: presign.publicUrl,
+        receiptUrl: _receiptRef(presign),
         fileName: params.fileName,
         mimeType: params.mimeType,
         sizeBytes: params.bytes.length,
@@ -128,5 +129,15 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
         note: params.note,
       );
     });
+  }
+
+  /// What the API stores for the receipt. Receipts live in the PRIVATE bucket,
+  /// so the presign answer carries only the object `key` (no public URL) and
+  /// the server accepts exactly that key. Falls back to the public URL for a
+  /// storage setup that has one. QA run 1, F-029: sending only `publicUrl`
+  /// posted an empty value and every payment proof was refused.
+  static String _receiptRef(PresignResponseDto presign) {
+    final key = presign.key;
+    return key != null && key.isNotEmpty ? key : presign.publicUrl;
   }
 }

@@ -11,7 +11,7 @@ import '../widgets/unit_status_chip.dart';
 import 'compare_cubit.dart';
 
 // Navy depth tokens — match the projects/units screen language.
-const _navyDeep = Color(0xFF0B1726);
+Color get _navyDeep => AppPalette.navyDeep;
 
 /// Premium compare screen — from-scratch redesign.
 ///
@@ -152,7 +152,7 @@ class _IdentityCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E3A62), AppPalette.navy, _navyDeep],
+          colors: [AppPalette.navyBright, AppPalette.navy, _navyDeep],
         ),
         borderRadius: BorderRadius.circular(AppRadii.md),
         border: Border.all(
@@ -227,9 +227,9 @@ class _IdentityCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                   AppPalette.gold400,
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                 ],
               ),
               borderRadius: BorderRadius.circular(999),
@@ -764,7 +764,7 @@ class _Step extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x44B8941F),
+                        color: AppPalette.gold400.withValues(alpha: 0.27),
                         blurRadius: 6,
                         offset: Offset(0, 2),
                       ),
@@ -870,7 +870,7 @@ class _MiniCard extends StatelessWidget {
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF1E3A62), AppPalette.navy],
+                colors: [AppPalette.navyBright, AppPalette.navy],
               )
             : null,
         color: navy ? null : colors.surface,

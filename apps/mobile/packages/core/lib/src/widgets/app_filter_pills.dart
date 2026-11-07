@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/theme/app_theme_ext.dart';
+import '../design/tokens/app_colors.dart';
 import '../design/tokens/app_radii.dart';
 import '../design/tokens/app_spacing.dart';
 import 'status_badge.dart';
@@ -123,7 +124,7 @@ class _Pill extends StatelessWidget {
     BadgeTone.warning => colors.warning,
     BadgeTone.error => colors.error,
     BadgeTone.info => colors.info,
-    BadgeTone.navy => const Color(0xFF14273F),
+    BadgeTone.navy => AppPalette.navyMid,
     _ => colors.brandGold,
   };
 

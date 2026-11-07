@@ -21,14 +21,14 @@ _Filter _familyOf(String code) {
 
 /// The icon and tint of a notification, as in the staff app.
 ({IconData icon, Color color}) _style(String code) {
-  if (code.startsWith('visit_') || code.startsWith('info_request_')) return (icon: Icons.event_rounded, color: const Color(0xFF26405F));
+  if (code.startsWith('visit_') || code.startsWith('info_request_')) return (icon: Icons.event_rounded, color: AppPalette.navy600);
   if (code.startsWith('reservation_')) return (icon: Icons.bookmark_rounded, color: const Color(0xFF2F6B4A));
-  if (code.startsWith('maintenance_')) return (icon: Icons.build_rounded, color: const Color(0xFF8A5A12));
+  if (code.startsWith('maintenance_')) return (icon: Icons.build_rounded, color: AppPalette.goldDeepB);
   if (code.startsWith('payment_') || code.startsWith('booking_payment_') || code.startsWith('deposit_')) {
     return (icon: Icons.payments_rounded, color: AppPalette.gold600);
   }
   if (code.startsWith('cheque_')) return (icon: Icons.receipt_long_rounded, color: const Color(0xFFB3261E));
-  if (code.startsWith('installment_')) return (icon: Icons.calendar_month_rounded, color: const Color(0xFF8A5A12));
+  if (code.startsWith('installment_')) return (icon: Icons.calendar_month_rounded, color: AppPalette.goldDeepB);
   if (code.startsWith('contract_') || code == 'unit_handed_over' || code == 'delivery_delayed_customer') {
     return (icon: Icons.description_rounded, color: AppPalette.gold600);
   }
@@ -109,7 +109,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           HomePill(id: 'all', label: l10n.ntAll, count: all.length, selected: _filter == _Filter.all, onTap: () => setState(() => _filter = _Filter.all)),
                           HomePill(id: 'unread', label: l10n.ntUnread, count: unread, dot: AppPalette.gold500, selected: _filter == _Filter.unread, onTap: () => pick(_Filter.unread)),
                           HomePill(id: 'finance', label: l10n.ntFinance, count: count(_Filter.finance), dot: const Color(0xFF3E7C5A), selected: _filter == _Filter.finance, onTap: () => pick(_Filter.finance)),
-                          HomePill(id: 'maintenance', label: l10n.accountMaintenance, count: count(_Filter.maintenance), dot: const Color(0xFF8A5A12), selected: _filter == _Filter.maintenance, onTap: () => pick(_Filter.maintenance)),
+                          HomePill(id: 'maintenance', label: l10n.accountMaintenance, count: count(_Filter.maintenance), dot: AppPalette.goldDeepB, selected: _filter == _Filter.maintenance, onTap: () => pick(_Filter.maintenance)),
                         ]),
                       ),
                     ),

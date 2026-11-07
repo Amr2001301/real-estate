@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../design/theme/app_theme_ext.dart';
+import '../design/tokens/app_colors.dart';
 import '../design/tokens/app_radii.dart';
 
 /// One filter of a list: a pill with an optional status dot and count.
@@ -22,8 +23,8 @@ class AppFilterChip extends StatelessWidget {
   final int? count;
   final Color? dotColor;
 
-  static const _navyDeep = Color(0xFF0B1726);
-  static const _navyLight = Color(0xFF243F62);
+  static Color get _navyDeep => AppPalette.navyDeep;
+  static Color get _navyLight => AppPalette.navyLight;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +42,7 @@ class AppFilterChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             gradient: selected
-                ? const LinearGradient(
+                ? LinearGradient(
                     colors: [_navyLight, _navyDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

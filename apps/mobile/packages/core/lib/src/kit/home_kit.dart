@@ -865,7 +865,7 @@ class HomeAttentionGrid extends StatelessWidget {
                 Icon(Icons.chevron_right_rounded, size: 18, color: context.appColors.inkMuted.withValues(alpha: 0.6)),
               ]),
               const SizedBox(height: 8),
-              Text(ltr('${a.count}'), style: homeDisplay(26, hot ? const Color(0xFF8A5A12) : context.appColors.inkStrong)),
+              Text(ltr('${a.count}'), style: homeDisplay(26, hot ? AppPalette.goldDeepB : context.appColors.inkStrong)),
               const SizedBox(height: 4),
               Text(a.label, style: TextStyle(fontSize: 12, height: 1.35, color: context.appColors.inkMuted)),
             ],

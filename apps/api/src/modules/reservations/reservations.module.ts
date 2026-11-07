@@ -657,8 +657,11 @@ export class ReservationsService {
             where: { leadId: dto.leadId, status: { not: ReservationStatus.CANCELLED } },
             select: { id: true },
           }),
+          // A visit for ANOTHER unit commits the lead elsewhere; a visit for this very
+          // unit is the normal road to its reservation (a website lead has no unit
+          // until its rep books the visit) — QA run 1, F-022. `not` also drops nulls.
           this.prisma.visitAppointment.findFirst({
-            where: { leadId: dto.leadId, unitId: { not: null } },
+            where: { leadId: dto.leadId, unitId: { not: dto.unitId } },
             select: { id: true },
           }),
           this.prisma.contract.findFirst({

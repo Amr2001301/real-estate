@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/entities/contract_statement.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 /// The share of the contract paid so far, 0–1: what was paid over the
 /// contract value and its fees.
@@ -36,7 +36,7 @@ class ContractMoneyCard extends StatelessWidget {
       key: const Key('contract-money'),
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(AppRadii.xl),
         boxShadow: [BoxShadow(color: _navyDeep.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
       ),

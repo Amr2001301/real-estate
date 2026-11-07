@@ -20,6 +20,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 // DepositsModule now imports DocumentsModule (for receipt-document linking).
 // Override the service so tests never touch R2; ConfigModule satisfies its deps.
 const documentsMock = {
+  assertFileRef: jest.fn(),
   create: jest.fn().mockImplementation(async (uploadedById: string, dto: Record<string, unknown>) => ({
     id: 'doc-1',
     uploadedById,

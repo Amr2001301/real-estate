@@ -7,8 +7,8 @@ import '../domain/repositories/profile_repository.dart';
 import '../../auth/presentation/auth_cubit.dart';
 import 'profile_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Profile Screen
@@ -224,7 +224,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Container(
             height: 52,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [_navyLight, _navyDeep],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

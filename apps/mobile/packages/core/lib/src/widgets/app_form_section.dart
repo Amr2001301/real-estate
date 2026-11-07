@@ -50,10 +50,10 @@ class AppFormSection extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                   AppPalette.gold400,
                   AppPalette.gold300,
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                 ],
               ),
               borderRadius:

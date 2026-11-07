@@ -189,6 +189,7 @@ let mock = makePrismaMock();
 describe('Deposits · reverseDeposit + FG-06', () => {
   let app: INestApplication;
   const documentsMock = {
+    assertFileRef: jest.fn(),
     create: jest.fn().mockResolvedValue({ id: 'doc-1' }),
     presign: jest.fn().mockResolvedValue({ url: 'https://presign.example/' }),
   };

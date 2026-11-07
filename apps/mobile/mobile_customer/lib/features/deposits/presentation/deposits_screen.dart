@@ -8,8 +8,8 @@ import '../domain/entities/deposit.dart';
 import 'deposit_format.dart';
 import 'deposits_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Deposits Screen
@@ -60,7 +60,7 @@ class _DepositsScreenState extends State<DepositsScreen> {
                     key: null,
                     label: l10n.filterAny,
                     dotColor: null,
-                    activeGradient: const [_navyLight, _navyDeep],
+                    activeGradient: [_navyLight, _navyDeep],
                     count: all.length,
                   ),
                   _FilterItem(
@@ -77,25 +77,25 @@ class _DepositsScreenState extends State<DepositsScreen> {
                     key: DepositType.downPayment.name,
                     label: l10n.depositTypeDownPayment,
                     dotColor: AppPalette.gold300,
-                    activeGradient: const [_navyLight, _navyDeep],
+                    activeGradient: [_navyLight, _navyDeep],
                     count: countOf(DepositType.downPayment),
                   ),
                   _FilterItem(
                     key: DepositType.installment.name,
                     label: l10n.depositTypeInstallment,
-                    dotColor: const Color(0xFF93C5FD),
-                    activeGradient: const [
-                      Color(0xFF1E3A6E),
-                      Color(0xFF0B1F42),
+                    dotColor: Color(0xFF93C5FD),
+                    activeGradient: [
+                      AppPalette.navyHero,
+                      AppPalette.navyInk,
                     ],
                     count: countOf(DepositType.installment),
                   ),
                   _FilterItem(
                     key: DepositType.finalPayment.name,
                     label: l10n.depositTypeFinal,
-                    dotColor: const Color(0xFFFBD27A),
-                    activeGradient: const [
-                      Color(0xFF7A5C1E),
+                    dotColor: AppPalette.goldPale,
+                    activeGradient: [
+                      AppPalette.goldBrown1,
                       Color(0xFF4A3610),
                     ],
                     count: countOf(DepositType.finalPayment),
@@ -210,7 +210,7 @@ class _DepositsSummary extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyLight, _navyDeep],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -384,15 +384,15 @@ class _DepositCard extends StatelessWidget {
     DepositType.bookingAmount =>
       dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D),
     DepositType.downPayment =>
-      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+      dark ? AppPalette.gold300 : AppPalette.goldInk,
     DepositType.installment =>
       dark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
     DepositType.finalPayment =>
-      dark ? const Color(0xFFFBD27A) : const Color(0xFFB45309),
+      dark ? AppPalette.goldPale : const Color(0xFFB45309),
     DepositType.fee =>
       dark ? const Color(0xFFFCA5A5) : const Color(0xFFB91C1C),
     DepositType.unknown =>
-      dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+      dark ? AppPalette.gold300 : AppPalette.goldInk,
   };
 
   @override
@@ -601,7 +601,7 @@ class _ReceiptsButton extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [_navyLight, _navyDeep],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,

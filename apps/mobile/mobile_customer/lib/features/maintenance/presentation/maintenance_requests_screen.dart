@@ -333,7 +333,7 @@ class _Chip extends StatelessWidget {
 
 Color _priorityAccent(MaintenancePriority p, bool dark) => switch (p) {
       MaintenancePriority.medium =>
-        dark ? AppPalette.gold400 : const Color(0xFF9A6F1E),
+        dark ? AppPalette.gold400 : AppPalette.goldInk,
       MaintenancePriority.high =>
         dark ? const Color(0xFFF87171) : const Color(0xFFB91C1C),
       MaintenancePriority.urgent =>

@@ -285,6 +285,17 @@ export class DocumentsService {
     return row;
   }
 
+  /**
+   * Refuses a bad file reference BEFORE a caller writes a row that points at it.
+   * QA run 1, F-030: a customer's payment proof created its Deposit first and
+   * only then validated the file, so a bad reference answered 400 yet left a
+   * proof row «under review» with no file — and the retry was refused as a
+   * duplicate, locking the customer out of paying that instalment.
+   */
+  assertFileRef(value: unknown): string {
+    return assertSafeUrl(value, this.r2.publicBaseUrl);
+  }
+
   async create(uploadedById: string, dto: CreateDocumentDto) {
     const fileUrl = assertSafeUrl(dto.fileUrl, this.r2.publicBaseUrl);
     await this.assertOwnerExists(dto.ownerType, dto.ownerId);
