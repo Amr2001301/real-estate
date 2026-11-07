@@ -1,3 +1,4 @@
+import { trustProxyHops } from './common/request/trust-proxy';
 import 'reflect-metadata';
 import { initSentry } from './common/observability/sentry';
 // Sentry must be initialised before any other application code so that the
@@ -23,6 +24,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(new JsonLoggerService());
   const config = app.get(ConfigService);
+
+  // The real client address behind the host's proxies (rate limits key on it). 0 = trust none.
+  const proxyHops = trustProxyHops(process.env['TRUST_PROXY_HOPS']);
+  if (proxyHops > 0) app.getHttpAdapter().getInstance().set('trust proxy', proxyHops);
 
   // Run before any other middleware so the id is on every response header,
   // including helmet's and CORS preflight responses.
