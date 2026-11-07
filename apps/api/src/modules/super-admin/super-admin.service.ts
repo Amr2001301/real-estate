@@ -23,6 +23,7 @@ import { seedFeeSettingsForCompany } from '../installments/fee-settings';
 import { seedTimeZoneSettingForCompany } from '../../common/time/company-timezone';
 import { seedLeadSourcesForCompany } from '../leads/lead-source-defaults';
 import { seedLostReasonsForCompany } from '../leads/lost-reason-defaults';
+import { seedMaintenanceCategoriesForCompany } from '../maintenance/maintenance-category-defaults';
 import { seedUnitTypesForCompany } from '../units/unit-type-defaults';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
@@ -233,6 +234,7 @@ export class SuperAdminService {
     await seedTimeZoneSettingForCompany(this.prisma, company.id);
     await seedLeadSourcesForCompany(this.prisma, company.id);
     await seedLostReasonsForCompany(this.prisma, company.id);
+    await seedMaintenanceCategoriesForCompany(this.prisma, company.id);
     await seedUnitTypesForCompany(this.prisma, company.id);
 
     let adminUser = null;

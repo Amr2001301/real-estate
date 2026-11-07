@@ -82,6 +82,10 @@ function makeService(overrides: Record<string, unknown> = {}) {
       count: jest.fn().mockResolvedValue(0),
       createMany: jest.fn().mockResolvedValue({ count: 10 }),
     },
+    maintenanceCategory: {
+      count: jest.fn().mockResolvedValue(0),
+      createMany: jest.fn().mockResolvedValue({ count: 6 }),
+    },
     unitType: {
       findMany: jest.fn().mockResolvedValue([]),
       createMany: jest.fn().mockResolvedValue({ count: 15 }),
@@ -189,6 +193,18 @@ describe('New DEVELOPER Company provisioning', () => {
     expect(data.websiteEnabled).toBeNull();
     expect(data.customerAppEnabled).toBeNull();
     expect(data.staffAppEnabled).toBeNull();
+  });
+
+  // QA run 1, F-032: a new company had no maintenance category, so its customers
+  // could not send a single maintenance request.
+  test('createCompany gives the new company its default maintenance categories', async () => {
+    const { service, prisma } = makeService();
+    const { company } = await service.createCompany({ name: 'NewCo', slug: 'newco', country: 'EG' });
+    const mc = (prisma as unknown as { maintenanceCategory: { createMany: jest.Mock } }).maintenanceCategory;
+    expect(mc.createMany).toHaveBeenCalledTimes(1);
+    const rows = mc.createMany.mock.calls[0][0].data as Array<{ companyId: string }>;
+    expect(rows.length).toBe(6);
+    expect(rows.every((r) => r.companyId === company.id)).toBe(true);
   });
 
   test('createCompany accepts explicit type=DEVELOPER', async () => {
