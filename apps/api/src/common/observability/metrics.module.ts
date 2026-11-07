@@ -61,13 +61,19 @@ class MetricsController {
   // JWT is bypassed (@Public) so Prometheus scrapers can reach this without
   // a user token. Authorization is enforced inside the handler via METRICS_TOKEN:
   // if the env var is set, the caller must present it as Bearer <token>.
-  // Without the env var the endpoint is open — set METRICS_TOKEN in production.
+  // Without the env var the endpoint is open in development only: in production
+  // it is closed until METRICS_TOKEN is set (QA F-055 — an unset variable used to
+  // publish the route and traffic figures to anyone).
   @Public()
   @Get('metrics')
   async metrics(@Res() res: Response) {
     // Read directly from process.env so tests that set the var at runtime
     // (after app startup) are observed — ConfigService caches at startup.
     const token = process.env['METRICS_TOKEN'];
+    if (!token && process.env['NODE_ENV'] === 'production') {
+      res.status(401).end('Unauthorized');
+      return;
+    }
     if (token) {
       const authHeader = (res.req as Request).headers['authorization'] ?? '';
       const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
