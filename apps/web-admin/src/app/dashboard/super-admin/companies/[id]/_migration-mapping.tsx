@@ -5,7 +5,7 @@ import { Check, Link2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { readError } from '@/components/ai/ai-strings';
 
 type Entity = 'PROJECT' | 'UNIT' | 'CUSTOMER' | 'LEAD' | 'ACTIVITY';
@@ -116,7 +116,7 @@ const extraKey = (field: string) => field.split('.extra.')[1] ?? field;
 // (an unrecognised stage, source, person, activity kind, unit type, or an
 // extra field) once; the API applies it to what was moved and to later sends.
 export function CompanyMigrationMapping({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => T[locale === 'en' ? 'en' : 'ar'], [locale]);
   const base = `/api-proxy/super-admin/companies/${companyId}/migrations/mapping`;
   const [screen, setScreen] = useState<Screen | null>(null);

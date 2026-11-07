@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, RotateCcw, Send, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PremiumPageHero } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { aiT } from '@/components/ai/ai-strings';
 import { AnswerText } from '@/components/ai/answer-text';
 
@@ -41,7 +41,7 @@ function saveChat(turns: Turn[]) {
 
 // The AI assistant: company staff ask about their own data, read-only.
 export default function AssistantPage() {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => aiT(locale), [locale]);
   const c = m.chat;
   const [status, setStatus] = useState<Status | null>(null);

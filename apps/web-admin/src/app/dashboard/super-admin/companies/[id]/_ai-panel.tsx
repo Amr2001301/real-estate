@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { formatDate } from '@/lib/format';
 import { aiT, readError, usageTone, type AiPlanView } from '@/components/ai/ai-strings';
 
@@ -38,7 +38,7 @@ type Mode = 'ACTIVATE' | 'RENEW' | 'TOP_UP' | null;
 // The company's AI assistant account: its current month, the three actions
 // (enable, renew, add questions) and every entry with its agreed price.
 export function CompanyAiPanel({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => aiT(locale), [locale]);
   const [plan, setPlan] = useState<AiPlanView | null>(null);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);

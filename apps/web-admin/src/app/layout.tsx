@@ -3,6 +3,7 @@ import { getLocale } from '@/lib/locale';
 import './fonts.css';
 import './globals.css';
 import { ThemeScript } from '@/components/ui/theme-script';
+import { LocaleProvider } from '@/components/locale-provider';
 import { NativeValidationMessages } from '@/components/form/native-validation-messages';
 
 // U5 type: Almarai for text, Noto Naskh Arabic for headings, Cormorant
@@ -29,7 +30,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <NativeValidationMessages locale={locale} />
-        {children}
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );
