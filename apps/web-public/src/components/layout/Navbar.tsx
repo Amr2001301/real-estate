@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import { Menu, X, UserCircle2, LogOut } from 'lucide-react';
@@ -16,29 +15,18 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { LangToggle } from '@/components/theme/LangToggle';
+import { CompanyMark } from './CompanyMark';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
 
-const PLATFORM_LOGO = '/brand/devora-logo.png';
-
 function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingData }) {
-  const logo = branding?.logoUrl ?? PLATFORM_LOGO;
   const name = branding?.displayName ?? branding?.name ?? SITE.name;
   return (
     <Link
       href={routes.home}
       className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
     >
-      <Image
-        src={logo}
-        alt={name}
-        width={28}
-        height={28}
-        priority
-        // The company's logo is served from object storage (any host): not through the image optimizer.
-        unoptimized
-        className="h-7 w-7 rounded-md object-cover"
-      />
+      <CompanyMark branding={branding} name={name} size={28} priority className="h-7 w-7" />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
         {name}
       </span>

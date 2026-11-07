@@ -9,9 +9,17 @@ import { join } from 'node:path';
 const read = (rel: string) => readFileSync(join(__dirname, '..', rel), 'utf8');
 
 describe('brand logo <Image>', () => {
-  it.each(['components/layout/Navbar.tsx', 'components/layout/Footer.tsx'])('%s uses unoptimized', (file) => {
+  // Both the header and the footer draw the mark through CompanyMark.
+  it('every <Image> of the company mark uses unoptimized', () => {
+    const src = read('components/layout/CompanyMark.tsx');
+    const blocks = src.match(/<Image[\s\S]*?\/>/g) ?? [];
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const block of blocks) expect(block).toMatch(/unoptimized/);
+  });
+
+  it.each(['components/layout/Navbar.tsx', 'components/layout/Footer.tsx'])('%s draws the mark with CompanyMark, not its own <Image>', (file) => {
     const src = read(file);
-    const block = /<Image[\s\S]*?\/>/.exec(src)?.[0] ?? '';
-    expect(block).toMatch(/unoptimized/);
+    expect(src).toContain('<CompanyMark');
+    expect(src).not.toMatch(/<Image/);
   });
 });
