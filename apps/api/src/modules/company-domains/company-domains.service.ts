@@ -444,7 +444,7 @@ export class CompanyDomainsService {
     const normalizedBase = baseDomain.trim().toLowerCase();
     if (hostname === normalizedBase || hostname.endsWith(`.${normalizedBase}`)) {
       throw new ForbiddenException({
-        message: `Custom domains under ${baseDomain} are reserved for platform use`,
+        message: `النطاقات تحت ${baseDomain} مخصصة للمنصة — استخدم نطاقًا خاصًا بالشركة`,
         code: 'DOMAIN_RESERVED_NAMESPACE',
       });
     }
