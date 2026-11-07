@@ -222,17 +222,20 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
           </CardBody>
         </Card>
 
-        <div className="lg:col-span-1 space-y-1.5">
-          <p className="text-[11px] text-slate-400 px-1">
-            {m.docsHint}
-          </p>
-          <OwnerDocumentsCard
-            ownerType="DEPOSIT"
-            ownerId={d.id}
-            title={m.docsTitle}
-            legacy={d.receiptUrl ? [{ label: m.docsLegacyLabel, href: d.receiptUrl, hint: m.docsLegacyHint }] : undefined}
-          />
-        </div>
+        {/* The documents list is admin-only: a rep or manager reads the payment, not its files (F-043). */}
+        {isAdmin && (
+          <div className="lg:col-span-1 space-y-1.5">
+            <p className="text-[11px] text-slate-400 px-1">
+              {m.docsHint}
+            </p>
+            <OwnerDocumentsCard
+              ownerType="DEPOSIT"
+              ownerId={d.id}
+              title={m.docsTitle}
+              legacy={d.receiptUrl ? [{ label: m.docsLegacyLabel, href: d.receiptUrl, hint: m.docsLegacyHint }] : undefined}
+            />
+          </div>
+        )}
       </div>
 
       <Link
