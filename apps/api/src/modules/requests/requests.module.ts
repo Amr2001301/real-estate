@@ -17,6 +17,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { cleanPersonName } from '../../common/utils/clean-person-name';
 import { Throttle } from '@nestjs/throttler';
 import {
   IsDateString,
@@ -101,7 +103,7 @@ class CreateInfoRequestDto extends UtmDto {
   @IsString() @MinLength(2) message!: string;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() unitId?: string;
-  @IsOptional() @IsString() name?: string;
+  @IsOptional() @Transform(({ value }) => cleanPersonName(value)) @IsString() name?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() email?: string;
 }
@@ -114,7 +116,7 @@ class CreateVisitRequestDto extends UtmDto {
   // admin tooling that renders date + time as separate cells stays populated.
   @IsOptional() @IsString() preferredTime?: string;
   @IsOptional() @IsString() notes?: string;
-  @IsOptional() @IsString() name?: string;
+  @IsOptional() @Transform(({ value }) => cleanPersonName(value)) @IsString() name?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() email?: string;
 }
