@@ -48,7 +48,7 @@ export default async function AdminBrokerPayoutDetailPage({
   const isAdmin = (await getSession())?.role === 'ADMIN';
   const isApproved = payout.status === 'APPROVED';
   const isProcessing = payout.status === 'PROCESSING';
-  const canCancel = isDraft || isApproved;
+  const canCancel = isDraft || isApproved || isProcessing;
 
   const METHOD_LABEL: Record<string, string> = {
     BANK_TRANSFER: m.methodBankTransfer,
