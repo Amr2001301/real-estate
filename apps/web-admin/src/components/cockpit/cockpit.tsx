@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowUpRight, CalendarCheck2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { initials } from '@/lib/initials';
 
 /**
  * Building blocks of the sales and manager homes, a day planner: a quiet
@@ -11,15 +12,6 @@ import { cn } from '@/lib/cn';
  */
 
 const GOLD = 'text-[#B8913F] dark:text-[#D8B66A]';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
-  if (!parts.length) return '؟';
-  // Skip the Arabic article: "رامي الشريف" reads رش.
-  const lead = (w: string) => (w.length > 3 && w.startsWith('ال') ? w.charAt(2) : w.charAt(0));
-  if (parts.length === 1) return lead(parts[0]!).toUpperCase();
-  return (lead(parts[0]!) + lead(parts[parts.length - 1]!)).toUpperCase();
-}
 
 export function Avatar({ name, className }: { name: string; className?: string }) {
   return (

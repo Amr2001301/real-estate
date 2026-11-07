@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Card } from '@/components/ui/card';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export type DetailHeroStatus = 'success' | 'warning' | 'danger' | 'neutral';
 
@@ -124,5 +125,5 @@ export function avatarColor(name: string): string {
 }
 
 export function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }

@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { AuditFilterBar } from './_components/audit-filter-bar';
 import { areaLabel } from '../operations/_area-label';
 import { PremiumPageHero, PremiumPanel, PremiumEmptyState } from '@/components/premium';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -161,8 +162,7 @@ const ROLE_CHIP: Partial<Record<UserRole, string>> = {
 };
 
 function initials(name: string | null | undefined): string {
-  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '·';
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────

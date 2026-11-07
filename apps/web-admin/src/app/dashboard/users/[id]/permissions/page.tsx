@@ -7,6 +7,7 @@ import { uiT } from '@/messages/ui';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero } from '@/components/premium';
 import { PermissionPicker } from './permission-picker';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -21,11 +22,7 @@ const ROLE_CHIP: Partial<Record<UserRole, string>> = {
 };
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] ?? '')
-    .join('');
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 export default async function UserPermissionsPage({

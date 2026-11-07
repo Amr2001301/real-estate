@@ -2,21 +2,12 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { EntityLink, type EntityKind } from '@/components/entity-link';
+import { initials } from '@/lib/initials';
 
 /**
  * Shared table cells for the premium list pages (visits, reservations, contracts).
  * Codes, amounts and dates never wrap; names sit beside an initials avatar.
  */
-
-function initials(name: string): string {
-  // Words that start with a letter only: "E2E Visitor 1792…" reads EV, not E1.
-  const parts = name.trim().split(/\s+/).filter((w) => /^\p{L}/u.test(w));
-  if (!parts.length || name === '—') return '؟';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  // Skip the Arabic article: "رامي الشريف" reads رش, not را.
-  const lead = (w: string) => (w.length > 3 && w.startsWith('ال') ? w.charAt(2) : w.charAt(0));
-  return (lead(parts[0]!) + lead(parts[parts.length - 1]!)).toUpperCase();
-}
 
 /** Record number link; `muted` marks a short id shown when the record has no number. */
 export function CodeCell({

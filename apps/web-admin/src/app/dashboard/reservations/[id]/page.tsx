@@ -51,6 +51,7 @@ import {
   PremiumEmptyNote,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 
@@ -768,12 +769,7 @@ function PartyLabel({ children }: { children: React.ReactNode }) {
 }
 
 function Avatar({ name, small }: { name: string; small?: boolean }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('');
+  const initials = sharedInitials(name, { single: 2, fallback: '·' });
   return (
     <span
       aria-hidden

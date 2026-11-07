@@ -6,6 +6,7 @@ import type { PrintSettings, Seal } from '@/lib/print-settings';
 import type { TemplateBlock } from '@/lib/document-template';
 import { printT } from '@/messages/print';
 import { PrintToolbar, type TemplateSwitcher } from './PrintToolbar';
+import { initials as sharedInitials } from '@/lib/initials';
 
 // A4 company documents: letterhead from the company branding (logo, colours,
 // contact, commercial registration), amounts in the company currency, text in
@@ -54,9 +55,7 @@ export function companyNameOf(letterhead: Letterhead, locale: Locale): string {
 }
 
 function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const [first = '', second = ''] = words;
-  return (second ? first.charAt(0) + second.charAt(0) : first.slice(0, 2)).toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function text(value: unknown, locale: Locale): string {

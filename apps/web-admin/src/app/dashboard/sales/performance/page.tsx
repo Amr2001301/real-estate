@@ -18,6 +18,7 @@ import { attainment, expectedPct, STATUS_CHIP, targetPhase, targetStatus } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -316,7 +317,7 @@ export default async function SalesPerformancePage({
                     {idx + 1}
                   </span>
                   <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400/35 to-brand-700/20 font-heading text-[16px] font-bold text-brand-700 ring-1 ring-brand-500/40">
-                    {row.salesName.charAt(0)}
+                    {sharedInitials(row.salesName)}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-[14.5px] font-bold text-slate-900">{row.salesName}</p>

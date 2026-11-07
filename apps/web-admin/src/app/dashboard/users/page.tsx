@@ -21,6 +21,7 @@ import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
 import { getDisabledFeatures } from '@/lib/capabilities';
 import { uiT } from '@/messages/ui';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -86,12 +87,7 @@ const ROLE_DOT: Partial<Record<UserRole, string>> = {
 };
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
