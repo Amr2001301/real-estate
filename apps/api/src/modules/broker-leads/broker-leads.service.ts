@@ -186,6 +186,19 @@ export class BrokerLeadsService {
       assignedSalesId: dto.assignedSalesId ?? null,
       note: dto.note ?? null,
     });
+    // F-036: the rep the lead is handed to is told, like on every other assign path.
+    if (dto.assignedSalesId) {
+      try {
+        await this.notifications.sendToUser(
+          dto.assignedSalesId,
+          'lead_assigned_sales',
+          { entityType: 'lead', entityId: id, customerName: lead.fullName, projectName: '' },
+          { except: actor.sub },
+        );
+      } catch {
+        // Best-effort, like the broker's own notice: the approval already happened.
+      }
+    }
     return result;
   }
 
@@ -293,6 +306,7 @@ export class BrokerLeadsService {
       select: {
         id: true,
         brokerId: true,
+        fullName: true,
         brokerApprovalStatus: true,
         stage: true,
       },
