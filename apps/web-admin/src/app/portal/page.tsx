@@ -44,6 +44,7 @@ import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerStatusBadge, BrokerLeadStatusBadge } from '@/components/badges';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -59,7 +60,7 @@ function convPct(num: number, denom: number): string | null {
 }
 
 function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function SectionLabel({ children, icon }: { children: ReactNode; icon?: ReactNode }) {

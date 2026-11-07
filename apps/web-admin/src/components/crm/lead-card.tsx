@@ -13,13 +13,7 @@ import { cn } from '@/lib/cn';
 import type { Locale } from '@/lib/locale';
 import Link from 'next/link';
 import { QuickContact } from './quick-contact';
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '؟';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
-}
+import { initials } from '@/lib/initials';
 
 function daysSince(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
@@ -107,7 +101,7 @@ function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
             title={rep}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] text-[11px] font-bold text-[#1A1408]"
           >
-            {initials(rep)}
+            {initials(rep, { single: 2 })}
           </span>
         ) : (
           <span

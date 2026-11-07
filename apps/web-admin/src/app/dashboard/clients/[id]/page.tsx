@@ -29,6 +29,7 @@ import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
+import { initials as sharedInitials } from '@/lib/initials';
 
 interface AuditLog {
   id: string;
@@ -65,10 +66,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 1);
-  return parts[0]![0]! + parts[parts.length - 1]![0]!;
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 export default async function ClientDetailPage({

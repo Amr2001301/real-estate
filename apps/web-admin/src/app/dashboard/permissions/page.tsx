@@ -27,6 +27,7 @@ import {
   PremiumFilterBar,
   PremiumSectionCard,
 } from '@/components/premium';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -77,12 +78,7 @@ function avatarColor(id: string): string {
 }
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 export default async function PermissionsPage({

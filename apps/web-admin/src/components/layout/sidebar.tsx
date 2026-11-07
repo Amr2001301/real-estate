@@ -6,6 +6,7 @@ import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
 import { NavSections } from './nav-sections';
 import { UserMenu } from './user-menu';
+import { initials } from '@/lib/initials';
 
 interface Props {
   user: SessionUser;
@@ -14,13 +15,6 @@ interface Props {
   sections?: NavSection[];
   onNavigate?: () => void;
   className?: string;
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
@@ -73,7 +67,7 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
         <UserMenu
           name={user.fullName}
           role={m.sidebar.roles[user.role as SessionRole]}
-          initials={initials(user.fullName)}
+          initials={initials(user.fullName, { single: 2, fallback: '·' })}
           settings={settingsItem ? { href: settingsItem.href, label: m.nav.items[settingsItem.labelKey], matches: settingsItem.matches } : undefined}
           security={{ href: user.role === 'BROKER' ? '/portal/security' : '/dashboard/security', label: m.sidebar.security }}
           logout={{ label: m.sidebar.logout, action: logoutAction }}

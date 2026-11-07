@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { MediaUploader } from '@/components/media-uploader';
 import { patchBrandingAction, type BrandingPayload } from '../actions';
 import { CURRENCY_OPTIONS, currencySymbol } from '@/lib/currency-format';
+import { initials as sharedInitials } from '@/lib/initials';
 
 // ── Curated palette ─────────────────────────────────────────────────────────
 // All colours satisfy ≥ 3:1 contrast ratio against white — safe to use as
@@ -423,7 +424,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
                     <img src={logoUrl} alt="" className="h-7 w-7 rounded-lg bg-white/10 object-contain" />
                   ) : (
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[12px] font-bold" style={{ backgroundColor: shownAccent }}>
-                      {shownName.charAt(0)}
+                      {sharedInitials(shownName)}
                     </span>
                   )}
                   <span className="truncate text-[13px] font-bold">{shownName}</span>

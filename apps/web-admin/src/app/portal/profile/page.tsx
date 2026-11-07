@@ -25,12 +25,13 @@ import { getLocale } from '@/lib/locale';
 import { portalMoneyTeamT } from '@/messages/portal/money-team';
 import { cn } from '@/lib/cn';
 import { BrokerStatusBadge, BrokerUserStatusBadge } from '@/components/badges';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function contractDaysLeft(endAt: string | null | undefined): number | null {

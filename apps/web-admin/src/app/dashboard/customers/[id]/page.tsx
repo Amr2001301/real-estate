@@ -50,6 +50,7 @@ import { EntityLink } from '@/components/entity-link';
 import { LeadStageBadge } from '@/components/badges';
 import { followUpState, followUpT } from '@/components/crm/follow-up-messages';
 import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -70,10 +71,7 @@ function paletteFor(s: string): string {
 }
 
 function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 2);
-  return parts[0]![0]! + parts[parts.length - 1]![0]!;
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
