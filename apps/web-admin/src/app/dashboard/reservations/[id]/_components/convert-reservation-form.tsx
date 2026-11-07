@@ -1,5 +1,6 @@
 'use client';
 
+import { upfrontTotal } from '@/lib/upfront-total';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeftRight } from 'lucide-react';
@@ -141,6 +142,13 @@ export function ConvertReservationForm({ reservation, symbol, locale = 'ar' }: P
             {reservation.snapshotDownPaymentAmount != null && (
               <SummaryRow label={m.convertDownPaymentLabel}>
                 <span className="tabular-nums" dir="ltr">{fmt(reservation.snapshotDownPaymentAmount)} {symbol}</span>
+              </SummaryRow>
+            )}
+            {upfrontTotal(bookingAmount, reservation.snapshotDownPaymentAmount) != null && (
+              <SummaryRow label={m.upfrontTotalLabel}>
+                <span className="font-semibold tabular-nums" dir="ltr">
+                  {fmt(upfrontTotal(bookingAmount, reservation.snapshotDownPaymentAmount) ?? 0)} {symbol}
+                </span>
               </SummaryRow>
             )}
             {reservation.selectedDurationMonths != null && (
