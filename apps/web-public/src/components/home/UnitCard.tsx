@@ -9,13 +9,14 @@ import { cn } from '@/lib/cn';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-const STATUS: Record<string, { label: string; dot: string }> = {
-  AVAILABLE: { label: 'متاحة', dot: 'bg-success' },
-  RESERVED: { label: 'محجوزة', dot: 'bg-warning' },
-  SOLD: { label: 'مباعة', dot: 'bg-ink-muted' },
+const STATUS_DOT: Record<string, string> = {
+  AVAILABLE: 'bg-success',
+  RESERVED: 'bg-warning',
+  SOLD: 'bg-ink-muted',
 };
-const DEFAULT_STATUS = { label: 'متاحة', dot: 'bg-success' };
 
 /** Gold type glyph for the title tile. */
 function typeIcon(type: string): typeof Home {
@@ -33,21 +34,23 @@ function typeIcon(type: string): typeof Home {
   }
 }
 
-export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.ReactNode }) {
-  const status = STATUS[unit.status] ?? DEFAULT_STATUS;
-  const typeLabel = unitTypeLabel(unit.type, unit.typeName);
+export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; action?: React.ReactNode; locale?: Locale }) {
+  const t = extraT(locale).unitCard;
+  const statusLabels = t.statuses as Record<string, string>;
+  const status = { label: statusLabels[unit.status] ?? t.statuses.AVAILABLE, dot: STATUS_DOT[unit.status] ?? 'bg-success' };
+  const typeLabel = unitTypeLabel(unit.type, unit.typeName, locale);
   const TypeIcon = typeIcon(unit.type);
 
-  const projectName = unit.project ? pickAr(unit.project.name) : '';
-  const location = cityLabel(unit.project?.city);
+  const projectName = unit.project ? pickAr(unit.project.name, '', locale) : '';
+  const location = cityLabel(unit.project?.city, locale);
 
   // Compact specs with light Arabic pluralization (singular at 1).
   const specs: Array<{ icon: typeof BedDouble; label: string; value: string }> = [];
   if (unit.bedrooms > 0)
-    specs.push({ icon: BedDouble, label: unit.bedrooms === 1 ? 'غرفة' : 'غرف', value: formatNumber(unit.bedrooms) });
+    specs.push({ icon: BedDouble, label: unit.bedrooms === 1 ? t.roomOne : t.roomMany, value: formatNumber(unit.bedrooms, locale) });
   if (unit.bathrooms > 0)
-    specs.push({ icon: Bath, label: unit.bathrooms === 1 ? 'حمام' : 'حمامات', value: formatNumber(unit.bathrooms) });
-  if (unit.area > 0) specs.push({ icon: Maximize, label: 'م²', value: formatNumber(unit.area) });
+    specs.push({ icon: Bath, label: unit.bathrooms === 1 ? t.bathOne : t.bathMany, value: formatNumber(unit.bathrooms, locale) });
+  if (unit.area > 0) specs.push({ icon: Maximize, label: locale === 'en' ? 'm²' : 'م²', value: formatNumber(unit.area, locale) });
 
   return (
     <div className="relative h-full">
@@ -104,7 +107,7 @@ export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.Re
             <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
             <span className="line-clamp-1">
               {location}
-              {unit.floor > 0 ? ` · الطابق ${formatNumber(unit.floor)}` : ''}
+              {unit.floor > 0 ? ` · ${t.floor(formatNumber(unit.floor, locale))}` : ''}
             </span>
           </p>
 
@@ -131,7 +134,7 @@ export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.Re
               className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-ink-strong transition-colors group-hover:bg-gold-400 group-hover:text-navy"
               aria-hidden
             >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              <ArrowLeft className="h-4 w-4 transition-transform ltr:rotate-180 group-hover:-translate-x-0.5 ltr:group-hover:translate-x-0.5" />
             </span>
           </div>
         </div>

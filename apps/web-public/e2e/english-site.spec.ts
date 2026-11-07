@@ -30,4 +30,13 @@ test.describe('English public site', () => {
     await expect(page.locator('main')).not.toContainText('تفاصيل المشروع');
     await expect(page.locator('main')).not.toContainText('وحدات متاحة');
   });
+
+  test('unit cards show English labels, Latin digits and the currency code', async ({ page }) => {
+    await page.goto('/units', { waitUntil: 'networkidle' });
+    const cards = page.locator('main a[href^="/units/"]');
+    if ((await cards.count()) === 0) test.skip(true, 'no units in this database');
+    const text = await page.locator('main').innerText();
+    expect(text).not.toMatch(/ج\.م|م²|متاحة|الطابق/);
+    expect(text).toMatch(/\bEGP\b|\bSAR\b|\bAED\b|\$/);
+  });
 });

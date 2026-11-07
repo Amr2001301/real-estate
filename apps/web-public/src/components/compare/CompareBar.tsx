@@ -8,6 +8,8 @@ import { routes } from '@/lib/routes';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { InlineNotice } from '@/components/states/InlineNotice';
 import { useCompare, MAX_COMPARE } from './CompareContext';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { extraT } from '@/messages/site-extra';
 
 /**
  * Sticky bottom compare bar. Appears once at least one unit is selected.
@@ -15,6 +17,7 @@ import { useCompare, MAX_COMPARE } from './CompareContext';
  */
 export function CompareBar() {
   const { items, remove, clear, notice } = useCompare();
+  const t = extraT(useSiteLocale()).compareBar;
   const active = items.length > 0;
 
   // Reserve space at the page bottom so the fixed bar never hides the footer
@@ -50,7 +53,7 @@ export function CompareBar() {
                   <CoverImage src={item.coverImage} alt={item.label} className="h-full w-full" />
                   <button
                     type="button"
-                    aria-label={`إزالة ${item.label}`}
+                    aria-label={t.remove(item.label)}
                     onClick={() => remove(item.id)}
                     className="absolute inset-0 flex items-center justify-center bg-navy/0 text-white opacity-0 transition-all hover:bg-navy/60 hover:opacity-100"
                   >
@@ -59,7 +62,7 @@ export function CompareBar() {
                 </span>
               ))}
               <span className="ms-2 text-sm text-ink-muted">
-                {items.length} من {MAX_COMPARE}
+                {t.count(items.length, MAX_COMPARE)}
               </span>
             </div>
           </div>
@@ -69,8 +72,8 @@ export function CompareBar() {
               href={compareHref}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-navy px-6 text-[15px] font-medium text-white transition-colors hover:bg-navy-700"
             >
-              قارن الآن
-              <ArrowLeft className="h-4 w-4" aria-hidden />
+              {t.now}
+              <ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden />
             </Link>
             <button
               type="button"
@@ -78,7 +81,7 @@ export function CompareBar() {
               className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink-strong"
             >
               <X className="h-4 w-4" aria-hidden />
-              إلغاء
+              {t.cancel}
             </button>
           </div>
         </div>

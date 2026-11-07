@@ -13,13 +13,17 @@ import { ButtonLink } from '@/components/ui/Button';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { writeCompareItems, type CompareItem } from './CompareContext';
 import { useCurrency } from '@/components/currency/CurrencyProvider';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-const STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'neutral' }> = {
-  AVAILABLE: { label: 'متاحة', tone: 'success' },
-  RESERVED: { label: 'محجوزة', tone: 'warning' },
-  SOLD: { label: 'مباعة', tone: 'neutral' },
-};
-const DEFAULT_STATUS = { label: 'متاحة', tone: 'success' as const };
+type Tone = 'success' | 'warning' | 'neutral';
+const STATUS_TONE: Record<string, Tone> = { AVAILABLE: 'success', RESERVED: 'warning', SOLD: 'neutral' };
+
+function statusOf(t: ReturnType<typeof extraT>['compare'], status: string): { label: string; tone: Tone } {
+  const labels = t.statuses as Record<string, string>;
+  return { label: labels[status] ?? t.statuses.AVAILABLE, tone: STATUS_TONE[status] ?? 'success' };
+}
 
 interface Row {
   label: string;
@@ -30,17 +34,20 @@ interface Row {
   dir?: 'min' | 'max';
 }
 
-const ROWS: Row[] = [
-  { label: 'السعر', value: (u, currency) => formatPrice(u.price, currency), metric: (u) => Number(u.price), dir: 'min' },
-  { label: 'المساحة', value: (u) => formatArea(u.area), metric: (u) => u.area, dir: 'max' },
-  { label: 'غرف النوم', value: (u) => formatNumber(u.bedrooms), metric: (u) => u.bedrooms, dir: 'max' },
-  { label: 'دورات المياه', value: (u) => formatNumber(u.bathrooms), metric: (u) => u.bathrooms, dir: 'max' },
-  { label: 'الطابق', value: (u) => formatNumber(u.floor) },
-  { label: 'النوع', value: (u) => unitTypeLabel(u.type, u.typeName) },
-  { label: 'الحالة', value: (u) => (STATUS[u.status] ?? DEFAULT_STATUS).label },
-  { label: 'المشروع', value: (u) => (u.project ? pickAr(u.project.name, '—') : '—') },
-  { label: 'المدينة', value: (u) => cityLabel(u.project?.city) },
-];
+function buildRows(locale: Locale): Row[] {
+  const t = extraT(locale).compare;
+  return [
+    { label: t.rows.price, value: (u, currency) => formatPrice(u.price, currency, locale), metric: (u) => Number(u.price), dir: 'min' },
+    { label: t.rows.area, value: (u) => formatArea(u.area, locale), metric: (u) => u.area, dir: 'max' },
+    { label: t.rows.bedrooms, value: (u) => formatNumber(u.bedrooms, locale), metric: (u) => u.bedrooms, dir: 'max' },
+    { label: t.rows.bathrooms, value: (u) => formatNumber(u.bathrooms, locale), metric: (u) => u.bathrooms, dir: 'max' },
+    { label: t.rows.floor, value: (u) => formatNumber(u.floor, locale) },
+    { label: t.rows.type, value: (u) => unitTypeLabel(u.type, u.typeName, locale) },
+    { label: t.rows.status, value: (u) => statusOf(t, u.status).label },
+    { label: t.rows.project, value: (u) => (u.project ? pickAr(u.project.name, '—', locale) : '—') },
+    { label: t.rows.city, value: (u) => cityLabel(u.project?.city, locale) },
+  ];
+}
 
 /** Winning metric value for a row, or null when there's no clear winner (all equal / no metric). */
 function bestValue(row: Row, units: PublicUnit[]): number | null {
@@ -52,11 +59,11 @@ function bestValue(row: Row, units: PublicUnit[]): number | null {
   return row.dir === 'min' ? Math.min(...vals) : Math.max(...vals);
 }
 
-function toItem(u: PublicUnit): CompareItem {
-  const project = u.project ? pickAr(u.project.name) : '';
+function toItem(u: PublicUnit, locale: Locale): CompareItem {
+  const project = u.project ? pickAr(u.project.name, '', locale) : '';
   return {
     id: u.id,
-    label: [u.type, project].filter(Boolean).join(' · ') || `وحدة ${u.code}`,
+    label: [u.type, project].filter(Boolean).join(' · ') || extraT(locale).compare.unitWord(u.code),
     price: u.price,
     coverImage: u.coverImage,
   };
@@ -64,17 +71,20 @@ function toItem(u: PublicUnit): CompareItem {
 
 export function CompareView({ units }: { units: PublicUnit[] }) {
   const currency = useCurrency();
+  const locale = useSiteLocale();
+  const t = extraT(locale).compare;
+  const ROWS = buildRows(locale);
   const router = useRouter();
 
   // Keep the querystring (source of truth) and localStorage in sync so the
   // compare selection stays consistent when the user returns to /units.
   useEffect(() => {
-    writeCompareItems(units.map(toItem));
-  }, [units]);
+    writeCompareItems(units.map((u) => toItem(u, locale)));
+  }, [units, locale]);
 
   function removeUnit(id: string) {
     const remaining = units.filter((u) => u.id !== id);
-    writeCompareItems(remaining.map(toItem));
+    writeCompareItems(remaining.map((u) => toItem(u, locale)));
     const ids = remaining.map((u) => u.id);
     const href = ids.length ? `${routes.compare}?ids=${ids.join(',')}` : routes.compare;
     router.replace(href as Route);
@@ -101,12 +111,12 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
         )}
       >
         {units.map((u) => {
-          const status = STATUS[u.status] ?? DEFAULT_STATUS;
-          const project = u.project ? pickAr(u.project.name) : '';
+          const status = statusOf(t, u.status);
+          const project = u.project ? pickAr(u.project.name, '', locale) : '';
           return (
             <div key={u.id} className="flex h-full flex-col overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
               <div className="relative">
-                <CoverImage src={u.coverImage} alt={`وحدة ${u.code}`} className="aspect-[4/3]" />
+                <CoverImage src={u.coverImage} alt={t.unitWord(u.code)} className="aspect-[4/3]" />
                 <span className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/25 to-transparent" aria-hidden />
                 <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
                   <span
@@ -120,7 +130,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                 </span>
                 <button
                   type="button"
-                  aria-label="إزالة من المقارنة"
+                  aria-label={t.removeFromCompare}
                   onClick={() => removeUnit(u.id)}
                   className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-ink-strong shadow-soft backdrop-blur-md transition-colors hover:bg-surface"
                 >
@@ -129,15 +139,15 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
               </div>
               <div className="flex flex-1 flex-col p-5">
                 <div className="line-clamp-1 text-sm text-ink-muted">
-                  {unitTypeLabel(u.type, u.typeName)}{project ? ` · ${project}` : ''}
+                  {unitTypeLabel(u.type, u.typeName, locale)}{project ? ` · ${project}` : ''}
                 </div>
-                <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price, currency)}</div>
+                <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price, currency, locale)}</div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
                   <ButtonLink href={routes.unit(u.id) as Route} variant="primary" size="sm">
-                    عرض التفاصيل
+                    {t.viewDetails}
                   </ButtonLink>
                   <ButtonLink href={`${routes.contact}?unitId=${u.id}` as Route} variant="outline" size="sm">
-                    طلب معلومات
+                    {t.requestInfo}
                   </ButtonLink>
                 </div>
               </div>
@@ -153,7 +163,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-gold-500 shadow-soft">
               <Plus className="h-6 w-6" aria-hidden />
             </span>
-            أضف وحدات أخرى
+            {t.addMore}
           </Link>
         )}
       </div>
@@ -162,7 +172,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
       {units.length >= 2 && (
         <p className="mt-8 inline-flex items-center gap-2 text-xs text-ink-muted">
           <span className="inline-block h-3 w-3 rounded bg-gold-100 ring-1 ring-gold-200" aria-hidden />
-          القيمة المميّزة في كل صف (الأقل سعرًا، الأكبر مساحةً، والأكثر غرفًا) مظللة بالذهبي.
+          {t.legend}
         </p>
       )}
 
@@ -173,12 +183,12 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
           className="grid border-b border-hairline bg-navy text-white"
           style={{ gridTemplateColumns: `200px repeat(${units.length}, minmax(0, 1fr))` }}
         >
-          <div className="px-6 py-4 text-sm font-bold">المواصفات</div>
+          <div className="px-6 py-4 text-sm font-bold">{t.specs}</div>
           {units.map((u) => {
-            const project = u.project ? pickAr(u.project.name) : '';
+            const project = u.project ? pickAr(u.project.name, '', locale) : '';
             return (
               <div key={u.id} className="border-s border-white/10 px-6 py-4 text-center">
-                <div className="line-clamp-1 text-sm font-bold">{unitTypeLabel(u.type, u.typeName)}</div>
+                <div className="line-clamp-1 text-sm font-bold">{unitTypeLabel(u.type, u.typeName, locale)}</div>
                 {project && <div className="mt-0.5 line-clamp-1 text-xs text-white/65">{project}</div>}
               </div>
             );
@@ -217,11 +227,11 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
       {/* Mobile stacked cards */}
       <div className="mt-10 space-y-5 lg:hidden">
         {units.map((u) => {
-          const project = u.project ? pickAr(u.project.name) : '';
+          const project = u.project ? pickAr(u.project.name, '', locale) : '';
           return (
             <div key={u.id} className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft">
               <div className="flex items-center gap-3 border-b border-hairline bg-surface-soft/50 px-5 py-4">
-                <span className="font-display text-ink-strong">{unitTypeLabel(u.type, u.typeName)}</span>
+                <span className="font-display text-ink-strong">{unitTypeLabel(u.type, u.typeName, locale)}</span>
                 {project && (
                   <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
                     <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />
@@ -249,16 +259,16 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
       <div className="mt-10 flex flex-wrap items-center gap-4">
         <ButtonLink href={addMoreHref} variant="primary" size="md">
           <Plus className="h-4 w-4" aria-hidden />
-          أضف وحدات أخرى
+          {t.addMore}
         </ButtonLink>
         {/* Premium text-link — same arrow-circle pattern as project page */}
         <Link
           href={routes.units}
           className="group flex items-center gap-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
         >
-          العودة إلى الوحدات
+          {t.backToUnits}
           <span className="flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-surface transition-colors group-hover:border-gold-200 group-hover:bg-gold-50 group-hover:text-gold-600">
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            <ArrowLeft className="h-3.5 w-3.5 ltr:rotate-180" aria-hidden />
           </span>
         </Link>
       </div>

@@ -13,8 +13,8 @@ import type { Locale } from '@/lib/locale';
 
 export function ProjectCard({ project, locale = 'ar' }: { project: PublicProjectListItem; locale?: Locale }) {
   const t = extraT(locale).projectCard;
-  const name = pickAr(project.name, t.defaultName);
-  const description = pickAr(project.description);
+  const name = pickAr(project.name, t.defaultName, locale);
+  const description = pickAr(project.description, '', locale);
   const units = project.availableUnitsCount;
 
   return (
@@ -36,7 +36,7 @@ export function ProjectCard({ project, locale = 'ar' }: { project: PublicProject
         <div className="flex flex-1 flex-col p-6 sm:p-7">
           <div className="flex items-center gap-1.5 text-xs text-ink-muted">
             <MapPin className="h-4 w-4 text-gold-500" aria-hidden />
-            {cityLabel(project.city)}
+            {cityLabel(project.city, locale)}
           </div>
           <h3 className="mt-2 line-clamp-1 text-xl font-bold text-ink-strong">{name}</h3>
           {/* Reserve two lines so short descriptions don't shrink the card. */}
@@ -46,7 +46,7 @@ export function ProjectCard({ project, locale = 'ar' }: { project: PublicProject
           <div className="mt-auto flex items-center justify-between pt-6">
             {units > 0 ? (
               <Badge tone="gold">
-                {formatNumber(units)} {units === 1 ? t.unitOne : t.unitMany}
+                {formatNumber(units, locale)} {units === 1 ? t.unitOne : t.unitMany}
               </Badge>
             ) : (
               <Badge tone="neutral">{t.none}</Badge>

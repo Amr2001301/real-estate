@@ -3,8 +3,11 @@ import { siteUrl } from '@/lib/seo';
 import { Container } from '@/components/ui/Container';
 import { Reveal } from '@/components/motion/Reveal';
 import { QrCode } from './QrCode';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-export function MobileAppPromo() {
+export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
+  const t = extraT(locale).mobilePromo;
   const appUrl = siteUrl(routes.app);
 
   return (
@@ -31,14 +34,14 @@ export function MobileAppPromo() {
             <div className="relative z-30 flex w-[46%] flex-col items-end justify-center py-10 pl-8 pr-12 text-right xl:pr-14">
               <Reveal>
                 <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[13px] font-semibold text-[#9a7a35]">
-                  تطبيق ديفورا العقاري
+                  {t.badge}
                 </span>
 
                 <h2 className="mt-4 text-[1.95rem] font-bold leading-[1.25] text-ink-strong xl:text-[2.18rem]">
-                  حمّل تطبيق ديفورا
+                  {t.titleA}
                   <br />
                   <span className="relative inline-block whitespace-nowrap">
-                    واكتشف منزلك القادم بسهولة
+                    {t.titleB}
                     <span
                       aria-hidden
                       className="absolute inset-x-0 bottom-1 h-[8px] rounded-full bg-gold-300/70"
@@ -47,8 +50,7 @@ export function MobileAppPromo() {
                 </h2>
 
                 <p className="mt-5 max-w-[470px] text-[15px] leading-[1.9] text-ink-muted">
-                  تصفّح المشاريع والوحدات، قارن الخيارات، واحجز زيارتك مباشرة من التطبيق
-                  — كل ما تحتاجه في مكان واحد.
+                  {t.body}
                 </p>
               </Reveal>
             </div>
@@ -57,7 +59,7 @@ export function MobileAppPromo() {
             <div className="relative z-20 w-[34%] overflow-visible">
               <img
                 src="/mobile-transparent.png"
-                alt="واجهة تطبيق ديفورا العقاري على الهاتف"
+                alt={t.alt}
                 className="absolute bottom-[-8px] left-1/2 h-[465px] w-auto -translate-x-1/2 object-contain drop-shadow-[0_28px_62px_rgba(15,30,51,0.24)] xl:h-[490px]"
                 style={{ background: 'transparent' }}
               />
@@ -75,7 +77,7 @@ export function MobileAppPromo() {
                 </div>
 
                 <p className="mt-3 max-w-[120px] text-[13px] font-semibold leading-snug text-ink-muted">
-                  امسح الرمز لتحميل التطبيق
+                  {t.scan}
                 </p>
               </div>
             </div>
@@ -85,14 +87,14 @@ export function MobileAppPromo() {
           <div className="relative flex flex-col items-center px-6 pb-6 pt-8 text-center lg:hidden">
             <Reveal>
               <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[12px] font-semibold text-[#9a7a35]">
-                تطبيق ديفورا العقاري
+                {t.badge}
               </span>
 
               <h2 className="mt-4 text-[1.65rem] font-bold leading-[1.3] text-ink-strong sm:text-[1.9rem]">
-                حمّل تطبيق ديفورا
+                {t.titleA}
                 <br />
                 <span className="relative inline-block">
-                  واكتشف منزلك القادم بسهولة
+                  {t.titleB}
                   <span
                     aria-hidden
                     className="absolute inset-x-0 bottom-0 h-[6px] rounded-full bg-gold-300/70"
@@ -101,8 +103,7 @@ export function MobileAppPromo() {
               </h2>
 
               <p className="mx-auto mt-4 max-w-[430px] text-[13px] leading-[1.9] text-ink-muted sm:text-[14px]">
-                تصفّح المشاريع والوحدات، قارن الخيارات، واحجز زيارتك مباشرة من التطبيق
-                — كل ما تحتاجه في مكان واحد.
+                {t.body}
               </p>
             </Reveal>
 
@@ -114,7 +115,7 @@ export function MobileAppPromo() {
 
               <img
                 src="/mobile-transparent.png"
-                alt="واجهة تطبيق ديفورا العقاري على الهاتف"
+                alt={t.alt}
                 className="relative z-10 w-[230px] object-contain drop-shadow-[0_20px_45px_rgba(15,30,51,0.22)] sm:w-[260px]"
                 style={{ background: 'transparent' }}
               />

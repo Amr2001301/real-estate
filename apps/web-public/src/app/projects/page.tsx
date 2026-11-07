@@ -124,7 +124,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
                   <ProjectCard key={project.id} project={project} locale={locale} />
                 ))}
               </Stagger>
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
+              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
             </>
           )}
       </Section>

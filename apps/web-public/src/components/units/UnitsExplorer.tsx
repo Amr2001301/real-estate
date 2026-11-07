@@ -7,10 +7,13 @@ import { UnitCard } from '@/components/home/UnitCard';
 import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
 import { CompareToggle } from '@/components/compare/CompareToggle';
 import { CompareBar } from '@/components/compare/CompareBar';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
-function toCompareItem(unit: PublicUnit): CompareItem {
-  const project = unit.project ? pickAr(unit.project.name) : '';
-  const label = [unit.type, project].filter(Boolean).join(' · ') || `وحدة ${unit.code}`;
+function toCompareItem(unit: PublicUnit, locale: Locale): CompareItem {
+  const project = unit.project ? pickAr(unit.project.name, '', locale) : '';
+  const label = [unit.type, project].filter(Boolean).join(' · ') || extraT(locale).compare.unitWord(unit.code);
   return { id: unit.id, label, price: unit.price, coverImage: unit.coverImage };
 }
 
@@ -30,7 +33,8 @@ export function UnitsExplorer({
   // Resolve each carried-over id to a full compare item when the unit is on the
   // current page; otherwise a minimal placeholder (id only) — the provider then
   // enriches it from localStorage. Either way the id is preserved.
-  const byId = new Map(units.map((u) => [u.id, toCompareItem(u)] as const));
+  const locale = useSiteLocale();
+  const byId = new Map(units.map((u) => [u.id, toCompareItem(u, locale)] as const));
   const seedItems = seedCompareIds.map(
     (id) => byId.get(id) ?? { id, label: '', price: '', coverImage: null },
   );
@@ -40,7 +44,7 @@ export function UnitsExplorer({
       <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
         {units.map((unit) => (
           <div key={unit.id} className="h-full">
-            <UnitCard unit={unit} action={<CompareToggle item={toCompareItem(unit)} />} />
+            <UnitCard unit={unit} locale={locale} action={<CompareToggle item={toCompareItem(unit, locale)} />} />
           </div>
         ))}
       </Stagger>

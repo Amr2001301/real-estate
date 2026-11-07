@@ -21,7 +21,7 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords, l
   const t = extraT(locale).projectFacts;
   const facts: Fact[] = [];
   if (city) facts.push({ icon: MapPin,    label: t.city,          value: city });
-  facts.push({           icon: Home,       label: t.units, value: t.unitsValue(formatNumber(availableUnitsCount)) });
+  facts.push({           icon: Home,       label: t.units, value: t.unitsValue(formatNumber(availableUnitsCount, locale)) });
   facts.push({           icon: BadgeCheck, label: t.status,           value: featured ? t.featuredValue : t.availableValue });
   if (hasCoords) facts.push({ icon: Compass, label: t.location,        value: t.onMap });
 

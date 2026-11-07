@@ -187,7 +187,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
                 </p>
               )}
               <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
+              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
             </>
           )}
       </Section>

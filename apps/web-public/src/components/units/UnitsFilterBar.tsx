@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp, Paintbrush, CalendarCheck } from 'lucide-react';
@@ -145,7 +146,7 @@ export function UnitsFilterBar({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
+      <div className={cn('grid grid-cols-2 gap-2.5 sm:grid-cols-3', locale === 'en' ? 'lg:grid-cols-5' : 'lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]')}>
         <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
           {typeOptions.map((tp) => (
             <option key={tp.value} value={tp.value}>{tp.label}</option>

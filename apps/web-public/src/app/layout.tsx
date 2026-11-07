@@ -12,6 +12,7 @@ import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { SiteLocaleProvider } from '@/components/locale/SiteLocaleProvider';
 import { FavoritesProvider } from '@/components/favorites/FavoritesProvider';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { CompanyContactProvider } from '@/components/contact/CompanyContactProvider';
@@ -80,6 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PageViewTracker />
         <UtmCapture />
         <ThemeProvider>
+          <SiteLocaleProvider locale={locale}>
           <CurrencyProvider currency={branding?.currency ?? DEFAULT_CURRENCY}>
           <FavoritesProvider>
           <CompanyContactProvider contact={companyContact(branding)}>
@@ -90,6 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </CompanyContactProvider>
           </FavoritesProvider>
           </CurrencyProvider>
+          </SiteLocaleProvider>
         </ThemeProvider>
       </body>
     </html>
