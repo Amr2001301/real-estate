@@ -26,8 +26,9 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
       switchPrompt={m.auth.verifyEmail.loginPrompt}
       switchLabel={m.auth.verifyEmail.loginLabel}
       switchHref={routes.login}
+      locale={locale}
     >
-      <VerifyEmailCard token={token} />
+      <VerifyEmailCard token={token} locale={locale} />
     </AuthShell>
   );
 }

@@ -26,9 +26,10 @@ export default async function RegisterPage() {
       subtitle={m.auth.register.subtitle}
       switchPrompt={m.auth.register.switchPrompt}
       switchLabel={m.auth.register.switchLabel}
+      locale={locale}
       switchHref={routes.login}
     >
-      <CustomerAuthForm mode="register" />
+      <CustomerAuthForm mode="register" locale={locale} />
     </AuthShell>
   );
 }

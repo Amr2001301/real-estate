@@ -7,10 +7,13 @@ import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { authT } from '@/messages/auth';
+import type { Locale } from '@/lib/locale';
 
 type VerifyState = 'loading' | 'success' | 'already' | 'invalid' | 'error';
 
-export function VerifyEmailCard({ token }: { token: string }) {
+export function VerifyEmailCard({ token, locale = 'ar' }: { token: string; locale?: Locale }) {
+  const t = authT(locale);
   const [state, setState] = useState<VerifyState>(token ? 'loading' : 'invalid');
   const [resendPending, setResendPending] = useState(false);
   const [resendDone, setResendDone] = useState(false);
@@ -37,11 +40,11 @@ export function VerifyEmailCard({ token }: { token: string }) {
     if (res.ok) {
       setResendDone(true);
     } else if (res.status === 429) {
-      setResendError('يرجى الانتظار دقيقة قبل طلب رابط جديد.');
+      setResendError(t.verify.waitMinute);
     } else if (res.status === 401) {
-      setResendError('يجب تسجيل الدخول أولاً لإعادة إرسال رابط التأكيد.');
+      setResendError(t.verify.needLogin);
     } else {
-      setResendError('تعذّر إرسال الرابط حاليًا. يرجى المحاولة لاحقًا.');
+      setResendError(t.verify.resendFailed);
     }
   }
 
@@ -49,7 +52,7 @@ export function VerifyEmailCard({ token }: { token: string }) {
     return (
       <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-gold-500" aria-hidden />
-        <p className="text-sm text-ink-muted">جارٍ التحقق من الرابط…</p>
+        <p className="text-sm text-ink-muted">{t.verify.checking}</p>
       </PremiumCard>
     );
   }
@@ -58,10 +61,10 @@ export function VerifyEmailCard({ token }: { token: string }) {
     return (
       <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
         <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">تم تأكيد بريدك الإلكتروني</h2>
-        <p className="text-sm text-ink-muted">يمكنك الآن الاستفادة الكاملة من جميع خدمات ديفورا.</p>
+        <h2 className="text-xl font-bold text-ink-strong">{t.verify.doneTitle}</h2>
+        <p className="text-sm text-ink-muted">{t.verify.doneBody}</p>
         <ButtonLink href={routes.account} size="lg" className="mt-2 w-full">
-          الذهاب إلى الحساب
+          {t.common.goToAccountShort}
         </ButtonLink>
       </PremiumCard>
     );
@@ -71,10 +74,10 @@ export function VerifyEmailCard({ token }: { token: string }) {
     return (
       <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
         <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">بريدك الإلكتروني مؤكَّد بالفعل</h2>
-        <p className="text-sm text-ink-muted">حسابك مفعّل ولا حاجة لأي إجراء إضافي.</p>
+        <h2 className="text-xl font-bold text-ink-strong">{t.verify.alreadyTitle}</h2>
+        <p className="text-sm text-ink-muted">{t.verify.alreadyBody}</p>
         <ButtonLink href={routes.account} size="lg" className="mt-2 w-full">
-          الذهاب إلى الحساب
+          {t.common.goToAccountShort}
         </ButtonLink>
       </PremiumCard>
     );
@@ -87,18 +90,18 @@ export function VerifyEmailCard({ token }: { token: string }) {
       <div className="flex flex-col items-center gap-3 text-center">
         <XCircle className="h-12 w-12 text-error" aria-hidden />
         <h2 className="text-xl font-bold text-ink-strong">
-          {isInvalid ? 'رابط التأكيد غير صالح أو منتهي الصلاحية' : 'حدث خطأ أثناء التحقق'}
+          {isInvalid ? t.verify.invalidTitle : t.verify.errorTitle}
         </h2>
         <p className="text-sm text-ink-muted">
           {isInvalid
-            ? 'قد يكون الرابط منتهي الصلاحية (٦٠ دقيقة) أو تم استخدامه من قبل.'
-            : 'يرجى المحاولة مرة أخرى. إذا استمرت المشكلة تواصل معنا.'}
+            ? t.verify.invalidBody
+            : t.verify.errorBody}
         </p>
       </div>
 
       {resendDone ? (
         <InlineNotice tone="success">
-          تم إرسال رابط تأكيد جديد إلى بريدك الإلكتروني. يرجى مراجعة البريد الوارد والمجلدات الأخرى.
+          {t.verify.resendDone}
         </InlineNotice>
       ) : (
         <>
@@ -115,14 +118,14 @@ export function VerifyEmailCard({ token }: { token: string }) {
             ) : (
               <RefreshCw className="h-4 w-4" aria-hidden />
             )}
-            {resendPending ? 'جارٍ الإرسال…' : 'إعادة إرسال رابط التأكيد'}
+            {resendPending ? t.verify.sending : t.verify.resend}
           </Button>
           <p className="text-center text-xs text-ink-muted">
-            إذا لم يكن لديك جلسة نشطة،{' '}
+            {t.verify.noSession}{' '}
             <a href={routes.login} className="underline underline-offset-4 hover:text-ink-strong">
-              سجّل دخولك أولاً
+              {t.verify.signInFirst}
             </a>{' '}
-            ثم اطلب رابطًا جديدًا من الملف الشخصي.
+            {t.verify.thenRequest}
           </p>
         </>
       )}

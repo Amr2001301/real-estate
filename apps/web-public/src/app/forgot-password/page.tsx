@@ -26,9 +26,10 @@ export default async function ForgotPasswordPage() {
       subtitle={m.auth.forgotPassword.subtitle}
       switchPrompt={m.auth.forgotPassword.backPrompt}
       switchLabel={m.auth.forgotPassword.backLabel}
+      locale={locale}
       switchHref={routes.login}
     >
-      <ForgotPasswordCard />
+      <ForgotPasswordCard locale={locale} />
     </AuthShell>
   );
 }

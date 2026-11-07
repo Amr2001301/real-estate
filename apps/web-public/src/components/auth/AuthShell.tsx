@@ -4,6 +4,8 @@ import { CalendarCheck, Heart, Headset, BellRing, ShieldCheck } from 'lucide-rea
 import { SITE } from '@/lib/seo';
 import { Container } from '@/components/ui/Container';
 import { Reveal } from '@/components/motion/Reveal';
+import { authT } from '@/messages/auth';
+import type { Locale } from '@/lib/locale';
 
 interface AuthShellProps {
   eyebrow?: string;
@@ -12,6 +14,7 @@ interface AuthShellProps {
   switchPrompt: string;
   switchLabel: string;
   switchHref: string;
+  locale?: Locale;
   children: React.ReactNode;
 }
 
@@ -22,23 +25,22 @@ const DOTS = {
 } as const;
 
 // Generic account benefits — true for any logged-in customer, no invented claims.
-const BENEFITS = [
-  { icon: CalendarCheck, text: 'متابعة طلباتك وزياراتك في مكان واحد' },
-  { icon: Heart, text: 'حفظ وحداتك ومشاريعك المفضّلة' },
-  { icon: Headset, text: 'تواصل أسرع مع مستشارك العقاري' },
-  { icon: BellRing, text: 'إشعارات بأحدث العروض والإتاحات' },
-] as const;
+const BENEFIT_ICONS = [CalendarCheck, Heart, Headset, BellRing] as const;
 
 /** Premium split layout: a value-prop navy panel + a clean auth card. */
 export function AuthShell({
-  eyebrow = SITE.name,
+  eyebrow,
   title,
   subtitle,
   switchPrompt,
   switchLabel,
   switchHref,
+  locale = 'ar',
   children,
 }: AuthShellProps) {
+  const t = authT(locale).shell;
+  const brand = eyebrow ?? (locale === 'en' ? 'Devora' : SITE.name);
+  const benefits = t.bullets.map((text, i) => ({ icon: BENEFIT_ICONS[i]!, text }));
   return (
     <section className="bg-canvas pb-16 pt-28 sm:pt-32">
       <Container>
@@ -57,7 +59,7 @@ export function AuthShell({
               {/* Brand mark */}
               <span className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-gold-200">
                 <span className="h-2 w-2 rounded-full bg-gold-400" aria-hidden />
-                {eyebrow}
+                {brand}
               </span>
 
               <Reveal>
@@ -67,7 +69,7 @@ export function AuthShell({
                   <p className="mt-5 max-w-md leading-relaxed text-white/75">{subtitle}</p>
 
                   <ul className="mt-8 space-y-3.5">
-                    {BENEFITS.map(({ icon: Icon, text }) => (
+                    {benefits.map(({ icon: Icon, text }) => (
                       <li key={text} className="flex items-center gap-3 text-[15px] text-white/85">
                         <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-gold-200 ring-1 ring-white/10">
                           <Icon className="h-[18px] w-[18px]" aria-hidden />
@@ -81,7 +83,7 @@ export function AuthShell({
 
               <div className="flex items-center gap-2 border-t border-white/10 pt-5 text-xs text-white/55">
                 <ShieldCheck className="h-4 w-4 text-gold-200" aria-hidden />
-                بياناتك محمية ولن تُشارك مع أي جهة خارجية.
+                {t.privacyNote}
               </div>
             </div>
           </div>

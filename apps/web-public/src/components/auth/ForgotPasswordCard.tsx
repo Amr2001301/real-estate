@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { authT } from '@/messages/auth';
+import type { Locale } from '@/lib/locale';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function ForgotPasswordCard() {
+export function ForgotPasswordCard({ locale = 'ar' }: { locale?: Locale }) {
+  const t = authT(locale);
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [pending, setPending] = useState(false);
@@ -23,7 +26,7 @@ export function ForgotPasswordCard() {
     setTopError('');
 
     if (!email.trim() || !EMAIL_RE.test(email.trim())) {
-      setEmailError('صيغة البريد الإلكتروني غير صحيحة.');
+      setEmailError(t.common.emailInvalid);
       return;
     }
 
@@ -32,7 +35,7 @@ export function ForgotPasswordCard() {
     setPending(false);
 
     if (res.status === 0) {
-      setTopError('تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.');
+      setTopError(t.common.offline);
       return;
     }
     // Always show success to avoid user enumeration.
@@ -43,7 +46,7 @@ export function ForgotPasswordCard() {
     return (
       <PremiumCard className="p-6 sm:p-8">
         <InlineNotice tone="success">
-          إذا كان البريد الإلكتروني مسجّلًا لدينا، فستصلك رسالة تحتوي على رابط إعادة التعيين خلال دقائق. تحقق من صندوق الوارد أو مجلد البريد غير المرغوب فيه.
+          {t.forgot.sent}
         </InlineNotice>
       </PremiumCard>
     );
@@ -52,7 +55,7 @@ export function ForgotPasswordCard() {
   return (
     <PremiumCard className="p-6 sm:p-8">
       <form onSubmit={onSubmit} noValidate className="space-y-5">
-        <Field label="البريد الإلكتروني" required>
+        <Field label={t.common.emailLabel} required>
           <Input
             type="email"
             value={email}
@@ -69,7 +72,7 @@ export function ForgotPasswordCard() {
         {topError && <InlineNotice tone="error">{topError}</InlineNotice>}
 
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? 'جارٍ الإرسال...' : 'إرسال رابط إعادة التعيين'}
+          {pending ? t.forgot.sending : t.forgot.submit}
         </Button>
       </form>
     </PremiumCard>
