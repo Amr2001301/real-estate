@@ -97,6 +97,7 @@ import { getTenantContext, runInCompany, runTenantContext } from '../../common/t
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { addMonths } from '../../common/utils/add-months';
+import { isLive, materializePlan } from '../installments/plan-scope';
 import { currentCompanyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 // BrokerCommissionsModule/Service no longer imported here. Commission
@@ -470,11 +471,19 @@ export class ReservationsService {
         status: true,
         projectId: true,
         unitId: true,
+        unitTypes: true,
+        validFrom: true,
+        validTo: true,
         totalPrice: true,
+        discountAmount: true,
+        discountType: true,
+        discountValue: true,
         netPrice: true,
         reservationAmount: true,
         reservationAmountType: true,
         reservationAmountValue: true,
+        downPaymentType: true,
+        downPaymentValue: true,
         downPaymentAmount: true,
         finalPaymentAmount: true,
         installmentsCount: true,
@@ -491,22 +500,33 @@ export class ReservationsService {
     if (plan.status !== PlanTemplateStatus.ACTIVE) {
       throw new BadRequestException('خطة التقسيط غير مفعّلة');
     }
-    // Plan must match either the exact unit, or be a project-wide plan for the same project
+    // Plan must match either the exact unit, or be a project / unit-type plan for the same project
     if (plan.unitId && plan.unitId !== unitId) {
       throw new BadRequestException('خطة التقسيط مرتبطة بوحدة مختلفة');
     }
     if (plan.projectId !== projectId) {
       throw new BadRequestException('خطة التقسيط لا تنتمي إلى مشروع هذه الوحدة');
     }
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { price: true, type: true } });
+    // A plan offered between dates is not sold outside them.
+    if (!isLive(plan, new Date())) {
+      throw new BadRequestException('خطة التقسيط خارج فترة صلاحيتها');
+    }
+    // A unit-type plan is for those types only.
+    if (!plan.unitId && plan.unitTypes.length > 0 && unit && !plan.unitTypes.includes(unit.type)) {
+      throw new BadRequestException('خطة التقسيط لا تشمل نوع هذه الوحدة');
+    }
     // A unit's plan is priced at the unit's price; once the unit is repriced
     // the plan is stale and would sell at the old price.
     if (plan.unitId) {
-      const unit = await this.prisma.unit.findUnique({ where: { id: plan.unitId }, select: { price: true } });
       if (unit && !new Prisma.Decimal(unit.price).equals(plan.totalPrice)) {
         throw new BadRequestException('تغيّر سعر الوحدة بعد إنشاء خطة الأسعار — حدّث الخطة أولاً');
       }
+      return plan;
     }
-    return plan;
+    // A project / unit-type plan holds percentages: its amounts on THIS unit's
+    // price (plan-scope.ts). Nothing downstream reads the raw percentages.
+    return materializePlan(plan, unit?.price ?? 0);
   }
 
   /**
