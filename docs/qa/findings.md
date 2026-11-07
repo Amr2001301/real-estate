@@ -134,3 +134,34 @@ Read back from the `Notification` table of the QA database (226 audit rows, ~190
 - **Audit log.** Every mutating call is logged with actor, entity and the masked response; searched all rows for password / token / secret / OTP keys: none (the only hits are `code` of units and phases). Rows without an actor are the anonymous public calls; rows without a company are the super admin's. Exports were missing (F-058, fixed).
 - **CSRF — pass by design.** The API never reads a cookie (Bearer only); the web apps keep the tokens in `httpOnly`, `SameSite=Lax` cookies and call the API from their server, so a cross-site request carries no credential the API accepts.
 - **Private files.** Downloads are presigned and expire after 5 minutes, uploads after 5 minutes; whether the storage itself refuses an expired or unsigned link cannot be proven on the local S3 stand-in (moto): to check on MinIO / R2.
+
+## Run 2 — the master cycle from an empty database (2026-11-07)
+
+**Start.** Local database dropped and re-created from the 141 migrations (`db:schema-check` = 0), Redis flushed, one platform account seeded; API, admin web, public web, customer app and staff app on `main` at `b055cb5e`. Nothing else existed: 0 companies, 1 user.
+
+**How it was driven.** The company was created in the super-admin UI; the website inquiry and the customer's sign-in and screens were driven through the real UIs (Playwright, the customer app's web build); the set-up (project, units, plans, staff) and the middle of the cycle went through the same API the apps call, each step read back in SQL. Every step below passed unless a note says otherwise.
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Super admin creates the company | Company + admin + `default.localhost` + 138 templates, 131 permissions, 6 default maintenance categories seeded |
+| 2 | Admin sets up | Published project, phase, building, 8 units (2BR, 3BR, 1BR, studio, shop, penthouse), a project-wide percentage plan (7 years, 10% down, 2% booking) and a cash plan, a manager, two reps, a maintenance supervisor |
+| 3 | Guest on the website | The company's own name in the tab and share preview (F-009/F-054 fixed); the inquiry form sends; a visit request |
+| 4 | Lead made and assigned | One lead (not two) for the same person, normalised phone, auto-assigned to a rep who is notified; manager and admin told of the inquiry |
+| 5 | Manager reassigns once | The new rep is told, the old rep is told it was taken; each sees only what is theirs |
+| 6 | Follow-up | Note, stages; a rep cannot back-date a visit (admin only, by design) |
+| 7 | Reservation | Unit-type/project plan gives booking 99,000, down 495,000, 51,857.14 × 84; the unit goes RESERVED; a second rep on the same unit is refused |
+| 8 | Approval and booking payment | Manager approves; the admin confirms the booking payment — twice — and exactly **one** «booking paid» notice goes out (F-057 fixed) |
+| 9 | Contract | Unsigned on conversion, signed by the admin: ACTIVE, unit SOLD, lead WON; shown in the customer's app |
+| 10 | Schedule | 85 rows = 495,000 + 84 × 51,857.14 = 4,851,000; plus the 99,000 booking = 4,950,000 = the contract |
+| 11 | The guest becomes a customer | She signs in to the app by OTP with the phone she gave, sees her unit, her contract and 85 instalments |
+| 12–13 | Proofs | Two proofs uploaded; the admin rejects one and approves the other; the customer sees both and re-uploads; approved: down payment and instalment 1 |
+| 14 | Reports | collected 645,857.14 in the KPIs, the financial report, the dashboard and SQL; remaining 4,304,142.86 = SQL |
+| 15 | Time moves to 2026-12-20 | Instalment 2 marked overdue once (a second run marks none), the customer and staff told once; with the clause the 1% fee 518.57 is charged once; paid → overdue 0 |
+| 16–18 | Maintenance | Handover, a request with a photo, approval, assignment to the supervisor, IN_PROGRESS → RESOLVED, the customer confirms with 4 stars; each step notified the right people |
+| 19 | Broker path | Firm registered, activated, the project granted at 3%; the broker's lead is refused a reservation until approved, then approved and assigned; the broker reserves through the project plan (F-039, booking 72,000); commission locked 3% = 108,000 on a 3,600,000 unit; approved, payout draft → approved → processing → paid |
+| 20 | Cancellation | Refund 72,000 and commission clawback decided at cancellation; the unit stays SOLD until the admin approves its release (company policy default), then AVAILABLE; clawback OUTSTANDING; the refund is recorded as paid |
+| 21 | Reconciliation | gross collected 770,232.85 − refunds 72,000 = **net 698,232.85**, which is the dashboard's `netCollected`; payments page shows the gross (labelled before refunds); SQL witness: no instalment ≤ 0, no PAID instalment without an approved payment, no SOLD unit without an active contract, no unit with two active contracts, no row without a company |
+
+**Findings of the run:** none new. Open from before and seen again: F-051 (a rep can complete a visit before its time), F-033 (the contract clause charges a late fee while the company setting reads off).
+
+**Not covered in this run:** the customer's own e-signature (the admin signed), a discount approval, the second website customer through a broker's customer, the second company in parallel (done in run 1), per-role screen sweeps.
