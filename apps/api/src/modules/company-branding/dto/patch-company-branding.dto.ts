@@ -81,6 +81,7 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export class PatchCompanyBrandingDto {
   // Identity
   @IsOptional() @IsString() @MaxLength(120) displayName?: string;
+  @IsOptional() @IsString() @MaxLength(120) displayNameEn?: string;
   @IsOptional() @ValidateNested() @Type(() => TranslatableDto) tagline?: TranslatableDto;
   @IsOptional() @IsString() @MaxLength(2048) logoUrl?: string;
   @IsOptional() @IsString() @MaxLength(2048) faviconUrl?: string;

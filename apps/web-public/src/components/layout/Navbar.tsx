@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import type { Locale } from '@/lib/locale';
-import type { BrandingData } from '@/lib/branding';
+import { companyName, type BrandingData } from '@/lib/branding';
 import { siteT } from '@/messages/site';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
@@ -19,8 +19,8 @@ import { CompanyMark } from './CompanyMark';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
 
-function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingData }) {
-  const name = branding?.displayName ?? branding?.name ?? SITE.name;
+function Wordmark({ invert, branding, locale }: { invert: boolean; branding?: BrandingData; locale: Locale }) {
+  const name = companyName(branding, locale, SITE.name);
   return (
     <Link
       href={routes.home}
@@ -66,7 +66,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
       )}
     >
       <Container className="flex h-20 items-center justify-between py-4">
-        <Wordmark invert={!solid} branding={branding} />
+        <Wordmark invert={!solid} branding={branding} locale={locale} />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {PRIMARY_NAV.map((item) => {

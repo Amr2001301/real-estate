@@ -11,6 +11,8 @@ export interface BrandingData {
   slug: string;
   name: string;
   displayName?: string;
+  /** The public name for the English site (falls back to `displayName` / `name`). */
+  displayNameEn?: string;
   logoUrl?: string;
   faviconUrl?: string;
   ogImageUrl?: string;
@@ -129,4 +131,10 @@ export async function fetchBranding(slug: string): Promise<BrandingData | null> 
   } catch {
     return null;
   }
+}
+
+/** The company's public name in the visitor's language (F-067). */
+export function companyName(branding: BrandingData | null | undefined, locale: 'ar' | 'en', fallback: string): string {
+  if (locale === 'en' && branding?.displayNameEn?.trim()) return branding.displayNameEn.trim();
+  return branding?.displayName ?? branding?.name ?? fallback;
 }

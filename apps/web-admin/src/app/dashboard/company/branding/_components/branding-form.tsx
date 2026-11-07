@@ -43,6 +43,7 @@ const ACCENT_PALETTE = [
 
 type RawBranding = {
   displayName?: string | null;
+  displayNameEn?: string | null;
   tagline?: { ar?: string; en?: string } | null;
   logoUrl?: string | null;
   faviconUrl?: string | null;
@@ -174,6 +175,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
   const obj = (v: Record<string, string> | null | undefined) => v ?? {};
 
   const [displayName, setDisplayName] = useState(str(initial.displayName));
+  const [displayNameEn, setDisplayNameEn] = useState(str(initial.displayNameEn));
   const [taglineAr, setTaglineAr] = useState(str(initial.tagline?.ar));
   const [taglineEn, setTaglineEn] = useState(str(initial.tagline?.en));
   const [logoUrl, setLogoUrl] = useState(str(initial.logoUrl));
@@ -219,6 +221,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
   function handleSubmit() {
     const payload: BrandingPayload = {};
     if (displayName)    payload.displayName    = displayName;
+    if (displayNameEn)  payload.displayNameEn  = displayNameEn;
     if (taglineAr || taglineEn) payload.tagline = { ar: taglineAr || undefined, en: taglineEn || undefined };
     if (logoUrl)        payload.logoUrl        = logoUrl;
     if (faviconUrl)     payload.faviconUrl     = faviconUrl;
@@ -259,6 +262,9 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="الاسم المعروض">
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="اسم الشركة للعرض العام" dir="rtl" />
+            </Field>
+            <Field label="الاسم المعروض (إنجليزي)">
+              <Input value={displayNameEn} onChange={(e) => setDisplayNameEn(e.target.value)} placeholder="Company name on the English site" dir="ltr" data-testid="branding-display-name-en" />
             </Field>
             <Field label="رقم السجل التجاري">
               <Input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="رقم الترخيص" dir="ltr" />

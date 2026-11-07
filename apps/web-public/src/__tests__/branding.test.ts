@@ -14,7 +14,7 @@
  *   §10 fetchBranding — fetch called with correct URL and slug encoding
  */
 
-import { hexToRgbVars, fetchBranding } from '../lib/branding';
+import { hexToRgbVars, fetchBranding, companyName } from '../lib/branding';
 import type { BrandingData } from '../lib/branding';
 
 // ── hexToRgbVars ─────────────────────────────────────────────────────────────
@@ -151,5 +151,20 @@ describe('fetchBranding', () => {
     await fetchBranding('acme');
     expect(capturedUrl).toContain('/v1/public/branding');
     expect(capturedUrl).toContain('slug=acme');
+  });
+});
+
+describe('companyName (F-067)', () => {
+  const b = { slug: 'a', name: 'شركة', displayName: 'الشركة المختصرة', displayNameEn: ' Acme Developments ' } as never;
+
+  it('the English site uses the English display name, trimmed', () => {
+    expect(companyName(b, 'en', 'Fallback')).toBe('Acme Developments');
+  });
+
+  it('the Arabic site, and an English site without one, keep the Arabic name', () => {
+    expect(companyName(b, 'ar', 'Fallback')).toBe('الشركة المختصرة');
+    expect(companyName({ slug: 'a', name: 'شركة', displayName: 'الاسم' } as never, 'en', 'Fallback')).toBe('الاسم');
+    expect(companyName({ slug: 'a', name: 'شركة', displayNameEn: '  ' } as never, 'en', 'Fallback')).toBe('شركة');
+    expect(companyName(null, 'en', 'Fallback')).toBe('Fallback');
   });
 });

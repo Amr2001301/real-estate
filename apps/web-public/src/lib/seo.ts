@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { BrandingData } from './branding';
 import type { Locale } from './locale';
+import { companyName } from '@/lib/branding';
 
 export const SITE = {
   name: 'ديفورا',
@@ -72,7 +73,7 @@ export function buildMetadata({
       ...rest,
     };
   }
-  const siteName    = branding?.displayName ?? branding?.name ?? SITE.name;
+  const siteName    = companyName(branding, locale === 'en' ? 'en' : 'ar', SITE.name);
   const siteTagline = (locale && branding?.tagline?.[locale]) ?? SITE.tagline;
   const fullTitle   = title ? `${title} · ${siteName}` : `${siteName} · ${siteTagline}`;
   const desc        = (description as string) ?? SITE.description;
