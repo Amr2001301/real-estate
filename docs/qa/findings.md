@@ -89,6 +89,9 @@ Not yet done: second company in parallel (isolation), the variant matrix, per-ro
 | F-059 | 3 | Manager / Sales | Leads board | 1 company | Open the lead board as a rep or manager | No console error | React hydration mismatch (`aria-describedby="DndDescribedBy-0"` vs `-3`): the drag-and-drop context had no stable id | Low | fixed — `DndContext id="lead-pipeline-board"` | |
 | F-060 | 3 | Admin | English screens: assistant, reports | 1 company | Switch to English, open the AI assistant and the reports page | The page loads cleanly | «Hydration failed»: client components read the locale cookie in the browser (server rendered Arabic), and the reports period used `formatRange` whose dash spacing differs between server and browser ICU | Medium | fixed — `LocaleProvider` hands the server's locale to client components (`useClientLocale`); the period is built without `formatRange` | |
 | F-061 | 3 | Admin | English screens: shell, lead board, dashboard | 1 company | Switch to English, open the dashboard and the lead board | All English | Hard-coded Arabic: the sidebar subtitle «بوابة المسؤولين», the six lead-stage column names (and their toast / aria texts), the dashboard activity feed («عقد جديد», «دفعة جديدة»…) and the six chart months came from the API in Arabic | Low | fixed — English labels by type / month key (`activity-labels`), locale-aware board and sidebar | |
+| F-062 | 3 | Guest | Public site, OS in dark mode | 1 company | Open any page with the system theme on dark | No console error | Hydration mismatch on every page: the theme switch's label («switch to light») depended on the browser's theme, unknown on the server | Low | fixed — a neutral label until mounted (`ThemeToggle`) | |
+| F-063 | 3 | Guest | Public site in English | 1 company | Switch to English, open any page / the privacy and terms pages | All English | The chat launcher and the whole chat panel (21 strings), the theme switch label, and the privacy / terms subtitles were Arabic | Low | fixed — `chat`, `theme` and the subtitles are in `messages/site.ts`; `ChatWidget` takes the locale | |
+| F-064 | 3 | Guest / Customer | Public site in English | 1 company | Switch to English, open the units filter, contact, login and register, project cards | All English | Still Arabic: the unit-type filter («كل الأنواع»), the contact page's support block and opening hours, the login / register / OTP forms and their side panel (~100 strings), the «project details» / «units available» labels on the cards | Medium | open — next PR | |
 
 ## Run 1 — UI sweep (2026-11-07)
 
@@ -151,6 +154,12 @@ Method: a script signs in as each role and opens every link of its navigation (p
 | Maintenance supervisor | landing page | by design: the account works in the mobile app; the web shows an explanation and a sign-out |
 
 Not a defect: on a phone, the projects page reports a document overflow caused by an absolutely positioned screen-reader-only label; nothing is visible or scrollable (the table card now contains it).
+
+## Run 2 — public website sweep (2026-11-07)
+
+Method as for the admin screens (header / footer links, the first project and the first unit; Arabic, English, phone, dark). The dev server must run with `E2E_TENANT_BYPASS_SLUG=default` on localhost, otherwise every page is the «not found» page with status 200 (also true of the first pass of this sweep, which therefore did not count).
+
+Result after the fixes: 13 pages × (Arabic desktop / phone / dark) clean; English desktop and phone clean apart from F-064. The dev-only `ERR_TUNNEL_CONNECTION_FAILED` on the project page is the sandbox proxy refusing an external map tile, not the product.
 
 ## Run 2 — the master cycle from an empty database (2026-11-07)
 

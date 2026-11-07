@@ -99,6 +99,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
             className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
           />
           <ThemeToggle
+            locale={locale}
             className={cn(
               'rounded-lg',
               solid ? 'text-ink-muted hover:bg-surface-soft' : 'text-white/80 hover:bg-white/10 hover:text-white',
@@ -151,7 +152,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
             current={locale}
             className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
           />
-          <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
+          <ThemeToggle locale={locale} className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
           <button
             type="button"
             aria-label={open ? m.nav.closeMenu : m.nav.openMenu}

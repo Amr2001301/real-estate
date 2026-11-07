@@ -23,7 +23,7 @@ export default async function TermsPage() {
       <PageHero
         eyebrow={m.terms.eyebrow}
         title={m.terms.title}
-        subtitle="تنظّم هذه الشروط استخدامك للموقع. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا."
+        subtitle={m.terms.subtitle}
       />
 
       <Section tone="canvas">
