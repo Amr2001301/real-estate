@@ -2672,6 +2672,12 @@ export class ReservationsService {
             'تعذّر إنشاء رقم العقد بعد عدة محاولات، يرجى المحاولة مرة أخرى.',
           );
         }
+        // A concurrent conversion of this very reservation won the race: the
+        // unique key on reservationId held (one contract), the loser is told so
+        // instead of a 500 — QA run 1, F-044.
+        if (err?.code === 'P2002' && Array.isArray(err?.meta?.target) && err.meta!.target!.includes('reservationId')) {
+          throw new ConflictException('تم تحويل هذا الحجز إلى عقد بالفعل');
+        }
         throw e;
       }
     }

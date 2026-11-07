@@ -453,6 +453,19 @@ describe('Reservations · conversion workflow', () => {
     expect(mock.reservation.update).not.toHaveBeenCalled();
   });
 
+  // QA run 1, F-044: five simultaneous conversions of one reservation made one
+  // contract (the unique key on reservationId held) and answered 500 to the rest.
+  it('a concurrent conversion that loses the race on reservationId is a 409, not a 500', async () => {
+    mock.contract.create.mockRejectedValueOnce(
+      Object.assign(new Error('Unique constraint failed on the fields: (`reservationId`)'), {
+        code: 'P2002',
+        meta: { target: ['reservationId'] },
+      }),
+    );
+    const res = await request(app.getHttpServer()).post(PATH_CONVERT).send({}).expect(409);
+    expect(res.body.message).toMatch(/تم تحويل هذا الحجز/);
+  });
+
   it('rejects conversion when plan template is set but snapshot fields are missing (400)', async () => {
     fixture.reservation.installmentPlanTemplateId = 'tpl-1';
     fixture.reservation.selectedDurationMonths = null; // missing
