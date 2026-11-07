@@ -4,6 +4,7 @@ import { Pencil, Building2, Home, ChevronLeft } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
+import { projectPlansT } from '@/messages/project-plans';
 import { uiT } from '@/messages/ui';
 import type { InstallmentPlanTemplate } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
@@ -47,6 +48,8 @@ export default async function InstallmentPlanDetailPage({
 
   const plan = planRes.data;
   const m = uiT(locale).pages.installments.detail;
+  const pp = projectPlansT(locale);
+  const isPct = plan.percentPriced === true && !plan.unitId;
   const isAdmin = session?.role === 'ADMIN';
   const scheduleItems = plan.scheduleItems ?? [];
   const durationOptions = plan.durationOptions ?? [];
@@ -88,45 +91,67 @@ export default async function InstallmentPlanDetailPage({
             {/* Plan details */}
             <PremiumSectionCard title={m.sectionPlanTitle}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+                {isPct ? (
+                  <>
+                    <Field label={pp.discount}>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{Number(plan.discountValue ?? 0)}%</span>
+                    </Field>
+                    <Field label={pp.reservation}>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                        {plan.reservationAmountType === 'FIXED'
+                          ? formatCurrency(Number(plan.reservationAmountValue ?? 0), currency, locale)
+                          : `${Number(plan.reservationAmountValue ?? 0)}%`}
+                      </span>
+                    </Field>
+                    {!plan.isCash && (
+                      <Field label={pp.downPayment}>
+                        <span className="text-[14px] font-bold tabular-nums text-slate-900">{Number(plan.downPaymentValue)}%</span>
+                      </Field>
+                    )}
+                  </>
+                ) : (
+                  <>
                 <Field label={m.fieldNetPrice}>
-                  <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.netPrice, currency, locale)}
-                  </span>
-                </Field>
-                <Field label={m.fieldTotalPrice}>
-                  <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.totalPrice, currency, locale)}
-                  </span>
-                </Field>
-                {Number(plan.discountAmount) > 0 && (
-                  <Field label={m.fieldDiscount}>
-                    <span className="text-[14px] font-bold tabular-nums text-success-700">
-                      − {formatCurrency(plan.discountAmount, currency, locale)}
+                    <span className="text-[15px] font-bold tabular-nums text-slate-900">
+                      {formatCurrency(plan.netPrice, currency, locale)}
                     </span>
                   </Field>
-                )}
-                <Field label={m.fieldReservation}>
-                  <div>
-                    <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
-                      {formatCurrency(plan.reservationAmount, currency, locale)}
+                  <Field label={m.fieldTotalPrice}>
+                    <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                      {formatCurrency(plan.totalPrice, currency, locale)}
                     </span>
-                    {Number(plan.reservationAmount) <= 0 && (
-                      <p className="text-[10px] text-warning-700 mt-0.5">
-                        {m.reservationWarning}
-                      </p>
-                    )}
-                  </div>
-                </Field>
-                <Field label={m.fieldDownPayment}>
-                  <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.downPaymentAmount, currency, locale)}
-                    {plan.downPaymentType === 'PERCENTAGE' && (
-                      <span className="text-[12px] font-semibold text-slate-400 ms-1.5">
-                        ({Number(plan.downPaymentValue)}%)
+                  </Field>
+                  {Number(plan.discountAmount) > 0 && (
+                    <Field label={m.fieldDiscount}>
+                      <span className="text-[14px] font-bold tabular-nums text-success-700">
+                        − {formatCurrency(plan.discountAmount, currency, locale)}
                       </span>
-                    )}
-                  </span>
-                </Field>
+                    </Field>
+                  )}
+                  <Field label={m.fieldReservation}>
+                    <div>
+                      <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
+                        {formatCurrency(plan.reservationAmount, currency, locale)}
+                      </span>
+                      {Number(plan.reservationAmount) <= 0 && (
+                        <p className="text-[10px] text-warning-700 mt-0.5">
+                          {m.reservationWarning}
+                        </p>
+                      )}
+                    </div>
+                  </Field>
+                  <Field label={m.fieldDownPayment}>
+                    <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                      {formatCurrency(plan.downPaymentAmount, currency, locale)}
+                      {plan.downPaymentType === 'PERCENTAGE' && (
+                        <span className="text-[12px] font-semibold text-slate-400 ms-1.5">
+                          ({Number(plan.downPaymentValue)}%)
+                        </span>
+                      )}
+                    </span>
+                  </Field>
+                  </>
+                )}
                 <Field label={hasDurationOptions ? m.fieldDurationOptions : m.fieldInstallmentsCount}>
                   <span className="text-[14px] font-bold text-slate-900">
                     {plan.isCash
@@ -166,7 +191,18 @@ export default async function InstallmentPlanDetailPage({
             </PremiumSectionCard>
 
             {/* Duration options or schedule table */}
-            {hasDurationOptions ? (
+            {isPct && hasDurationOptions ? (
+              <PremiumSectionCard title={m.durationOptionsSectionTitle(durationOptions.length)}>
+                <table className="w-full text-sm">
+                  <thead><tr><th className="text-start py-2">{pp.durationMonths}</th><th className="text-start py-2">{pp.increase}</th></tr></thead>
+                  <tbody>
+                    {durationOptions.map((o) => (
+                      <tr key={o.id} className="border-t border-hairline"><td className="py-2">{o.durationMonths}</td><td className="py-2">{Number(o.increasePercentage)}%</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </PremiumSectionCard>
+            ) : isPct ? null : hasDurationOptions ? (
               <PremiumSectionCard title={m.durationOptionsSectionTitle(durationOptions.length)}>
                 <DurationSelector
                   options={durationOptions}
@@ -317,7 +353,26 @@ export default async function InstallmentPlanDetailPage({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[12px] text-slate-400">{m.allProjectScope}</p>
+                  <div className="space-y-1.5 text-[12px] text-slate-600">
+                    <span className="inline-block rounded-full bg-brand-50 text-brand-700 px-2.5 py-0.5 font-semibold">
+                      {plan.scope === 'TYPE' ? pp.scopeBadgeType : pp.scopeBadgeProject}
+                    </span>
+                    <p>
+                      {plan.unitTypes && plan.unitTypes.length > 0 ? `${pp.ofTypes}${plan.unitTypes.join('، ')}` : pp.allUnits}
+                      {typeof plan.unitsInScope === 'number' ? ` · ${pp.unitsCovered(plan.unitsInScope)}` : ''}
+                    </p>
+                    {(plan.validFrom || plan.validTo) && (
+                      <p>
+                        {pp.validity}:{' '}
+                        {plan.validFrom && plan.validTo
+                          ? pp.validBetween(formatDate(plan.validFrom, locale), formatDate(plan.validTo, locale))
+                          : plan.validFrom
+                            ? pp.validFromOnly(formatDate(plan.validFrom, locale))
+                            : pp.validToOnly(formatDate(plan.validTo as string, locale))}
+                      </p>
+                    )}
+                    {(plan.reservationsTotal ?? 0) > 0 && <p>{pp.warnFrozen(plan.reservationsTotal ?? 0)}</p>}
+                  </div>
                 )}
               </div>
             </PremiumSectionCard>

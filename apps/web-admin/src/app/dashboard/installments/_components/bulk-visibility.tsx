@@ -51,19 +51,21 @@ export function BulkVisibilityBar({ locale = 'ar' }: { locale?: Locale }) {
         variant="primary"
         size="sm"
         disabled={pending}
+        className="whitespace-nowrap"
+        leftIcon={<Eye className="h-4 w-4" />}
       >
-        <Eye className="h-4 w-4" />
         {m.showToCustomers}
       </Button>
       <Button
         type="submit"
         name="visibility"
         value="SALES_ONLY"
-        variant="secondary"
+        variant="outline"
         size="sm"
         disabled={pending}
+        className="whitespace-nowrap"
+        leftIcon={<EyeOff className="h-4 w-4" />}
       >
-        <EyeOff className="h-4 w-4" />
         {m.salesOnly}
       </Button>
       <span className="text-xs text-slate-500" role="status">

@@ -1186,6 +1186,17 @@ export interface InstallmentPlanTemplate {
   project?: { id: string; name: Translatable };
   unitId: string | null;
   unit?: { id: string; code: string; type?: string; price?: string | number } | null;
+  /** Project / unit-type plans (F-019): percentages, worked out per unit at reservation time. */
+  percentPriced?: boolean;
+  unitTypes?: string[];
+  validFrom?: string | null;
+  validTo?: string | null;
+  scope?: 'UNIT' | 'TYPE' | 'PROJECT';
+  unitsInScope?: number;
+  reservationsInUse?: number;
+  reservationsTotal?: number;
+  /** List only: the plan worked out on a sample unit (percent plans). */
+  sample?: unknown;
   totalPrice: string | number;
   discountAmount: string | number;
   // Discount mode (mirrors downPayment). Optional for back-compat.
@@ -2512,4 +2523,28 @@ export interface DuplicateLead {
 export interface DuplicateGroup {
   client: { id: string; fullName: string; phone: string | null; email: string | null };
   leads: DuplicateLead[];
+}
+
+export interface PlanScopeInfo {
+  totalUnits: number;
+  unitTypes: { code: string; name: Translatable | string; units: number }[];
+}
+
+export interface PlanPreviewRow {
+  unitId: string;
+  code: string;
+  type: string;
+  price: number;
+  ownPlan: boolean;
+  discountAmount: number;
+  netPrice: number;
+  reservationAmount: number;
+  downPaymentAmount: number;
+  options: { durationMonths: number; monthly: number; total: number }[];
+}
+
+export interface PlanPreview {
+  problem: string | null;
+  unitsInScope: number;
+  rows: PlanPreviewRow[];
 }

@@ -98,7 +98,7 @@ test.describe('Record deposit — contract picker', () => {
 
 test.describe('New installment plan — unit picker', () => {
   test('waits for a project, then searches units without a plan', async ({ page }) => {
-    await gotoReady(page, '/dashboard/installments/new');
+    await gotoReady(page, '/dashboard/installments/new?scope=unit');
     await expect(page.locator('#unitId')).toBeDisabled();
     await page.locator('select[name="projectId"]').selectOption({ label: SEEDED_PROJECT_NAME_AR });
     await expect(page.locator('#unitId')).toBeEnabled();
