@@ -6,7 +6,7 @@ import { getLocale } from '@/lib/locale';
 import { printT } from '@/messages/print';
 import { uiT } from '@/messages/ui';
 import type { Deposit, DepositType } from '@/lib/types';
-import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { formatExactCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
@@ -111,7 +111,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
           <CardBody className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <Field label={m.fieldType}      value={DEPOSIT_TYPE_LABELS[d.type] ?? d.type} />
-              <Field label={m.fieldAmount}    value={formatCurrency(d.amount, currency, locale)} />
+              <Field label={m.fieldAmount}    value={formatExactCurrency(d.amount, currency, locale)} />
               <Field label={m.fieldPaidAt}    value={formatDate(d.paidAt, locale)} />
               <Field label={m.fieldCreatedAt} value={formatDateTime(d.createdAt, locale)} />
               <Field
