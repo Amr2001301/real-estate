@@ -473,6 +473,7 @@
   "maintenanceNoAttachments": "No photos or documents have been attached yet.",
   "maintenanceUnitLabel": "Which unit?",
   "maintenanceUnitRequired": "Please select a unit.",
+  "maintenanceBeforeHandover": "Maintenance requests open once your unit is handed over. We will let you know when it is.",
   "maintenanceNoUnitsTitle": "No units",
   "maintenanceNoUnitsMessage": "You don't have any units to file a request against yet.",
   "maintenanceCategoryLabel": "What needs attention?",

@@ -18,6 +18,7 @@ class Property extends Equatable {
     this.reservationNumber,
     this.monthlyAmount,
     this.totalMonths,
+    this.handedOver = true,
   });
 
   final String contractId;
@@ -33,8 +34,11 @@ class Property extends Equatable {
   final String? monthlyAmount;
   final int? totalMonths;
 
+  /// The unit has been handed over: maintenance requests open from then on.
+  final bool handedOver;
+
   bool get hasInstallmentPlan => totalMonths != null && totalMonths! > 0;
 
   @override
-  List<Object?> get props => [contractId, unitId, unitCode, status, signedAt];
+  List<Object?> get props => [contractId, unitId, unitCode, status, signedAt, handedOver];
 }

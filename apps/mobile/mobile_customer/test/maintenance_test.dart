@@ -125,13 +125,14 @@ class _FakePropertyRepo implements MyPropertyRepository {
   Future<Result<List<Property>>> getMyProperties() async => _result;
 }
 
-Property _property(String unitId) => Property(
+Property _property(String unitId, {bool handedOver = true}) => Property(
   contractId: 'c-$unitId',
   unitId: unitId,
   unitCode: unitId.toUpperCase(),
   unitType: 'APARTMENT',
   projectName: const Translatable(ar: '', en: 'P'),
   status: PropertyStatus.owned,
+  handedOver: handedOver,
 );
 
 void main() {
@@ -265,13 +266,14 @@ void main() {
     );
 
     test(
-      'fixed unit skips unit loading and is valid after category+desc',
+      'fixed unit hides the picker and is valid after category+desc',
       () async {
         final repo = repoWithCat();
         final cubit = make(repo, initialUnitId: 'u1');
         await cubit.load();
         expect(cubit.state.fixedUnit, isTrue);
-        expect(cubit.state.unitsStatus, DataStatus.initial); // never loaded
+        // Units still load: they say whether the unit was handed over.
+        expect(cubit.state.unitsStatus, DataStatus.empty);
         expect(cubit.state.isValid, isFalse);
 
         cubit.toggleCategory('cat1');
@@ -305,6 +307,38 @@ void main() {
       await cubit.load();
       expect(cubit.state.unitsStatus, DataStatus.success);
       expect(cubit.state.selectedUnitId, 'u9');
+    });
+
+    // F-035: a unit not handed over yet cannot take a request — the screen says so
+    // up front instead of offering the form and failing on send.
+    test('a unit not handed over is flagged, invalid, and never sent', () async {
+      final repo = repoWithCat();
+      final cubit = make(
+        repo,
+        propertyRepo: _FakePropertyRepo(Ok([_property('u1', handedOver: false)])),
+        initialUnitId: 'u1',
+      );
+      await cubit.load();
+      cubit.toggleCategory('cat1');
+      cubit.setDescription('Water leak in kitchen');
+      expect(cubit.state.unitNotHandedOver, isTrue);
+      expect(cubit.state.isValid, isFalse);
+      await cubit.submit();
+      expect(repo.createCalls, 0);
+      expect(cubit.state.submitted, isFalse);
+    });
+
+    test('a handed-over unit is not flagged', () async {
+      final repo = repoWithCat();
+      final cubit = make(
+        repo,
+        propertyRepo: _FakePropertyRepo(Ok([_property('u1'), _property('u2', handedOver: false)])),
+        initialUnitId: 'u1',
+      );
+      await cubit.load();
+      expect(cubit.state.unitNotHandedOver, isFalse);
+      cubit.selectUnit('u2');
+      expect(cubit.state.unitNotHandedOver, isTrue);
     });
 
     test('submit failure surfaces failure without marking submitted', () async {

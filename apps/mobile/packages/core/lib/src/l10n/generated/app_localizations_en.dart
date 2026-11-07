@@ -1345,6 +1345,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceUnitRequired => 'Please select a unit.';
 
   @override
+  String get maintenanceBeforeHandover =>
+      'Maintenance requests open once your unit is handed over. We will let you know when it is.';
+
+  @override
   String get maintenanceNoUnitsTitle => 'No units';
 
   @override

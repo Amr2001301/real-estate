@@ -2612,6 +2612,12 @@ abstract class AppLocalizations {
   /// **'Please select a unit.'**
   String get maintenanceUnitRequired;
 
+  /// No description provided for @maintenanceBeforeHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance requests open once your unit is handed over. We will let you know when it is.'**
+  String get maintenanceBeforeHandover;
+
   /// No description provided for @maintenanceNoUnitsTitle.
   ///
   /// In en, this message translates to:

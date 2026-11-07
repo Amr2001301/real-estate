@@ -76,17 +76,26 @@ class PhotoItem extends Equatable {
 
 /// A selectable unit option for the create form (one of the customer's units).
 class UnitOption extends Equatable {
-  const UnitOption({required this.id, required this.projectName, required this.unitType, required this.unitCode});
+  const UnitOption({
+    required this.id,
+    required this.projectName,
+    required this.unitType,
+    required this.unitCode,
+    this.handedOver = true,
+  });
   final String id;
   final Translatable projectName;
   final String unitType;
   final String unitCode;
 
+  /// Maintenance opens at handover; before it the form is not offered.
+  final bool handedOver;
+
   /// "فيلا · PD-V-01": the type's name, never its code.
   String label(String languageCode) => '${unitTypeLabel(unitType, languageCode: languageCode)} · $unitCode';
 
   @override
-  List<Object?> get props => [id, unitType, unitCode];
+  List<Object?> get props => [id, unitType, unitCode, handedOver];
 }
 
 class CreateMaintenanceState extends Equatable {
@@ -143,7 +152,16 @@ class CreateMaintenanceState extends Equatable {
   bool get hasUnit => (selectedUnitId ?? '').isNotEmpty;
   bool get hasCategory => selectedCategoryIds.isNotEmpty;
   bool get hasDescription => description.trim().length >= kMaintenanceDescriptionMin;
-  bool get isValid => hasUnit && hasCategory && hasDescription;
+  /// The chosen unit is one of the customer's, not handed over yet: nothing can be sent.
+  bool get unitNotHandedOver {
+    if (!hasUnit) return false;
+    for (final u in units) {
+      if (u.id == selectedUnitId) return !u.handedOver;
+    }
+    return false;
+  }
+
+  bool get isValid => hasUnit && hasCategory && hasDescription && !unitNotHandedOver;
   bool get canAddMorePhotos => photos.length < kMaxPhotos;
   int get failedPhotoCount =>
       photos.where((p) => p.status == PhotoStatus.failed).length;
@@ -240,7 +258,8 @@ class CreateMaintenanceCubit extends Cubit<CreateMaintenanceState> {
   int _photoSeq = 0;
 
   Future<void> load() async {
-    await Future.wait([loadCategories(), if (!state.fixedUnit) loadUnits()]);
+    // Units load in the fixed-unit case too: they say whether the unit was handed over.
+    await Future.wait([loadCategories(), loadUnits()]);
   }
 
   Future<void> loadCategories() async {
@@ -287,6 +306,7 @@ class CreateMaintenanceCubit extends Cubit<CreateMaintenanceState> {
         projectName: p.projectName,
         unitType: p.unitType,
         unitCode: p.unitCode,
+        handedOver: p.handedOver,
       ));
     }
     return options;
@@ -380,6 +400,7 @@ class CreateMaintenanceCubit extends Cubit<CreateMaintenanceState> {
     if (state.busy) return; // double-tap guard
     // Create the request once; a retry only re-uploads photos.
     if (state.requestId == null) {
+      if (state.unitNotHandedOver) return;
       if (!state.isValid) {
         emit(state.copyWith(showValidation: true));
         return;

@@ -68,6 +68,10 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                     AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                   ),
                   children: [
+                    if (state.unitNotHandedOver) ...[
+                      _HandoverNotice(text: l10n.maintenanceBeforeHandover),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     // ── Unit picker ──────────────────────────────────────
                     if (!state.fixedUnit)
                       _StepCard(
@@ -362,7 +366,7 @@ class _SubmitArea extends StatelessWidget {
       variant: AppButtonVariant.gold,
       expand: true,
       isLoading: state.busy,
-      onPressed: state.busy ? null : cubit.submit,
+      onPressed: state.busy || state.unitNotHandedOver ? null : cubit.submit,
     );
   }
 }
@@ -1179,6 +1183,38 @@ class _Done extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Not handed over ───────────────────────────────────────────────────────────
+
+class _HandoverNotice extends StatelessWidget {
+  const _HandoverNotice({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppPalette.gold50,
+        border: Border.all(color: AppPalette.gold100),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.key_rounded, size: 20, color: AppPalette.gold500),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: _navyDeep, fontSize: 13.5, height: 1.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
