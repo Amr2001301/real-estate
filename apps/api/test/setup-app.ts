@@ -44,6 +44,7 @@ const _rsWarmup = new _rs.PassThrough();
 void _rsWarmup[Symbol.asyncIterator](); // triggers async_iterator lazy require
 _rsWarmup.end();
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { RejectNulBytesPipe } from '../src/common/pipes/reject-nul-bytes.pipe';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -239,6 +240,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,
@@ -366,6 +368,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,
@@ -455,6 +458,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,

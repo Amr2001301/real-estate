@@ -11,6 +11,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { clientMetaMiddleware } from './common/request/client-meta';
+import { RejectNulBytesPipe } from './common/pipes/reject-nul-bytes.pipe';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
@@ -39,6 +40,7 @@ async function bootstrap() {
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
 
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,
