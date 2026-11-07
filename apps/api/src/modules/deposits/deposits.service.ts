@@ -152,6 +152,23 @@ const INSTALLMENT_CANCELLED_MESSAGE =
 const PROOF_AMOUNT_CHANGED_MESSAGE =
   'مبلغ الإثبات لا يطابق قيمة القسط الحالية بعد تعديل العقد — ارفض الإثبات وأرسل إثباتاً جديداً بالمبلغ الصحيح';
 
+/**
+ * The date a payment was received: today unless given, and never in the future —
+ * a payment dated ahead marked the instalment PAID for money not yet received
+ * (QA F-053). A few minutes of clock difference between the device and the
+ * server are allowed.
+ */
+export function paymentDate(value?: string): Date {
+  const now = new Date();
+  if (!value) return now;
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) throw new BadRequestException('تاريخ الدفع غير صالح');
+  if (at.getTime() > now.getTime() + 5 * 60_000) {
+    throw new BadRequestException('تاريخ الدفع لا يمكن أن يكون في المستقبل');
+  }
+  return at;
+}
+
 @Injectable()
 export class DepositsService {
   private readonly logger = new Logger(DepositsService.name);
@@ -315,7 +332,7 @@ export class DepositsService {
 
     const depositType = depositTypeForInstallment(installment.type);
 
-    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    const paidAt = paymentDate(dto.paidAt);
 
     // FG-01 — the payment method decides when the installment counts as paid
     // (decided 2026-10-08): cash and bank transfers at once; a cheque only
@@ -478,7 +495,7 @@ export class DepositsService {
     if (dto.amount !== undefined && Math.round(dto.amount * 100) !== totalCents) {
       throw new BadRequestException(`المبلغ لا يساوي مجموع الأقساط المختارة (${(totalCents / 100).toFixed(2)})`);
     }
-    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    const paidAt = paymentDate(dto.paidAt);
 
     const deposits = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.installment.updateMany({
