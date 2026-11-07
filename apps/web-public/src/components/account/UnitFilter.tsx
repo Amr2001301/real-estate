@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 export interface UnitOption {
   contractId: string;
@@ -15,6 +17,7 @@ interface Props {
 
 export function UnitFilter({ options, activeContractId, activeStatus }: Props) {
   const router = useRouter();
+  const t = accountT(useSiteLocale()).unitFilter;
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const contractId = e.target.value;
@@ -31,17 +34,16 @@ export function UnitFilter({ options, activeContractId, activeStatus }: Props) {
         htmlFor="unit-filter"
         className="shrink-0 text-xs font-bold text-ink-muted"
       >
-        الوحدة:
+        {t.label}
       </label>
       <select
         id="unit-filter"
         value={activeContractId ?? ''}
         onChange={handleChange}
-        dir="rtl"
         className="h-9 w-full rounded-xl border border-hairline bg-surface px-3 text-sm font-semibold text-ink-strong shadow-sm transition-colors hover:border-gold-300/80 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-200/50 lg:w-[340px]"
-        aria-label="تصفية حسب الوحدة"
+        aria-label={t.aria}
       >
-        <option value="">كل الوحدات</option>
+        <option value="">{t.all}</option>
         {options.map((opt) => (
           <option key={opt.contractId} value={opt.contractId}>
             {opt.label}

@@ -1,7 +1,8 @@
 import { BookmarkCheck, Building2, Home, Clock, User2 } from 'lucide-react';
 import { Price } from '@/components/currency/CurrencyProvider';
 import { cn } from '@/lib/cn';
-import { pickAr, unitTypeLabel } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatDateShort } from '@/lib/format';
+import { accountT } from '@/messages/account';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
 import { getLocale } from '@/lib/locale';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
@@ -18,12 +19,12 @@ import { BookingPaymentProof } from '@/components/account/BookingPaymentProof';
 // PENDING should auto-fire when proof is uploaded but not yet verified.
 const BOOKING_PAYMENT_LABELS: Record<
   MeReservationBookingPaymentStatus,
-  { label: string; tone: 'success' | 'accent' | 'muted' | 'neutral' }
+  { tone: 'success' | 'accent' | 'muted' | 'neutral' }
 > = {
-  UNPAID: { label: 'غير مدفوع', tone: 'muted' },
-  PENDING: { label: 'بانتظار المراجعة', tone: 'accent' },
-  PAID: { label: 'مدفوع — تم التحقق', tone: 'success' },
-  WAIVED: { label: 'مُعفى', tone: 'neutral' },
+  UNPAID: { tone: 'muted' },
+  PENDING: { tone: 'accent' },
+  PAID: { tone: 'success' },
+  WAIVED: { tone: 'neutral' },
 };
 
 const PAYMENT_TONE_CLASS: Record<'success' | 'accent' | 'muted' | 'neutral', string> = {
@@ -32,15 +33,6 @@ const PAYMENT_TONE_CLASS: Record<'success' | 'accent' | 'muted' | 'neutral', str
   muted: 'bg-surface-soft text-ink-muted',
   neutral: 'bg-navy/[0.06] text-ink-strong',
 };
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
 
 /** A single data block in the 3-up row. A hairline separator on the start edge
  *  (md+) gives each number room to breathe; the first block omits it. */
@@ -63,13 +55,14 @@ function Block({
 
 export async function ReservationCard({ reservation }: { reservation: MeReservation }) {
   const locale = await getLocale();
+  const t = accountT(locale).reservation;
   const project = reservation.unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name) : '';
+  const projectName = project ? pickAr(project.name, '', locale) : '';
   const unitLabel = reservation.unit
-    ? `${unitTypeLabel(reservation.unit.type)} · ${reservation.unit.code}`
+    ? `${unitTypeLabel(reservation.unit.type, null, locale)} · ${reservation.unit.code}`
     : '';
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
-  const payment = BOOKING_PAYMENT_LABELS[reservation.bookingPaymentStatus];
+  const payment = { ...BOOKING_PAYMENT_LABELS[reservation.bookingPaymentStatus], label: accountT(locale).bookingPayment[reservation.bookingPaymentStatus] ?? reservation.bookingPaymentStatus };
 
   // Gap 3 — booking-amount payment proof entry point. Show only on active
   // reservations (PENDING/APPROVED) with a positive booking amount that isn't
@@ -105,7 +98,7 @@ export async function ReservationCard({ reservation }: { reservation: MeReservat
           </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              حجز رقم {reservation.reservationNumber ?? '—'}
+              {t.number(reservation.reservationNumber ?? '—')}
             </h3>
             {subtitle && (
               <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
@@ -124,12 +117,12 @@ export async function ReservationCard({ reservation }: { reservation: MeReservat
 
       {/* ── Three balanced data blocks with breathing-room separators ── */}
       <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
-        <Block label="مبلغ الحجز">
+        <Block label={t.bookingAmount}>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
             <Price value={reservation.bookingAmount} />
           </div>
         </Block>
-        <Block label="حالة الدفع" separator>
+        <Block label={t.paymentStatus} separator>
           <span
             className={cn(
               'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
@@ -139,9 +132,9 @@ export async function ReservationCard({ reservation }: { reservation: MeReservat
             {payment.label}
           </span>
         </Block>
-        <Block label="ينتهي في" separator>
+        <Block label={t.expiresAt} separator>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            {formatDate(reservation.expiresAt)}
+            {formatDateShort(reservation.expiresAt, locale)}
           </div>
         </Block>
       </div>
@@ -152,22 +145,22 @@ export async function ReservationCard({ reservation }: { reservation: MeReservat
           {reservation.sales && (
             <span className="inline-flex items-center gap-1.5">
               <User2 className="h-3.5 w-3.5 shrink-0 text-gold-500" strokeWidth={1.5} aria-hidden />
-              المسؤول المختص:
+              {t.specialist}
               <span className="font-semibold text-ink-strong">{reservation.sales.fullName}</span>
             </span>
           )}
           {reservation.bookingPaidAt && (
             <span className="inline-flex items-center gap-1.5">
-              تاريخ السداد:
+              {t.paidAt}
               <span className="font-semibold text-ink-strong" dir="auto">
-                {formatDate(reservation.bookingPaidAt)}
+                {formatDateShort(reservation.bookingPaidAt, locale)}
               </span>
             </span>
           )}
         </div>
         <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
           <Clock className="h-3.5 w-3.5 shrink-0 text-gold-500" strokeWidth={1.5} aria-hidden />
-          أُنشئ في {formatDate(reservation.createdAt)}
+          {t.createdAt(formatDateShort(reservation.createdAt, locale))}
         </span>
       </div>
 

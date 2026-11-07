@@ -1,4 +1,6 @@
 import { Skeleton, SkeletonStat } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 /** Mirrors a RecentPanel: header (icon + title) over a few list rows. */
 function SkeletonPanel({ rows = 3, className }: { rows?: number; className?: string }) {
@@ -24,10 +26,11 @@ function SkeletonPanel({ rows = 3, className }: { rows?: number; className?: str
   );
 }
 
-export default function AccountDashboardLoading() {
+export default async function AccountDashboardLoading() {
+  const t = accountT(await getLocale());
   return (
     <div className="space-y-12 sm:space-y-16">
-      <span className="sr-only">جارٍ التحميل…</span>
+      <span className="sr-only">{t.loading}</span>
       {/* Overview heading + quick actions */}
       <div className="space-y-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">

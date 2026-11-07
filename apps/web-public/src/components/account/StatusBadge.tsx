@@ -1,4 +1,6 @@
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 type Tone = 'neutral' | 'accent' | 'success' | 'error' | 'muted';
 
@@ -10,40 +12,16 @@ const TONE_CLASS: Record<Tone, string> = {
   muted: 'bg-surface-soft text-ink-muted',
 };
 
-/**
- * Arabic labels + tones for visit, maintenance, and review/priority enums.
- * Generic status → pill map; unknown values fall back to a neutral pill showing
- * the raw value rather than throwing.
- */
-const STATUS_MAP: Record<string, { label: string; tone: Tone }> = {
-  // VisitRequestStatus
-  NEW: { label: 'جديد', tone: 'neutral' },
-  UNDER_REVIEW: { label: 'قيد المراجعة', tone: 'accent' },
-  CONVERTED: { label: 'تم التحويل', tone: 'success' },
-  REJECTED: { label: 'مرفوض', tone: 'error' },
-  // VisitStatus
-  PENDING: { label: 'قيد الانتظار', tone: 'neutral' },
-  APPROVED: { label: 'تمت الموافقة', tone: 'success' },
-  SCHEDULED: { label: 'محدد', tone: 'accent' },
-  COMPLETED: { label: 'مكتمل', tone: 'success' },
-  // MaintenanceStatus
-  OPEN: { label: 'مفتوح', tone: 'neutral' },
-  ASSIGNED: { label: 'تم الإسناد', tone: 'accent' },
-  IN_PROGRESS: { label: 'قيد التنفيذ', tone: 'accent' },
-  RESOLVED: { label: 'تم الحل', tone: 'success' },
-  CLOSED: { label: 'مغلق', tone: 'muted' },
-  // MaintenancePriority
-  LOW: { label: 'أولوية منخفضة', tone: 'muted' },
-  MEDIUM: { label: 'أولوية متوسطة', tone: 'neutral' },
-  HIGH: { label: 'أولوية عالية', tone: 'accent' },
-  URGENT: { label: 'عاجلة', tone: 'error' },
-  // Shared
-  CANCELLED: { label: 'ملغى', tone: 'muted' },
-  // ReservationStatus extras
-  EXPIRED: { label: 'منتهي الصلاحية', tone: 'muted' },
+/** Tones per status; the wording comes from messages/account.ts. Unknown values show the raw value. */
+const STATUS_TONE: Record<string, Tone> = {
+  NEW: 'neutral', UNDER_REVIEW: 'accent', CONVERTED: 'success', REJECTED: 'error',
+  PENDING: 'neutral', APPROVED: 'success', SCHEDULED: 'accent', COMPLETED: 'success',
+  OPEN: 'neutral', ASSIGNED: 'accent', IN_PROGRESS: 'accent', RESOLVED: 'success', CLOSED: 'muted',
+  LOW: 'muted', MEDIUM: 'neutral', HIGH: 'accent', URGENT: 'error',
+  CANCELLED: 'muted', EXPIRED: 'muted',
 };
 
-export function StatusBadge({
+export async function StatusBadge({
   status,
   label,
   className,
@@ -55,7 +33,8 @@ export function StatusBadge({
   label?: string;
   className?: string;
 }) {
-  const entry = STATUS_MAP[status] ?? { label: status, tone: 'neutral' as Tone };
+  const t = accountT(await getLocale());
+  const entry = { label: t.status[status] ?? status, tone: STATUS_TONE[status] ?? ('neutral' as Tone) };
   return (
     <span
       className={cn(

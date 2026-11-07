@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Download, FileText, Loader2 } from 'lucide-react';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 /**
  * Direct-id signed-download row for documents that are already enumerated
@@ -26,6 +28,7 @@ export function DocumentDownloadById({
   /** Visible label for the row (title || fileName || generic fallback). */
   title: string;
 }) {
+  const t = accountT(useSiteLocale()).docs;
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
 
   async function handleClick() {
@@ -61,7 +64,7 @@ export function DocumentDownloadById({
       {state === 'loading' ? (
         <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink-muted" aria-hidden />
       ) : state === 'error' ? (
-        <span className="shrink-0 text-xs font-medium text-red-600">تعذر الفتح</span>
+        <span className="shrink-0 text-xs font-medium text-red-600">{t.failedShort}</span>
       ) : (
         <Download className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
       )}

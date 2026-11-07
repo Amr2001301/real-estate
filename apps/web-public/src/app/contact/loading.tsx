@@ -1,8 +1,11 @@
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
 import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function ContactLoading() {
+export default async function ContactLoading() {
+  const t = accountT(await getLocale());
   return (
     <>
       <PageHero
@@ -11,7 +14,7 @@ export default function ContactLoading() {
         subtitle="فريقنا جاهز لمساعدتك في اختيار المشروع أو الوحدة الأنسب لاحتياجك."
       />
       <Section tone="canvas">
-        <span className="sr-only">جارٍ التحميل…</span>
+        <span className="sr-only">{t.loading}</span>
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Lead form */}
           <div className="rounded-3xl border border-hairline bg-surface p-6 shadow-soft sm:p-8 lg:col-span-2">

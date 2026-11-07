@@ -149,3 +149,23 @@ export function pickAr(value: unknown, fallback = '', locale: Locale = 'ar'): st
   if (typeof value === 'string') return value;
   return fallback;
 }
+
+/** A medium date ("7 Nov 2026" / «٧ نوفمبر ٢٠٢٦»); "—" when missing or invalid. */
+export function formatDateShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
+/** A medium date with the short time; "—" when missing or invalid. */
+export function formatDateTimeShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}

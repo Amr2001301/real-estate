@@ -3,17 +3,11 @@ import Link from 'next/link';
 import { Wrench, Home } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
-import { pickAr, unitTypeLabel } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatDateShort } from '@/lib/format';
 import type { MeMaintenanceRequest } from '@/lib/api-types';
 import { AccountCard, type AccountCardAccent } from '@/components/account/AccountCard';
-
-function formatDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 // Soft minimal pills — light tint + matching border (theme tokens → dark-safe).
 const SLATE = 'bg-surface-soft/80 text-ink-muted border border-hairline/60';
@@ -22,28 +16,19 @@ const AMBER = 'bg-warning/10 text-warning border border-warning/20';
 const GOLD = 'bg-gold-100/80 text-gold-600 border border-gold-200/50';
 const ERROR = 'bg-error/10 text-error border border-error/20';
 
-/** Status / review / priority enums → Arabic label + luxury tint. */
-const TAG: Record<string, { label: string; cls: string }> = {
+/** Status / review / priority enums → label (messages/account.ts) + luxury tint. */
+const TAG_CLASS: Record<string, string> = {
   // MaintenanceStatus
-  OPEN: { label: 'مفتوح', cls: GOLD },
-  ASSIGNED: { label: 'تم الإسناد', cls: GOLD },
-  IN_PROGRESS: { label: 'قيد التنفيذ', cls: GOLD },
-  RESOLVED: { label: 'تم الحل', cls: SUCCESS },
-  CLOSED: { label: 'مغلق', cls: SLATE },
-  CANCELLED: { label: 'ملغى', cls: SLATE },
+  OPEN: GOLD, ASSIGNED: GOLD, IN_PROGRESS: GOLD, RESOLVED: SUCCESS, CLOSED: SLATE, CANCELLED: SLATE,
   // Review status
-  PENDING_REVIEW: { label: 'بانتظار المراجعة', cls: GOLD },
-  APPROVED: { label: 'تمت الموافقة', cls: SUCCESS },
-  REJECTED: { label: 'مرفوض', cls: ERROR },
+  PENDING_REVIEW: GOLD, APPROVED: SUCCESS, REJECTED: ERROR,
   // Priority
-  LOW: { label: 'أولوية منخفضة', cls: SLATE },
-  MEDIUM: { label: 'أولوية متوسطة', cls: AMBER },
-  HIGH: { label: 'أولوية عالية', cls: GOLD },
-  URGENT: { label: 'عاجلة', cls: ERROR },
+  LOW: SLATE, MEDIUM: AMBER, HIGH: GOLD, URGENT: ERROR,
 };
 
-export function MaintenanceTag({ status }: { status: string }) {
-  const t = TAG[status] ?? { label: status, cls: SLATE };
+export async function MaintenanceTag({ status }: { status: string }) {
+  const labels = accountT(await getLocale()).status;
+  const t = { label: labels[status] ?? status, cls: TAG_CLASS[status] ?? SLATE };
   return (
     <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold', t.cls)}>
       {t.label}
@@ -51,9 +36,10 @@ export function MaintenanceTag({ status }: { status: string }) {
   );
 }
 
-export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequest }) {
-  const categoryName = request.category ? pickAr(request.category.name) : '';
-  const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type)} · ${request.unit.code}` : '';
+export async function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequest }) {
+  const locale = await getLocale();
+  const categoryName = request.category ? pickAr(request.category.name, '', locale) : '';
+  const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type, null, locale)} · ${request.unit.code}` : '';
   const accent: AccountCardAccent =
     request.status === 'RESOLVED'
       ? 'success'
@@ -71,7 +57,7 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
               <Wrench className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h3 className="line-clamp-1 text-sm font-black text-ink-strong">{categoryName || 'طلب صيانة'}</h3>
+              <h3 className="line-clamp-1 text-sm font-black text-ink-strong">{categoryName || accountT(locale).maintenanceCard.request}</h3>
               {unitLabel && (
                 <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-ink-muted">
                   <Home className="h-3 w-3 shrink-0 text-gold-500" aria-hidden />
@@ -98,7 +84,7 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
           {/* Col 4 — timeline (far left) */}
           <div className="md:col-span-2 md:flex md:justify-end">
             <span className="font-mono text-[11px] font-bold text-ink-muted" dir="auto">
-              {formatDate(request.createdAt)}
+              {formatDateShort(request.createdAt, locale)}
             </span>
           </div>
         </div>

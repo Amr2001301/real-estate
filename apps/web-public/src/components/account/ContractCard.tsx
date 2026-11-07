@@ -41,8 +41,8 @@ export async function ContractCard({ contract }: { contract: MeContract }) {
   };
 
   const project = contract.unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name) : '';
-  const unitLabel = contract.unit ? `${unitTypeLabel(contract.unit.type)} · ${contract.unit.code}` : '';
+  const projectName = project ? pickAr(project.name, '', locale) : '';
+  const unitLabel = contract.unit ? `${unitTypeLabel(contract.unit.type, null, locale)} · ${contract.unit.code}` : '';
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
   const plan = contract.installmentPlan;
 
@@ -120,7 +120,7 @@ export async function ContractCard({ contract }: { contract: MeContract }) {
           value={contract.signedAt ? formatDate(contract.signedAt, locale) : m.unsignedLabel}
         />
         {plan && <FootItem icon={CalendarClock} label={m.planStartLabel} value={formatDate(plan.startsAt, locale)} />}
-        {plan && <FootItem icon={Clock} label={m.durationLabel} value={`${formatNumber(plan.totalMonths)} ${m.monthsSuffix}`} />}
+        {plan && <FootItem icon={Clock} label={m.durationLabel} value={`${formatNumber(plan.totalMonths, locale)} ${m.monthsSuffix}`} />}
       </div>
     </AccountCard>
   );

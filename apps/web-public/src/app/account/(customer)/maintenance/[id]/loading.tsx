@@ -1,10 +1,13 @@
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function MaintenanceDetailLoading() {
+export default async function MaintenanceDetailLoading() {
+  const t = accountT(await getLocale());
   return (
     <div className="space-y-6">
-      <span className="sr-only">جارٍ التحميل…</span>
+      <span className="sr-only">{t.loading}</span>
       {/* Back link */}
       <Skeleton className="h-4 w-32 rounded-full" />
 

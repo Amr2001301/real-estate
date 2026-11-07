@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 interface RecentPanelProps {
   icon: LucideIcon;
@@ -20,7 +22,8 @@ interface RecentPanelProps {
  * `RecentRow`s. Replaces the previous "wall of individually-bordered cards" so
  * the dashboard reads as a few composed modules instead of box soup.
  */
-export function RecentPanel({ icon: Icon, title, href, linkLabel = 'عرض الكل', className, children }: RecentPanelProps) {
+export async function RecentPanel({ icon: Icon, title, href, linkLabel, className, children }: RecentPanelProps) {
+  const viewAll = linkLabel ?? accountT(await getLocale()).viewAll;
   return (
     <PremiumCard className={cn('flex flex-col p-5', className)}>
       <div className="mb-4 flex h-8 items-center justify-between gap-3">
@@ -35,7 +38,7 @@ export function RecentPanel({ icon: Icon, title, href, linkLabel = 'عرض ال�
             href={href as Route}
             className="inline-flex shrink-0 items-center rounded-lg border border-hairline/70 bg-surface-soft px-3 py-1 text-[10px] font-extrabold text-ink-strong shadow-sm transition-all duration-200 hover:bg-hairline/40"
           >
-            {linkLabel}
+            {viewAll}
           </Link>
         )}
       </div>
