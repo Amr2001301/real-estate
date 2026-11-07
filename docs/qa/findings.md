@@ -75,3 +75,13 @@ Not yet done: second company in parallel (isolation), the variant matrix, per-ro
 - **Concurrency:** same-unit reservation ×4 → 1 created, 3 × 409 ✔; booking-payment confirm ×6 → exactly 1 deposit ✔; convert ×5 → 1 contract but 4 × 500 ✘ (F-044).
 - **Input:** XSS payloads in a name and a message render as text, nothing executes (checked on 5 admin pages); SQL-injection strings are stored inert; 100 KB body → 413; empty/invalid phone → 400 with a clear message; emoji OK; NUL → 500 (F-045).
 - **Auth:** tampered payload / companyId, `alg: none`, stripped signature, refresh-as-access, access-as-refresh → 401; refresh reuse refused; 5th wrong login in a minute → 429; CORS refuses an unknown origin.
+| F-048 | 3 | Admin | Lead / customer pages (avatar) | 1 company | Open a lead whose name starts with an emoji | The page renders | React **hydration error** (console + page regenerates on the client): five separate `initials()` helpers (`avatar.tsx`, `lead-card.tsx`, `sidebar.tsx`, `cockpit.tsx`, `list-cells.tsx`) cut the first character by UTF-16 unit, splitting the emoji's surrogate pair (server and client then disagree). Same helpers cause F-010 («ال» article used as the initial) | Medium | open — fix: one shared `initials()` (code points, skips «ال»), 5 call sites, test | |
+| F-049 | 3 | Admin | Projects list on a phone (390 px) | 1 company | Open `/dashboard/projects` | No horizontal scroll | The page scrolls sideways | Low | open | |
+
+## Run 1 — UI sweep (2026-11-07)
+
+~60 admin routes × desktop light / desktop dark / 390 px: no 5xx, no blank page, no horizontal overflow except F-049, hydration errors only for F-048. (The dark-mode check by background colour was not meaningful — the theme is switched by the toggle, not by the system scheme; dark mode was reviewed visually in phase 1.)
+
+## Run 1 — time
+
+Instalment dates are UTC midnight on the same day-of-month across the whole 84-month schedule (no DST drift); `addMonths` clamps month-ends and leap days (Jan 31 → Feb 28 → Mar 31 → Apr 30; Feb 29 2028 + 12 → Feb 28 2029; +48 → Feb 29 2032) without drifting; `markOverdue` waits until the whole due day has ended in the company's time zone.
