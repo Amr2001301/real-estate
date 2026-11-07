@@ -722,7 +722,7 @@ const UI = {
         breadcrumb: 'الدفعات',
         addBtn: 'تسجيل دفعة',
         kpi: {
-          totalCollected: 'إجمالي المحصّل',
+          totalCollected: 'إجمالي المقبوض (قبل الاسترداد)',
           reservationAmounts: 'مبالغ الحجز',
           monthlyInstallments: 'الأقساط الشهرية',
           totalDeposits: 'عدد الدفعات',
@@ -6689,7 +6689,7 @@ const UI = {
         breadcrumb: 'Deposits',
         addBtn: 'Record Payment',
         kpi: {
-          totalCollected: 'Total Collected',
+          totalCollected: 'Total received (before refunds)',
           reservationAmounts: 'Reservation Amounts',
           monthlyInstallments: 'Monthly Installments',
           totalDeposits: 'Total Deposits',
