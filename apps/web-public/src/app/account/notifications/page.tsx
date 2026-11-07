@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Bell, CheckCheck } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -20,11 +20,9 @@ import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { markAllNotificationsReadAction } from '@/lib/account-actions';
 
-export const metadata = buildMetadata({
-  title: 'الإشعارات',
-  description: 'إشعاراتك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('notifications', { robots: { index: false, follow: false } });
+}
 
 // P10 — the local `extractItems` helper that used to live here is gone;
 // callers now use the shared `extractPaginatedData<T>` from

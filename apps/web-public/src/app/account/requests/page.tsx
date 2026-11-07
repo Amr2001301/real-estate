@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { MessageSquareText } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -13,11 +13,9 @@ import { Pagination } from '@/components/projects/Pagination';
 import { InfoRequestCard } from '@/components/account/InfoRequestCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
-export const metadata = buildMetadata({
-  title: 'الطلبات',
-  description: 'استفساراتك وطلبات المعلومات في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('requests', { robots: { index: false, follow: false } });
+}
 
 const PAGE_SIZE = 10;
 

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
@@ -18,12 +18,9 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { Stagger } from '@/components/motion/Stagger';
 
-export const metadata = buildMetadata({
-  path: '/projects',
-  title: 'المشاريع العقارية',
-  description:
-    'استكشف مجموعة منتقاة من المشاريع السكنية والتجارية الفاخرة المصممة لأسلوب حياة أرقى — مواقع مميزة وتصاميم استثنائية.',
-});
+export async function generateMetadata() {
+  return pageMeta('projects', { path: '/projects' });
+}
 
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;

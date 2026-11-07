@@ -30,4 +30,11 @@ test.describe('English sign-in and sign-up', () => {
     await expect(page.getByRole('button', { name: 'دخول إلى الحساب' })).toBeVisible();
     await context.close();
   });
+
+  test('the tab title is English', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'networkidle' });
+    await expect(page).toHaveTitle(/Sign in/);
+    await page.goto('/contact', { waitUntil: 'networkidle' });
+    await expect(page).toHaveTitle(/Contact us/);
+  });
 });

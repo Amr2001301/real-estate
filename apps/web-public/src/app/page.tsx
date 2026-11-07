@@ -1,4 +1,4 @@
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
@@ -21,13 +21,9 @@ import { MobileAppPromo } from '@/components/marketing/MobileAppPromo';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { organizationLd } from '@/lib/jsonld';
 
-export const metadata = buildMetadata({
-  // No title of its own: the layout's default is «Company · tagline» (a template
-  // does not apply to a page in the layout's own segment).
-  path: '/',
-  description:
-    'فن العيش الراقي يبدأ من اختيارك الصحيح — اكتشف مشاريع ووحدات عقارية فاخرة مختارة بعناية لتناسب أسلوب حياتك واستثمارك.',
-});
+export async function generateMetadata() {
+  return pageMeta('home', { path: '/' });
+}
 
 // Re-fetch public feeds at most once a minute (ISR).
 const REVALIDATE = 60;

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { FolderOpen } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -12,11 +12,9 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { DocumentList } from '@/components/account/DocumentList';
 
-export const metadata = buildMetadata({
-  title: 'مستنداتي',
-  description: 'جميع مستنداتك وملفاتك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('documents', { robots: { index: false, follow: false } });
+}
 
 export const dynamic = 'force-dynamic';
 

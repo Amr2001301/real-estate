@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props) {
   const res = tenant
     ? await apiFetch<ArticleDetail>(`/public/articles/${slug}`, { revalidate: 60, tenantSlug: tenant.slug })
     : { ok: false as const, error: { message: '', status: 404 } };
-  if (!res.ok) return buildMetadata({ title: 'مقال' });
+  if (!res.ok) return buildMetadata({ title: (await getLocale()) === 'en' ? 'Article' : 'مقال' });
   return buildMetadata({
     title: res.data.title,
     description: res.data.excerpt,

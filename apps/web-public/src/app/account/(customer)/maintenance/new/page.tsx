@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Building2 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -17,11 +17,9 @@ import { MaintenanceRequestForm, type SelectOption } from '@/components/account/
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import type { Locale } from '@/lib/locale';
 
-export const metadata = buildMetadata({
-  title: 'طلب صيانة جديد',
-  description: 'إنشاء طلب صيانة جديد في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('maintenanceNew', { robots: { index: false, follow: false } });
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

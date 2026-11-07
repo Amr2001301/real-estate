@@ -1,15 +1,13 @@
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { VerifyEmailCard } from '@/components/auth/VerifyEmailCard';
 
-export const metadata = buildMetadata({
-  title: 'تأكيد البريد الإلكتروني',
-  description: 'تأكيد بريدك الإلكتروني في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('verifyEmail', { robots: { index: false, follow: false } });
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

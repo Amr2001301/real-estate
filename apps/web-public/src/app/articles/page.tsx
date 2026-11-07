@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
@@ -9,10 +9,9 @@ import { Section } from '@/components/ui/Section';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { PageHero } from '@/components/layout/PageHero';
 
-export const metadata = buildMetadata({
-  title: 'المقالات',
-  description: 'اقرأ أحدث المقالات والمعلومات العقارية على منصتنا.',
-});
+export async function generateMetadata() {
+  return pageMeta('articles');
+}
 
 export const revalidate = 120;
 
