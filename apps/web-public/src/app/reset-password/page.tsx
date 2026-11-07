@@ -25,9 +25,10 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       subtitle={m.auth.resetPassword.subtitle}
       switchPrompt={m.auth.resetPassword.backPrompt}
       switchLabel={m.auth.resetPassword.backLabel}
+      locale={locale}
       switchHref={routes.login}
     >
-      <ResetPasswordCard token={token} />
+      <ResetPasswordCard token={token} locale={locale} />
     </AuthShell>
   );
 }

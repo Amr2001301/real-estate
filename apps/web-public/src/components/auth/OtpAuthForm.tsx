@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { authT } from '@/messages/auth';
+import type { Locale } from '@/lib/locale';
 
 type Mode = 'login' | 'register';
 type Step = 'request' | 'verify';
@@ -28,22 +30,25 @@ function readFrom(): string | undefined {
   return new URLSearchParams(window.location.search).get('from') ?? undefined;
 }
 
-function mapRequestError(status: number): string {
-  if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
-  if (status === 429) return 'محاولات كثيرة. يرجى الانتظار قليلًا قبل المحاولة مجددًا.';
-  if (status === 400) return 'تعذر إرسال الرمز. تأكد من رقم الهاتف ثم حاول مرة أخرى.';
-  return 'حدث خطأ أثناء إرسال الرمز. يرجى المحاولة مرة أخرى.';
+type AuthText = ReturnType<typeof authT>;
+
+function mapRequestError(t: AuthText, status: number): string {
+  if (status === 0) return t.common.offline;
+  if (status === 429) return t.otp.requestTooMany;
+  if (status === 400) return t.otp.requestBad;
+  return t.otp.requestFailed;
 }
 
-function mapVerifyError(status: number): string {
-  if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
-  if (status === 401) return 'الرمز غير صحيح. تأكد من الرمز المُرسل إلى هاتفك.';
-  if (status === 400) return 'انتهت صلاحية الرمز أو لم نعثر عليه. اطلب رمزًا جديدًا.';
-  if (status === 403) return 'محاولات كثيرة. اطلب رمزًا جديدًا.';
-  return 'حدث خطأ أثناء التحقق. يرجى المحاولة مرة أخرى.';
+function mapVerifyError(t: AuthText, status: number): string {
+  if (status === 0) return t.common.offline;
+  if (status === 401) return t.otp.verifyWrong;
+  if (status === 400) return t.otp.verifyExpired;
+  if (status === 403) return t.otp.verifyTooMany;
+  return t.otp.verifyFailed;
 }
 
-export function OtpAuthForm({ mode }: { mode: Mode }) {
+export function OtpAuthForm({ mode, locale = 'ar' }: { mode: Mode; locale?: Locale }) {
+  const t = authT(locale);
   const router = useRouter();
   const [step, setStep] = useState<Step>('request');
   const [pending, setPending] = useState(false);
@@ -60,11 +65,11 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
   async function onRequest(ev: React.FormEvent) {
     ev.preventDefault();
     const e: Record<string, string> = {};
-    if (isRegister && fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
+    if (isRegister && fullName.trim().length < 2) e.fullName = t.common.fullNameRequired;
     const normalized = normalizePhone(phone);
-    if (!normalized) e.phone = 'يرجى إدخال رقم الهاتف.';
-    else if (!PHONE_RE.test(normalized)) e.phone = 'يرجى إدخال رقم هاتف صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
-    if (isRegister && !terms) e.terms = 'يرجى الموافقة على الشروط والأحكام.';
+    if (!normalized) e.phone = t.otp.phoneRequired;
+    else if (!PHONE_RE.test(normalized)) e.phone = t.otp.phoneInvalid;
+    if (isRegister && !terms) e.terms = t.common.termsRequired;
     setErrors(e);
     if (Object.keys(e).length) return;
 
@@ -75,14 +80,14 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     if (res.ok) {
       setStep('verify');
     } else {
-      setTopError(mapRequestError(res.status));
+      setTopError(mapRequestError(t, res.status));
     }
   }
 
   async function onVerify(ev: React.FormEvent) {
     ev.preventDefault();
     const e: Record<string, string> = {};
-    if (!/^\d{6}$/.test(code.trim())) e.code = 'الرمز مكوّن من ٦ أرقام.';
+    if (!/^\d{6}$/.test(code.trim())) e.code = t.otp.codeInvalid;
     setErrors(e);
     if (Object.keys(e).length) return;
 
@@ -100,7 +105,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
       router.refresh();
     } else {
       setPending(false);
-      setTopError(mapVerifyError(res.status));
+      setTopError(mapVerifyError(t, res.status));
     }
   }
 
@@ -109,31 +114,31 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
     setTopError('');
     const res = await otpRequestAction(normalizePhone(phone));
     setPending(false);
-    if (!res.ok) setTopError(mapRequestError(res.status));
+    if (!res.ok) setTopError(mapRequestError(t, res.status));
   }
 
   return (
     <PremiumCard className="p-6 sm:p-8">
       <h2 className="hidden text-2xl text-ink-strong lg:block">
-        {isRegister ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+        {isRegister ? t.common.createAccount : t.common.signIn}
       </h2>
 
       {step === 'request' ? (
         <form onSubmit={onRequest} noValidate className="mt-6 space-y-5">
           {isRegister && (
-            <Field label="الاسم الكامل" required>
+            <Field label={t.common.fullNameLabel} required>
               <Input
                 value={fullName}
                 onChange={(ev) => setFullName(ev.target.value)}
                 invalid={!!errors.fullName}
-                placeholder="مثال: محمد الأحمد"
+                placeholder={t.common.fullNameExample}
                 autoComplete="name"
               />
               <FormError>{errors.fullName}</FormError>
             </Field>
           )}
 
-          <Field label="رقم الهاتف" required>
+          <Field label={t.otp.phoneLabel} required>
             <Input
               value={phone}
               onChange={(ev) => setPhone(ev.target.value)}
@@ -156,10 +161,10 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
                   className="mt-0.5 h-5 w-5 rounded-md border-hairline text-gold-500 focus:ring-gold-400/40"
                 />
                 <span>
-                  أوافق على{' '}
-                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
-                  و{' '}
-                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">سياسة الخصوصية</a>.
+                  {t.common.iAgree}{' '}
+                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">{t.common.terms}</a>{' '}
+                  {t.common.and}{' '}
+                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">{t.common.privacy}</a>.
                 </span>
               </label>
               <FormError>{errors.terms}</FormError>
@@ -169,10 +174,10 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
           {topError && <InlineNotice tone="error">{topError}</InlineNotice>}
 
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
-            {pending ? 'جارٍ الإرسال...' : (
+            {pending ? t.otp.sending : (
               <>
                 <Phone className="h-5 w-5" aria-hidden />
-                إرسال رمز التحقق
+                {t.otp.sendCode}
               </>
             )}
           </Button>
@@ -180,15 +185,15 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
       ) : (
         <form onSubmit={onVerify} noValidate className="mt-6 space-y-5">
           <p className="text-sm text-ink-muted">
-            أدخل رمز التحقق المكوّن من ٦ أرقام المُرسل إلى <span dir="ltr" className="font-medium text-ink-strong">{normalizePhone(phone)}</span>.
+            {t.otp.enterCode} <span dir="ltr" className="font-medium text-ink-strong">{normalizePhone(phone)}</span>.
           </p>
 
-          <Field label="رمز التحقق" required>
+          <Field label={t.otp.codeLabel} required>
             <Input
               value={code}
               onChange={(ev) => setCode(ev.target.value.replace(/\D/g, '').slice(0, 6))}
               invalid={!!errors.code}
-              placeholder="٦ أرقام"
+              placeholder={t.otp.codeHint}
               inputMode="numeric"
               dir="ltr"
               autoComplete="one-time-code"
@@ -199,24 +204,24 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
           {topError && <InlineNotice tone="error">{topError}</InlineNotice>}
 
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
-            {pending ? 'جارٍ التحقق...' : (
+            {pending ? t.otp.verifying : (
               <>
                 <KeyRound className="h-5 w-5" aria-hidden />
-                {isRegister ? 'إنشاء الحساب' : 'دخول إلى الحساب'}
+                {isRegister ? t.common.createAccountBtn : t.common.signInBtn}
               </>
             )}
           </Button>
 
           <div className="flex items-center justify-between text-sm">
             <button type="button" onClick={resend} disabled={pending} className="text-ink-strong hover:text-gold-600 disabled:opacity-50">
-              إعادة إرسال الرمز
+              {t.otp.resend}
             </button>
             <button
               type="button"
               onClick={() => { setStep('request'); setCode(''); setTopError(''); setErrors({}); }}
               className="inline-flex items-center gap-1 text-ink-muted hover:text-ink-strong"
             >
-              تغيير الرقم
+              {t.otp.changeNumber}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </button>
           </div>

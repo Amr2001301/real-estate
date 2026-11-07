@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { authT } from '@/messages/auth';
+import type { Locale } from '@/lib/locale';
 
 type Mode = 'login' | 'register';
 type Step = 'form' | 'check-email';
@@ -29,49 +31,34 @@ function readFrom(): string | undefined {
   return new URLSearchParams(window.location.search).get('from') ?? undefined;
 }
 
-const INTERESTS = [
-  { value: 'apartment', label: 'شقة' },
-  { value: 'villa', label: 'فيلا' },
-  { value: 'townhouse', label: 'تاون هاوس' },
-  { value: 'commercial', label: 'تجاري' },
-  { value: 'investment', label: 'استثمار' },
-];
-const BUDGETS = [
-  { value: '0-1m', label: 'حتى مليون' },
-  { value: '1m-2m', label: 'مليون – مليونان' },
-  { value: '2m-5m', label: 'مليونان – ٥ ملايين' },
-  { value: '5m+', label: 'أكثر من ٥ ملايين' },
-];
-const CONTACT_METHODS = [
-  { value: 'phone', label: 'مكالمة هاتفية' },
-  { value: 'whatsapp', label: 'واتساب' },
-  { value: 'email', label: 'بريد إلكتروني' },
-];
+type AuthText = ReturnType<typeof authT>;
 
-function mapLoginError(status: number, code?: string): string {
-  if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
-  if (code === 'not_customer') return 'هذا الحساب غير مخصص لاستخدام الموقع العام.';
-  if (status === 401 || status === 403) return 'بيانات الدخول غير صحيحة. تأكد من البريد الإلكتروني وكلمة المرور.';
-  return 'حدث خطأ أثناء تنفيذ الطلب. يرجى المحاولة مرة أخرى.';
+function mapLoginError(t: AuthText, status: number, code?: string): string {
+  if (status === 0) return t.common.offline;
+  if (code === 'not_customer') return t.login.notCustomer;
+  if (status === 401 || status === 403) return t.login.badCredentials;
+  return t.common.genericError;
 }
 
-function mapRegisterError(status: number, code?: string): string {
-  if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
-  if (code === 'email_taken') return 'يوجد حساب مسجل بهذا البريد الإلكتروني بالفعل.';
-  if (code === 'phone_taken') return 'يوجد حساب مسجل بهذا الرقم بالفعل.';
-  if (code === 'account_exists_verify')
-    return 'هذا الرقم أو البريد مسجّل لدينا بالفعل. ادخل برمز يصلك على الموبايل، أو أعد تعيين كلمة المرور من بريدك.';
-  if (status === 400) return 'برجاء مراجعة البيانات المطلوبة.';
-  return 'تعذر إنشاء الحساب حاليًا. حاول مرة أخرى بعد لحظات.';
+function mapRegisterError(t: AuthText, status: number, code?: string): string {
+  if (status === 0) return t.common.offline;
+  if (code === 'email_taken') return t.register.emailTaken;
+  if (code === 'phone_taken') return t.register.phoneTaken;
+  if (code === 'account_exists_verify') return t.register.accountExists;
+  if (status === 400) return t.register.reviewData;
+  return t.register.createFailed;
 }
 
 export function CustomerAuthForm({
   mode,
   onUseOtp,
+  locale = 'ar',
 }: {
   mode: Mode;
   onUseOtp?: () => void;
+  locale?: Locale;
 }) {
+  const t = authT(locale);
   const router = useRouter();
   const isRegister = mode === 'register';
   const [step, setStep] = useState<Step>('form');
@@ -93,13 +80,13 @@ export function CustomerAuthForm({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!email.trim() || !EMAIL_RE.test(email.trim())) e.email = 'صيغة البريد الإلكتروني غير صحيحة.';
-    if (password.length < 8) e.password = 'كلمة المرور يجب ألا تقل عن ٨ أحرف.';
+    if (!email.trim() || !EMAIL_RE.test(email.trim())) e.email = t.common.emailInvalid;
+    if (password.length < 8) e.password = t.common.passwordMin;
     if (isRegister) {
-      if (fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
-      if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, ''))) e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
-      if (confirm !== password) e.confirm = 'كلمتا المرور غير متطابقتين.';
-      if (!terms) e.terms = 'يرجى الموافقة على الشروط والأحكام.';
+      if (fullName.trim().length < 2) e.fullName = t.common.fullNameRequired;
+      if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, ''))) e.phone = t.register.phoneInvalid;
+      if (confirm !== password) e.confirm = t.common.passwordMismatch;
+      if (!terms) e.terms = t.common.termsRequired;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -144,8 +131,8 @@ export function CustomerAuthForm({
       setPending(false);
       setTopError(
         isRegister
-          ? mapRegisterError(res.status, res.code)
-          : mapLoginError(res.status, res.code),
+          ? mapRegisterError(t, res.status, res.code)
+          : mapLoginError(t, res.status, res.code),
       );
     }
   }
@@ -154,23 +141,23 @@ export function CustomerAuthForm({
     return (
       <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
         <MailCheck className="h-14 w-14 text-gold-500" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">تم إنشاء حسابك بنجاح</h2>
+        <h2 className="text-xl font-bold text-ink-strong">{t.register.doneTitle}</h2>
         <p className="text-sm text-ink-muted leading-relaxed">
-          أرسلنا رابط تأكيد إلى{' '}
+          {t.register.doneBefore}{' '}
           <span className="font-medium text-ink-strong" dir="ltr">{registeredEmail}</span>.
-          {' '}تحقق من بريدك الوارد (ومجلد الرسائل غير المرغوب) وانقر الرابط لتفعيل حسابك.
+          {' '}{t.register.doneAfter}
         </p>
         <button
           type="button"
           onClick={() => { router.push(routes.account as Route); router.refresh(); }}
           className="mt-2 w-full rounded-full bg-navy px-8 py-3.5 text-base font-medium tracking-tight text-white transition-all hover:-translate-y-0.5 hover:bg-navy-700"
         >
-          الانتقال إلى الحساب
+          {t.common.goToAccount}
         </button>
         <p className="text-xs text-ink-muted">
-          لم تصلك الرسالة؟{' '}
+          {t.register.noMail}{' '}
           <a href={routes.accountProfile} className="underline underline-offset-4 hover:text-ink-strong">
-            يمكنك إعادة الإرسال من الملف الشخصي
+            {t.register.resendFromProfile}
           </a>.
         </p>
       </PremiumCard>
@@ -180,19 +167,19 @@ export function CustomerAuthForm({
   return (
     <PremiumCard className="p-6 sm:p-8">
       <h2 className="hidden text-2xl text-ink-strong lg:block">
-        {isRegister ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+        {isRegister ? t.common.createAccount : t.common.signIn}
       </h2>
 
       <form onSubmit={onSubmit} noValidate className="mt-6 space-y-5">
         {isRegister && (
           <>
-            <p className="text-sm font-semibold text-gold-600">بيانات الحساب</p>
+            <p className="text-sm font-semibold text-gold-600">{t.register.accountData}</p>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="الاسم الكامل" required>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} invalid={!!errors.fullName} placeholder="مثال: محمد الأحمد" autoComplete="name" />
+              <Field label={t.common.fullNameLabel} required>
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} invalid={!!errors.fullName} placeholder={t.common.fullNameExample} autoComplete="name" />
                 <FormError>{errors.fullName}</FormError>
               </Field>
-              <Field label="رقم الجوال" required>
+              <Field label={t.register.phoneLabel} required>
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} invalid={!!errors.phone} placeholder="+2010XXXXXXXX" inputMode="tel" dir="ltr" autoComplete="tel" />
                 <FormError>{errors.phone}</FormError>
               </Field>
@@ -200,19 +187,19 @@ export function CustomerAuthForm({
           </>
         )}
 
-        <Field label="البريد الإلكتروني" required>
+        <Field label={t.common.emailLabel} required>
           <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} invalid={!!errors.email} placeholder="you@example.com" dir="ltr" autoComplete="email" />
           <FormError>{errors.email}</FormError>
         </Field>
 
         <div className={isRegister ? 'grid gap-5 sm:grid-cols-2' : ''}>
-          <Field label="كلمة المرور" required>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} invalid={!!errors.password} placeholder="٨ أحرف على الأقل" autoComplete={isRegister ? 'new-password' : 'current-password'} />
+          <Field label={t.register.passwordLabel} required>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} invalid={!!errors.password} placeholder={t.register.passwordHint} autoComplete={isRegister ? 'new-password' : 'current-password'} />
             <FormError>{errors.password}</FormError>
           </Field>
           {isRegister && (
-            <Field label="تأكيد كلمة المرور" required>
-              <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} invalid={!!errors.confirm} placeholder="أعد إدخال كلمة المرور" autoComplete="new-password" />
+            <Field label={t.register.confirmLabel} required>
+              <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} invalid={!!errors.confirm} placeholder={t.register.confirmHint} autoComplete="new-password" />
               <FormError>{errors.confirm}</FormError>
             </Field>
           )}
@@ -220,28 +207,28 @@ export function CustomerAuthForm({
 
         {isRegister && (
           <>
-            <p className="pt-2 text-sm font-semibold text-gold-600">تفضيلاتك العقارية <span className="font-normal text-ink-muted">(اختياري)</span></p>
+            <p className="pt-2 text-sm font-semibold text-gold-600">{t.register.prefs} <span className="font-normal text-ink-muted">{t.register.optional}</span></p>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="المدينة">
+              <Field label={t.register.city}>
                 {/* Free text: a fixed list offered Saudi cities to every company (F37). */}
-                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="مثال: القاهرة" maxLength={80} />
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder={t.register.cityExample} maxLength={80} />
               </Field>
-              <Field label="نوع الاهتمام">
+              <Field label={t.register.interest}>
                 <Select value={interestType} onChange={(e) => setInterestType(e.target.value)}>
-                  <option value="">اختر النوع</option>
-                  {INTERESTS.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
+                  <option value="">{t.register.pickType}</option>
+                  {Object.entries(t.register.interests).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                 </Select>
               </Field>
-              <Field label="نطاق الميزانية">
+              <Field label={t.register.budget}>
                 <Select value={budgetRange} onChange={(e) => setBudgetRange(e.target.value)}>
-                  <option value="">اختر النطاق</option>
-                  {BUDGETS.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+                  <option value="">{t.register.pickRange}</option>
+                  {Object.entries(t.register.budgets).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                 </Select>
               </Field>
-              <Field label="طريقة التواصل المفضلة">
+              <Field label={t.register.contactMethod}>
                 <Select value={preferredContactMethod} onChange={(e) => setPreferredContactMethod(e.target.value)}>
-                  <option value="">اختر الطريقة</option>
-                  {CONTACT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  <option value="">{t.register.pickMethod}</option>
+                  {Object.entries(t.register.methods).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                 </Select>
               </Field>
             </div>
@@ -250,10 +237,10 @@ export function CustomerAuthForm({
               <label className="flex items-start gap-3 text-sm text-ink-muted">
                 <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-5 w-5 rounded-md border-hairline text-gold-500 focus:ring-gold-400/40" />
                 <span>
-                  أوافق على{' '}
-                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
-                  و{' '}
-                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">سياسة الخصوصية</a>.
+                  {t.common.iAgree}{' '}
+                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">{t.common.terms}</a>{' '}
+                  {t.common.and}{' '}
+                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">{t.common.privacy}</a>.
                 </span>
               </label>
               <FormError>{errors.terms}</FormError>
@@ -264,10 +251,10 @@ export function CustomerAuthForm({
         {topError && <InlineNotice tone="error">{topError}</InlineNotice>}
 
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? (isRegister ? 'جارٍ الإنشاء...' : 'جارٍ الدخول...') : (
+          {pending ? (isRegister ? t.register.creating : t.login.signingIn) : (
             <>
               {isRegister ? <UserPlus className="h-5 w-5" aria-hidden /> : <LogIn className="h-5 w-5" aria-hidden />}
-              {isRegister ? 'إنشاء الحساب' : 'دخول إلى الحساب'}
+              {isRegister ? t.common.createAccountBtn : t.common.signInBtn}
             </>
           )}
         </Button>
@@ -276,11 +263,11 @@ export function CustomerAuthForm({
           <div className="flex flex-col items-center gap-2">
             {onUseOtp && (
               <button type="button" onClick={onUseOtp} className="text-sm text-ink-muted transition-colors hover:text-ink-strong">
-                الدخول برقم الجوال بدلاً من ذلك
+                {t.login.useOtp}
               </button>
             )}
             <a href={routes.forgotPassword} className="text-sm text-ink-muted transition-colors hover:text-gold-600">
-              نسيت كلمة المرور؟
+              {t.login.forgot}
             </a>
           </div>
         )}

@@ -55,6 +55,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       subtitle={m.auth.login.subtitle}
       switchPrompt={m.auth.login.switchPrompt}
       switchLabel={m.auth.login.switchLabel}
+      locale={locale}
       switchHref={routes.register}
     >
       {showResetNotice && (
@@ -67,7 +68,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
           {m.auth.login.sessionNotice}
         </InlineNotice>
       )}
-      <LoginCard />
+      <LoginCard locale={locale} />
     </AuthShell>
   );
 }
