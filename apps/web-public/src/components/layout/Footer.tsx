@@ -1,5 +1,5 @@
+import { CompanyMark } from './CompanyMark';
 import Link from 'next/link';
-import Image from 'next/image';
 import type { Route } from 'next';
 import { Phone, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
@@ -11,7 +11,6 @@ import { Container } from '@/components/ui/Container';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 
-const PLATFORM_LOGO = '/brand/devora-logo.png';
 const YEAR = new Date().getFullYear();
 
 type ContactRow = { icon: typeof Phone; text: string; dir: 'ltr' | 'rtl' };
@@ -40,7 +39,6 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
   const m = siteT(locale);
 
   const companyName = branding?.displayName ?? branding?.name ?? SITE.name;
-  const logoSrc     = branding?.logoUrl ?? PLATFORM_LOGO;
 
   // Contact rows: branding fields take priority over env vars.
   // WhatsApp only renders when branding supplies it (no env fallback).
@@ -75,14 +73,7 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
           {/* Brand */}
           <div className="lg:col-span-5">
             <div className="flex items-center gap-2.5">
-              <Image
-                src={logoSrc}
-                alt={companyName}
-                width={32}
-                height={32}
-                unoptimized
-                className="h-8 w-8 rounded-md object-cover"
-              />
+              <CompanyMark branding={branding} name={companyName} size={32} className="h-8 w-8" />
               <span className="font-display text-xl text-white">{companyName}</span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
