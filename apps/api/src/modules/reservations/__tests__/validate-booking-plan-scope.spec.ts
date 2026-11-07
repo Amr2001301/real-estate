@@ -36,7 +36,7 @@ function planRow(over: Record<string, unknown> = {}) {
 }
 
 function service(plan: ReturnType<typeof planRow> | null, unit: { price: number; type: string } | null) {
-  const svc = Object.create(ReservationsService.prototype) as ReservationsService & { prisma: unknown };
+  const svc = Object.create(ReservationsService.prototype) as ReservationsService;
   (svc as unknown as { prisma: unknown }).prisma = {
     installmentPlanTemplate: { findUnique: jest.fn().mockResolvedValue(plan) },
     unit: { findUnique: jest.fn().mockResolvedValue(unit) },
