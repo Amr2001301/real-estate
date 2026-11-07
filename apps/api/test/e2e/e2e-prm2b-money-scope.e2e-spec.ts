@@ -166,7 +166,8 @@ describe('PRM2b — contracts and payments: own, or the whole company (e2e)', ()
     await as(repToken, http().get(`/v1/contracts/${contractId}/installment-plan`)).expect(200);
     // Payments are their own code.
     expect(await total(repToken, '/v1/deposits?pageSize=1')).toBe(0);
-    await as(repToken, http().get(`/v1/deposits/${depositId}`)).expect(403);
+    // F-043: the detail opens only for payments in the rep's own scope; anything else is hidden (404).
+    await as(repToken, http().get(`/v1/deposits/${depositId}`)).expect(404);
 
     await grant(['deposits:read:all']);
     expect(await total(repToken, '/v1/deposits?pageSize=1')).toBe(
