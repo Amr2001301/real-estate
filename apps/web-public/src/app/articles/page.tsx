@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import { Container } from '@/components/ui/Container';
@@ -31,7 +31,7 @@ export default async function ArticlesListPage() {
   if (!tenant) notFound();
 
   const [articles, locale] = await Promise.all([
-    safeFetch<ArticleSummary[]>('/public/articles', { revalidate: 120, tenantSlug: tenant.slug }),
+    apiFetch<ArticleSummary[]>('/public/articles', { revalidate: 120, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
 

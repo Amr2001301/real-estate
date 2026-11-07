@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Home, Star } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatNumber } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -96,11 +96,11 @@ function projectFaq(name: string): AccordionItem[] {
 }
 
 function fetchProject(id: string, tenantSlug: string) {
-  return safeFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
+  return apiFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
 function fetchProjectUnits(id: string, tenantSlug: string) {
-  return safeFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
+  return apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
     revalidate: REVALIDATE,
     tenantSlug,
   });
@@ -403,6 +403,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                 availableUnitsCount={project.availableUnitsCount}
                 featured={project.featured}
                 hasCoords={hasCoords}
+                locale={locale}
               />
             </div>
           </aside>

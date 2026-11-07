@@ -1,0 +1,121 @@
+import type { Locale } from '@/lib/locale';
+
+/** Project cards and facts, the contact page's support block, and the unit filters' fixed ranges. */
+const EXTRA = {
+  ar: {
+    projectCard: {
+      defaultName: 'مشروع',
+      featured: 'مميز',
+      unitOne: 'وحدة متاحة',
+      unitMany: 'وحدات متاحة',
+      none: 'لا وحدات متاحة',
+      details: 'تفاصيل المشروع',
+      view: 'عرض المشروع',
+    },
+    projectFacts: {
+      title: 'تفاصيل المشروع',
+      city: 'المدينة',
+      units: 'الوحدات المتاحة',
+      unitsValue: (n: string) => `${n} وحدة`,
+      status: 'الحالة',
+      featuredValue: 'مشروع مميز',
+      availableValue: 'متاح',
+      location: 'الموقع',
+      onMap: 'متوفر على الخريطة',
+    },
+    contact: {
+      helpTitle: 'هل تحتاج مساعدة فورية؟',
+      helpSub: 'تواصل معنا مباشرة وسيسعد فريقنا بالرد على استفساراتك.',
+      call: 'اتصل بنا',
+      mail: 'راسلنا عبر البريد',
+      whatsapp: 'تواصل عبر واتساب',
+      whatsappMessage: 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.',
+      hours: 'ساعات العمل',
+      days: 'الأحد - الخميس',
+      time: '9:00 ص - 6:00 م',
+      hq: 'مقر الشركة',
+      directions: 'الحصول على الاتجاهات',
+      openNow: 'مفتوح الآن',
+      closedNow: 'مغلق الآن',
+    },
+    filters: {
+      allTypes: 'كل الأنواع',
+      price: {
+        '': 'كل الأسعار',
+        '0-500000': 'حتى ٥٠٠ ألف',
+        '500000-1000000': '٥٠٠ ألف – مليون',
+        '1000000-2000000': 'مليون – مليونان',
+        '2000000-': 'أكثر من مليونين',
+      },
+      area: {
+        '': 'كل المساحات',
+        '0-100': 'أقل من ١٠٠ م²',
+        '100-150': '١٠٠ – ١٥٠ م²',
+        '150-200': '١٥٠ – ٢٠٠ م²',
+        '200-300': '٢٠٠ – ٣٠٠ م²',
+        '300-': 'أكثر من ٣٠٠ م²',
+      },
+      rooms: { '1': '١', '2': '٢', '3': '٣', '4': '٤+' },
+    },
+  },
+  en: {
+    projectCard: {
+      defaultName: 'Project',
+      featured: 'Featured',
+      unitOne: 'unit available',
+      unitMany: 'units available',
+      none: 'No units available',
+      details: 'Project details',
+      view: 'View project',
+    },
+    projectFacts: {
+      title: 'Project details',
+      city: 'City',
+      units: 'Available units',
+      unitsValue: (n: string) => `${n} units`,
+      status: 'Status',
+      featuredValue: 'Featured project',
+      availableValue: 'Available',
+      location: 'Location',
+      onMap: 'Shown on the map',
+    },
+    contact: {
+      helpTitle: 'Need help right away?',
+      helpSub: 'Contact us directly and our team will be glad to answer your questions.',
+      call: 'Call us',
+      mail: 'Email us',
+      whatsapp: 'Chat on WhatsApp',
+      whatsappMessage: 'Hello, I would like to ask about your real-estate services.',
+      hours: 'Working hours',
+      days: 'Sunday – Thursday',
+      time: '9:00 AM – 6:00 PM',
+      hq: 'Head office',
+      directions: 'Get directions',
+      openNow: 'Open now',
+      closedNow: 'Closed now',
+    },
+    filters: {
+      allTypes: 'All types',
+      price: {
+        '': 'Any price',
+        '0-500000': 'Up to 500K',
+        '500000-1000000': '500K – 1M',
+        '1000000-2000000': '1M – 2M',
+        '2000000-': 'More than 2M',
+      },
+      area: {
+        '': 'Any area',
+        '0-100': 'Under 100 m²',
+        '100-150': '100 – 150 m²',
+        '150-200': '150 – 200 m²',
+        '200-300': '200 – 300 m²',
+        '300-': 'Over 300 m²',
+      },
+      rooms: { '1': '1', '2': '2', '3': '3', '4': '4+' },
+    },
+  },
+} as const;
+
+export function extraT(locale: Locale) {
+  return EXTRA[locale];
+}

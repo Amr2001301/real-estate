@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
 const TZ = 'Asia/Riyadh';
 const DAY: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -25,7 +27,8 @@ function isOpenNow(): boolean {
  * the server pass to avoid a hydration mismatch, then fills in on the client
  * and refreshes every minute.
  */
-export function OpenStatus({ className }: { className?: string }) {
+export function OpenStatus({ className, locale = 'ar' }: { className?: string; locale?: Locale }) {
+  const t = extraT(locale).contact;
   const [open, setOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -53,7 +56,7 @@ export function OpenStatus({ className }: { className?: string }) {
           aria-hidden
         />
       </span>
-      {open ? 'مفتوح الآن' : 'مغلق الآن'}
+      {open ? t.openNow : t.closedNow}
     </span>
   );
 }

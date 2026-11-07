@@ -3,11 +3,12 @@ import { getContactPhone, getContactEmail, getWhatsappPhone, getContactAddress, 
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { OpenStatus } from './OpenStatus';
-
-const WHATSAPP_MESSAGE = 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
 /** Side support block: instant help, working hours, and HQ location. */
-export function ContactSupport() {
+export function ContactSupport({ locale = 'ar' }: { locale?: Locale }) {
+  const t = extraT(locale).contact;
   const contactPhone = getContactPhone();
   const contactEmail = getContactEmail();
   const whatsappPhone = getWhatsappPhone();
@@ -23,9 +24,9 @@ export function ContactSupport() {
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-500 text-navy ring-1 ring-gold-300/40">
             <Phone className="h-6 w-6" aria-hidden />
           </span>
-          <h3 className="mt-5 text-xl font-semibold text-white">هل تحتاج مساعدة فورية؟</h3>
+          <h3 className="mt-5 text-xl font-semibold text-white">{t.helpTitle}</h3>
           <p className="mt-2 text-sm leading-relaxed text-white/70">
-            تواصل معنا مباشرة وسيسعد فريقنا بالرد على استفساراتك.
+            {t.helpSub}
           </p>
 
           {/* Tappable contact rows */}
@@ -39,7 +40,7 @@ export function ContactSupport() {
                   <Phone className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-xs text-white/55">اتصل بنا</span>
+                  <span className="block text-xs text-white/55">{t.call}</span>
                   <span dir="ltr" className="block font-display text-lg leading-tight text-gold-100 group-hover:text-white">
                     {contactPhone}
                   </span>
@@ -55,7 +56,7 @@ export function ContactSupport() {
                   <Mail className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-xs text-white/55">راسلنا عبر البريد</span>
+                  <span className="block text-xs text-white/55">{t.mail}</span>
                   <span dir="ltr" className="block truncate text-sm text-white/85 group-hover:text-white">
                     {contactEmail}
                   </span>
@@ -65,9 +66,9 @@ export function ContactSupport() {
           </div>
 
           {whatsappPhone && (
-            <ButtonLink href={whatsappHref(whatsappPhone, WHATSAPP_MESSAGE)} variant="gold" size="md" className="mt-4 w-full">
+            <ButtonLink href={whatsappHref(whatsappPhone, t.whatsappMessage)} variant="gold" size="md" className="mt-4 w-full">
               <MessageCircle className="h-5 w-5" aria-hidden />
-              تواصل عبر واتساب
+              {t.whatsapp}
             </ButtonLink>
           )}
         </div>
@@ -81,11 +82,11 @@ export function ContactSupport() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-ink-strong">ساعات العمل</h3>
-              <OpenStatus />
+              <h3 className="text-base font-semibold text-ink-strong">{t.hours}</h3>
+              <OpenStatus locale={locale} />
             </div>
-            <p className="mt-1 text-sm text-ink-muted">الأحد - الخميس</p>
-            <p className="text-sm text-ink-muted">9:00 ص - 6:00 م</p>
+            <p className="mt-1 text-sm text-ink-muted">{t.days}</p>
+            <p className="text-sm text-ink-muted">{t.time}</p>
           </div>
         </div>
       </PremiumCard>
@@ -98,7 +99,7 @@ export function ContactSupport() {
               <MapPin className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0 flex-1">
-              <h3 className="text-base font-semibold text-ink-strong">مقر الشركة</h3>
+              <h3 className="text-base font-semibold text-ink-strong">{t.hq}</h3>
               <p className="mt-1 text-sm text-ink-muted">{contactAddress}</p>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contactAddress)}`}
@@ -107,7 +108,7 @@ export function ContactSupport() {
                 className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-600 transition-colors hover:text-gold-500"
               >
                 <Navigation className="h-4 w-4" aria-hidden />
-                الحصول على الاتجاهات
+                {t.directions}
               </a>
             </div>
           </div>
