@@ -602,6 +602,11 @@ export class ReservationsService {
     let clientPhone: string | null = null;
     let clientEmail: string | null = null;
     let genericLeadId: string | null = null;
+    // A broker's lead keeps its broker on the reservation (and so on the
+    // contract and the commission) — QA run 1, F-038. The commission rate is
+    // then taken at signing (the grant in force when the sale was reserved).
+    let leadBrokerId: string | null = null;
+    let leadBrokerAgentId: string | null = null;
     if (dto.clientId) {
       const clientUser = await resolveTenantUser(
         this.prisma,
@@ -630,12 +635,16 @@ export class ReservationsService {
           projectInterestId: true,
           stage: true,
           assignedSalesId: true,
+          brokerId: true,
+          brokerAgentId: true,
         },
       });
       if (!lead) {
         throw new BadRequestException('Lead not found');
       }
       assertLeadInScope(ownerScope, lead.assignedSalesId);
+      leadBrokerId = lead.brokerId;
+      leadBrokerAgentId = lead.brokerAgentId;
       // The sale is the lead's rep's: a manager or admin booking it on their
       // behalf does not take the credit (and the commission) for it.
       if (!sellerChosen && actor.role !== UserRole.SALES && lead.assignedSalesId) {
@@ -874,6 +883,8 @@ export class ReservationsService {
           salesId: effectiveSalesId,
           leadId: dto.leadId ?? null,
           clientId: resolvedClientId,
+          brokerId: leadBrokerId,
+          brokerAgentId: leadBrokerAgentId,
           notes: dto.notes ?? null,
           expiresAt,
           status: ReservationStatus.PENDING,
