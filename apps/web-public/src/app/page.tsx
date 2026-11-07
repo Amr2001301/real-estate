@@ -22,8 +22,9 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { organizationLd } from '@/lib/jsonld';
 
 export const metadata = buildMetadata({
+  // No title of its own: the layout's default is «Company · tagline» (a template
+  // does not apply to a page in the layout's own segment).
   path: '/',
-  title: 'الرئيسية',
   description:
     'فن العيش الراقي يبدأ من اختيارك الصحيح — اكتشف مشاريع ووحدات عقارية فاخرة مختارة بعناية لتناسب أسلوب حياتك واستثمارك.',
 });

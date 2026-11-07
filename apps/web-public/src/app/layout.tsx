@@ -36,7 +36,7 @@ async function getResolvedSlug(): Promise<string> {
 export async function generateMetadata(): Promise<Metadata> {
   const [locale, slug] = await Promise.all([getLocale(), getResolvedSlug()]);
   const branding = slug ? await fetchBranding(slug) : null;
-  return buildMetadata({ branding: branding ?? undefined, locale });
+  return buildMetadata({ branding: branding ?? undefined, locale, root: true });
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
