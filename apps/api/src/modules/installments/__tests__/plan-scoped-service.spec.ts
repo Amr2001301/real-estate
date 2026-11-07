@@ -46,14 +46,26 @@ function make(opts: { unitTypes?: string[]; existing?: Record<string, unknown> }
   const prisma = {
     project: { findFirst: jest.fn().mockResolvedValue({ id: PROJECT }) },
     unitType: {
-      findMany: jest.fn().mockImplementation(async ({ where }: { where: { code: { in: string[] } } }) =>
-        where.code.in.filter((c) => (opts.unitTypes ?? ['2BR', 'Office']).includes(c)).map((code) => ({ code })),
+      findMany: jest.fn().mockImplementation(async ({ where }: { where: { code?: { in: string[] } } }) =>
+        where.code
+          ? where.code.in.filter((c) => (opts.unitTypes ?? ['2BR', 'Office']).includes(c)).map((code) => ({ code }))
+          : [{ code: '2BR', name: { ar: 'غرفتين', en: '2BR' } }, { code: '1BR', name: { ar: 'غرفة', en: '1BR' } }],
       ),
     },
     setting: { findFirst: jest.fn().mockResolvedValue(null) },
     auditLog: { create: jest.fn().mockResolvedValue({}) },
     reservation: { count: jest.fn().mockResolvedValue(0) },
-    unit: { count: jest.fn().mockResolvedValue(12) },
+    unit: {
+      count: jest.fn().mockResolvedValue(12),
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'u1', code: 'A1-101', type: '2BR', price: D(3_600_000) },
+        { id: 'u2', code: 'B1-201', type: '1BR', price: D(2_400_000) },
+      ]),
+      groupBy: jest.fn().mockResolvedValue([
+        { type: '1BR', _count: { _all: 5 } },
+        { type: '2BR', _count: { _all: 7 } },
+      ]),
+    },
     installmentPlanTemplate: {
       findUnique: jest.fn().mockResolvedValue(stored),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => {
@@ -169,5 +181,42 @@ describe('PlanTemplatesService.list — what clients read', () => {
       reservationAmount: 2,
       downPaymentAmount: 9.5,
     });
+  });
+});
+
+describe('PlanTemplatesService — the project plan screen helpers', () => {
+  it('previews the plan on real units, with the same numbers a reservation will get', async () => {
+    const { svc, prisma } = make();
+    prisma.installmentPlanTemplate.findMany.mockResolvedValueOnce([{ unitId: 'u2' }]);
+    const out = await svc.previewScoped({
+      projectId: PROJECT,
+      discountType: 'PERCENTAGE',
+      discountValue: 5,
+      reservationAmountType: 'PERCENTAGE',
+      reservationAmountValue: 2,
+      downPaymentType: 'PERCENTAGE',
+      downPaymentValue: 10,
+      durationOptions: [{ durationMonths: 84, increasePercentage: 0 }],
+    } as never);
+    expect(out.problem).toBeNull();
+    const a = out.rows.find((r) => r.code === 'A1-101')!;
+    expect(a).toMatchObject({ netPrice: 3_420_000, reservationAmount: 72_000, downPaymentAmount: 342_000, ownPlan: false });
+    // 3,420,000 − 72,000 − 342,000 = 3,006,000 over 84 months
+    expect(a.options[0]).toMatchObject({ durationMonths: 84, monthly: 35_785.71, total: 3_420_000 });
+    expect(out.rows.find((r) => r.code === 'B1-201')!.ownPlan).toBe(true); // takes its own plan
+  });
+
+  it('says what is wrong instead of previewing nonsense', async () => {
+    const { svc } = make();
+    const out = await svc.previewScoped({ projectId: PROJECT, discountType: 'FIXED', discountValue: 5 } as never);
+    expect(out.problem).toMatch(/نسبة مئوية/);
+    expect(out.rows).toEqual([]);
+  });
+
+  it("lists the project's unit types with their unit counts, biggest first", async () => {
+    const { svc } = make();
+    const out = await svc.scopeInfo(PROJECT);
+    expect(out.totalUnits).toBe(12);
+    expect(out.unitTypes.map((t) => [t.code, t.units])).toEqual([['2BR', 7], ['1BR', 5]]);
   });
 });

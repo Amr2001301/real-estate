@@ -222,6 +222,21 @@ class UpdatePlanTemplateDto {
   durationOptions?: DurationOptionDto[];
 }
 
+/** What a project plan screen sends to see its amounts on real units (nothing is saved). */
+class PreviewPlanDto {
+  @IsUUID() projectId!: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @IsString({ each: true }) unitTypes?: string[];
+  @IsOptional() @IsEnum(DownPaymentType) discountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) discountValue?: number;
+  @IsOptional() @IsEnum(DownPaymentType) reservationAmountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) reservationAmountValue?: number;
+  @IsOptional() @IsBoolean() isCash?: boolean;
+  @IsOptional() @IsEnum(DownPaymentType) downPaymentType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) downPaymentValue?: number;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
+  durationOptions?: DurationOptionDto[];
+}
+
 class BulkPlanVisibilityDto {
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @IsUUID('4', { each: true }) ids!: string[];
   @IsIn(PLAN_VISIBILITIES) visibility!: PlanVisibility;
@@ -1758,6 +1773,119 @@ export class PlanTemplatesService {
     return this.findOne(updatedId);
   }
 
+  /** The project's unit types with how many units each has — what a type-scoped plan can name. */
+  async scopeInfo(projectId: string) {
+    const companyId = getRequiredCompanyId();
+    const project = await this.prisma.project.findFirst({ where: { id: projectId, companyId }, select: { id: true } });
+    if (!project) throw new NotFoundException('Project not found');
+    const [groups, types] = await Promise.all([
+      this.prisma.unit.groupBy({
+        by: ['type'],
+        where: { companyId, building: { phase: { projectId } } },
+        _count: { _all: true },
+      }),
+      this.prisma.unitType.findMany({ where: { companyId, active: true }, select: { code: true, name: true } }),
+    ]);
+    const nameOf = new Map(types.map((t) => [t.code, t.name]));
+    return {
+      totalUnits: groups.reduce((n, g) => n + g._count._all, 0),
+      unitTypes: groups
+        .map((g) => ({ code: g.type, name: nameOf.get(g.type) ?? { ar: g.type, en: g.type }, units: g._count._all }))
+        .sort((a, b) => b.units - a.units),
+    };
+  }
+
+  /**
+   * A project plan's amounts on real units of the project, without saving it: the
+   * same code that prices a reservation (plan-scope.ts + computeDurationOption).
+   * `problem` says what is wrong with the terms (null when sound). Units that have
+   * their own plan are listed too, flagged `ownPlan` — they take that plan instead.
+   */
+  async previewScoped(dto: PreviewPlanDto) {
+    const companyId = getRequiredCompanyId();
+    const unitTypes = await this.assertScope(dto.projectId, dto.unitTypes);
+    const isCash = dto.isCash === true;
+    let problem: string | null = null;
+    try {
+      this.scopedTerms({
+        isCash,
+        discountType: dto.discountType,
+        discountValue: dto.discountValue,
+        reservationAmountType: dto.reservationAmountType,
+        reservationAmountValue: dto.reservationAmountValue,
+        downPaymentType: dto.downPaymentType,
+        downPaymentValue: dto.downPaymentValue,
+      });
+    } catch (e) {
+      if (!(e instanceof BadRequestException)) throw e;
+      problem = String((e.getResponse() as { message?: unknown }).message ?? e.message);
+    }
+    const unitWhere = {
+      companyId,
+      building: { phase: { projectId: dto.projectId } },
+      ...(unitTypes.length > 0 ? { type: { in: unitTypes } } : {}),
+    };
+    const [cheapest, priciest, ownPlans] = await Promise.all([
+      this.prisma.unit.findMany({ where: unitWhere, orderBy: { price: 'asc' }, take: 3, select: { id: true, code: true, type: true, price: true } }),
+      this.prisma.unit.findMany({ where: unitWhere, orderBy: { price: 'desc' }, take: 2, select: { id: true, code: true, type: true, price: true } }),
+      this.prisma.installmentPlanTemplate.findMany({
+        where: { companyId, projectId: dto.projectId, unitId: { not: null } },
+        select: { unitId: true },
+      }),
+    ]);
+    const seen = new Set<string>();
+    const units = [...cheapest, ...priciest].filter((u) => (seen.has(u.id) ? false : (seen.add(u.id), true)));
+    const own = new Set(ownPlans.map((p) => p.unitId));
+    const rows = problem
+      ? []
+      : units.map((u) => {
+          const m = materializePlan(
+            {
+              unitId: null,
+              percentPriced: true,
+              totalPrice: new Prisma.Decimal(0),
+              discountAmount: new Prisma.Decimal(0),
+              discountType: dto.discountType ?? DownPaymentType.PERCENTAGE,
+              discountValue: new Prisma.Decimal(dto.discountValue ?? 0),
+              netPrice: new Prisma.Decimal(0),
+              reservationAmount: new Prisma.Decimal(0),
+              reservationAmountType: dto.reservationAmountType ?? DownPaymentType.FIXED,
+              reservationAmountValue: new Prisma.Decimal(dto.reservationAmountValue ?? 0),
+              downPaymentType: isCash ? DownPaymentType.FIXED : (dto.downPaymentType ?? DownPaymentType.PERCENTAGE),
+              downPaymentValue: new Prisma.Decimal(isCash ? 0 : (dto.downPaymentValue ?? 0)),
+              downPaymentAmount: new Prisma.Decimal(0),
+              finalPaymentAmount: null,
+              isCash,
+            },
+            u.price,
+          );
+          return {
+            unitId: u.id,
+            code: u.code,
+            type: u.type,
+            price: Number(u.price),
+            ownPlan: own.has(u.id),
+            discountAmount: Number(m.discountAmount),
+            netPrice: Number(m.netPrice),
+            reservationAmount: Number(m.reservationAmount),
+            downPaymentAmount: Number(m.downPaymentAmount),
+            options: isCash
+              ? []
+              : (dto.durationOptions ?? []).map((o) => {
+                  const c = computeDurationOption({
+                    netPrice: Number(m.netPrice),
+                    reservationAmount: Number(m.reservationAmount),
+                    downPaymentAmount: Number(m.downPaymentAmount),
+                    durationMonths: o.durationMonths,
+                    increasePercentage: o.increasePercentage,
+                  });
+                  return { durationMonths: o.durationMonths, monthly: c.monthlyInstallment, total: c.totalPayable };
+                }),
+          };
+        });
+    return { problem, unitsInScope: await this.prisma.unit.count({ where: unitWhere }), rows };
+  }
+
   /**
    * The plans a unit takes, by scope priority (unit's own > its type's >
    * the project's), with project / type plans worked out on the unit's price.
@@ -2628,6 +2756,21 @@ class PlanTemplatesController {
   @Get('stats')
   stats() {
     return this.svc.stats();
+  }
+
+  // Project plan screen helpers (literal paths, before ':id').
+  @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
+  @Get('scope-info')
+  scopeInfo(@Query('projectId', ParseUUIDPipe) projectId: string) {
+    return this.svc.scopeInfo(projectId);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
+  @Post('preview')
+  preview(@Body() dto: PreviewPlanDto) {
+    return this.svc.previewScoped(dto);
   }
 
   // The plans a unit takes (its own, else its type's, else the project's), already
