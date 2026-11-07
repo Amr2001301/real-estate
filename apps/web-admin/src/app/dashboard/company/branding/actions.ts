@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 
 export interface BrandingPayload {
   displayName?: string;
+  displayNameEn?: string;
   tagline?: { ar?: string; en?: string };
   logoUrl?: string;
   faviconUrl?: string;

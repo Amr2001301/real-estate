@@ -5,7 +5,7 @@ import { Phone, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { getContactPhone, getContactEmail } from '@/lib/contact';
-import type { BrandingData } from '@/lib/branding';
+import { companyName, type BrandingData } from '@/lib/branding';
 import type { PublicPageLink } from '@/lib/cms';
 import { Container } from '@/components/ui/Container';
 import type { Locale } from '@/lib/locale';
@@ -38,7 +38,7 @@ function ColumnHeading({ children }: { children: React.ReactNode }) {
 export function Footer({ locale, branding, pages = [] }: { locale: Locale; branding?: BrandingData; pages?: PublicPageLink[] }) {
   const m = siteT(locale);
 
-  const companyName = branding?.displayName ?? branding?.name ?? SITE.name;
+  const companyDisplay = companyName(branding, locale, SITE.name);
 
   // Contact rows: branding fields take priority over env vars.
   // WhatsApp only renders when branding supplies it (no env fallback).
@@ -73,8 +73,8 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
           {/* Brand */}
           <div className="lg:col-span-5">
             <div className="flex items-center gap-2.5">
-              <CompanyMark branding={branding} name={companyName} size={32} className="h-8 w-8" />
-              <span className="font-display text-xl text-white">{companyName}</span>
+              <CompanyMark branding={branding} name={companyDisplay} size={32} className="h-8 w-8" />
+              <span className="font-display text-xl text-white">{companyDisplay}</span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
               {m.footer.tagline}
@@ -122,7 +122,7 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
         {/* Legal row */}
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/45 sm:flex-row">
           <p>
-            © {YEAR} {companyName}. {m.footer.rights}.
+            © {YEAR} {companyDisplay}. {m.footer.rights}.
           </p>
           <div className="flex items-center gap-5">
             <FooterLink href={routes.privacy} label={m.footer.privacy} />

@@ -26,6 +26,7 @@ model Company {
   faviconUrl         String? // 32×32 or 64×64, PNG/ICO/SVG
   ogImageUrl         String? // 1200×630 social share banner
   displayName        String? // public-facing name override; falls back to Company.name
+  displayNameEn      String? // the same name for the English site; falls back to displayName / name
   primaryColor       String? // #RRGGBB — buttons, CTAs, nav accent
   accentColor        String? // #RRGGBB — secondary highlight
   tagline            Json? // { ar: String, en: String }
