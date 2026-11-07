@@ -2248,6 +2248,11 @@ describe('Flow C — Visit journey (e2e)', () => {
     });
 
     it('C7: SALES completes → COMPLETED, VisitActivity(VISIT_COMPLETED) logged', async () => {
+      // A visit is completed once its time has come (F-051): the walk-through has happened.
+      await testApp.rawPrisma.visitAppointment.update({
+        where: { id: apptId },
+        data: { scheduledAt: new Date(Date.now() - 60 * 60 * 1000) },
+      });
       const res = await http()
         .post(`/v1/visits/appointments/${apptId}/complete`)
         .set('Authorization', bearer(salesToken))
