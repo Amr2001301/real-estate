@@ -103,7 +103,7 @@ export function ProjectsFilterBar({
             >
               <option value="">{t.allCities}</option>
               {cities.map((c) => (
-                <option key={c} value={c}>{cityLabel(c, locale)}</option>
+                <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
               ))}
             </Select>
             <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />

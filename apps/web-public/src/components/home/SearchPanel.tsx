@@ -94,7 +94,7 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
           >
             <option value="">{m.allCities}</option>
             {cities.map((c) => (
-              <option key={c} value={c}>{cityLabel(c, locale)}</option>
+              <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
             ))}
           </select>
         )}
