@@ -10,6 +10,7 @@ import {
   Injectable,
   Logger,
   Module,
+  NotFoundException,
   OnModuleInit,
   Param,
   ParseUUIDPipe,
@@ -594,7 +595,7 @@ export class NotificationsService implements OnModuleInit {
 
   async send(dto: SendNotificationDto & { skipInactive?: boolean }) {
     const tpl = await this.templateFor(dto.templateCode);
-    if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);
+    if (!tpl) throw new NotFoundException(`Template ${dto.templateCode} not found`);
     // A company that switched an event off (templates page) gets no
     // automatic notification for it; an admin's manual send still goes out.
     if (dto.skipInactive && tpl.active === false) return null;
