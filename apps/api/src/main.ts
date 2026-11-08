@@ -13,6 +13,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { clientMetaMiddleware } from './common/request/client-meta';
 import { RejectNulBytesPipe } from './common/pipes/reject-nul-bytes.pipe';
+import { BooleanStringsPipe } from './common/pipes/boolean-strings.pipe';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
@@ -46,6 +47,7 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new RejectNulBytesPipe(),
+    new BooleanStringsPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,

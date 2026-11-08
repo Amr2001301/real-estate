@@ -317,5 +317,20 @@ CMS pages, articles and banners driven through the API.
 
 | F-073 | 3 | Admin | Articles, pages | 1 company | Save an article with slug `a b/c`, an empty slug, a 500-character slug, an empty title/body, or a `javascript:` cover | Refused | The article DTO had `@IsString()` only (the page DTO already checked its slug), so the article's address could be unusable or unreachable and the card could carry blank text | **Fixed**: the article slug uses the page slug rule (lowercase, digits, dashes, ≤ 80); titles ≤ 200, excerpts ≤ 500, none empty (page titles and bodies too); the cover must be an http(s) address ≤ 1000. Test `cms-validation.spec.ts` |
 
-**Not yet driven live:** opt-outs of notifications.
+## Notification opt-outs run (2026-11-08)
+
+| Case | Result |
+|---|---|
+| Preferences of a sales rep: read, unknown group, unknown channel | 200 (all on by default) / 400 / 400 |
+| Finance e-mail switched off, then a finance event (`deposit_recorded`) | the in-app row is created, no e-mail attempted |
+| Same user, an account event (`account_promoted_customer`, group still on) | an e-mail attempted (fails here only because SMTP is not configured) |
+| Send with a template code that does not exist | **500** — F-074 |
+| `GET /units?withoutPlan=false` or `=0` | **returned the same 4 units as `=true`** (8 without the flag) — F-075 |
+| Preferences body with the string `"no"` (or `"false"`) for a flag | **200 and the flag read as true** — F-075 |
+
+| F-074 | 4 | Admin | Notifications | 1 company | Send a notification with a template code that does not exist | A clear "not found" answer | The service threw a plain `Error`, which the API answered as 500 | **Fixed**: a not-found error (404) naming the code |
+| F-075 | 2 | All | Every filter or body with a boolean flag | any | Use `?withoutPlan=false` (or `0`), or send the string "false" for a flag | The flag is off | The global validation converts implicitly and `Boolean("false")` is true, so a query filter set to false filtered like true and a string "false" switched a flag on | **Fixed** in `BooleanStringsPipe` (before the validation pipe): for properties declared `@IsBoolean()` — nested DTOs included — it reads true/false/1/0 as what they say and answers 400 for any other string; real booleans are untouched. Test `boolean-strings.pipe.spec.ts`; checked live on units and on the preferences body |
+
+Notification opt-outs are otherwise as designed: an admin broadcast belongs to no group and always goes out; in-app notifications are never switched off.
+
 
