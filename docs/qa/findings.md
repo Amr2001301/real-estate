@@ -287,3 +287,19 @@ Campaigns, spend and lead intake driven through the API, SQL as the witness.
 Seen, not changed: "all sales" excludes sales managers, and "all customers" excludes website accounts that have not bought (role CLIENT); both read as by design.
 
 **Not yet driven live:** CMS pages, opt-outs, print documents per company.
+
+## Printed documents run (2026-11-08)
+
+The amount in words on contracts, booking forms and receipts was checked on 45 amounts (units to billions) and on cents, in Arabic and English.
+
+| Case | Result |
+|---|---|
+| 1 to 999, thousands, millions, billions (e.g. 2,400,000 / 3,000,000 / 1,773,880 / 2,500,000,000) | read correctly |
+| 200,000 and 200,000,000 | **«مائتان ألف» / «مائتان مليون»** — should be «مائتا ألف» / «مائتا مليون» — F-072 |
+| 99.995 | **«تسعة وتسعون جنيه ومائة قرش»** — the rounded-up cents were not carried — F-072 |
+
+| F-072 | 4 | Admin | Contract / receipt print | 1 document | Print a contract worth 200,000 or 2,200,000 (or an amount whose cents round up) | The amount is written correctly | The words for 200 before a scale word used the plain form, and the cents were rounded after the pounds were cut off | **Fixed** in `document-template.ts`: «مائتا» before ألف/مليون/مليار; the amount is rounded to the minor unit first. Test `number-words.spec.ts` |
+
+Seen, not changed: the currency word does not agree with the number («ثلاثة جنيه مصري»), which is how contracts are usually typed.
+
+**Not yet driven live:** CMS pages, opt-outs.

@@ -239,6 +239,8 @@ export function arabicNumberWords(n: number): string {
         if (g === 1) groups.unshift(one);
         else if (g === 2) groups.unshift(two);
         else if (g <= 10) groups.unshift(`${arBelow1000(g)} ${plural}`);
+        // 200 before a scale word is the construct form: مائتا ألف / مائتا مليون.
+        else if (g === 200) groups.unshift(`مائتا ${many}`);
         else groups.unshift(`${arBelow1000(g)} ${many}`);
       }
     }
@@ -285,8 +287,10 @@ export function amountInWords(value: number | string | null | undefined, currenc
   const n = Math.abs(Number(value));
   if (!Number.isFinite(n)) return null;
   const minorPer = MINOR[currency] ?? 100;
-  const major = Math.floor(n);
-  const minor = Math.round((n - major) * minorPer);
+  // Round to the minor unit first, so 99.995 reads as one hundred, not "99 and 100 piastres".
+  const total = Math.round(n * minorPer);
+  const major = Math.floor(total / minorPer);
+  const minor = total % minorPer;
   const names = CURRENCY_WORDS[currency] ?? { ar: [currency, ''], en: [currency, ''] };
   if (locale === 'en') {
     const [maj, min] = names.en;
