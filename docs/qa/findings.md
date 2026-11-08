@@ -270,7 +270,7 @@ Campaigns, spend and lead intake driven through the API, SQL as the witness.
 | Lead intake with a key tied to the campaign | lead created and counted on the campaign; the same phone again returns the existing lead; a 1-letter name, a bad phone, a wrong key and a disabled key are all refused (400/401) |
 | Intake with an unknown campaign code | falls back to the key's campaign, as documented in the field comment |
 
-| F-070 | 4 | Admin | Campaigns | 1 campaign | Add spend, or set a start date, on a day that does not exist (2026-02-30) | Refused | Only a digits pattern checked the day, and `new Date()` rolled it into the next month, so the spend landed on 2026-03-02 and the period reports were wrong | **Fixed** for the campaign DTOs and the report filters: `IsCalendarDay` / `isCalendarDay`. Test `calendar-day.spec.ts`. The same weak pattern is still in the users DTO (`DAY`), custom-field dates, the data-migration birth date and the leads/ledger/report-range filters — to be moved to it |
+| F-070 | 4 | Admin | Campaigns | 1 campaign | Add spend, or set a start date, on a day that does not exist (2026-02-30) | Refused | Only a digits pattern checked the day, and `new Date()` rolled it into the next month, so the spend landed on 2026-03-02 and the period reports were wrong | **Fixed** for the campaign DTOs and the report filters: `IsCalendarDay` / `isCalendarDay`. Test `calendar-day.spec.ts`. The same weak pattern was then moved to it in the users DTO (birth date, ID issue date), the data-migration birth date, the leads lost-report and calendar filters, the ledger filters and `reportRange` (custom-field dates already checked the day properly) |
 
 ## Notifications run (2026-11-08)
 

@@ -1,3 +1,4 @@
+import { isCalendarDay } from '../../common/validators/calendar-day';
 import {
   BadRequestException,
   Body,
@@ -134,7 +135,7 @@ export class LeadsController {
   ) {
     const scope = await resolveSalesScope(this.prisma, user, salesId);
     const day = (v: string | undefined, name: string) => {
-      if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
+      if (v && !isCalendarDay(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
       return v || undefined;
     };
     return this.leads.lostReport(scope, {
@@ -176,8 +177,7 @@ export class LeadsController {
     @Query('to') to?: string,
     @Query('salesId') salesId?: string,
   ) {
-    const day = /^\d{4}-\d{2}-\d{2}$/;
-    if (!from || !to || !day.test(from) || !day.test(to)) throw new BadRequestException('from and to must be dates (YYYY-MM-DD)');
+    if (!from || !to || !isCalendarDay(from) || !isCalendarDay(to)) throw new BadRequestException('from and to must be dates (YYYY-MM-DD)');
     return this.calendarSvc.events(await resolveSalesScope(this.prisma, user, salesId || undefined), from, to);
   }
 
