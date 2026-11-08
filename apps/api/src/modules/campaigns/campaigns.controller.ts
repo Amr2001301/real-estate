@@ -1,3 +1,4 @@
+import { isCalendarDay } from '../../common/validators/calendar-day';
 import {
   BadRequestException,
   Body,
@@ -34,7 +35,7 @@ export class CampaignsController {
 
   private static reportOptions(from?: string, to?: string, channel?: string, projectId?: string): CampaignReportOptions {
     const day = (v: string | undefined, name: string) => {
-      if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
+      if (v && !isCalendarDay(v)) throw new BadRequestException(`${name} must be a date (YYYY-MM-DD)`);
       return v || undefined;
     };
     if (channel && !(Object.values(CampaignChannel) as string[]).includes(channel)) throw new BadRequestException('Unknown channel');
