@@ -195,3 +195,63 @@ Result after the fixes: 13 pages × (Arabic desktop / phone / dark) clean; Engli
 **Findings of the run:** none new. Open from before and seen again: F-051 (a rep can complete a visit before its time), F-033 (the contract clause charges a late fee while the company setting reads off).
 
 **Not covered in this run:** the customer's own e-signature (the admin signed), a discount approval, the second website customer through a broker's customer, the second company in parallel (done in run 1), per-role screen sweeps.
+
+## Broker pay run (2026-11-08)
+
+Driven through the API on the QA database, SQL as the witness. Starting point: a cancelled deal whose 108,000.00 commission was paid, clawback OUTSTANDING 108,000.00 with an open netting adjustment.
+
+| Step | Result |
+|---|---|
+| Collect 8,000 | PARTIALLY_COLLECTED, collected 8,000.00; the open adjustment shrank to 100,000.00 (no double recovery in the next payout) |
+| Collect 100,001 | refused 400, "more than the remaining 100,000.00" |
+| Collect 0.005 | refused 400 (minimum 0.01) |
+| Collect 60,000 then 40,000 | PARTIALLY_COLLECTED, then COLLECTED at 108,000.00; the adjustment row is gone |
+| Collect 1 more / waive after collected | both refused 409 "already COLLECTED" |
+
+**Findings:** none new in this run. F-068 (a PROCESSING payout could not be cancelled) was found by reading the payout code and fixed in the same session.
+
+### A new broker sale, end to end (unit 2,400,000, 3% locked, 10% instalment markup of 211,000)
+
+| Step | Result |
+|---|---|
+| Sign | commission PENDING, basis 2,400,000.00, gross = net 72,000.00 (3%, markup excluded) |
+| Approve, then price up to 2,600,000 before any payout | back to PENDING at 71,670.00 (basis 2,389,000.00); approved again |
+| Payout PAY-2026-0002 → approve → process → mark paid | total net 71,670.00, PAID, commission linked |
+| Price down to 2,500,000 after payment | open CLAWBACK 3,000.00 (68,670.00 owed − 71,670.00 paid) |
+| Price up to 2,800,000 | open TOP_UP 9,000.00 (77,670.00 − 68,670.00) |
+| Payout with no commissions | nets both: total net 6,000.00; approves (top-ups alone are allowed) |
+| Process, then cancel as the bank rejected it (F-068) | CANCELLED, both adjustments open again |
+| New payout PAY-2026-0004 → approve → process → paid | net 6,000.00, PAID; the two adjustments stay attached to it as history |
+
+**Findings:** none new. Every amount matched the commission-basis rule (price after discount, markup excluded) and SQL.
+
+### Rules, reject / cancel and payout hold (same broker: default 2.5%, grant 3% on the project)
+
+| Case | Result |
+|---|---|
+| Reservation locked a fixed 50,000 (no %) on a 3,700,000 unit | gross 50,000.00, no % stored |
+| Reservation with no commission snapshot, 5,100,000 unit | falls back to the project grant 3% (not the broker default 2.5%): gross 153,000.00 |
+| Reject with a blank reason / with a reason | 400 "reason is required" / REJECTED |
+| Approve a rejected commission | allowed by design: it is reconsidered and the rejection fields are cleared |
+| Payout while the broker is on payout hold | 409 "payouts of this broker are on hold by management" |
+| Process an approved payout while on hold | 409 the same message; lifting the hold lets payouts move again |
+| Cancel a commission already linked to an approved payout | 409 naming the payout and its status; the commission stays APPROVED |
+
+**Findings:** none new.
+
+### Sales bonus and targets (rule 1% auto-apply, 1,632,000 net-price unit, markup 141,880)
+
+| Step | Result |
+|---|---|
+| Sign | bonus PENDING 16,320.00 = 1% of 1,632,000 (price after discount, markup excluded) |
+| Approve, pay | APPROVED, PAID |
+| Price up to 1.8M / 1.9M / 2.0M after payment | three ADJUSTMENT entries 261.20, 1,000.00, 1,000.00 (each the difference from what was already paid or adjusted); they are linked by `adjustsEntryId`, not by contract |
+| Target 3,000,000 / 2 units for the month | performance: realized 1,858,120 (net price of the one signed deal), 62% of the amount, 50% of the units; matches SQL |
+| Negative target | 400 |
+| Target with period `2026-13` | **accepted (201)** — F-069 |
+
+An admin-created reservation takes the admin as its sales owner, so a bonus would go to the admin unless a rep is set; seen, not changed.
+
+| F-069 | 4 | Admin | Sales targets, bonus entries | 1 rep | Create a target (or a manual bonus entry) for period `2026-13` | Refused: the period is YYYY-MM | Only `@IsString()` was on the period, so any text was stored and no report matched it | **Fixed**: the period must match YYYY-MM on both DTOs. Test `bonus-period-validation.spec.ts` |
+
+**Not yet driven live:** marketing and content, notification wording per company, print documents per company.
