@@ -332,7 +332,7 @@ export default function NewReservationForm({
             {/* Only the admin books on someone's behalf (F17); a rep or a
                 manager books as themself. */}
             {canChooseSeller && (
-              <Field label={m.salesLabel} name="salesId">
+              <Field label={m.salesLabel} name="salesId" hint={m.salesHint}>
                 <Select name="salesId">
                   <option value="">{m.salesOptionEmpty}</option>
                   {salesOptions.map((s) => (

@@ -1221,7 +1221,7 @@ export class NotificationsService implements OnModuleInit {
       case BroadcastTarget.ALL_BROKERS:
         return this.activeUserIdsByRole([UserRole.BROKER]);
       case BroadcastTarget.ALL_SALES:
-        return this.activeUserIdsByRole([UserRole.SALES]);
+        return this.activeUserIdsByRole([UserRole.SALES, UserRole.SALES_MANAGER]);
       case BroadcastTarget.ALL_MAINTENANCE_SUPERVISORS:
         return this.activeUserIdsByRole([UserRole.MAINTENANCE_SUPERVISOR]);
       case BroadcastTarget.ALL_ACTIVE: {
