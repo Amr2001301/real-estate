@@ -26,6 +26,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from 'class-validator';
 import {
@@ -80,13 +81,15 @@ export function retryDueAt(previousAttempt: Date, retriesSoFar: number): Date {
   return new Date(previousAttempt.getTime() + 5 * 60_000 * 3 ** retriesSoFar);
 }
 
-class UpsertTemplateDto {
-  @IsString() code!: string;
+export class UpsertTemplateDto {
+  /** A catalogue code: lowercase, digits, _ . - (2–80). */
+  @Matches(/^[a-z][a-z0-9_.-]{1,79}$/, { message: 'code: lowercase letters, digits, _ . - (2–80)' }) code!: string;
   @IsEnum(NotificationChannel) channel!: NotificationChannel;
-  @IsString() ar_subject!: string;
-  @IsString() en_subject!: string;
-  @IsString() ar_body!: string;
-  @IsString() en_body!: string;
+  // A blank subject or body would send the customer an empty message.
+  @IsString() @IsNotEmpty() @MaxLength(200) ar_subject!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) en_subject!: string;
+  @IsString() @IsNotEmpty() @MaxLength(2000) ar_body!: string;
+  @IsString() @IsNotEmpty() @MaxLength(2000) en_body!: string;
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsBoolean() emailEnabled?: boolean;
 }
