@@ -495,7 +495,7 @@ describe('Notifications module · permissions enforcement', () => {
   // ── Business validation survives the gate ────────────────────────────
 
   describe('Business validation', () => {
-    it('ADMIN bypass + POST /notifications/send with non-existent templateCode → fails; notification.create NOT called', async () => {
+    it('ADMIN bypass + POST /notifications/send with non-existent templateCode → 404; notification.create NOT called', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       fixture.templateExists = false;
       const res = await request(app.getHttpServer())
@@ -504,8 +504,9 @@ describe('Notifications module · permissions enforcement', () => {
           userId: 'a1111111-1111-4111-8111-111111111111',
           templateCode: 'no_such_template',
         });
-      // The service throws a plain Error (not HttpException), so Nest surfaces 500.
-      expect([400, 500]).toContain(res.status);
+      // F-074: a missing template is a 404 naming the code, not a plain Error (500).
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).toContain('no_such_template');
       expect(mock.notificationTemplate.findMany).toHaveBeenCalledTimes(1);
       expect(mock.notification.create).not.toHaveBeenCalled();
     });
