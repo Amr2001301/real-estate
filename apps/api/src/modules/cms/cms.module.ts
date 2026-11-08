@@ -15,6 +15,7 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -33,13 +34,13 @@ const PAGE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Where a banner may send the visitor: a page of the site (/projects) or a web address. */
 const BANNER_LINK = /^(\/(?!\/)\S*|https?:\/\/\S+)$/;
 
-class UpsertPageDto {
+export class UpsertPageDto {
   @IsString() @MaxLength(80) @Matches(PAGE_SLUG, { message: 'رابط الصفحة: حروف إنجليزية صغيرة وأرقام وشَرطة فقط (مثال: about)' })
   slug!: string;
-  @IsString() ar_title!: string;
-  @IsString() en_title!: string;
-  @IsString() ar_body!: string;
-  @IsString() en_body!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) ar_title!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) en_title!: string;
+  @IsString() @IsNotEmpty() ar_body!: string;
+  @IsString() @IsNotEmpty() en_body!: string;
   @IsOptional() @IsBoolean() published?: boolean;
 }
 
@@ -59,15 +60,18 @@ class UpdateBannerDto {
   @IsOptional() @IsInt() @Min(0) order?: number;
 }
 
-class UpsertArticleDto {
-  @IsString() slug!: string;
-  @IsString() ar_title!: string;
-  @IsString() en_title!: string;
-  @IsString() ar_excerpt!: string;
-  @IsString() en_excerpt!: string;
-  @IsString() ar_body!: string;
-  @IsString() en_body!: string;
-  @IsOptional() @IsString() coverUrl?: string;
+export class UpsertArticleDto {
+  /** The article's address: it is the last part of its URL, as for a page. */
+  @IsString() @MaxLength(80) @Matches(PAGE_SLUG, { message: 'رابط المقال: حروف إنجليزية صغيرة وأرقام وشَرطة فقط (مثال: buying-guide)' })
+  slug!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) ar_title!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) en_title!: string;
+  @IsString() @IsNotEmpty() @MaxLength(500) ar_excerpt!: string;
+  @IsString() @IsNotEmpty() @MaxLength(500) en_excerpt!: string;
+  @IsString() @IsNotEmpty() ar_body!: string;
+  @IsString() @IsNotEmpty() en_body!: string;
+  @IsOptional() @IsString() @MaxLength(1000) @Matches(/^https?:\/\/\S+$/, { message: 'صورة الغلاف لازم تكون رابط يبدأ بـ http أو https' })
+  coverUrl?: string;
   @IsOptional() @IsBoolean() published?: boolean;
 }
 
