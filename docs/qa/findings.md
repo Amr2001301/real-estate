@@ -195,3 +195,19 @@ Result after the fixes: 13 pages × (Arabic desktop / phone / dark) clean; Engli
 **Findings of the run:** none new. Open from before and seen again: F-051 (a rep can complete a visit before its time), F-033 (the contract clause charges a late fee while the company setting reads off).
 
 **Not covered in this run:** the customer's own e-signature (the admin signed), a discount approval, the second website customer through a broker's customer, the second company in parallel (done in run 1), per-role screen sweeps.
+
+## Broker pay run (2026-11-08)
+
+Driven through the API on the QA database, SQL as the witness. Starting point: a cancelled deal whose 108,000.00 commission was paid, clawback OUTSTANDING 108,000.00 with an open netting adjustment.
+
+| Step | Result |
+|---|---|
+| Collect 8,000 | PARTIALLY_COLLECTED, collected 8,000.00; the open adjustment shrank to 100,000.00 (no double recovery in the next payout) |
+| Collect 100,001 | refused 400, "more than the remaining 100,000.00" |
+| Collect 0.005 | refused 400 (minimum 0.01) |
+| Collect 60,000 then 40,000 | PARTIALLY_COLLECTED, then COLLECTED at 108,000.00; the adjustment row is gone |
+| Collect 1 more / waive after collected | both refused 409 "already COLLECTED" |
+
+**Findings:** none new in this run. F-068 (a PROCESSING payout could not be cancelled) was found by reading the payout code and fixed in the same session.
+
+**Not yet driven live:** commission rules (project % vs broker default vs fixed per unit), approve/reject/cancel of a pending commission, price-change top-up after payment, a payout with a payout hold, sales bonus and targets.
