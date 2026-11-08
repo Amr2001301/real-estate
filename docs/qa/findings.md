@@ -255,3 +255,21 @@ An admin-created reservation takes the admin as its sales owner, so a bonus woul
 | F-069 | 4 | Admin | Sales targets, bonus entries | 1 rep | Create a target (or a manual bonus entry) for period `2026-13` | Refused: the period is YYYY-MM | Only `@IsString()` was on the period, so any text was stored and no report matched it | **Fixed**: the period must match YYYY-MM on both DTOs. Test `bonus-period-validation.spec.ts` |
 
 **Not yet driven live:** marketing and content, notification wording per company, print documents per company.
+
+## Marketing run (2026-11-08)
+
+Campaigns, spend and lead intake driven through the API, SQL as the witness.
+
+| Case | Result |
+|---|---|
+| Campaign with dates and a 10,000 budget | created, code made from the name (`qa-facebook-nov`) |
+| Same name again | a second campaign, code `qa-facebook-nov-1`; an Arabic name gets `campaign-1` |
+| End date before the start date | 400 |
+| Spend 2,500.50 and 1,500.00 | stored; amount 0 refused (minimum 0.01); the report's spend equals the SQL sum |
+| Start or spend day `2026-02-30` | **accepted and stored as 2026-03-02** — F-070 |
+| Lead intake with a key tied to the campaign | lead created and counted on the campaign; the same phone again returns the existing lead; a 1-letter name, a bad phone, a wrong key and a disabled key are all refused (400/401) |
+| Intake with an unknown campaign code | falls back to the key's campaign, as documented in the field comment |
+
+| F-070 | 4 | Admin | Campaigns | 1 campaign | Add spend, or set a start date, on a day that does not exist (2026-02-30) | Refused | Only a digits pattern checked the day, and `new Date()` rolled it into the next month, so the spend landed on 2026-03-02 and the period reports were wrong | **Fixed** for the campaign DTOs and the report filters: `IsCalendarDay` / `isCalendarDay`. Test `calendar-day.spec.ts`. The same weak pattern is still in the users DTO (`DAY`), custom-field dates, the data-migration birth date and the leads/ledger/report-range filters — to be moved to it |
+
+**Not yet driven live:** CMS pages, notifications to a segment, templates, opt-outs, notification wording per company, print documents per company.
