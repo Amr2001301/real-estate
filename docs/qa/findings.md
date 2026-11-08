@@ -210,4 +210,19 @@ Driven through the API on the QA database, SQL as the witness. Starting point: a
 
 **Findings:** none new in this run. F-068 (a PROCESSING payout could not be cancelled) was found by reading the payout code and fixed in the same session.
 
-**Not yet driven live:** commission rules (project % vs broker default vs fixed per unit), approve/reject/cancel of a pending commission, price-change top-up after payment, a payout with a payout hold, sales bonus and targets.
+### A new broker sale, end to end (unit 2,400,000, 3% locked, 10% instalment markup of 211,000)
+
+| Step | Result |
+|---|---|
+| Sign | commission PENDING, basis 2,400,000.00, gross = net 72,000.00 (3%, markup excluded) |
+| Approve, then price up to 2,600,000 before any payout | back to PENDING at 71,670.00 (basis 2,389,000.00); approved again |
+| Payout PAY-2026-0002 → approve → process → mark paid | total net 71,670.00, PAID, commission linked |
+| Price down to 2,500,000 after payment | open CLAWBACK 3,000.00 (68,670.00 owed − 71,670.00 paid) |
+| Price up to 2,800,000 | open TOP_UP 9,000.00 (77,670.00 − 68,670.00) |
+| Payout with no commissions | nets both: total net 6,000.00; approves (top-ups alone are allowed) |
+| Process, then cancel as the bank rejected it (F-068) | CANCELLED, both adjustments open again |
+| New payout PAY-2026-0004 → approve → process → paid | net 6,000.00, PAID; the two adjustments stay attached to it as history |
+
+**Findings:** none new. Every amount matched the commission-basis rule (price after discount, markup excluded) and SQL.
+
+**Not yet driven live:** commission rules (project % vs broker default vs fixed per unit), reject/cancel of a pending commission, a payout with a payout hold, sales bonus and targets.
