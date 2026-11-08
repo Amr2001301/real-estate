@@ -225,4 +225,18 @@ Driven through the API on the QA database, SQL as the witness. Starting point: a
 
 **Findings:** none new. Every amount matched the commission-basis rule (price after discount, markup excluded) and SQL.
 
-**Not yet driven live:** commission rules (project % vs broker default vs fixed per unit), reject/cancel of a pending commission, a payout with a payout hold, sales bonus and targets.
+### Rules, reject / cancel and payout hold (same broker: default 2.5%, grant 3% on the project)
+
+| Case | Result |
+|---|---|
+| Reservation locked a fixed 50,000 (no %) on a 3,700,000 unit | gross 50,000.00, no % stored |
+| Reservation with no commission snapshot, 5,100,000 unit | falls back to the project grant 3% (not the broker default 2.5%): gross 153,000.00 |
+| Reject with a blank reason / with a reason | 400 "reason is required" / REJECTED |
+| Approve a rejected commission | allowed by design: it is reconsidered and the rejection fields are cleared |
+| Payout while the broker is on payout hold | 409 "payouts of this broker are on hold by management" |
+| Process an approved payout while on hold | 409 the same message; lifting the hold lets payouts move again |
+| Cancel a commission already linked to an approved payout | 409 naming the payout and its status; the commission stays APPROVED |
+
+**Findings:** none new.
+
+**Not yet driven live:** sales bonus and targets.
