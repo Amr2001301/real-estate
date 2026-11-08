@@ -1,7 +1,21 @@
-# Handoff — where the work stands (2026-11-06, after #321)
+# Handoff — where the work stands (2026-11-08, after #372)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
+
+---
+
+## ملخص سريع — فحص الجودة الشامل (6–8 نوفمبر، #322–#372، كله مدموج)
+
+**ابدأ من هنا:** بعد #321 اتعمل فحص جودة شامل للمنصة كلها («QA program») قبل ما شركات حقيقية تستخدمها. الخطة في `docs/QA_PLAN.md`، وسجل كل ملاحظة في `docs/qa/findings.md` (من F-001 لـ F-077). القسم **2q** تحت فيه التفاصيل وإزاي تشغّل البيئة.
+
+- **الحالة:** مفيش ولا ملاحظة Blocker أو Critical أو High مفتوحة. كل ملاحظة اتصلحت في PR صغير بتست يفشل من غير الإصلاح. الدورة الرئيسية (من تسجيل العميل للتحصيل والإلغاء) اتعملت مرتين من داتا بيز فاضية.
+- **اتغطى من السحابة:** الأدوار كلها (أدمن، مبيعات، مدير، بروكر، صيانة، عميل، زائر)، عربي وإنجليزي، فاتح وليلي، موبايل ودسكتوب، عزل الشركات، الصلاحيات، الفلوس بـ SQL، الأمان، الأداء، إنجليزي كامل للموقع العام وللوحة الأدمن، دفعات وعمولات ومكافآت البروكر، الحملات، الإشعارات وقوالبها وإلغاء الاشتراك، صفحات المحتوى، المبلغ بالحروف في المستندات.
+- **ما اتجربش بنفسه:** توقيع العميل الإلكتروني على العقد بنفسه (الأدمن هو اللي وقّع في الدورة)، واعتماد الخصم.
+- **مش ممكن من السحابة (عليك):** تجربة على أجهزة حقيقية (iOS وAndroid)، التخزين الحقيقي (R2)، إشعارات push (FCM)، الإيميل الحقيقي (SMTP).
+- **اللي مقبول ومفتوح:** F-023 (Low): حوالي 400 رسالة خطأ في الـ API لسه بالإنجليزي لحد ما يبقى فيه كتالوج رسائل مشترك. F-013: تحذير React في وضع التطوير بس.
+- **قرارات المالك:** الدفع الجزئي للقسط مش مدعوم (F-052)؛ شرط غرامة التأخير في العقد وحقل الإعدادات شغالين ومقفولين بالتصميم (F-033)؛ حجز الأدمن من غير مندوب بيتسجل باسمه والمكافأة له، والشاشة بتقول كده (F-077)؛ بث «كل المبيعات» يشمل المديرين (F-076)؛ بث «كل العملاء» لا يشمل حسابات الموقع اللي ما اشترتش.
+- **الخطوة الجاية:** دورة كاملة تالتة من داتا بيز فاضية بعد كل الإصلاحات، وفيها توقيع العميل واعتماد الخصم (التفاصيل في 2q).
 
 ---
 
@@ -132,7 +146,7 @@
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #318 مدموج. **ابدأ بالقسم 2o** (آخر جدول وحالة تطبيق العملاء)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني (آخر تحديث 8 نوفمبر، بعد #372):** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #372 مدموج. **ابدأ بالملخص الأول (فحص الجودة الشامل) والقسم 2q**، ومنهم على `docs/qa/findings.md`. (الكلام اللي بعد كده عن تطبيق العملاء لحد #318؛ ابدأ فيه بالقسم 2o) (آخر جدول وحالة تطبيق العملاء)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -698,6 +712,43 @@ The owner asked for the customer app to look like the staff app. The method: sha
 | #321 | Admin sidebar + ring (`apps/web-admin`) | Sidebar: no page counters, no box around the open section, no heavy focus ring, no wash behind the active link (gold text and the gold bar only), no tiles behind section icons. `PremiumMetricStrip` ring metrics (`ring`) draw a larger ring with the value inside it and the note beside it. Refines the #318 sidebar (owner-approved). |
 
 **Still open:** REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`). The owner may later ask to drop the phone / WhatsApp buttons from the dashboard's «متابعات اليوم» (not done).
+
+---
+
+### 2q. QA program (2026-11-06 → 2026-11-08, #322–#372)
+
+**Documents:** `docs/QA_PLAN.md` (scope, roles, phases, exit criteria), `docs/qa/findings.md` (one row per finding F-001…F-077, with the run logs, SQL witnesses and the decisions). Read the end of `findings.md` first: it has the latest runs (broker pay, marketing, notifications, content, printed documents) and the decisions of 2026-11-08.
+
+**What was merged (by theme):**
+
+| Theme | PRs |
+|---|---|
+| Plans, financial report, branding per company | #323, #326–#331, #338–#339, #344, #349, #363 (English public name `displayNameEn`) |
+| Reservations, payments, visits, brokers | #332–#334, #336, #341–#343, #346–#347, #350–#355 |
+| English admin and English public site | #356–#362 (admin screens hydrate cleanly; the site asks the API for English; formatting, cards, account area, page titles) |
+| Broker pay | #364 (a PROCESSING payout can be cancelled when the bank rejects it), #365 (periods `YYYY-MM`) |
+| Dates and amounts | #366, #369 (`isCalendarDay`: `2026-02-30` is refused in campaigns, spend, customer records, migration, lead/ledger filters, `reportRange`), #368 (amount in words: «مائتا ألف», cents rounded first) |
+| Notifications, content, flags | #367 (template needs a catalogue code, non-empty text), #370 (article slug/text/cover), #371 (`BooleanStringsPipe`: `?flag=false` was read as true; missing template → 404), #372 (all-sales broadcast includes managers; reservation form says who the sale is recorded under) |
+
+**Rules learned (apply them):**
+- Every fix is its own small PR with a test that fails without it; merge when CI is fully green on the current head (use the full 40-char `expectedHeadSha`).
+- The global `ValidationPipe` converts implicitly; booleans now go through `BooleanStringsPipe` first (`apps/api/src/common/pipes/boolean-strings.pipe.ts`). Dates: use `@IsCalendarDay()` / `isCalendarDay()` (`src/common/validators/calendar-day.ts`), never a bare `YYYY-MM-DD` regex.
+- A bonus adjustment (price change after payment) is linked by `adjustsEntryId`, not by `contractId`; query accordingly.
+- A reservation's `salesId` is required: an admin who books without choosing a rep is the owner, and the sales bonus goes to the admin. Changing that means touching about 11 e2e/security specs.
+- Web-admin Playwright specs that import only `src/lib/*` are pure tests; running them locally needs the web server (slow here), so CI runs them. Check such logic with `tsx` locally (`apps/api/node_modules/.bin/tsx`).
+
+**How to bring up the local stack (the container restarts often; the API dies from time to time):**
+1. `pg_ctlcluster 16 main start` (if not online); `redis-server --daemonize yes` (if `redis-cli ping` fails).
+2. API: `cd apps/api && pnpm exec nest start` (port 4000, wait until `curl localhost:4000/v1/auth/login` answers). Web admin: `cd apps/web-admin && pnpm exec next dev -p 3001`. Public site: `cd apps/web-public && E2E_TENANT_BYPASS_SLUG=default pnpm exec next dev -p 3002` (without the bypass every page reads «not available» in dev because the host is not a company host). Storage emulator: a moto S3 server on :9000 with buckets `real-estate-media` and `real-estate-private` (it keeps objects in memory, so uploaded logos vanish on restart: not a defect, F-021).
+3. `psql` needs `DATABASE_URL` without the `?schema=` part. Login is rate limited (429 after a few attempts: wait a minute; do not loop logins).
+4. To act as a company admin in a scratch database without knowing its password, set an argon2 hash in `User.passwordHash` (`node -e "require('argon2').hash('…').then(console.log)"` from `apps/api`). Use passwords only inline in the shell; never write them to a file.
+5. Staff API login is `POST /v1/auth/login-staff` with `{slug, email, password}` and the header `X-Tenant-Slug`. Money checks: always compare an API result with SQL.
+
+**Clean start (phase 0):** drop and recreate the database, `pnpm db:deploy`, `pnpm db:schema-check` (0), then `PLATFORM_ADMIN_EMAIL=… PLATFORM_ADMIN_PASSWORD=<12+ chars> pnpm --filter @rep/api prisma:seed:platform`. After that everything is made through the product: the super admin (UI at `/super-admin/login`) creates company A (slug `default` makes the local site and apps find it), the company admin sets up branding, projects → phases → buildings → units, plans, users of every role, then the master cycle.
+
+**Master cycle to repeat (third run, from an empty database):** lead → visit → reservation (booking payment confirmed) → conversion to a contract → **the customer signs the contract himself** (not yet tested) → down payment and instalments with proofs (reject one, approve one) → a **discount that needs approval** (not yet tested) → overdue and late fee → maintenance → broker path (register, activate, grant, reserve, commission, payout) → cancellation with refund and clawback → reconciliation against SQL (gross collected − refunds = net, dashboard `netCollected`). Log every finding as F-078+ in `findings.md`.
+
+**Still open or the owner's:** F-023 (accepted, Low); real devices, real storage, push and e-mail (cannot be done from the cloud); the production deploy and the owner tasks in section 5.
 
 ---
 
