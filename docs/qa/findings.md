@@ -239,4 +239,19 @@ Driven through the API on the QA database, SQL as the witness. Starting point: a
 
 **Findings:** none new.
 
-**Not yet driven live:** sales bonus and targets.
+### Sales bonus and targets (rule 1% auto-apply, 1,632,000 net-price unit, markup 141,880)
+
+| Step | Result |
+|---|---|
+| Sign | bonus PENDING 16,320.00 = 1% of 1,632,000 (price after discount, markup excluded) |
+| Approve, pay | APPROVED, PAID |
+| Price up to 1.8M / 1.9M / 2.0M after payment | three ADJUSTMENT entries 261.20, 1,000.00, 1,000.00 (each the difference from what was already paid or adjusted); they are linked by `adjustsEntryId`, not by contract |
+| Target 3,000,000 / 2 units for the month | performance: realized 1,858,120 (net price of the one signed deal), 62% of the amount, 50% of the units; matches SQL |
+| Negative target | 400 |
+| Target with period `2026-13` | **accepted (201)** — F-069 |
+
+An admin-created reservation takes the admin as its sales owner, so a bonus would go to the admin unless a rep is set; seen, not changed.
+
+| F-069 | 4 | Admin | Sales targets, bonus entries | 1 rep | Create a target (or a manual bonus entry) for period `2026-13` | Refused: the period is YYYY-MM | Only `@IsString()` was on the period, so any text was stored and no report matched it | **Fixed**: the period must match YYYY-MM on both DTOs. Test `bonus-period-validation.spec.ts` |
+
+**Not yet driven live:** marketing and content, notification wording per company, print documents per company.
