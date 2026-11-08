@@ -386,6 +386,8 @@ describe('NotificationsService · resolveRecipients — correct fan-out per targ
     { id: 'c-2', role: UserRole.CUSTOMER, active: true },
     { id: 'b-1', role: UserRole.BROKER, active: true },
     { id: 's-1', role: UserRole.SALES, active: true },
+    { id: 'sm-1', role: UserRole.SALES_MANAGER, active: true },
+    { id: 'sm-inactive', role: UserRole.SALES_MANAGER, active: false },
     { id: 'm-1', role: UserRole.MAINTENANCE_SUPERVISOR, active: true },
     { id: 'a-1', role: UserRole.ADMIN, active: true },
     { id: 'c-inactive', role: UserRole.CUSTOMER, active: false },
@@ -412,14 +414,14 @@ describe('NotificationsService · resolveRecipients — correct fan-out per targ
     expect(prisma.notifications[0]?.userId).toBe('b-1');
   });
 
-  it('ALL_SALES → only active SALES', async () => {
+  it('ALL_SALES → the active sales team: reps and sales managers (F-076)', async () => {
     const prisma = makePrisma(users);
     const { svc } = makeService(prisma);
     const r = await runTenantContext(TEST_TENANT, () =>
       svc.broadcastNotification('admin-1', { ...BASE_IN_APP, target: BroadcastTarget.ALL_SALES }),
     );
-    expect(r.recipientCount).toBe(1);
-    expect(prisma.notifications[0]?.userId).toBe('s-1');
+    expect(r.recipientCount).toBe(2);
+    expect(prisma.notifications.map((n) => n.userId).sort()).toEqual(['s-1', 'sm-1']);
   });
 
   it('ALL_MAINTENANCE_SUPERVISORS → only active MAINTENANCE_SUPERVISORs', async () => {
@@ -438,8 +440,8 @@ describe('NotificationsService · resolveRecipients — correct fan-out per targ
     const r = await runTenantContext(TEST_TENANT, () =>
       svc.broadcastNotification('admin-1', { ...BASE_IN_APP, target: BroadcastTarget.ALL_ACTIVE }),
     );
-    expect(r.recipientCount).toBe(6); // c-inactive excluded
-    expect(prisma.notifications).toHaveLength(6);
+    expect(r.recipientCount).toBe(7); // c-inactive and sm-inactive excluded
+    expect(prisma.notifications).toHaveLength(7);
   });
 
   it('ROLE + targetRole → only users with that role', async () => {

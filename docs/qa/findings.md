@@ -334,3 +334,11 @@ CMS pages, articles and banners driven through the API.
 Notification opt-outs are otherwise as designed: an admin broadcast belongs to no group and always goes out; in-app notifications are never switched off.
 
 
+
+## Decisions on the three open points (2026-11-08)
+
+| Point | Decision | What changed |
+|---|---|---|
+| F-076 — "all sales" broadcast skipped sales managers | Include them | `ALL_SALES` now means active reps and sales managers; the admin label reads «كل فريق المبيعات» / "All Sales Team (reps and managers)". Test updated (inactive manager excluded) |
+| F-077 — an admin's reservation with no rep is recorded under the admin, so the sales bonus goes to the admin | Keep the behaviour (a small company's admin may be the seller; 11 e2e/security specs also depend on it), make it visible | The reservation form's empty option reads «أنا (بدون مندوب)» instead of «اختر مندوباً», with the hint «إن لم تختر مندوباً يُسجَّل البيع والمكافأة باسمك» |
+| "all customers" broadcast leaves out website accounts that have not bought | By design, unchanged | A separate "registered visitors" audience can be added later if a company asks |
