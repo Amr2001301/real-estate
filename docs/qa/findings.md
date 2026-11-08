@@ -272,4 +272,18 @@ Campaigns, spend and lead intake driven through the API, SQL as the witness.
 
 | F-070 | 4 | Admin | Campaigns | 1 campaign | Add spend, or set a start date, on a day that does not exist (2026-02-30) | Refused | Only a digits pattern checked the day, and `new Date()` rolled it into the next month, so the spend landed on 2026-03-02 and the period reports were wrong | **Fixed** for the campaign DTOs and the report filters: `IsCalendarDay` / `isCalendarDay`. Test `calendar-day.spec.ts`. The same weak pattern is still in the users DTO (`DAY`), custom-field dates, the data-migration birth date and the leads/ledger/report-range filters — to be moved to it |
 
-**Not yet driven live:** CMS pages, notifications to a segment, templates, opt-outs, notification wording per company, print documents per company.
+## Notifications run (2026-11-08)
+
+| Case | Result |
+|---|---|
+| Broadcast preview per audience | customers 2, brokers 1, sales 2, maintenance supervisors 1, all active 10 — each equals the SQL count of active users of that role (the platform super admin is outside the company) |
+| Broadcast to all customers, in-app | 2 recipients, 2 rows `admin_broadcast` carrying both languages; failed 0 |
+| Target ROLE without a role / unknown user / PUSH without Firebase | 400 / 404 / 400 with a clear message; a role nobody has returns 0 recipients |
+| Template saved with an empty subject or body, or a blank code | **accepted** — F-071 |
+| Template with a 200 KB body | 413 |
+
+| F-071 | 3 | Admin | Notification templates | 1 company | Save a template with an empty subject/body, or a blank code | Refused | The DTO had `@IsString()` only, so a blank override replaced the platform wording and customers got an empty message; a blank code stored a junk row | **Fixed**: subject ≤ 200 and body ≤ 2000 characters, none empty; the code is a catalogue-style code (lowercase, digits, `_ . -`, 2–80). All 138 catalogue codes and the test codes match. Test `template-validation.spec.ts` |
+
+Seen, not changed: "all sales" excludes sales managers, and "all customers" excludes website accounts that have not bought (role CLIENT); both read as by design.
+
+**Not yet driven live:** CMS pages, opt-outs, print documents per company.
