@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { isCalendarDay } from '../calendar-day';
+import { reportRange } from '../../time/report-range';
+import { UpdateUserDto } from '../../../modules/users/dto/user.dto';
 import { AddCampaignSpendDto, CreateCampaignDto } from '../../../modules/campaigns/dto/campaign.dto';
 
 /** F-070: a day that does not exist used to be stored as the next month's. */
@@ -29,5 +31,20 @@ describe('campaign DTO days', () => {
     expect(c).toHaveLength(0);
     const s = await validate(plainToInstance(AddCampaignSpendDto, { amount: 10, spentOn: '2026-11-05' }));
     expect(s).toHaveLength(0);
+  });
+});
+
+describe('report range and customer record days (F-070 follow-up)', () => {
+  it('reportRange refuses a day that does not exist, keeps real days and timestamps', () => {
+    expect(() => reportRange('2026-02-30', undefined, 'Africa/Cairo')).toThrow('not a real date');
+    expect(() => reportRange(undefined, '2026-04-31', 'Africa/Cairo')).toThrow('not a real date');
+    expect(reportRange('2026-02-28', '2026-03-01', 'Africa/Cairo').gte).toBeInstanceOf(Date);
+    expect(reportRange('2026-02-28T10:00:00Z', undefined, 'Africa/Cairo').gte).toBeInstanceOf(Date);
+  });
+  it('a customer record refuses an impossible birth date or ID issue date', async () => {
+    const bad = await validate(plainToInstance(UpdateUserDto, { birthDate: '2026-02-30', nationalIdIssueDate: '2025-13-01' }));
+    expect(bad.map((e) => e.property).sort()).toEqual(['birthDate', 'nationalIdIssueDate']);
+    const ok = await validate(plainToInstance(UpdateUserDto, { birthDate: '1990-02-28', nationalIdIssueDate: '2020-02-29' }));
+    expect(ok).toHaveLength(0);
   });
 });

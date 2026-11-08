@@ -1,3 +1,4 @@
+import { IsCalendarDay } from '../../../common/validators/calendar-day';
 import { Transform, Type } from 'class-transformer';
 import {
   IsEmail,
@@ -18,7 +19,6 @@ import {
 import { UserRole, Locale } from '@prisma/client';
 
 const trimOrNull = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() || null : value);
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * What the company records about a buyer for its contracts and forms: their
@@ -44,7 +44,7 @@ export abstract class CustomerRecordDto {
   @IsOptional()
   @Transform(trimOrNull)
   @ValidateIf((_o, v) => v !== null)
-  @Matches(DAY, { message: 'تاريخ الميلاد غير صالح' })
+  @IsCalendarDay({ message: 'تاريخ الميلاد غير صالح' })
   birthDate?: string | null;
 
   @IsOptional()
@@ -71,7 +71,7 @@ export abstract class CustomerRecordDto {
   @IsOptional()
   @Transform(trimOrNull)
   @ValidateIf((_o, v) => v !== null)
-  @Matches(DAY, { message: 'تاريخ إصدار الهوية غير صالح' })
+  @IsCalendarDay({ message: 'تاريخ إصدار الهوية غير صالح' })
   nationalIdIssueDate?: string | null;
 
   @IsOptional()

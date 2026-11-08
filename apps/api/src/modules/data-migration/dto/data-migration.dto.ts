@@ -1,3 +1,4 @@
+import { IsCalendarDay } from '../../../common/validators/calendar-day';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -168,7 +169,7 @@ export class MigrationCustomerItem extends MigrationItem {
   @IsOptional() @Transform(trim) @IsString() @MaxLength(300)
   address?: string;
 
-  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'birthDate: YYYY-MM-DD' })
+  @IsOptional() @IsCalendarDay({ message: 'birthDate: YYYY-MM-DD' })
   birthDate?: string;
 
   @IsOptional() @Transform(trim) @IsString() @MaxLength(120)

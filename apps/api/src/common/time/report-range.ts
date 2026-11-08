@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+import { isCalendarDay } from '../validators/calendar-day';
 import { COMPANY_TIMEZONE_DEFAULT, isValidTimeZone } from './company-timezone';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,6 +41,10 @@ export function reportRange(
   to: string | undefined,
   timeZone: string,
 ): { gte?: Date; lt?: Date } {
+  for (const d of [from, to]) {
+    // A day that does not exist (2026-02-30) would roll into the next month.
+    if (d && DATE_ONLY.test(d) && !isCalendarDay(d)) throw new BadRequestException(`${d} is not a real date`);
+  }
   const range: { gte?: Date; lt?: Date } = {};
   if (from) range.gte = DATE_ONLY.test(from) ? localMidnight(from, timeZone) : new Date(from);
   if (to) {
