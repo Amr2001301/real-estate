@@ -302,4 +302,20 @@ The amount in words on contracts, booking forms and receipts was checked on 45 a
 
 Seen, not changed: the currency word does not agree with the number («ثلاثة جنيه مصري»), which is how contracts are usually typed.
 
-**Not yet driven live:** CMS pages, opt-outs.
+## Content run (2026-11-08)
+
+CMS pages, articles and banners driven through the API.
+
+| Case | Result |
+|---|---|
+| Page slug rules (letters, digits, dashes, 80) | already enforced; the public site shows pages under `/pages/<slug>`, so a page called `login` collides with nothing |
+| Article slug empty / `a b/c` / `Hello` / Arabic / 500 characters | **all saved** — F-073 |
+| Article or page with an empty title, excerpt or body | **saved** — F-073 |
+| Article cover `javascript:alert(1)` | **saved** — F-073 (an `<img src>`, so not executable in current browsers, but not a picture URL) |
+| Script and `onerror` in a page body | saved as written; the public article page sanitizes the body with DOMPurify before showing it |
+| 600 KB body | 413 |
+
+| F-073 | 3 | Admin | Articles, pages | 1 company | Save an article with slug `a b/c`, an empty slug, a 500-character slug, an empty title/body, or a `javascript:` cover | Refused | The article DTO had `@IsString()` only (the page DTO already checked its slug), so the article's address could be unusable or unreachable and the card could carry blank text | **Fixed**: the article slug uses the page slug rule (lowercase, digits, dashes, ≤ 80); titles ≤ 200, excerpts ≤ 500, none empty (page titles and bodies too); the cover must be an http(s) address ≤ 1000. Test `cms-validation.spec.ts` |
+
+**Not yet driven live:** opt-outs of notifications.
+
