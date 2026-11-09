@@ -11,7 +11,7 @@ import '../widgets/unit_status_chip.dart';
 import 'compare_cubit.dart';
 
 // Navy depth tokens — match the projects/units screen language.
-const _navyDeep = Color(0xFF0B1726);
+Color get _navyDeep => AppPalette.navyDeep;
 
 /// Premium compare screen — from-scratch redesign.
 ///
@@ -149,10 +149,10 @@ class _IdentityCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E3A62), AppPalette.navy, _navyDeep],
+          colors: [AppPalette.navyBright, AppPalette.navy, _navyDeep],
         ),
         borderRadius: BorderRadius.circular(AppRadii.md),
         border: Border.all(
@@ -225,11 +225,11 @@ class _IdentityCard extends StatelessWidget {
             width: 28,
             height: 1.5,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                   AppPalette.gold400,
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                 ],
               ),
               borderRadius: BorderRadius.circular(999),
@@ -755,7 +755,7 @@ class _Step extends StatelessWidget {
                   width: 20,
                   height: 20,
                   alignment: Alignment.center,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -764,7 +764,7 @@ class _Step extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x44B8941F),
+                        color: AppPalette.gold400.withValues(alpha: 0.27),
                         blurRadius: 6,
                         offset: Offset(0, 2),
                       ),
@@ -772,7 +772,7 @@ class _Step extends StatelessWidget {
                   ),
                   child: Text(
                     '$stepNumber',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppPalette.navy,
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
@@ -867,10 +867,10 @@ class _MiniCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         gradient: navy
-            ? const LinearGradient(
+            ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF1E3A62), AppPalette.navy],
+                colors: [AppPalette.navyBright, AppPalette.navy],
               )
             : null,
         color: navy ? null : colors.surface,
@@ -924,7 +924,7 @@ class _CompareBadge extends StatelessWidget {
       width: 58,
       height: 58,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppPalette.gold300, AppPalette.gold500],
@@ -939,7 +939,7 @@ class _CompareBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(Icons.compare_arrows_rounded,
+      child: Icon(Icons.compare_arrows_rounded,
           color: AppPalette.navy, size: 28),
     );
   }

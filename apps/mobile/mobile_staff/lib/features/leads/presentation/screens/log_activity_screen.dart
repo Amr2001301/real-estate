@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/lead_detail_cubit.dart';
 import '../follow_up_labels.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 /// FU1 — opens «سجّل تواصل» over the lead, on the lead's own cubit.
 Future<void> openLogActivity(BuildContext context, LeadDetailCubit cubit, {String? leadName, DateTime? currentNext}) {
@@ -502,7 +501,7 @@ class _DateTimeTile extends StatelessWidget {
                   color: AppPalette.gold400.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.event_rounded, color: AppPalette.gold400, size: 18),
+                child: Icon(Icons.event_rounded, color: AppPalette.gold400, size: 18),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(

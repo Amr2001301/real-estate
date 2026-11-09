@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../design/tokens/app_colors.dart';
-import '../design/tokens/app_radii.dart';
-import '../design/tokens/app_spacing.dart';
+import '../../core.dart';
 
-// Navy depth scale matching the Devora design language.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
-const _navyLight = Color(0xFF243F62);
 
 /// A reusable navy-gradient screen header for non-catalog screens.
 ///
@@ -48,227 +42,18 @@ class AppNavHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hasBottom = bottom != null;
-
+    // One look in both apps: the staff app's list header.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_navyLight, _navyMid, _navyDeep],
-          stops: [0.0, 0.45, 1.0],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(AppRadii.xl + 4),
-          bottomRight: Radius.circular(AppRadii.xl + 4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 22,
-            offset: Offset(0, 8),
-          ),
-        ],
+      child: HomeListHero(
+        title: title,
+        subtitle: subtitle,
+        leading: leadingAction ?? avatarWidget,
+        actions: actions,
+        bottom: bottom,
       ),
-      child: Stack(
-        children: [
-          // Dot texture
-          const Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(AppRadii.xl + 4),
-                bottomRight: Radius.circular(AppRadii.xl + 4),
-              ),
-              child: IgnorePointer(child: _HeaderDots()),
-            ),
-          ),
-          // Gold radial bloom — end corner
-          PositionedDirectional(
-            top: 0,
-            end: -30,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
-                  stops: [0.0, 0.75],
-                ),
-              ),
-            ),
-          ),
-          // Gold shimmer hairline at bottom
-          Positioned(
-            bottom: 0,
-            left: 40,
-            right: 40,
-            child: Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    AppPalette.gold400.withValues(alpha: 0.50),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.lg,
-                right: AppSpacing.lg,
-                top: AppSpacing.md,
-                bottom: hasBottom ? AppSpacing.sm : AppSpacing.lg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (compact) ...[
-                    // ── Compact: leading + title in the same row ─────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (leadingAction != null) ...[
-                          leadingAction!,
-                          const SizedBox(width: AppSpacing.md),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              if (subtitle != null && subtitle!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  subtitle!,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppPalette.gold400,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        for (final a in actions) ...[
-                          const SizedBox(width: AppSpacing.xs),
-                          a,
-                        ],
-                      ],
-                    ),
-                  ] else ...[
-                    // ── Standard: leading row above, title row below ──────
-                    if (leadingAction != null || actions.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          ?leadingAction,
-                          const Spacer(),
-                          ...actions,
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                    ],
-                    // Avatar + title row
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (avatarWidget != null) ...[
-                          avatarWidget!,
-                          const SizedBox(width: AppSpacing.md),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              if (subtitle != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  subtitle!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.65),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  // Optional bottom widget (filter row, stats, etc.)
-                  if (hasBottom) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    bottom!,
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Private helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _HeaderDots extends StatelessWidget {
-  const _HeaderDots();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotsPainter(), child: SizedBox.expand());
-}
-
-class _DotsPainter extends CustomPainter {
-  const _DotsPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 8.0; y < size.height; y += step) {
-      for (var x = 8.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotsPainter _) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -351,7 +136,7 @@ class NavHeaderBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return NavHeaderAction(
-      icon: Icons.arrow_back_ios_new_rounded,
+      icon: Icons.arrow_back_rounded,
       tooltip: MaterialLocalizations.of(context).backButtonTooltip,
       onTap: onTap ??
           () {
@@ -380,13 +165,13 @@ class NavHeaderBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppPalette.gold400,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF0B1726), width: 1),
+        border: Border.all(color: AppPalette.navyDeep, width: 1),
       ),
       alignment: Alignment.center,
       child: Text(
         count > 9 ? '9+' : '$count',
-        style: const TextStyle(
-          color: Color(0xFF0B1726),
+        style: TextStyle(
+          color: AppPalette.navyDeep,
           fontSize: 12,
           fontWeight: FontWeight.w800,
           height: 1,
@@ -414,7 +199,7 @@ class AppNavSliverHeader extends StatelessWidget {
 
   /// Content height of a compact header (padding, a 40px button or a title
   /// with its one-line subtitle).
-  static const double contentHeight = 84;
+  static const double contentHeight = 72;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +298,7 @@ class NavHeaderButton extends StatelessWidget {
           height: 40,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold500],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -530,7 +315,7 @@ class NavHeaderButton extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(color: AppPalette.navy, fontSize: 13, fontWeight: FontWeight.w800),
+                style: TextStyle(color: AppPalette.navy, fontSize: 13, fontWeight: FontWeight.w800),
               ),
             ],
           ),

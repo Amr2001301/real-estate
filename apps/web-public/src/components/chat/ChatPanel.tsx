@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/cn';
 import { CHAT_MAX_LENGTH, type ChatUiMessage, type FeedbackRating } from '@/lib/chat';
 import { ChatMessage } from './ChatMessage';
+import { siteT } from '@/messages/site';
+import type { Locale } from '@/lib/locale';
 
 interface ChatPanelProps {
+  locale?: Locale;
   open: boolean;
   onClose: () => void;
   messages: ChatUiMessage[];
@@ -28,6 +31,7 @@ interface ChatPanelProps {
 
 export function ChatPanel(props: ChatPanelProps) {
   const { open, onClose, messages, quickReplies, pending, restoring, error } = props;
+  const t = siteT(props.locale ?? 'ar').chat;
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,7 +58,7 @@ export function ChatPanel(props: ChatPanelProps) {
       {/* Mobile backdrop */}
       <button
         type="button"
-        aria-label="إغلاق المحادثة"
+        aria-label={t.closeChat}
         onClick={onClose}
         className="fixed inset-0 z-[65] bg-navy/40 backdrop-blur-sm sm:hidden"
       />
@@ -62,7 +66,7 @@ export function ChatPanel(props: ChatPanelProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="المساعد العقاري"
+        aria-label={t.panelTitle}
         onKeyDown={(e) => e.key === 'Escape' && onClose()}
         className={cn(
           'fixed z-[70] flex flex-col overflow-hidden border border-hairline bg-canvas shadow-lift',
@@ -77,8 +81,8 @@ export function ChatPanel(props: ChatPanelProps) {
             <Sparkles className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold text-ink-strong">المساعد العقاري</p>
-            <p className="truncate text-xs text-ink-muted">مساعد ذكي مجاني للبحث والاستفسار</p>
+            <p className="text-[15px] font-semibold text-ink-strong">{t.panelTitle}</p>
+            <p className="truncate text-xs text-ink-muted">{t.panelSub}</p>
           </div>
 
           {/* Session menu: new chat / clear chat (kept compact to avoid clutter) */}
@@ -86,7 +90,7 @@ export function ChatPanel(props: ChatPanelProps) {
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              aria-label="خيارات المحادثة"
+              aria-label={t.options}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               className="rounded-full p-1.5 text-ink-muted transition-colors hover:bg-navy/[0.05] hover:text-ink-strong"
@@ -116,7 +120,7 @@ export function ChatPanel(props: ChatPanelProps) {
                     className="flex w-full items-center gap-2 px-3.5 py-2 text-[13px] text-ink-strong transition-colors hover:bg-navy/[0.05]"
                   >
                     <SquarePen className="h-4 w-4 text-gold-600" aria-hidden />
-                    محادثة جديدة
+                    {t.newChat}
                   </button>
                   <button
                     type="button"
@@ -128,7 +132,7 @@ export function ChatPanel(props: ChatPanelProps) {
                     className="flex w-full items-center gap-2 px-3.5 py-2 text-[13px] text-error transition-colors hover:bg-error/5"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
-                    مسح المحادثة
+                    {t.clearChat}
                   </button>
                 </div>
               </>
@@ -138,7 +142,7 @@ export function ChatPanel(props: ChatPanelProps) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="إغلاق"
+            aria-label={t.close}
             className="rounded-full p-1.5 text-ink-muted transition-colors hover:bg-navy/[0.05] hover:text-ink-strong"
           >
             <X className="h-5 w-5" aria-hidden />
@@ -148,10 +152,10 @@ export function ChatPanel(props: ChatPanelProps) {
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
           {messages.map((m) => (
-            <ChatMessage key={m.id} message={m} onFeedback={props.onFeedback} />
+            <ChatMessage key={m.id} message={m} onFeedback={props.onFeedback} locale={props.locale} />
           ))}
 
-          {(pending || restoring) && <TypingIndicator />}
+          {(pending || restoring) && <TypingIndicator locale={props.locale ?? 'ar'} />}
 
           {error && (
             <div className="flex flex-col items-end gap-2">
@@ -163,7 +167,7 @@ export function ChatPanel(props: ChatPanelProps) {
                 onClick={props.onRetry}
                 className="rounded-full border border-hairline px-3 py-1 text-xs font-medium text-ink-strong hover:border-gold-300"
               >
-                إعادة المحاولة
+                {t.retry}
               </button>
             </div>
           )}
@@ -192,8 +196,8 @@ export function ChatPanel(props: ChatPanelProps) {
             value={props.input}
             onChange={(e) => props.onInputChange(e.target.value)}
             maxLength={CHAT_MAX_LENGTH}
-            placeholder="اكتب رسالتك…"
-            aria-label="اكتب رسالتك"
+            placeholder={t.placeholder}
+            aria-label={t.inputLabel}
             autoComplete="off"
             disabled={restoring}
             className="flex-1"
@@ -202,7 +206,7 @@ export function ChatPanel(props: ChatPanelProps) {
             type="submit"
             variant="gold"
             size="md"
-            aria-label="إرسال"
+            aria-label={t.send}
             disabled={pending || restoring || props.input.trim().length === 0}
             className="shrink-0 !px-3"
           >
@@ -215,13 +219,14 @@ export function ChatPanel(props: ChatPanelProps) {
 }
 
 /** Reuses the shared `.skeleton` shimmer as a calm "assistant is typing" cue. */
-function TypingIndicator() {
+function TypingIndicator({ locale }: { locale: Locale }) {
+  const t = siteT(locale).chat;
   return (
     <div className="flex items-center gap-1.5 self-end rounded-2xl bg-surface-soft px-4 py-3" aria-hidden>
       <span className="skeleton h-2 w-2 rounded-full" />
       <span className="skeleton h-2 w-2 rounded-full" />
       <span className="skeleton h-2 w-2 rounded-full" />
-      <span className="sr-only">جارٍ كتابة الرد…</span>
+      <span className="sr-only">{t.typing}</span>
     </div>
   );
 }

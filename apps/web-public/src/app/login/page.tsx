@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -8,11 +8,9 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { LoginCard } from '@/components/auth/LoginCard';
 import { InlineNotice } from '@/components/states/InlineNotice';
 
-export const metadata = buildMetadata({
-  title: 'تسجيل الدخول',
-  description: 'سجّل دخولك إلى حسابك في ديفورا لمتابعة طلباتك وزياراتك ووحداتك المفضلة.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('login', { robots: { index: false, follow: false } });
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -55,6 +53,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       subtitle={m.auth.login.subtitle}
       switchPrompt={m.auth.login.switchPrompt}
       switchLabel={m.auth.login.switchLabel}
+      locale={locale}
       switchHref={routes.register}
     >
       {showResetNotice && (
@@ -67,7 +66,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
           {m.auth.login.sessionNotice}
         </InlineNotice>
       )}
-      <LoginCard />
+      <LoginCard locale={locale} />
     </AuthShell>
   );
 }

@@ -5,8 +5,11 @@ import { RefreshCw, Loader2 } from 'lucide-react';
 import { resendVerificationAction } from '@/lib/auth-actions';
 import { Button } from '@/components/ui/Button';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 export function ResendVerificationButton() {
+  const t = accountT(useSiteLocale()).resend;
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -19,16 +22,16 @@ export function ResendVerificationButton() {
     if (res.ok) {
       setDone(true);
     } else if (res.status === 429) {
-      setError('يرجى الانتظار دقيقة قبل طلب رابط جديد.');
+      setError(t.wait);
     } else {
-      setError('تعذّر إرسال الرابط. يرجى المحاولة لاحقًا.');
+      setError(t.fail);
     }
   }
 
   if (done) {
     return (
       <InlineNotice tone="success" className="mt-3">
-        تم إرسال رابط التأكيد إلى بريدك الإلكتروني. يرجى مراجعة البريد الوارد والمجلدات الأخرى.
+        {t.sent}
       </InlineNotice>
     );
   }
@@ -49,7 +52,7 @@ export function ResendVerificationButton() {
         ) : (
           <RefreshCw className="h-4 w-4" aria-hidden />
         )}
-        {pending ? 'جارٍ الإرسال…' : 'إعادة إرسال رابط التأكيد'}
+        {pending ? t.sending : t.button}
       </Button>
     </div>
   );

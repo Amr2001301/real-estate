@@ -53,7 +53,7 @@ export function FeaturedProjects({
         ) : (
           <Stagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard key={project.id} project={project} locale={locale} />
             ))}
           </Stagger>
         )}

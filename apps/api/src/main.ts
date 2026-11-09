@@ -1,3 +1,4 @@
+import { trustProxyHops } from './common/request/trust-proxy';
 import 'reflect-metadata';
 import { initSentry } from './common/observability/sentry';
 // Sentry must be initialised before any other application code so that the
@@ -11,6 +12,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { clientMetaMiddleware } from './common/request/client-meta';
+import { RejectNulBytesPipe } from './common/pipes/reject-nul-bytes.pipe';
+import { BooleanStringsPipe } from './common/pipes/boolean-strings.pipe';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
@@ -22,6 +25,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(new JsonLoggerService());
   const config = app.get(ConfigService);
+
+  // The real client address behind the host's proxies (rate limits key on it). 0 = trust none.
+  const proxyHops = trustProxyHops(process.env['TRUST_PROXY_HOPS']);
+  if (proxyHops > 0) app.getHttpAdapter().getInstance().set('trust proxy', proxyHops);
 
   // Run before any other middleware so the id is on every response header,
   // including helmet's and CORS preflight responses.
@@ -39,6 +46,8 @@ async function bootstrap() {
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
 
   app.useGlobalPipes(
+    new RejectNulBytesPipe(),
+    new BooleanStringsPipe(),
     new ValidationPipe({
       whitelist: true,
       transform: true,

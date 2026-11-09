@@ -1,8 +1,11 @@
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function UnitsLoading() {
+export default async function UnitsLoading() {
+  const t = accountT(await getLocale());
   return (
     <>
       <PageHero
@@ -11,7 +14,7 @@ export default function UnitsLoading() {
         subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
       />
       <Section tone="canvas">
-        <span className="sr-only">جارٍ التحميل…</span>
+        <span className="sr-only">{t.loading}</span>
         {/* Filter bar (taller — more controls) */}
         <Skeleton className="h-40 w-full rounded-3xl" />
         {/* Card grid */}

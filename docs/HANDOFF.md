@@ -1,7 +1,21 @@
-# Handoff — where the work stands (2026-11-05, after #302)
+# Handoff — where the work stands (2026-11-08, after #372)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
+
+---
+
+## ملخص سريع — فحص الجودة الشامل (6–8 نوفمبر، #322–#372، كله مدموج)
+
+**ابدأ من هنا:** بعد #321 اتعمل فحص جودة شامل للمنصة كلها («QA program») قبل ما شركات حقيقية تستخدمها. الخطة في `docs/QA_PLAN.md`، وسجل كل ملاحظة في `docs/qa/findings.md` (من F-001 لـ F-077). القسم **2q** تحت فيه التفاصيل وإزاي تشغّل البيئة.
+
+- **الحالة:** مفيش ولا ملاحظة Blocker أو Critical أو High مفتوحة. كل ملاحظة اتصلحت في PR صغير بتست يفشل من غير الإصلاح. الدورة الرئيسية (من تسجيل العميل للتحصيل والإلغاء) اتعملت مرتين من داتا بيز فاضية.
+- **اتغطى من السحابة:** الأدوار كلها (أدمن، مبيعات، مدير، بروكر، صيانة، عميل، زائر)، عربي وإنجليزي، فاتح وليلي، موبايل ودسكتوب، عزل الشركات، الصلاحيات، الفلوس بـ SQL، الأمان، الأداء، إنجليزي كامل للموقع العام وللوحة الأدمن، دفعات وعمولات ومكافآت البروكر، الحملات، الإشعارات وقوالبها وإلغاء الاشتراك، صفحات المحتوى، المبلغ بالحروف في المستندات.
+- **ما اتجربش بنفسه:** توقيع العميل الإلكتروني على العقد بنفسه (الأدمن هو اللي وقّع في الدورة)، واعتماد الخصم.
+- **مش ممكن من السحابة (عليك):** تجربة على أجهزة حقيقية (iOS وAndroid)، التخزين الحقيقي (R2)، إشعارات push (FCM)، الإيميل الحقيقي (SMTP).
+- **اللي مقبول ومفتوح:** F-023 (Low): حوالي 400 رسالة خطأ في الـ API لسه بالإنجليزي لحد ما يبقى فيه كتالوج رسائل مشترك. F-013: تحذير React في وضع التطوير بس.
+- **قرارات المالك:** الدفع الجزئي للقسط مش مدعوم (F-052)؛ شرط غرامة التأخير في العقد وحقل الإعدادات شغالين ومقفولين بالتصميم (F-033)؛ حجز الأدمن من غير مندوب بيتسجل باسمه والمكافأة له، والشاشة بتقول كده (F-077)؛ بث «كل المبيعات» يشمل المديرين (F-076)؛ بث «كل العملاء» لا يشمل حسابات الموقع اللي ما اشترتش.
+- **الخطوة الجاية:** دورة كاملة تالتة من داتا بيز فاضية بعد كل الإصلاحات، وفيها توقيع العميل واعتماد الخصم (التفاصيل في 2q).
 
 ---
 
@@ -107,17 +121,32 @@
 - **الرئيسية والتفاصيل:** كل صفحات الدخول، وصفحات التفاصيل، والنماذج، ولوحات الأدمن الجديدة (صحة المشاريع، الصحة المالية، التدفق النقدي، مصادر العملاء).
 - **صفحات جديدة للأدمن:** استفسارات العملاء، تقرير المبيعات، التقرير المالي مع المقارنة بالفترة السابقة، وصفحات الوسطاء الست بتفاصيلها وأزرارها (اعتماد عمولة، صرف دفعة، إيقاف شركة…).
 - **التجربة على الأدوار الأربعة (مدير مبيعات، مبيعات، وسيط، مشرف صيانة):** كل الصفحات بتفتح بدون أخطاء، وكل دور محصور في صفحاته. الأزرار والنماذج اتجرّبت على بيانات الديمو واتأكدت من قاعدة البيانات.
-- **الوضع الليلي:** اتصلّحت الأماكن اللي كان فيها نص أبيض على فاتح (#302). **لسه حوالي 100 مكان بألوان ثابتة فاتحة** (مهمة DK1).
+- **الوضع الليلي:** اتصلّحت الأماكن اللي كان فيها نص أبيض على فاتح (#302). **اتصلّح الباقي (حوالي 100 مكان بألوان ثابتة فاتحة) في #320** (مهمة DK1 خلصت).
 - **طلباتك الجديدة (المهام الجديدة):**
   1. **حجم الخط في تطبيق الموظفين** — صغير مش مقروء (مهمة FS1).
   2. **تطبيق العملاء صفحة صفحة** بنفس شكل تطبيق الموظفين، مع الخط والوضع الليلي (CU-0، CU-1…n).
   3. **قايمة اختبار الجهاز الحقيقي** (`docs/staff-app-device-test.md`) وقرارات الإصدار اللي عليك (REL1).
 
+**بعد كده (5–6 نوفمبر، #303–#311، كله مدموج):** القسم **2n** تحت. الأكونت التاني كمّل لما الليمت خلص هنا، وده اللي اتعمل:
+- **حجم الخط في تطبيق الموظفين (#304):** أصغر خط بقى 12 وفوقه تكبير 1.1 للنص كله (مهمة FS1 خلصت).
+- **تطبيق العملاء بنفس شكل تطبيق الموظفين (#305–#311):** حجم الخط، مركز المالية، الأقساط والمدفوعات والعقود كأنها كروت قوائم، كارت «وحدتي»، شاشات الصيانة، طلبات الزيارة (ومعاها سبب التأجيل في شيت) والإشعارات، المفضلة، اسم الملف الشخصي، وكارت العقار في الرئيسية. كلها بتقرا كويس في الوضع الليلي.
+- **اللي فاضل في تطبيق العملاء (اتأكد بالتصوير بحساب عميل):** الكتالوج (الرئيسية والمشاريع والوحدات وصفحاتهم والمقارنة)، صفحات العقد وكشف الحساب والدفعة وإرسال الإثبات، طلب الزيارة وطلب المعلومات وصفحة طلب الصيانة، الملف الشخصي وتفضيلات الإشعارات و«المزيد»، المساعد، الصفحات التعريفية، وتسجيل الدخول. التفاصيل في القسم 2n.
+- **لسه عليك:** قرارات الإصدار (REL1) وقايمة اختبار الجهاز (`docs/staff-app-device-test.md`)، والنشر على السيرفر.
+
+**بعد كده (6 نوفمبر، #312–#318، كله مدموج):** القسم **2o** تحت. تطبيق العملاء اتحوّل كله لشكل تطبيق الموظفين، على دفعات من 10 صفحات تقريبًا، كل دفعة PR لوحده بعد ما بتوافق على الصور:
+- **الشريط السفلي والهيدر والفلتر (#313):** نفس شريط الموظفين الكحلي العايم، وهيدر كل الصفحات، وشاشة الفلتر. العناصر المشتركة (الهيرو، شريط الأرقام، الأزرار، الفلتر، أقسام وصفوف الحساب) اتنقلت لحزمة `core` وبقى التطبيقين يستخدموها.
+- **الكتالوج (#313):** الرئيسية للزائر، المشاريع والوحدات (كروت بصورة غلاف)، صفحة المشروع وصفحة الوحدة (غلاف وكارت السعر فوقه)، طلب المعلومات، وطلب الزيارة (التاريخ والوقت بقوا اختيار حر من منتقي النظام بدل أيام وساعات ثابتة).
+- **الأموال والصيانة (#314):** مركز المالية بشريط أرقام من ملخص الأقساط، وقائمة الصيانة وطلب صيانة جديد.
+- **الحساب (#315، #316):** الإشعارات (بنفس بنية إشعارات الموظفين)، المساعد (شبه مساعد الموظفين)، تفضيلات الإشعارات، الملف الشخصي، المفضلة، والحساب نفسه بأقسام وصفوف الموظفين، وشريط أرقام في «وحدتي».
+- **القائمة الجانبية في لوحة تحكم الأدمن (#318):** الأقسام بقت بتفتح واحد واحد (مجموعة واحدة مفتوحة، ومجموعة الصفحة اللي أنت فيها مفتوحة دايمًا)، وكل قسم وصفحة ليهم أيقونة، وعدد الصفحات جنب اسم القسم، ونقطة دهبية على القسم المقفول لو فيه حاجة محتاجة انتباه، وشريط دهبي على الصفحة الحالية. ده بيبدّل قرار U5 القديم «نص وحلقة من غير أيقونات»، والتصميم نفسه اتوافق عليه الأول.
+- **إصلاحات اتعملت في الطريق:** المفضلة كانت بتقع بخطأ لما يكون فيها حاجة (الاسم بيرجع نص مش خريطة)، واختبار التقويم كان بيفشل أيام الجمعة.
+- **اللي ما اتغيّرش محتواه:** صفحة العقد وكشف الحساب وصفحة الدفعة وإرسال الإثبات وصفحة طلب الصيانة والمستندات (أخدوا الهيدر والشريط الجداد بس، وكانوا بالفعل بشكل الكروت من #306)، وصفحات الدخول (بتستخدم نفس مكوّنات دخول الموظفين).
+
 **مؤجّل بطلب منك (27 أكتوبر):** النشر على السيرفر، وتشغيل الحملات فعليًا. القائمة في القسم 5 تحت «Deferred by the owner».
 
 **ليه التعديلات مش ظاهرة عندك؟** النشر على السيرفر **مش تلقائي**: ملف `deploy.yml` بيشتغل يدوي بس (`workflow_dispatch`)، وآخر مرة اشتغل كانت 18 سبتمبر. يعني السيرفر ما خدش أي حاجة من الشغل ده. ولو شغال على جهازك بعد الـ pull، الخطوات في القسم 2c تحت «Running the latest main».
 
-**إزاي تكمّل من أكونت تاني:** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #302 مدموج. **ابدأ بالقسم 2m** (آخر جدول والمهام الجديدة)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
+**إزاي تكمّل من أكونت تاني (آخر تحديث 8 نوفمبر، بعد #372):** افتح جلسة Claude Code على نفس الريبو، وقوله: «اقرأ `docs/HANDOFF.md`». كل الشغل لحد #372 مدموج. **ابدأ بالملخص الأول (فحص الجودة الشامل) والقسم 2q**، ومنهم على `docs/qa/findings.md`. (الكلام اللي بعد كده عن تطبيق العملاء لحد #318؛ ابدأ فيه بالقسم 2o، وفيه آخر جدول وحالة التطبيق)؛ اللي فاضل في القسم 5 (حاجات مفتوحة) وحاجات عليك إنت فوق.
 
 ---
 
@@ -601,7 +630,7 @@ Same method as 2k/2l: one PR per part, a screenshot from a real web build, merge
 **Owner requests not done yet (tasks in the list):**
 1. **FS1 — staff app font size.** The owner finds the text small. Many labels are 10–12.5. Set a readable floor and a shared scale; check at default and the largest system text size.
 2. **CU-0 / CU-1…n — the customer app, page by page,** in the staff app's look (home kit: hero, cards, sheets), with readable fonts and a proper dark theme. The customer app still uses the older strip-and-white-body cards (`InstallmentCard` etc.). Order: home, catalog (projects, units, compare, favourites), my property and contracts, installments and proofs, statement, payments, visits and requests, maintenance, documents, notifications, account and profile, content pages, sign-in. One PR per group; the owner reviews on screen.
-3. **DK1 — the rest of the staff dark theme** (about 100 fixed light colours: `grep -rn "Color(0xFF[EF]" apps/mobile/mobile_staff/lib`).
+3. **DK1 — the rest of the staff dark theme (done in #320, see 2p)** (about 100 fixed light colours: `grep -rn "Color(0xFF[EF]" apps/mobile/mobile_staff/lib`).
 4. **REL1 — release decisions that are the owner's:** the Android `applicationId` (`com.realestate.staff.mobile_staff`, a TODO, immutable after the first Play upload), the iOS bundle id, a release keystore (a release build without `key.properties` is signed with the debug key), the Firebase files (`google-services.json`, `GoogleService-Info.plist`; only `.example` files are in the repo), the app name «Devora Staff», push on a real device. The checklist for the phone is `docs/staff-app-device-test.md`.
 
 **Things learned (so they are not found again):**
@@ -613,6 +642,113 @@ Same method as 2k/2l: one PR per part, a screenshot from a real web build, merge
 - Two GitHub hiccups (a 502 on creating a PR, a rejected first push) were transient; retry.
 
 **Next (owner's order):** DOC1 (this file), FS1, then CU-0 and the customer app group by group, DK1 and REL1 on the side.
+
+---
+
+### 2n. #303–#311 (2026-11-05 → 2026-11-06) — readable text, and the customer app in the staff look
+
+Done by the other account while this one was out of limit; recorded here from the merged PRs.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #303 | Docs | HANDOFF through #302; `docs/staff-app-device-test.md` (the real-device checklist and what the release still needs from outside the code). |
+| #304 | FS1 — staff text size | `lib/app.dart`: a floor of 12 on the smallest text and a 1.1 text scale; about sixty files raised from 10–11.5. |
+| #305 | Customer app: text size + finance hub | The same floor and scale in `mobile_customer/lib/app.dart`; the finance hub as list cards. |
+| #306 | Installments, payments, contracts | `InstallmentCard`, the payments list and the contracts list as list cards in the staff look. |
+| #307 | «وحدتي» | `my_property_screen.dart` as a property card. |
+| #308 | Maintenance | The list, the request page and the new-request form in the staff look, readable on dark. |
+| #309 | Visit requests, notifications | `my_requests_screen.dart` and the notifications page in the staff look, readable on dark. |
+| #310 | Home property card, favourites, profile | The home dashboard's property card, the favourites page and the profile name, readable on dark. |
+| #311 | Reschedule sheet | The reschedule reason is a bottom sheet; readable quick actions on the home card. |
+
+**State of the customer app (checked on screen 2026-11-06, a web build logged in as a demo customer; the file lists are from `git show --stat` of #305–#311):**
+- **In the staff look (band, pills, list cards; readable on dark):** finance hub, installments, payments, contracts list, «وحدتي», maintenance list and new-request form, visit requests, notifications, favourites, home property card, the profile name.
+- **Not touched yet at that point (only the font floor changed), so still the older strip-and-white-body pages. Superseded: #313–#316 redid these, see 2o:**
+  1. **Catalog:** home (guest hero and banners), projects list, units list, project page, unit page, compare (and its empty state), and the unit/project filter sheets.
+  2. **Money detail pages:** contract page, statement («كشف الحساب»), payment page, the installment proof form («إرسال إثبات الدفع»).
+  3. **Requests and forms:** maintenance request page (the new-request form is done), visit request form, information request form.
+  4. **Account:** the profile page (a navy strip over a white card) and its edit form, notification preferences, «المزيد» / the account menu.
+  5. **Other:** the assistant chat, the content pages («من نحن» and the rest of `/pages/:slug`), documents, and sign-in (login, OTP, register, forgot password).
+- **Next:** one PR per group in the order above (the catalog is the most visible), mockup from real data approved first.
+- **QA notes for a new container:** the customer app has no `web/` folder in the repo (`flutter create . --platforms web` makes one, do not commit it); build with `--no-web-resources-cdn` (CanvasKit from gstatic is blocked here); the API's `CORS_ORIGINS` must list the web port; customers have no password, so set one for a demo customer by hand (argon2 hash in `User.passwordHash`) and sign in by e-mail in the app.
+
+**Still open from 2m:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps).
+
+### 2o. #312–#318 (2026-11-06) — the customer app in the staff look, page by page; the admin sidebar
+
+The owner asked for the customer app to look like the staff app. The method: shared pieces first (navigation bar, header, filter), then the content of the pages in groups of about ten; each group's new look was sent to the owner as screenshots from a real web build (logged in as a demo customer), and only after approval went to its own PR.
+
+| PR | Slice | Main points |
+|---|---|---|
+| #312 | Docs | HANDOFF through #311 and the customer app's remaining pages. |
+| #313 | Navbar, header, filter + the catalog | The staff app's floating navy bar (`AppFloatingNav`) on every customer tab; `AppNavHeader` now draws the staff list header (`HomeListHero`), back = `arrow_back_rounded`; one filter sheet (`FilterSheet`) for projects and units. Catalog content: guest home, projects, units (cover cards, pills by city or status), project page and unit page (`AppDetailPage`: cover, price card laid over it, facts, pill tabs, section titles; "units of the project" and "similar units" as vertical card lists), info request and visit request (each step in a card; the visit date and time are picked freely with the system pickers). Also fixes `calendar_test`, which failed every Friday (tomorrow is next week). |
+| #314 | Money and maintenance | Finance hub: figures band from the installments summary and the three services as cards (its own `HomeSummaryCubit` in the router). Maintenance list: figures band, status pills, compact cards; new request: each step in a card. |
+| #315 | Account area | Notifications (hero subtitle, pills all/unread/finance/maintenance, grouped by day, tinted icons), the assistant (welcome with suggestion cards, staff bubbles, pill composer), notification preferences, profile. Bug fix: the favourites list failed on a project name that the API flattens to a string (`favorite_dto.dart`, tests added). |
+| #316 | Account hub | The account page on the staff profile's structure (hero with the person, shortcuts, sections of rows, logout); «وحدتي» has a figures band; the company pages are a profile section (account and the guest «المزيد»). |
+| #317 | Docs | HANDOFF after #316. |
+| #318 | Admin sidebar (`apps/web-admin`) | `NavSections` is an accordion: one section open at a time (the page's own section is always the open one; the last choice is kept in `localStorage` key `sidebar.openSection` when the page has no section). Each header has an icon tile (`SECTION_ICONS` in `lib/nav.ts`), the page count and the chevron; a closed section with a waiting badge shows a gold dot. `NavLink` rows are 36px with the item's icon, no rings, and a gold bar on the guide line for the active page. Closed sections stay in the DOM (`visibility: hidden` after the fold) so the e2e checks that count nav links keep working. Replaces the U5 "text + ring, no icons" rule for the sidebar (owner-approved). |
+
+**Shared kit (now in `packages/core/lib/src/kit/`, exported by `core.dart`):** `home_kit.dart` (`HomeListHero`, `HomeHeroButton`, `HomeSearchField`, `HomePills`, `HomeBand`, `HomeSection` with a `horizontal` space, `HomeActions`, `HomeOverlap`, `homeCard`, `homeDisplay`, `homeCompact`…), `filter_kit.dart`, `catalog_kit.dart` (`CatalogPageHero`, `CatalogCover`, `CatalogBadge`), `profile_kit.dart` (`ProfileItem`, `ProfileSection`, `ProfileLogout`) and `widgets/app_floating_nav.dart`. The staff app keeps only what needs its own pieces: `HomeHero` (the notifications bell) and `ProfileHero` (its router). Staff files no longer import these kits; they get them from `core`.
+
+**State of the customer app:** every page has the new navigation bar and header; the content of the catalog, finance hub, maintenance, notifications, assistant, preferences, profile, favourites, account hub, «وحدتي» and the company pages was redone. Not redesigned individually (they only got the header and bar, and were already list-card pages from #306 or are shared with the staff app): contract page, statement, payment page, installment proof form, maintenance request page, documents, and sign-in / register / forgot password (shared auth widgets).
+
+**Known small things:**
+- The maintenance figures band repeats the same caption («طلبات الخدمة») under each figure.
+- Project and unit cards have no "starting from" or availability bar: the customer API does not send them.
+- The demo data has one project with the city «Riyadh» next to «الرياض», so the city pills show both.
+- The compare page was not screenshotted with two units selected.
+
+**QA notes for a new container (extends 2n):** building the web app (`flutter build web`) while the API runs can kill the API (memory); start the API again afterwards (`pnpm exec nest start` in `apps/api`). To see lists with data, the demo customer (client2) had maintenance requests, favourites and a visit request inserted by hand in the local database (not in the seed). `psql` needs the `?schema=` part of `DATABASE_URL` removed. While a PR is open, keep unapproved work out of its branch (`git stash`), and reset the branch to `origin/main` after each squash merge.
+
+**Still open:** DK1 (about 100 fixed light colours in the staff app), REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`).
+
+---
+
+### 2p. #320–#321 (2026-11-06) — staff dark theme (DK1); calmer admin sidebar and ring
+
+| PR | Slice | Main points |
+|---|---|---|
+| #320 | DK1: staff dark theme | The fixed light colours of the staff app now follow the theme. New helpers in `packages/core/lib/src/kit/home_kit.dart`: `homeField` (input fill), `homeSelected` (chosen-option card), `homeLine` (hairlines), `homeSheet` (sheet body), `homeWarnFill` / `homeOkFill` / `homeErrFill` (status fills), next to the existing `homeTint` / `homeTintBorder` / `homeIsDark`. Light mode is unchanged. Covered: unread notification cards, reservation and contract inputs, chosen-option cards, funnel and progress tracks, mini stat tiles, filter segments, pale gold icon tiles, team-performance chips, the assistant notice. Rule for new code: never write `Color(0xFFF…)` or `Colors.white` as a fill; use these helpers or `context.appColors`. |
+| #321 | Admin sidebar + ring (`apps/web-admin`) | Sidebar: no page counters, no box around the open section, no heavy focus ring, no wash behind the active link (gold text and the gold bar only), no tiles behind section icons. `PremiumMetricStrip` ring metrics (`ring`) draw a larger ring with the value inside it and the note beside it. Refines the #318 sidebar (owner-approved). |
+
+**Still open:** REL1 (release decisions that are the owner's), the admin's and manager's «أهدافي» / «مستحقاتي» scope (2l Known gaps), the server deploy (deferred by the owner), and the real-device checklist (`docs/staff-app-device-test.md`). The owner may later ask to drop the phone / WhatsApp buttons from the dashboard's «متابعات اليوم» (not done).
+
+---
+
+### 2q. QA program (2026-11-06 → 2026-11-08, #322–#372)
+
+**Documents:** `docs/QA_PLAN.md` (scope, roles, phases, exit criteria), `docs/qa/findings.md` (one row per finding F-001…F-077, with the run logs, SQL witnesses and the decisions). Read the end of `findings.md` first: it has the latest runs (broker pay, marketing, notifications, content, printed documents) and the decisions of 2026-11-08.
+
+**What was merged (by theme):**
+
+| Theme | PRs |
+|---|---|
+| Plans, financial report, branding per company | #323, #326–#331, #338–#339, #344, #349, #363 (English public name `displayNameEn`) |
+| Reservations, payments, visits, brokers | #332–#334, #336, #341–#343, #346–#347, #350–#355 |
+| English admin and English public site | #356–#362 (admin screens hydrate cleanly; the site asks the API for English; formatting, cards, account area, page titles) |
+| Broker pay | #364 (a PROCESSING payout can be cancelled when the bank rejects it), #365 (periods `YYYY-MM`) |
+| Dates and amounts | #366, #369 (`isCalendarDay`: `2026-02-30` is refused in campaigns, spend, customer records, migration, lead/ledger filters, `reportRange`), #368 (amount in words: «مائتا ألف», cents rounded first) |
+| Notifications, content, flags | #367 (template needs a catalogue code, non-empty text), #370 (article slug/text/cover), #371 (`BooleanStringsPipe`: `?flag=false` was read as true; missing template → 404), #372 (all-sales broadcast includes managers; reservation form says who the sale is recorded under) |
+
+**Rules learned (apply them):**
+- Every fix is its own small PR with a test that fails without it; merge when CI is fully green on the current head (use the full 40-char `expectedHeadSha`).
+- The global `ValidationPipe` converts implicitly; booleans now go through `BooleanStringsPipe` first (`apps/api/src/common/pipes/boolean-strings.pipe.ts`). Dates: use `@IsCalendarDay()` / `isCalendarDay()` (`src/common/validators/calendar-day.ts`), never a bare `YYYY-MM-DD` regex.
+- A bonus adjustment (price change after payment) is linked by `adjustsEntryId`, not by `contractId`; query accordingly.
+- A reservation's `salesId` is required: an admin who books without choosing a rep is the owner, and the sales bonus goes to the admin. Changing that means touching about 11 e2e/security specs.
+- Web-admin Playwright specs that import only `src/lib/*` are pure tests; running them locally needs the web server (slow here), so CI runs them. Check such logic with `tsx` locally (`apps/api/node_modules/.bin/tsx`).
+
+**How to bring up the local stack (the container restarts often; the API dies from time to time):**
+1. `pg_ctlcluster 16 main start` (if not online); `redis-server --daemonize yes` (if `redis-cli ping` fails).
+2. API: `cd apps/api && pnpm exec nest start` (port 4000, wait until `curl localhost:4000/v1/auth/login` answers). Web admin: `cd apps/web-admin && pnpm exec next dev -p 3001`. Public site: `cd apps/web-public && E2E_TENANT_BYPASS_SLUG=default pnpm exec next dev -p 3002` (without the bypass every page reads «not available» in dev because the host is not a company host). Storage emulator: a moto S3 server on :9000 with buckets `real-estate-media` and `real-estate-private` (it keeps objects in memory, so uploaded logos vanish on restart: not a defect, F-021).
+3. `psql` needs `DATABASE_URL` without the `?schema=` part. Login is rate limited (429 after a few attempts: wait a minute; do not loop logins).
+4. To act as a company admin in a scratch database without knowing its password, set an argon2 hash in `User.passwordHash` (`node -e "require('argon2').hash('…').then(console.log)"` from `apps/api`). Use passwords only inline in the shell; never write them to a file.
+5. Staff API login is `POST /v1/auth/login-staff` with `{slug, email, password}` and the header `X-Tenant-Slug`. Money checks: always compare an API result with SQL.
+
+**Clean start (phase 0):** drop and recreate the database, `pnpm db:deploy`, `pnpm db:schema-check` (0), then `PLATFORM_ADMIN_EMAIL=… PLATFORM_ADMIN_PASSWORD=<12+ chars> pnpm --filter @rep/api prisma:seed:platform`. After that everything is made through the product: the super admin (UI at `/super-admin/login`) creates company A (slug `default` makes the local site and apps find it), the company admin sets up branding, projects → phases → buildings → units, plans, users of every role, then the master cycle.
+
+**Master cycle to repeat (third run, from an empty database):** lead → visit → reservation (booking payment confirmed) → conversion to a contract → **the customer signs the contract himself** (not yet tested) → down payment and instalments with proofs (reject one, approve one) → a **discount that needs approval** (not yet tested) → overdue and late fee → maintenance → broker path (register, activate, grant, reserve, commission, payout) → cancellation with refund and clawback → reconciliation against SQL (gross collected − refunds = net, dashboard `netCollected`). Log every finding as F-078+ in `findings.md`.
+
+**Still open or the owner's:** F-023 (accepted, Low); real devices, real storage, push and e-mail (cannot be done from the cloud); the production deploy and the owner tasks in section 5.
 
 ---
 

@@ -1,8 +1,6 @@
-import 'package:core/core.dart';
+import '../../core.dart';
 import 'package:flutter/material.dart';
 
-import '../../catalog/kit/catalog_kit.dart';
-import 'home_kit.dart';
 
 /// The filter sheet every list uses (owner-approved design, 2026-11-04):
 /// a title with how many filters are on and a close button, titled
@@ -47,8 +45,8 @@ class FilterSheet extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.88),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFFBF7F0),
+        decoration: BoxDecoration(
+          color: homeSheet(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -57,7 +55,7 @@ class FilterSheet extends StatelessWidget {
               width: 40,
               height: 4,
               margin: const EdgeInsets.only(top: 10, bottom: 10),
-              decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)),
+              decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
             ),
           ),
           Padding(
@@ -68,12 +66,12 @@ class FilterSheet extends StatelessWidget {
                   Text(title, style: homeDisplay(19, colors.inkStrong)),
                   Text(l10n.fsActiveN(active),
                       key: const Key('filter-active'),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
               Material(
-                color: Colors.white,
-                shape: const CircleBorder(side: BorderSide(color: Color(0xFFECE4D6))),
+                color: homeField(context),
+                shape: CircleBorder(side: BorderSide(color: homeLine(context))),
                 child: InkWell(
                   key: const Key('filter-close'),
                   customBorder: const CircleBorder(),
@@ -91,7 +89,7 @@ class FilterSheet extends StatelessWidget {
           ),
           Container(
             padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
-            decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFEFE8DC)))),
+            decoration: BoxDecoration(border: Border(top: BorderSide(color: homeLine(context)))),
             child: Row(children: [
               Expanded(
                 child: OutlinedButton(
@@ -100,7 +98,7 @@ class FilterSheet extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                     foregroundColor: colors.inkStrong,
-                    side: const BorderSide(color: Color(0xFFD9D0C2), width: 1.5),
+                    side: BorderSide(color: homeLine(context), width: 1.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                   ),
@@ -197,10 +195,10 @@ class FilterTiles<T> extends StatelessWidget {
                 opacity: o.empty && !on ? 0.45 : 1,
                 child: Stack(clipBehavior: Clip.none, children: [
                   Material(
-                    color: on ? const Color(0xFFFFFCF5) : Colors.white,
+                    color: on ? homeSelected(context) : homeField(context),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
-                      side: on ? const BorderSide(color: AppPalette.navy, width: 1.6) : const BorderSide(color: Color(0xFFECE4D6)),
+                      side: on ? BorderSide(color: AppPalette.navy, width: 1.6) : BorderSide(color: homeLine(context)),
                     ),
                     child: InkWell(
                       key: Key('$keyPrefix-${o.value ?? 'all'}'),
@@ -234,8 +232,8 @@ class FilterTiles<T> extends StatelessWidget {
                       child: Container(
                         width: 20,
                         height: 20,
-                        decoration: const BoxDecoration(color: AppPalette.navy, shape: BoxShape.circle),
-                        child: const Icon(Icons.check_rounded, size: 13, color: AppPalette.gold300),
+                        decoration: BoxDecoration(color: AppPalette.navy, shape: BoxShape.circle),
+                        child: Icon(Icons.check_rounded, size: 13, color: AppPalette.gold300),
                       ),
                     ),
                 ]),
@@ -260,7 +258,7 @@ class FilterSegments<T> extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0xFFEFE8DC), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
         for (final (i, o) in options.indexed) ...[
           if (i > 0) const SizedBox(width: 4),
@@ -273,9 +271,9 @@ class FilterSegments<T> extends StatelessWidget {
                 duration: const Duration(milliseconds: 160),
                 padding: EdgeInsets.symmetric(vertical: o.sub == null ? 10 : 7),
                 decoration: BoxDecoration(
-                  color: o.value == selected ? Colors.white : Colors.transparent,
+                  color: o.value == selected ? (homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.22) : Colors.white) : Colors.transparent,
                   borderRadius: BorderRadius.circular(11),
-                  boxShadow: o.value == selected ? const [BoxShadow(color: Color(0x1F0F1E33), blurRadius: 8, offset: Offset(0, 2))] : null,
+                  boxShadow: o.value == selected && !homeIsDark(context) ? const [BoxShadow(color: Color(0x1F0F1E33), blurRadius: 8, offset: Offset(0, 2))] : null,
                 ),
                 child: Column(children: [
                   Text(o.label,
@@ -284,7 +282,7 @@ class FilterSegments<T> extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
-                        color: o.value == selected ? colors.inkStrong : const Color(0xFF6B6256),
+                        color: o.value == selected ? (homeIsDark(context) ? AppPalette.gold300 : colors.inkStrong) : (homeIsDark(context) ? colors.inkMuted : const Color(0xFF6B6256)),
                       )),
                   if (o.sub != null) Text(o.sub!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ]),
@@ -312,12 +310,12 @@ class FilterRadioList<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFECE4D6))),
+      color: homeField(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: homeLine(context))),
       clipBehavior: Clip.antiAlias,
       child: Column(children: [
         for (final (i, o) in options.indexed) ...[
-          if (i > 0) const Divider(height: 1, color: Color(0xFFF1EBE0)),
+          if (i > 0) Divider(height: 1, color: homeLine(context)),
           InkWell(
             key: Key('$keyPrefix-${o.value ?? 'all'}'),
             onTap: () => onSelect(o.value),
@@ -332,7 +330,7 @@ class FilterRadioList<T> extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: o.value == selected
                         ? Border.all(color: AppPalette.navy, width: 6)
-                        : Border.all(color: const Color(0xFFD9D0C2), width: 2),
+                        : Border.all(color: homeLine(context), width: 2),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -385,7 +383,7 @@ class FilterPriceRange extends StatelessWidget {
         ]);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFECE4D6))),
+      decoration: BoxDecoration(color: homeField(context), borderRadius: BorderRadius.circular(16), border: Border.all(color: homeLine(context))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           end(l10n.cuPriceFrom, money(lo), CrossAxisAlignment.start),
@@ -395,7 +393,7 @@ class FilterPriceRange extends StatelessWidget {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: AppPalette.gold400,
-            inactiveTrackColor: const Color(0xFFEFE8DC),
+            inactiveTrackColor: homeLine(context),
             thumbColor: Colors.white,
             overlayColor: AppPalette.gold400.withValues(alpha: 0.12),
             trackHeight: 6,
@@ -415,8 +413,8 @@ class FilterPriceRange extends StatelessWidget {
             Builder(builder: (context) {
               final on = from == a && to == b;
               return Material(
-                color: on ? AppPalette.navy : Colors.white,
-                shape: StadiumBorder(side: BorderSide(color: on ? AppPalette.navy : const Color(0xFFECE4D6))),
+                color: on ? AppPalette.navy : homeField(context),
+                shape: StadiumBorder(side: BorderSide(color: on ? AppPalette.navy : homeLine(context))),
                 child: InkWell(
                   key: Key('filter-price-preset-$i'),
                   customBorder: const StadiumBorder(),

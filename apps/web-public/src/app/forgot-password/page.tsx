@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -7,11 +7,9 @@ import { getResolvedTenant } from '@/lib/tenant';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { ForgotPasswordCard } from '@/components/auth/ForgotPasswordCard';
 
-export const metadata = buildMetadata({
-  title: 'نسيت كلمة المرور',
-  description: 'أدخل بريدك الإلكتروني وسنرسل إليك رابط إعادة تعيين كلمة المرور.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('forgotPassword', { robots: { index: false, follow: false } });
+}
 
 export default async function ForgotPasswordPage() {
   const tenant = await getResolvedTenant();
@@ -26,9 +24,10 @@ export default async function ForgotPasswordPage() {
       subtitle={m.auth.forgotPassword.subtitle}
       switchPrompt={m.auth.forgotPassword.backPrompt}
       switchLabel={m.auth.forgotPassword.backLabel}
+      locale={locale}
       switchHref={routes.login}
     >
-      <ForgotPasswordCard />
+      <ForgotPasswordCard locale={locale} />
     </AuthShell>
   );
 }

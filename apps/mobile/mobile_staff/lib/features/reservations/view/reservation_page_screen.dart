@@ -5,11 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/reservation_status_label.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contract_page_screen.dart' show ContractParty, KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
-import '../../dashboard/home_kit/filter_kit.dart' show FilterSegments, FilterOption;
 import '../../e_sign/presentation/signature_section.dart';
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;
@@ -224,13 +221,13 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                           decoration: InputDecoration(
                             hintText: l10n.leadNoteHint,
                             filled: true,
-                            fillColor: Colors.white,
+                            fillColor: homeField(context),
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: context.appColors.hairline)),
                             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: context.appColors.hairline)),
                             suffixIcon: IconButton(
                               key: const Key('reservation-note-send'),
-                              icon: const Icon(Icons.send_rounded, color: AppPalette.gold600),
+                              icon: Icon(Icons.send_rounded, color: AppPalette.gold600),
                               onPressed: _busy ? null : _addNote,
                             ),
                           ),
@@ -315,7 +312,7 @@ class ReservationBookingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -356,8 +353,8 @@ class ReservationBookingCard extends StatelessWidget {
                             ? catalogAvailable
                             : i == now
                                 ? AppPalette.gold400
-                                : const Color(0xFFEFE8DC),
-                    boxShadow: i == now ? const [BoxShadow(color: Color(0xFFF6E9C9), spreadRadius: 4)] : null,
+                                : homeLine(context),
+                    boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
                   ),
                   child: Icon(
                     i == 3 && closedStep != null ? Icons.close_rounded : (done ? Icons.check_rounded : Icons.more_horiz_rounded),
@@ -552,14 +549,14 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     final lang = Localizations.localeOf(context).languageCode;
     return Container(
       padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + MediaQuery.paddingOf(context).bottom),
-      decoration: const BoxDecoration(color: Color(0xFFFBF7F0), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      decoration: BoxDecoration(color: homeSheet(context), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Center(
           child: Container(
             width: 40,
             height: 4,
             margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)),
+            decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
           ),
         ),
         Text(l10n.rvRecordPayment, style: homeDisplay(19, colors.inkStrong)),
@@ -567,7 +564,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         Text(l10n.rvPayDate, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkMuted)),
         const SizedBox(height: 6),
         Material(
-          color: Colors.white,
+          color: homeField(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: colors.hairline)),
           child: ListTile(
             key: const Key('reservation-pay-date'),

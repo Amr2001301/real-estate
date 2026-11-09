@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../common/visit_status_label.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/visit.dart';
 import '../cubit/visit_detail_cubit.dart';
 
@@ -511,7 +510,7 @@ class _InfoRow extends StatelessWidget {
         Container(
           width: 38,
           height: 38,
-          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(12)),
           child: Icon(icon, size: 19, color: AppPalette.gold600),
         ),
         const SizedBox(width: 12),
@@ -662,7 +661,7 @@ class _CustomerRequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.format_quote_rounded,
+              Icon(Icons.format_quote_rounded,
                   size: 15, color: AppPalette.gold500),
               const SizedBox(width: 6),
               Text(
@@ -779,7 +778,7 @@ class _FeedbackTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg, vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [AppPalette.gold300, AppPalette.gold500],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -1036,7 +1035,7 @@ class _DarkContactButtons extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [AppPalette.gold300, AppPalette.gold500],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

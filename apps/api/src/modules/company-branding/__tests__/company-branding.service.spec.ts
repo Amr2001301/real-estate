@@ -26,6 +26,7 @@ function makeCompanyRow(overrides: Record<string, unknown> = {}) {
     slug: 'acme',
     name: 'Acme Real Estate',
     displayName: 'Acme',
+    displayNameEn: 'Acme Developments',
     logoUrl: 'https://cdn.example.com/logo.png',
     faviconUrl: null,
     ogImageUrl: null,
@@ -101,6 +102,8 @@ describe('CompanyBrandingService.getBySlug', () => {
     expect(result!.slug).toBe('acme');
     expect(result!.name).toBe('Acme Real Estate');
     expect(result!.displayName).toBe('Acme');
+    // F-067: the English site's name travels with the branding.
+    expect(result!.displayNameEn).toBe('Acme Developments');
     expect(result!.logoUrl).toBe('https://cdn.example.com/logo.png');
     expect(result!.primaryColor).toBe('#1E3A5F');
     expect(result!.tagline).toEqual({ ar: 'شعار الشركة', en: 'Company tagline' });

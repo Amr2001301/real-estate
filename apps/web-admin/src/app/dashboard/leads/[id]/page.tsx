@@ -40,6 +40,7 @@ import { salesActorLabel } from '@/lib/sales-actor';
 import { PremiumDetailLayout, PremiumPanel, PremiumEmptyNote } from '@/components/premium';
 import { cn } from '@/lib/cn';
 import { EntityLink } from '@/components/entity-link';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -73,10 +74,7 @@ const STAGE_DOT: Record<LeadStage, string> = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '؟';
-  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
-  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
+  return sharedInitials(name, { single: 1, fallback: '؟' });
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────

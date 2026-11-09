@@ -161,7 +161,7 @@ class _SplashScreenState extends State<SplashScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0B1726),
+        backgroundColor: AppPalette.navyDeep,
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -247,14 +247,14 @@ class _BottomOverlay extends StatelessWidget {
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.only(top: 130, bottom: bottomPad + 36),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
               Color(0x00000000),   // fully transparent
               Color(0xCC0B1726),   // ~80 % navy
-              Color(0xFF0B1726),   // fully opaque navy
+              AppPalette.navyDeep,   // fully opaque navy
             ],
             stops: [0.0, 0.5, 1.0],
           ),
@@ -278,7 +278,7 @@ class _Wordmark extends StatelessWidget {
           width: 40,
           height: 2,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold300, AppPalette.gold500],
             ),
             borderRadius: BorderRadius.circular(999),

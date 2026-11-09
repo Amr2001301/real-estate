@@ -65,6 +65,28 @@ export function formatCurrency(
   }).format(n);
 }
 
+/**
+ * A single payment's amount, exact to the piastre: 37,380.95 stays 37,380.95
+ * (formatCurrency rounds to whole pounds, which is right for totals but makes a
+ * payment read differently from the schedule it settles). Whole amounts show no
+ * decimals.
+ */
+export function formatExactCurrency(
+  value: number | string | null | undefined,
+  currency = 'SAR',
+  locale: Locale = 'ar',
+): string {
+  if (value === null || value === undefined) return '—';
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (Number.isNaN(n)) return '—';
+  return new Intl.NumberFormat(INTL[locale], {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
 export function formatDate(
   value: string | Date | null | undefined,
   locale: Locale = 'ar',

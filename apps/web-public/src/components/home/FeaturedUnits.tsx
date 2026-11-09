@@ -53,7 +53,7 @@ export function FeaturedUnits({
         ) : (
           <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={90}>
             {units.map((unit) => (
-              <UnitCard key={unit.id} unit={unit} />
+              <UnitCard key={unit.id} unit={unit} locale={locale} />
             ))}
           </Stagger>
         )}

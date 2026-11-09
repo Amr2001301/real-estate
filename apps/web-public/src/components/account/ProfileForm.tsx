@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -33,6 +35,7 @@ function PasswordInput({
   invalid,
   ...rest
 }: React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }) {
+  const t = accountT(useSiteLocale()).profile;
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
@@ -43,7 +46,7 @@ function PasswordInput({
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        aria-label={show ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+        aria-label={show ? t.hidePassword : t.showPassword}
         className="absolute inset-y-0 left-3 flex items-center text-ink-muted/70 transition-colors hover:text-ink-strong"
       >
         {show ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
@@ -72,6 +75,7 @@ export function ProfileForm({
   initialPhone: string;
   initialAvatarUrl: string | null;
 }) {
+  const t = accountT(useSiteLocale()).profile;
   const [fullName, setFullName] = useState(initialFullName);
   const [phone, setPhone] = useState(initialPhone);
   // The current (confirmed) number, and the code step for a new one.
@@ -109,12 +113,12 @@ export function ProfileForm({
 
     if (!AVATAR_TYPES.includes(file.type)) {
       setAvatarStatus('error');
-      setAvatarError('صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP.');
+      setAvatarError(t.badType);
       return;
     }
     if (file.size > AVATAR_MAX_BYTES) {
       setAvatarStatus('error');
-      setAvatarError('حجم الصورة كبير — الحد الأقصى ٥ ميجابايت.');
+      setAvatarError(t.tooBig);
       return;
     }
 
@@ -147,9 +151,9 @@ export function ProfileForm({
 
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (fullName.trim().length < 2) e.fullName = 'يرجى إدخال الاسم الكامل.';
+    if (fullName.trim().length < 2) e.fullName = t.fullNameRequired;
     if (!PHONE_RE.test(phone.trim().replace(/[\s-]/g, '')))
-      e.phone = 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX';
+      e.phone = t.phoneInvalid;
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -191,9 +195,9 @@ export function ProfileForm({
 
   async function onChangePassword() {
     const e: Record<string, string> = {};
-    if (!currentPassword) e.currentPassword = 'يرجى إدخال كلمة المرور الحالية.';
-    if (newPassword.length < 8) e.newPassword = 'كلمة المرور الجديدة يجب ألا تقل عن ٨ أحرف.';
-    if (confirmPassword !== newPassword) e.confirmPassword = 'كلمتا المرور غير متطابقتين.';
+    if (!currentPassword) e.currentPassword = t.currentRequired;
+    if (newPassword.length < 8) e.newPassword = t.newMin;
+    if (confirmPassword !== newPassword) e.confirmPassword = t.mismatch;
     setPwErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -240,7 +244,7 @@ export function ProfileForm({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={avatarStatus === 'uploading'}
-            aria-label="تغيير الصورة"
+            aria-label={t.changePhoto}
             className="absolute -bottom-1 -left-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-300 to-gold-500 text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)] ring-2 ring-surface transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-8px_rgba(200,162,75,0.7)] disabled:opacity-60"
           >
             <Camera className="h-4 w-4" aria-hidden />
@@ -257,17 +261,17 @@ export function ProfileForm({
             className="!rounded-full"
           >
             <Camera className="h-4 w-4" aria-hidden />
-            {avatarStatus === 'uploading' ? 'جارٍ الرفع...' : 'تغيير الصورة'}
+            {avatarStatus === 'uploading' ? t.uploading : t.changePhoto}
           </Button>
           {avatarStatus === 'success' ? (
             <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success">
               <Check className="h-3.5 w-3.5" aria-hidden />
-              تم تحديث الصورة
+              {t.photoUpdated}
             </p>
           ) : avatarStatus === 'error' ? (
             <p className="mt-2 text-xs font-medium text-error">{avatarError}</p>
           ) : (
-            <p className="mt-2 text-xs text-ink-muted">PNG أو JPG أو WEBP، بحد أقصى ٥ ميجابايت.</p>
+            <p className="mt-2 text-xs text-ink-muted">{t.photoHint}</p>
           )}
         </div>
 
@@ -277,7 +281,7 @@ export function ProfileForm({
       <form onSubmit={onSubmit} noValidate className="space-y-6 border-t border-hairline pt-7">
         {/* ── Credentials grid ── */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <Field label="الاسم الكامل" required>
+          <Field label={t.fullName} required>
             <Input
               value={fullName}
               onChange={(e) => {
@@ -285,13 +289,13 @@ export function ProfileForm({
                 if (status !== 'idle') setStatus('idle');
               }}
               invalid={!!errors.fullName}
-              placeholder="مثال: محمد الأحمد"
+              placeholder={t.fullNameExample}
               autoComplete="name"
             />
             <FormError>{errors.fullName}</FormError>
           </Field>
 
-          <Field label="رقم الجوال" required>
+          <Field label={t.phone} required>
             <Input
               value={phone}
               onChange={(e) => {
@@ -311,11 +315,11 @@ export function ProfileForm({
         {codeSent && (
           <div className="space-y-3 rounded-2xl border border-gold-300 bg-gold-50/60 p-4">
             <p className="text-sm text-ink-strong">
-              أرسلنا رمز تحقق إلى الرقم الجديد <span dir="ltr">{phone.trim()}</span>. يبقى رقمك الحالي{' '}
-              <span dir="ltr">{savedPhone || '—'}</span> حتى تُدخل الرمز.
+              {t.codeSentBefore} <span dir="ltr">{phone.trim()}</span>. {t.codeSentMiddle}{' '}
+              <span dir="ltr">{savedPhone || '—'}</span> {t.codeSentAfter}
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <Field label="رمز التحقق" required>
+              <Field label={t.codeLabel} required>
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
@@ -335,12 +339,12 @@ export function ProfileForm({
                 disabled={codeStatus === 'submitting' || code.trim().length !== 6}
                 className="sm:mt-7"
               >
-                {codeStatus === 'submitting' ? 'جارٍ التأكيد...' : 'تأكيد الرقم'}
+                {codeStatus === 'submitting' ? t.confirming : t.confirmPhone}
               </Button>
             </div>
           </div>
         )}
-        {codeStatus === 'success' && <InlineNotice tone="success">تم تغيير رقم الجوال بنجاح</InlineNotice>}
+        {codeStatus === 'success' && <InlineNotice tone="success">{t.phoneChanged}</InlineNotice>}
 
         {/* ── Password panel (collapsible, fully wired) ── */}
         <div className="rounded-2xl border border-hairline bg-surface-soft/40">
@@ -354,8 +358,8 @@ export function ProfileForm({
               <KeyRound className="h-4 w-4" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-ink-strong">تغيير كلمة المرور</span>
-              <span className="block text-xs text-ink-muted">حدّث كلمة المرور لتأمين حسابك.</span>
+              <span className="block text-sm font-semibold text-ink-strong">{t.changePassword}</span>
+              <span className="block text-xs text-ink-muted">{t.changePasswordSub}</span>
             </span>
             <ChevronDown
               className={cn('h-5 w-5 shrink-0 text-ink-muted transition-transform duration-200', showPassword && 'rotate-180')}
@@ -366,7 +370,7 @@ export function ProfileForm({
           {showPassword && (
             <div className="space-y-4 px-4 pb-4 pt-1">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <Field label="كلمة المرور الحالية" className="md:col-span-2">
+                <Field label={t.currentPassword} className="md:col-span-2">
                   <PasswordInput
                     placeholder="••••••••"
                     autoComplete="current-password"
@@ -379,7 +383,7 @@ export function ProfileForm({
                   />
                   <FormError>{pwErrors.currentPassword}</FormError>
                 </Field>
-                <Field label="كلمة المرور الجديدة">
+                <Field label={t.newPassword}>
                   <PasswordInput
                     placeholder="••••••••"
                     autoComplete="new-password"
@@ -392,7 +396,7 @@ export function ProfileForm({
                   />
                   <FormError>{pwErrors.newPassword}</FormError>
                 </Field>
-                <Field label="تأكيد كلمة المرور">
+                <Field label={t.confirmPassword}>
                   <PasswordInput
                     placeholder="••••••••"
                     autoComplete="new-password"
@@ -408,7 +412,7 @@ export function ProfileForm({
               </div>
 
               {pwStatus === 'success' && (
-                <InlineNotice tone="success">تم تغيير كلمة المرور بنجاح</InlineNotice>
+                <InlineNotice tone="success">{t.passwordChanged}</InlineNotice>
               )}
               {pwStatus === 'error' && pwTopError && <InlineNotice tone="error">{pwTopError}</InlineNotice>}
 
@@ -420,25 +424,25 @@ export function ProfileForm({
                   onClick={onChangePassword}
                   disabled={pwStatus === 'submitting'}
                 >
-                  {pwStatus === 'submitting' ? 'جارٍ التحديث...' : 'تحديث كلمة المرور'}
+                  {pwStatus === 'submitting' ? t.updating : t.updatePassword}
                 </Button>
               </div>
             </div>
           )}
         </div>
 
-        {status === 'success' && <InlineNotice tone="success">تم تحديث بياناتك بنجاح</InlineNotice>}
+        {status === 'success' && <InlineNotice tone="success">{t.saved}</InlineNotice>}
         {status === 'error' && topError && <InlineNotice tone="error">{topError}</InlineNotice>}
 
         {/* ── Save: full-width on mobile, end-aligned on desktop ── */}
         <div className="flex flex-col-reverse gap-3 border-t border-hairline pt-6 sm:flex-row sm:items-center sm:justify-end">
           <Button type="submit" size="md" disabled={status === 'submitting'} className="w-full sm:w-auto">
             {status === 'submitting' ? (
-              'جارٍ الحفظ...'
+              t.saving
             ) : (
               <>
                 <Save className="h-5 w-5" aria-hidden />
-                حفظ التغييرات
+                {t.save}
               </>
             )}
           </Button>

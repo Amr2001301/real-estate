@@ -1345,6 +1345,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceUnitRequired => 'Please select a unit.';
 
   @override
+  String get maintenanceBeforeHandover =>
+      'Maintenance requests open once your unit is handed over. We will let you know when it is.';
+
+  @override
   String get maintenanceNoUnitsTitle => 'No units';
 
   @override
@@ -9464,4 +9468,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brkConfirmHint => 'Do you want to do this?';
+
+  @override
+  String ctProjectsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n projects',
+      one: '1 project',
+      zero: 'No projects',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ctUnitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n units',
+      one: '1 unit',
+      zero: 'No units',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get financeInstallmentsPaid => 'paid';
+
+  @override
+  String get financeOverdue => 'Overdue';
+
+  @override
+  String get financeAllOnTime => 'None overdue';
+
+  @override
+  String get financeNeedsPayment => 'Needs payment';
+
+  @override
+  String get financeNextInstallment => 'Next installment';
+
+  @override
+  String get financeServices => 'Financial services';
+
+  @override
+  String get myPropertyUnitsLabel => 'My units';
+
+  @override
+  String get myPropertyOwnedLabel => 'Owned';
+
+  @override
+  String get myPropertyOwnedHint => 'Signed contract';
+
+  @override
+  String get myPropertyWithPlanHint => 'On a plan';
 }

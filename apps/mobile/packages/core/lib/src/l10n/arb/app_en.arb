@@ -473,6 +473,7 @@
   "maintenanceNoAttachments": "No photos or documents have been attached yet.",
   "maintenanceUnitLabel": "Which unit?",
   "maintenanceUnitRequired": "Please select a unit.",
+  "maintenanceBeforeHandover": "Maintenance requests open once your unit is handed over. We will let you know when it is.",
   "maintenanceNoUnitsTitle": "No units",
   "maintenanceNoUnitsMessage": "You don't have any units to file a request against yet.",
   "maintenanceCategoryLabel": "What needs attention?",
@@ -3138,5 +3139,19 @@
   "frCompare": "Comparison",
   "frCompareOff": "No comparison",
   "frCompareOn": "Against the period before",
-  "brkConfirmHint": "Do you want to do this?"
+  "brkConfirmHint": "Do you want to do this?",
+  "ctProjectsCountN": "{n, plural, =0{No projects} =1{1 project} other{{n} projects}}",
+  "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "ctUnitsCountN": "{n, plural, =0{No units} =1{1 unit} other{{n} units}}",
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "financeInstallmentsPaid": "paid",
+  "financeOverdue": "Overdue",
+  "financeAllOnTime": "None overdue",
+  "financeNeedsPayment": "Needs payment",
+  "financeNextInstallment": "Next installment",
+  "financeServices": "Financial services",
+  "myPropertyUnitsLabel": "My units",
+  "myPropertyOwnedLabel": "Owned",
+  "myPropertyOwnedHint": "Signed contract",
+  "myPropertyWithPlanHint": "On a plan"
 }

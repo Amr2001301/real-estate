@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { pageMeta } from '@/lib/page-meta';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit, PublicProjectDetail } from '@/lib/api-types';
@@ -13,12 +13,9 @@ import { PageHero } from '@/components/layout/PageHero';
 import { ContactForm, type ContactContext } from '@/components/contact/ContactForm';
 import { ContactSupport } from '@/components/contact/ContactSupport';
 
-export const metadata = buildMetadata({
-  path: '/contact',
-  title: 'تواصل معنا',
-  description:
-    'تواصل مع فريق ديفورا لطلب المعلومات أو حجز زيارة — نحن هنا لمساعدتك في اختيار المشروع أو الوحدة الأنسب لاحتياجك.',
-});
+export async function generateMetadata() {
+  return pageMeta('contact', { path: '/contact' });
+}
 
 const REVALIDATE = 60;
 
@@ -34,7 +31,7 @@ function firstStr(v: string | string[] | undefined): string {
  */
 async function resolveContext(projectId: string, unitId: string, tenantSlug: string): Promise<ContactContext> {
   if (unitId) {
-    const res = await safeFetch<PublicUnit>(`/public/units/${unitId}`, { revalidate: REVALIDATE, tenantSlug });
+    const res = await apiFetch<PublicUnit>(`/public/units/${unitId}`, { revalidate: REVALIDATE, tenantSlug });
     if (res.ok) {
       const u = res.data;
       const project = u.project ? pickAr(u.project.name) : '';
@@ -49,7 +46,7 @@ async function resolveContext(projectId: string, unitId: string, tenantSlug: str
     return { unitId, projectId: projectId || undefined };
   }
   if (projectId) {
-    const res = await safeFetch<PublicProjectDetail>(`/public/projects/${projectId}`, { revalidate: REVALIDATE, tenantSlug });
+    const res = await apiFetch<PublicProjectDetail>(`/public/projects/${projectId}`, { revalidate: REVALIDATE, tenantSlug });
     return { projectId, projectName: res.ok ? pickAr(res.data.name) : undefined };
   }
   return {};
@@ -96,7 +93,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
           </div>
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-28">
-              <ContactSupport />
+              <ContactSupport locale={locale} />
             </div>
           </aside>
         </div>

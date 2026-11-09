@@ -617,6 +617,8 @@ export class VisitsService {
         unitId: dto.unitId ?? null,
         scheduledAt,
         durationMinutes: dto.durationMinutes ?? null,
+        leadId: dto.leadId ?? null,
+        clientId: dto.clientId ?? null,
       });
     }
 
@@ -875,15 +877,33 @@ export class VisitsService {
     scheduledAt: Date;
     durationMinutes: number | null;
     excludeId?: string;
+    /** The customer the visit is for: one person cannot be booked twice at the same time (F-050). */
+    leadId?: string | null;
+    clientId?: string | null;
   }) {
     if (slot.unitId) {
       const unit = await this.prisma.unit.findFirst({ where: { id: slot.unitId }, select: { status: true } });
       if (unit?.status === UnitStatus.SOLD) throw new BadRequestException('هذه الوحدة تم بيعها');
     }
-    if (!slot.assignedSalesId || Number.isNaN(slot.scheduledAt.getTime())) return;
+    if (Number.isNaN(slot.scheduledAt.getTime())) return;
     const MIN = 60_000;
     const start = slot.scheduledAt.getTime();
     const end = start + (slot.durationMinutes ?? 60) * MIN;
+    const LIVE = [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING_RESCHEDULE];
+    if (slot.leadId || slot.clientId) {
+      const mine = await this.prisma.visitAppointment.findMany({
+        where: {
+          OR: [...(slot.leadId ? [{ leadId: slot.leadId }] : []), ...(slot.clientId ? [{ clientId: slot.clientId }] : [])],
+          status: { in: LIVE },
+          scheduledAt: { gte: new Date(start - 24 * 60 * MIN), lt: new Date(end) },
+          ...(slot.excludeId ? { id: { not: slot.excludeId } } : {}),
+        },
+        select: { scheduledAt: true, durationMinutes: true, visitNumber: true },
+      });
+      const same = mine.find((a) => a.scheduledAt.getTime() + (a.durationMinutes ?? 60) * MIN > start);
+      if (same) throw new ConflictException(`للعميل زيارة أخرى في هذا الوقت (${same.visitNumber ?? ''})`.trim());
+    }
+    if (!slot.assignedSalesId) return;
     const nearby = await this.prisma.visitAppointment.findMany({
       where: {
         assignedSalesId: slot.assignedSalesId,
@@ -954,6 +974,11 @@ export class VisitsService {
     // override (e.g. customer walked in without confirming online). SALES /
     // SALES_MANAGER never get the override — they must wait.
     if (dto.status === AppointmentStatus.COMPLETED) {
+      // A visit cannot be completed before its time (F-051; a no-show already could not).
+      // An admin may record one the customer attended early.
+      if (appt.scheduledAt.getTime() > now.getTime() && !(dto.force === true && user.role === UserRole.ADMIN)) {
+        throw new BadRequestException('لا يمكن إكمال زيارة قبل موعدها');
+      }
       if (appt.status !== AppointmentStatus.CONFIRMED) {
         const allowOverride = dto.force === true && user.role === UserRole.ADMIN;
         if (!allowOverride) {
@@ -1131,6 +1156,8 @@ export class VisitsService {
       scheduledAt: new Date(dto.scheduledAt),
       durationMinutes: dto.durationMinutes ?? appt.durationMinutes,
       excludeId: id,
+      leadId: appt.leadId,
+      clientId: appt.clientId,
     });
 
     const visitNumber = await this.nextVisitNumber();

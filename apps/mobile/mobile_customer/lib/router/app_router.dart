@@ -347,7 +347,10 @@ GoRouter createCustomerRouter(
             routes: [
               GoRoute(
                 path: '/account/finance',
-                builder: (_, _) => const FinanceHubScreen(),
+                builder: (context, _) => BlocProvider(
+                  create: (ctx) => HomeSummaryCubit(ctx.read<HomeSummaryRepository>())..load(),
+                  child: const FinanceHubScreen(),
+                ),
               ),
             ],
           ),

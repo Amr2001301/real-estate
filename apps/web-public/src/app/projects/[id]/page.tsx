@@ -1,12 +1,14 @@
 import type { Route } from 'next';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Home, Star } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
-import { pickAr, formatNumber } from '@/lib/format';
+import { pickAr, formatNumber, cityLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -74,33 +76,16 @@ function SectionHead({
 
 // Generic, process-oriented FAQ — deliberately avoids project-specific claims
 // (prices, guarantees, dates) so nothing is fabricated.
-function projectFaq(name: string): AccordionItem[] {
-  return [
-    {
-      question: `كيف أحجز زيارة لمشروع ${name}؟`,
-      answer: 'يمكنك طلب زيارة عبر زر «طلب زيارة» في الصفحة، وسيتواصل معك أحد مستشارينا لتأكيد الموعد المناسب لك.',
-    },
-    {
-      question: 'كيف أحصل على تفاصيل الأسعار والوحدات المتاحة؟',
-      answer: 'استعرض الوحدات المتاحة ضمن المشروع من القسم المخصص، أو تواصل مع مستشارنا للحصول على أحدث التفاصيل والعروض.',
-    },
-    {
-      question: 'هل يمكنني مقارنة أكثر من وحدة؟',
-      answer: 'نعم، يمكنك إضافة حتى ٣ وحدات إلى المقارنة لاستعراض المواصفات والأسعار جنبًا إلى جنب قبل اتخاذ قرارك.',
-    },
-    {
-      question: 'كيف أتواصل مع فريق المبيعات؟',
-      answer: 'من صفحة «تواصل معنا» أو عبر بطاقة التواصل في هذه الصفحة، وسنعاود التواصل معك في أقرب وقت.',
-    },
-  ];
+function projectFaq(name: string, locale: Locale): AccordionItem[] {
+  return extraT(locale).projectFaq(name);
 }
 
 function fetchProject(id: string, tenantSlug: string) {
-  return safeFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
+  return apiFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
 function fetchProjectUnits(id: string, tenantSlug: string) {
-  return safeFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
+  return apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
     revalidate: REVALIDATE,
     tenantSlug,
   });
@@ -117,8 +102,8 @@ export async function generateMetadata({ params }: { params: Params }) {
   if (!result.ok) {
     return buildMetadata({ title: m.projectDetail.errorTitle });
   }
-  const name = pickAr(result.data.name, m.projectDetail.breadProjects);
-  const description = pickAr(result.data.description) || undefined;
+  const name = pickAr(result.data.name, m.projectDetail.breadProjects, locale);
+  const description = pickAr(result.data.description, '', locale) || undefined;
   const image = result.data.media?.[0]?.url;
   return buildMetadata({
     title: name,
@@ -155,8 +140,8 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   }
 
   const project = result.data;
-  const name = pickAr(project.name, m.projectDetail.breadProjects);
-  const description = pickAr(project.description);
+  const name = pickAr(project.name, m.projectDetail.breadProjects, locale);
+  const description = pickAr(project.description, '', locale);
   const hasCoords = project.lat !== 0 || project.lng !== 0;
 
   // Best-effort: a few units from this project. Never blocks the page.
@@ -242,7 +227,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   {project.city && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
                       <MapPin className="h-3 w-3 text-gold-300" aria-hidden />
-                      {project.district ? `${project.district}، ${project.city}` : project.city}
+                      {project.district ? `${project.district}${locale === 'en' ? ', ' : '، '}${cityLabel(project.city, locale)}` : cityLabel(project.city, locale)}
                     </span>
                   )}
                   {project.type && m.projectTypes[project.type] && (
@@ -252,7 +237,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   )}
                   {project.totalArea && (
                     <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
-                      {m.projectFacts.totalArea}: {formatNumber(project.totalArea)} {m.projectFacts.sqm}
+                      {m.projectFacts.totalArea}: {formatNumber(project.totalArea, locale)} {m.projectFacts.sqm}
                     </span>
                   )}
                   {project.licenseNumber && (
@@ -314,7 +299,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             </div>
 
             {/* Features / Amenities */}
-            <ProjectAmenities services={project.services} />
+            <ProjectAmenities services={project.services} locale={locale} />
 
             {/* Available units — inside the main column so the sidebar stays
                 sticky and visible while the buyer browses units. */}
@@ -372,7 +357,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   step={80}
                 >
                   {previewUnits.map((unit) => (
-                    <UnitCard key={unit.id} unit={unit} />
+                    <UnitCard key={unit.id} unit={unit} locale={locale} />
                   ))}
                 </Stagger>
               )}
@@ -380,16 +365,17 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
 
             {/* Location */}
             <ProjectLocation
-              city={project.city}
+              city={cityLabel(project.city, locale)}
               lat={hasCoords ? project.lat : null}
               lng={hasCoords ? project.lng : null}
+              locale={locale}
             />
 
             {/* FAQ */}
             <div>
               <SectionHead label={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
               <div className="mt-8">
-                <Accordion items={projectFaq(name)} defaultOpenFirst />
+                <Accordion items={projectFaq(name, locale)} defaultOpenFirst />
               </div>
             </div>
           </div>
@@ -397,12 +383,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           {/* ── Sticky aside: inquiry + facts ── */}
           <aside className="lg:col-span-1">
             <div className="space-y-4 lg:sticky lg:top-28">
-              <InquiryCard projectId={project.id} projectName={name} />
+              <InquiryCard projectId={project.id} projectName={name} locale={locale} />
               <ProjectFacts
-                city={project.city}
+                city={cityLabel(project.city, locale)}
                 availableUnitsCount={project.availableUnitsCount}
                 featured={project.featured}
                 hasCoords={hasCoords}
+                locale={locale}
               />
             </div>
           </aside>

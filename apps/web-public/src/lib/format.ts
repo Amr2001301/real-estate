@@ -1,6 +1,10 @@
-/** Arabic-locale formatting helpers for the public website. */
+import type { Locale } from '@/lib/locale';
+
+/** Formatting helpers for the public website (Arabic by default; English when asked). */
 
 const NUM = new Intl.NumberFormat('ar-SA');
+const NUM_EN = new Intl.NumberFormat('en-US');
+const numFor = (locale: Locale) => (locale === 'en' ? NUM_EN : NUM);
 
 /** The short Arabic symbol of each supported currency. */
 const CURRENCY_SYMBOL: Record<string, string> = {
@@ -8,8 +12,12 @@ const CURRENCY_SYMBOL: Record<string, string> = {
   BHD: 'د.ب', OMR: 'ر.ع', JOD: 'د.أ', USD: '$',
 };
 
-/** The company currency's symbol ("ج.م" for EGP); unknown codes show as-is. */
-export function currencySymbol(currency: string): string {
+/** English reads the ISO code (EGP, SAR…); the dollar keeps its sign. */
+const CURRENCY_SYMBOL_EN: Record<string, string> = { USD: '$' };
+
+/** The company currency's symbol ("ج.م" for EGP, "EGP" in English); unknown codes show as-is. */
+export function currencySymbol(currency: string, locale: Locale = 'ar'): string {
+  if (locale === 'en') return CURRENCY_SYMBOL_EN[currency] ?? currency;
   return CURRENCY_SYMBOL[currency] ?? currency;
 }
 
@@ -20,24 +28,24 @@ export function currencySymbol(currency: string): string {
  * rest of the UI. `currency` is the company's (Company.currency, from the
  * public branding) — see lib/site-currency and components/currency.
  */
-export function formatPrice(value: number | string | null | undefined, currency: string): string {
+export function formatPrice(value: number | string | null | undefined, currency: string, locale: Locale = 'ar'): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return '—';
-  return `${NUM.format(n)} ${currencySymbol(currency)}`;
+  return `${numFor(locale).format(n)} ${currencySymbol(currency, locale)}`;
 }
 
-export function formatNumber(value: number | string | null | undefined): string {
+export function formatNumber(value: number | string | null | undefined, locale: Locale = 'ar'): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return '—';
-  return NUM.format(n);
+  return numFor(locale).format(n);
 }
 
-export function formatArea(value: number | string | null | undefined): string {
+export function formatArea(value: number | string | null | undefined, locale: Locale = 'ar'): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (n === null || n === undefined || !Number.isFinite(n)) return '—';
-  return `${NUM.format(n)} م²`;
+  return `${numFor(locale).format(n)} ${locale === 'en' ? 'm²' : 'م²'}`;
 }
 
 const UNIT_TYPE_LABELS: Record<string, string> = {
@@ -60,6 +68,26 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
   garage: 'جراج',
 };
 
+const UNIT_TYPE_LABELS_EN: Record<string, string> = {
+  studio: 'Studio',
+  apartment: 'Apartment',
+  '1br': '1-bedroom apartment',
+  '2br': '2-bedroom apartment',
+  '3br': '3-bedroom apartment',
+  '4br': '4-bedroom apartment',
+  duplex: 'Duplex',
+  penthouse: 'Penthouse',
+  villa: 'Villa',
+  townhouse: 'Townhouse',
+  'twin house': 'Twin house',
+  chalet: 'Chalet',
+  office: 'Office',
+  retail: 'Retail shop',
+  shop: 'Shop',
+  clinic: 'Clinic',
+  garage: 'Garage',
+};
+
 /**
  * A unit's type as a label: the company's name for it when the API sent one
  * (each company names its own types), else a label for a default code, else
@@ -68,11 +96,13 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
 export function unitTypeLabel(
   type: string | null | undefined,
   name?: string | { ar?: string; en?: string } | null,
+  locale: Locale = 'ar',
 ): string {
-  const given = typeof name === 'string' ? name : name?.ar ?? name?.en;
+  const given = typeof name === 'string' ? name : locale === 'en' ? name?.en ?? name?.ar : name?.ar ?? name?.en;
   if (given?.trim()) return given;
   if (!type) return '—';
-  return UNIT_TYPE_LABELS[type.toLowerCase()] ?? type;
+  const table = locale === 'en' ? UNIT_TYPE_LABELS_EN : UNIT_TYPE_LABELS;
+  return table[type.toLowerCase()] ?? type;
 }
 
 const CITY_LABELS: Record<string, string> = {
@@ -87,19 +117,55 @@ const CITY_LABELS: Record<string, string> = {
   khobar: 'الخبر',
 };
 
-/** Normalize a city to a consistent Arabic label; falls back to the raw value. */
-export function cityLabel(city: string | null | undefined): string {
+/** English names of cities a company may have typed in Arabic (the data has one text). */
+const CITY_LABELS_EN: Record<string, string> = {
+  riyadh: 'Riyadh', jeddah: 'Jeddah', jiddah: 'Jeddah', dammam: 'Dammam', mecca: 'Makkah', makkah: 'Makkah',
+  medina: 'Madinah', madinah: 'Madinah', khobar: 'Khobar',
+  'الرياض': 'Riyadh', 'جدة': 'Jeddah', 'الدمام': 'Dammam', 'مكة المكرمة': 'Makkah', 'المدينة المنورة': 'Madinah', 'الخبر': 'Khobar',
+  'القاهرة': 'Cairo', 'القاهرة الجديدة': 'New Cairo', 'الجيزة': 'Giza', 'الإسكندرية': 'Alexandria', 'الاسكندرية': 'Alexandria',
+  'السادس من أكتوبر': '6th of October', '6 أكتوبر': '6th of October', 'الشيخ زايد': 'Sheikh Zayed', 'العاصمة الإدارية': 'New Administrative Capital',
+  'العاصمة الإدارية الجديدة': 'New Administrative Capital', 'العين السخنة': 'Ain Sokhna', 'الساحل الشمالي': 'North Coast',
+  'الغردقة': 'Hurghada', 'شرم الشيخ': 'Sharm El Sheikh', 'المنصورة': 'Mansoura', 'التجمع الخامس': 'Fifth Settlement',
+  'الشروق': 'El Shorouk', 'المستقبل سيتي': 'Mostakbal City', 'مدينة نصر': 'Nasr City', 'المعادي': 'Maadi', 'الزمالك': 'Zamalek',
+};
+
+/** Normalize a city to a consistent label; falls back to the raw value. */
+export function cityLabel(city: string | null | undefined, locale: Locale = 'ar'): string {
   const v = city?.trim();
-  if (!v) return 'موقع مميز';
+  if (!v) return locale === 'en' ? 'Prime location' : 'موقع مميز';
+  if (locale === 'en') return CITY_LABELS_EN[v.toLowerCase()] ?? CITY_LABELS_EN[v] ?? v;
   return CITY_LABELS[v.toLowerCase()] ?? v;
 }
 
-/** Pick the Arabic side of a translatable `{ ar, en }` JSON value. */
-export function pickAr(value: unknown, fallback = ''): string {
-  if (value && typeof value === 'object' && 'ar' in value) {
-    const ar = (value as { ar?: unknown }).ar;
-    if (typeof ar === 'string') return ar;
+/** Pick the visitor's side of a translatable `{ ar, en }` JSON value (Arabic unless asked). */
+export function pickAr(value: unknown, fallback = '', locale: Locale = 'ar'): string {
+  if (value && typeof value === 'object' && ('ar' in value || 'en' in value)) {
+    const v = value as { ar?: unknown; en?: unknown };
+    const first = locale === 'en' ? v.en : v.ar;
+    const second = locale === 'en' ? v.ar : v.en;
+    if (typeof first === 'string' && first) return first;
+    if (typeof second === 'string' && second) return second;
   }
   if (typeof value === 'string') return value;
   return fallback;
+}
+
+/** A medium date ("7 Nov 2026" / «٧ نوفمبر ٢٠٢٦»); "—" when missing or invalid. */
+export function formatDateShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
+/** A medium date with the short time; "—" when missing or invalid. */
+export function formatDateTimeShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
 }

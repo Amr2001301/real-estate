@@ -7,10 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../../common/catalog_status_label.dart';
 import '../../../common/reservation_status_label.dart';
 import '../../../common/staff_share.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../installments/domain/repositories/installments_repository.dart';
 import '../domain/entities/staff_project.dart';
-import '../kit/catalog_kit.dart';
 import '../kit/catalog_media.dart';
 import 'unit_page_data.dart';
 
@@ -289,7 +287,7 @@ class UnitPriceCard extends StatelessWidget {
             color: Colors.transparent,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
-              side: const BorderSide(color: AppPalette.gold400, width: 1.4),
+              side: BorderSide(color: AppPalette.gold400, width: 1.4),
             ),
             child: InkWell(
               key: const Key('unit-calculator'),
@@ -298,10 +296,10 @@ class UnitPriceCard extends StatelessWidget {
               child: SizedBox(
                 height: 42,
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.calculate_rounded, size: 18, color: AppPalette.gold600),
+                  Icon(Icons.calculate_rounded, size: 18, color: AppPalette.gold600),
                   const SizedBox(width: 6),
                   Text(l10n.detailCalcInstallment,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
             ),
@@ -566,7 +564,7 @@ class _Where extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(13)),
-                child: const Icon(Icons.apartment_rounded, color: AppPalette.gold300, size: 20),
+                child: Icon(Icons.apartment_rounded, color: AppPalette.gold300, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -607,7 +605,7 @@ class _Maintenance extends StatelessWidget {
           if (i > 0) Divider(height: 1, color: colors.hairline),
           ListTile(
             dense: true,
-            leading: const Icon(Icons.verified_user_rounded, color: AppPalette.gold500),
+            leading: Icon(Icons.verified_user_rounded, color: AppPalette.gold500),
             title: Text(m.name.resolve(lang), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
             subtitle: Text(
               [

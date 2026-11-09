@@ -5,6 +5,7 @@ import { projectOptions } from '@/lib/options';
 import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { formatDate, formatCurrency, tx, intlLocale } from '@/lib/format';
+import { projectPlansT } from '@/messages/project-plans';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -55,6 +56,7 @@ export default async function InstallmentPlansPage({
 }) {
   const [sp, session, locale] = await Promise.all([searchParams, getSession(), getLocale()]);
   const m = uiT(locale).pages.installments;
+  const pp = projectPlansT(locale);
   const FREQUENCY_LABELS: Record<string, string> = {
     MONTHLY:     m.frequencyLabels.MONTHLY,
     QUARTERLY:   m.frequencyLabels.QUARTERLY,
@@ -260,15 +262,34 @@ export default async function InstallmentPlansPage({
                         <p className="text-slate-800">
                           {r.project ? <EntityLink kind="project" id={r.project.id ?? r.projectId} mono={false}>{tx(r.project.name)}</EntityLink> : '—'}
                         </p>
-                        {r.unit && (
+                        {r.unit ? (
                           <p className="text-xs text-slate-500">
                             {m.unitPrefix} <EntityLink kind="unit" id={r.unit.id ?? r.unitId}>{r.unit.code}</EntityLink>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-500">
+                            <span className="rounded-full bg-brand-50 text-brand-700 px-2 py-0.5">
+                              {r.scope === 'TYPE' ? pp.scopeBadgeType : pp.scopeBadgeProject}
+                            </span>
+                            {r.validFrom || r.validTo ? (
+                              <span className="ms-2">
+                                {r.validFrom && r.validTo
+                                  ? pp.validBetween(formatDate(r.validFrom, locale), formatDate(r.validTo, locale))
+                                  : r.validFrom
+                                    ? pp.validFromOnly(formatDate(r.validFrom, locale))
+                                    : pp.validToOnly(formatDate(r.validTo as string, locale))}
+                              </span>
+                            ) : null}
                           </p>
                         )}
                       </div>
                     </td>
                     <td className="py-3 px-4 tabular-nums font-medium text-slate-800">
-                      {formatCurrency(r.netPrice, currency, locale)}
+                      {r.percentPriced && !r.unitId ? (
+                        <span className="text-sm font-normal text-slate-600">{pp.perUnitPrice}</span>
+                      ) : (
+                        formatCurrency(r.netPrice, currency, locale)
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       {(() => {

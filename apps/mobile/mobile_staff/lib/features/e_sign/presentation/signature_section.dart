@@ -379,7 +379,7 @@ class _GoldButton extends StatelessWidget {
           child: Ink(
             height: 46,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
+              gradient: LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
               borderRadius: BorderRadius.circular(AppRadii.md),
             ),
             child: Center(
@@ -447,7 +447,7 @@ class _Label extends StatelessWidget {
           width: 4,
           height: 20,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [AppPalette.gold300, AppPalette.gold500],

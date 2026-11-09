@@ -47,13 +47,13 @@ class AppFormSection extends StatelessWidget {
         children: [
           Container(
             height: 2,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                   AppPalette.gold400,
                   AppPalette.gold300,
-                  Color(0x00B8941F),
+                  AppPalette.gold400.withValues(alpha: 0.00),
                 ],
               ),
               borderRadius:
@@ -93,7 +93,7 @@ class AppFormSection extends StatelessWidget {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [AppPalette.gold300, AppPalette.gold500],

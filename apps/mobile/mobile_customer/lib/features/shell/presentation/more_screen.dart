@@ -7,9 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../content/presentation/content_widgets.dart';
 
 // Navy depth tokens — shared design language with projects/units/compare.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
-const _navyLight = Color(0xFF24426A);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyMid => AppPalette.navyMid;
+Color get _navyLight => AppPalette.navyLight;
 
 /// Premium "المزيد" hub — self-chrome screen with its own Scaffold.
 ///
@@ -58,10 +58,10 @@ class MoreScreen extends StatelessWidget {
                     children: [
                       _MenuTile(
                         icon: AppIcons.chat,
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF1E3A62), AppPalette.navy],
+                          colors: [AppPalette.navyBright, AppPalette.navy],
                         ),
                         label: l10n.homeAskAssistant,
                         subtitle: l10n.moreAssistantSubtitle,
@@ -71,7 +71,7 @@ class MoreScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   // CMS1 — the company's published pages (about, terms…).
-                  CompanyPagesCard(title: l10n.contentAboutCompany),
+                  CompanyPagesCard(title: l10n.contentAboutCompany, horizontal: 0),
                   const SizedBox(height: AppSpacing.xl),
 
                   // ── Settings ─────────────────────────────────────────────
@@ -81,10 +81,10 @@ class MoreScreen extends StatelessWidget {
                     children: [
                       _MenuTile(
                         icon: Icons.translate_rounded,
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFFC99A2E), AppPalette.gold400],
+                          colors: [AppPalette.goldWarm2, AppPalette.gold400],
                         ),
                         label: l10n.galleryToggleLanguage,
                         subtitle: 'العربية  ·  English',
@@ -144,7 +144,7 @@ class _MoreHero extends StatelessWidget {
           // Base navy radial gradient
           Positioned.fill(
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment(0.7, -0.9),
                   radius: 1.5,
@@ -161,10 +161,10 @@ class _MoreHero extends StatelessWidget {
             child: Container(
               width: 200,
               height: 200,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x2AC8A24B), Color(0x00C8A24B)],
+                  colors: [AppPalette.gold400.withValues(alpha: 0.16), AppPalette.gold400.withValues(alpha: 0.00)],
                   stops: [0.0, 0.65],
                 ),
               ),
@@ -177,10 +177,10 @@ class _MoreHero extends StatelessWidget {
             child: Container(
               width: 160,
               height: 160,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [Color(0x18C8A24B), Color(0x00C8A24B)],
+                  colors: [AppPalette.gold400.withValues(alpha: 0.09), AppPalette.gold400.withValues(alpha: 0.00)],
                   stops: [0.0, 0.7],
                 ),
               ),
@@ -273,10 +273,10 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.favorite_rounded,
               label: context.l10n.moreBenefitFavorites,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFC8A24B), AppPalette.gold400],
+                colors: [AppPalette.gold400, AppPalette.gold400],
               ),
             ),
           ),
@@ -285,10 +285,10 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.compare_arrows_rounded,
               label: context.l10n.moreBenefitCompare,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF24426A), AppPalette.navy],
+                colors: [AppPalette.navyLight, AppPalette.navy],
               ),
             ),
           ),
@@ -297,10 +297,10 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.timeline_rounded,
               label: context.l10n.moreBenefitTrack,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFFB07818), Color(0xFF8A5F10)],
+                colors: [AppPalette.goldDeepA, AppPalette.goldDeepB],
               ),
             ),
           ),
@@ -531,7 +531,7 @@ class _MoreFooter extends StatelessWidget {
         const BrandMark(size: 32),
         const SizedBox(height: AppSpacing.xs),
         CompanyNameText(
-          style: const TextStyle(
+          style: TextStyle(
             color: AppPalette.gold300,
             fontSize: 12,
             fontWeight: FontWeight.w600,

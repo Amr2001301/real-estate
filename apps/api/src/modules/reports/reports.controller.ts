@@ -12,7 +12,8 @@ import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { ReportsService } from './reports.service';
 import { LedgerService } from './ledger.service';
-import { FinancialDashboardQueryDto, LedgerQueryDto, LedgerRowsQueryDto } from './reports.dto';
+import { FinancialComparisonService } from './financial-comparison.service';
+import { FinancialComparisonQueryDto, FinancialDashboardQueryDto, LedgerQueryDto, LedgerRowsQueryDto } from './reports.dto';
 
 @ApiTags('reports')
 @Controller('reports')
@@ -20,6 +21,7 @@ export class ReportsController {
   constructor(
     private readonly svc: ReportsService,
     private readonly ledger: LedgerService,
+    private readonly comparison: FinancialComparisonService,
   ) {}
 
   @Roles(UserRole.ADMIN)
@@ -151,6 +153,15 @@ export class ReportsController {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     });
+  }
+
+  // The financial report's comparison view: the period against another one.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @GrantedBy('reports:financial:read')
+  @Get('financial-comparison')
+  financialComparison(@Query() query: FinancialComparisonQueryDto) {
+    return this.comparison.compare(query);
   }
 
   // Receivables & payables (المستحقات والالتزامات) — what the company is owed and what it owes, by group.

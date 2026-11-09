@@ -102,11 +102,12 @@ class UpdateRuleDto {
   @IsOptional() @IsBoolean() autoApplyOnSignedContract?: boolean;
 }
 
-class CreateEntryDto {
+export class CreateEntryDto {
   @IsUUID() salesId!: string;
   @IsUUID() ruleId!: string;
   @IsNumber() @Min(0) amount!: number;
-  @IsString() period!: string; // YYYY-MM
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'period must be YYYY-MM' })
+  period!: string;
 }
 
 /**
@@ -119,9 +120,10 @@ class UpdateEntryStatusDto {
   @IsIn([BonusEntryStatus.PENDING]) status!: BonusEntryStatus;
 }
 
-class CreateTargetDto {
+export class CreateTargetDto {
   @IsUUID() salesId!: string;
-  @IsString() period!: string;
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'period must be YYYY-MM' })
+  period!: string;
   @IsNumber() @Min(0) amountTarget!: number;
   @IsNumber() @Min(0) unitsTarget!: number;
 }

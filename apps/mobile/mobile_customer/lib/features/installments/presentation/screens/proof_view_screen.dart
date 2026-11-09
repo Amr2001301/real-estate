@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import '../../../documents/presentation/widgets/documents_list_view.dart';
 import '../../domain/entities/installment.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
 const _paidAccent = Color(0xFF4ADE80);
-const _pendingAccent = AppPalette.gold300;
+Color get _pendingAccent => AppPalette.gold300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Proof View Screen

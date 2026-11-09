@@ -5,10 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contract_page_screen.dart' show KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import 'payments_data.dart';
 
@@ -309,8 +307,8 @@ class PaymentCardView extends StatelessWidget {
               key: Key('payment-cheque-${row.id}'),
               onTap: () => context.push('/cheques/${row.instrumentId}'),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(l10n.pmOpenCheque, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
+                Text(l10n.pmOpenCheque, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
               ]),
             ),
         ],
@@ -365,7 +363,7 @@ class PaymentCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        if (row.reference != null) TextSpan(text: ltr(row.reference!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (row.reference != null) TextSpan(text: ltr(row.reference!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if ((row.unitCode ?? '').isNotEmpty) TextSpan(text: ' · ${ltr(row.unitCode!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 1,
@@ -531,7 +529,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         decoration: BoxDecoration(
                           color: colors.surface,
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: const Color(0xFFEFE6D4)),
+                          border: Border.all(color: homeLine(context)),
                           boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
                         ),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -544,7 +542,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ]),
                           ),
                           if (p.state == 'CHEQUE_PENDING')
-                            Text(l10n.pmNotCounted, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
+                            Text(l10n.pmNotCounted, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
                           else if (p.state == 'COLLECTED' && p.paidAt != null)
                             Text('✓ ${l10n.pmPaidOn(DateFormatter.mediumDate(p.paidAt!, languageCode: lang))}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable))
                           else if ((p.rejectionReason ?? '').isNotEmpty)
@@ -560,8 +558,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                     height: 26,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFF9A9083) : const Color(0xFFEFE8DC))),
-                                      boxShadow: i == now ? const [BoxShadow(color: Color(0xFFF6E9C9), spreadRadius: 4)] : null,
+                                      color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFF9A9083) : homeLine(context))),
+                                      boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
                                     ),
                                     child: Icon(
                                       done ? Icons.check_rounded : (failed && i == steps.length - 1 ? Icons.close_rounded : Icons.more_horiz_rounded),

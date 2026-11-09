@@ -2,10 +2,13 @@ import { Check } from 'lucide-react';
 import { pickAr } from '@/lib/format';
 import type { Translatable } from '@/lib/api-types';
 import { Stagger } from '@/components/motion/Stagger';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
 /** Renders services/amenities as premium vertical feature tiles. Returns null when empty. */
-export function ProjectAmenities({ services }: { services: Translatable[] }) {
-  const items = (services ?? []).map((s) => pickAr(s)).filter(Boolean);
+export function ProjectAmenities({ services, locale = 'ar' }: { services: Translatable[]; locale?: Locale }) {
+  const t = extraT(locale).amenities;
+  const items = (services ?? []).map((s) => pickAr(s, '', locale)).filter(Boolean);
   if (items.length === 0) return null;
 
   return (
@@ -14,10 +17,10 @@ export function ProjectAmenities({ services }: { services: Translatable[] }) {
       <div>
         <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
         <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
-          المرافق والخدمات
+          {t.eyebrow}
         </span>
         <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
-          ما يميّز هذا المشروع
+          {t.title}
         </h2>
       </div>
 

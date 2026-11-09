@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/lib/cn';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp, Paintbrush, CalendarCheck } from 'lucide-react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { PRICE_RANGES, AREA_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
 import type { Locale } from '@/lib/locale';
+import { extraT } from '@/messages/site-extra';
 import { siteT } from '@/messages/site';
 
 export interface UnitsFilterValues {
@@ -68,8 +70,10 @@ export function UnitsFilterBar({
   types?: Array<{ value: string; label: string }>;
   locale: Locale;
 }) {
-  const typeOptions = types?.length ? [TYPES[0]!, ...types] : TYPES;
   const router = useRouter();
+  const fx = extraT(locale).filters;
+  const allTypes = { value: '', label: fx.allTypes };
+  const typeOptions = types?.length ? [allTypes, ...types] : [allTypes, ...TYPES.slice(1)];
   const t = siteT(locale).unitsFilter;
   const statuses = siteT(locale).home.search.statuses;
   const sortOptions = siteT(locale).sortOptions.unit;
@@ -142,7 +146,7 @@ export function UnitsFilterBar({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]">
+      <div className={cn('grid grid-cols-2 gap-2.5 sm:grid-cols-3', locale === 'en' ? 'lg:grid-cols-5' : 'lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]')}>
         <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
           {typeOptions.map((tp) => (
             <option key={tp.value} value={tp.value}>{tp.label}</option>
@@ -151,25 +155,25 @@ export function UnitsFilterBar({
         <CompactSelect icon={BedDouble} label={t.bedrooms} value={bedrooms} onChange={setBedrooms}>
           {ROOMS.map((r) => (
             <option key={r.value} value={r.value}>
-              {r.value ? `${r.label} ${t.roomSuffix}` : t.allRooms}
+              {r.value ? `${fx.rooms[r.value as keyof typeof fx.rooms] ?? r.label} ${t.roomSuffix}` : t.allRooms}
             </option>
           ))}
         </CompactSelect>
         <CompactSelect icon={Bath} label={t.bathrooms} value={bathrooms} onChange={setBathrooms}>
           {ROOMS.map((r) => (
             <option key={r.value} value={r.value}>
-              {r.value ? `${r.label} ${t.bathroomSuffix}` : t.allBathrooms}
+              {r.value ? `${fx.rooms[r.value as keyof typeof fx.rooms] ?? r.label} ${t.bathroomSuffix}` : t.allBathrooms}
             </option>
           ))}
         </CompactSelect>
         <CompactSelect icon={Wallet} label={t.priceRange} value={price} onChange={setPrice}>
           {PRICE_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
+            <option key={r.value} value={r.value}>{fx.price[r.value as keyof typeof fx.price] ?? r.label}</option>
           ))}
         </CompactSelect>
         <CompactSelect icon={Ruler} label={t.area} value={area} onChange={setArea}>
           {AREA_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
+            <option key={r.value} value={r.value}>{fx.area[r.value as keyof typeof fx.area] ?? r.label}</option>
           ))}
         </CompactSelect>
         <CompactSelect icon={Paintbrush} label={t.finishing} value={finishing} onChange={setFinishing}>

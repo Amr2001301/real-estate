@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { pageMeta } from '@/lib/page-meta';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -19,12 +19,9 @@ import { UnitsFilterBar, type UnitsFilterValues } from '@/components/units/Units
 import { UnitsExplorer } from '@/components/units/UnitsExplorer';
 import { derivePriceValue, deriveAreaValue } from '@/lib/unit-filters';
 
-export const metadata = buildMetadata({
-  path: '/units',
-  title: 'الوحدات المتاحة',
-  description:
-    'تصفّح مجموعة مختارة من الشقق والفيلات الفاخرة المتاحة — مواصفات راقية وأسعار شفافة وإمكانية المقارنة بين الوحدات.',
-});
+export async function generateMetadata() {
+  return pageMeta('units', { path: '/units' });
+}
 
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
@@ -98,10 +95,10 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (sort) apiParams.set('sort', sort);
 
   const [result, locale, typesRes] = await Promise.all([
-    safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    apiFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     getLocale(),
     // The company's own unit types (F10) for the type filter.
-    safeFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', {
+    apiFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', {
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
@@ -187,7 +184,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
                 </p>
               )}
               <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
+              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
             </>
           )}
       </Section>

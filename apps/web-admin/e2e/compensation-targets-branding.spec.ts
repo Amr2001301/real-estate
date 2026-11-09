@@ -53,6 +53,16 @@ test.describe('branding', () => {
     await expect(preview).toContainText('بيوت تدوم');
   });
 
+  test('the English display name is saved and comes back (F-067)', async ({ page }) => {
+    await gotoReady(page, '/dashboard/company/branding');
+    const field = page.getByTestId('branding-display-name-en');
+    await field.fill('Elite Developments');
+    await page.getByRole('button', { name: /حفظ/ }).first().click();
+    await expect(page.getByText(/تم الحفظ|تم حفظ/).first()).toBeVisible({ timeout: 15_000 });
+    await gotoReady(page, '/dashboard/company/branding');
+    await expect(page.getByTestId('branding-display-name-en')).toHaveValue('Elite Developments');
+  });
+
   test('field labels use the theme text colour, not a fixed navy', async ({ page }) => {
     await gotoReady(page, '/dashboard/company/branding');
     await expect(page.locator('label.text-navy\\/80')).toHaveCount(0);

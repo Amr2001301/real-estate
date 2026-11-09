@@ -5,9 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/cheque.dart';
 import 'cheques_cubit.dart';
@@ -203,7 +201,7 @@ class ChequeCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),

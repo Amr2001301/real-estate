@@ -2612,6 +2612,12 @@ abstract class AppLocalizations {
   /// **'Please select a unit.'**
   String get maintenanceUnitRequired;
 
+  /// No description provided for @maintenanceBeforeHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance requests open once your unit is handed over. We will let you know when it is.'**
+  String get maintenanceBeforeHandover;
+
   /// No description provided for @maintenanceNoUnitsTitle.
   ///
   /// In en, this message translates to:
@@ -16801,6 +16807,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Do you want to do this?'**
   String get brkConfirmHint;
+
+  /// No description provided for @ctProjectsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No projects} =1{1 project} other{{n} projects}}'**
+  String ctProjectsCountN(int n);
+
+  /// No description provided for @ctUnitsCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No units} =1{1 unit} other{{n} units}}'**
+  String ctUnitsCountN(int n);
+
+  /// No description provided for @financeInstallmentsPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'paid'**
+  String get financeInstallmentsPaid;
+
+  /// No description provided for @financeOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get financeOverdue;
+
+  /// No description provided for @financeAllOnTime.
+  ///
+  /// In en, this message translates to:
+  /// **'None overdue'**
+  String get financeAllOnTime;
+
+  /// No description provided for @financeNeedsPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs payment'**
+  String get financeNeedsPayment;
+
+  /// No description provided for @financeNextInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next installment'**
+  String get financeNextInstallment;
+
+  /// No description provided for @financeServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial services'**
+  String get financeServices;
+
+  /// No description provided for @myPropertyUnitsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'My units'**
+  String get myPropertyUnitsLabel;
+
+  /// No description provided for @myPropertyOwnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get myPropertyOwnedLabel;
+
+  /// No description provided for @myPropertyOwnedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contract'**
+  String get myPropertyOwnedHint;
+
+  /// No description provided for @myPropertyWithPlanHint.
+  ///
+  /// In en, this message translates to:
+  /// **'On a plan'**
+  String get myPropertyWithPlanHint;
 }
 
 class _AppLocalizationsDelegate

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/cn';
+import { siteT } from '@/messages/site';
+import type { Locale } from '@/lib/locale';
 
 /**
  * Light/dark switch. Reads the *resolved* theme (so a "system" preference shows
@@ -11,7 +13,8 @@ import { cn } from '@/lib/cn';
  * mounted to avoid a hydration mismatch, since the active theme is only known
  * on the client.
  */
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({ className, locale = 'ar' }: { className?: string; locale?: Locale }) {
+  const t = siteT(locale).theme;
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -22,7 +25,9 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      aria-label={isDark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
+      // The resolved theme is only known in the browser: until mounted the label is neutral,
+      // so the server's HTML and the first client render agree.
+      aria-label={!mounted ? t.toggle : isDark ? t.toLight : t.toDark}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       className={cn(
         'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',

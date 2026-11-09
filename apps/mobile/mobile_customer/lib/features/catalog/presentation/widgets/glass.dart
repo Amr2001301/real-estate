@@ -142,13 +142,13 @@ class ImageScrim extends StatelessWidget {
 class GoldHairline extends StatelessWidget {
   const GoldHairline({super.key});
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     height: 2,
     width: double.infinity,
     child: DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0x00C8A24B), Color(0x5CC8A24B), Color(0x00C8A24B)],
+          colors: [AppPalette.gold400.withValues(alpha: 0.00), AppPalette.gold400.withValues(alpha: 0.36), AppPalette.gold400.withValues(alpha: 0.00)],
         ),
       ),
     ),

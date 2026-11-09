@@ -6,8 +6,8 @@ import '../../documents/presentation/widgets/documents_list_view.dart';
 import '../domain/entities/contract.dart';
 import 'contract_detail_sections.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Contract Detail Screen
@@ -86,7 +86,7 @@ class ContractDetailScreen extends StatelessWidget {
                       width: 3,
                       height: 18,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: LinearGradient(
                           colors: [AppPalette.gold400, AppPalette.gold300],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -201,7 +201,7 @@ class _SummaryCard extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [_navyLight, _navyDeep],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -215,7 +215,7 @@ class _SummaryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     AppIcons.property,
                     size: 20,
                     color: AppPalette.gold300,
@@ -364,10 +364,10 @@ class _StatementLink extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_navyLight, _navyDeep]),
+              gradient: LinearGradient(colors: [_navyLight, _navyDeep]),
               borderRadius: BorderRadius.circular(AppRadii.md),
             ),
-            child: const Icon(Icons.receipt_long_rounded, color: AppPalette.gold300, size: 20),
+            child: Icon(Icons.receipt_long_rounded, color: AppPalette.gold300, size: 20),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

@@ -11,96 +11,55 @@ import '../chat_event.dart';
 // Chat bubble
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// A chat message bubble.
-///
-/// User bubbles: navy gradient with an angled shine and a bottom-end tail.
-/// Assistant bubbles: white surface with a gold start-edge bar and a
-/// bottom-start tail. Result cards and CTAs appear beneath assistant turns.
+/// A chat message bubble, as the staff app's assistant draws it: the
+/// customer's words in a navy bubble on the reading side, the assistant's
+/// answers in a card across, headed by a gold sparkle and its name. Result
+/// cards and CTAs appear beneath assistant turns.
 class ChatBubble extends StatelessWidget {
   const ChatBubble({super.key, required this.message});
   final ChatMessage message;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    final isUser = message.isUser;
-    final dir = Directionality.of(context);
-
-    // Directional border radius: small corner acts as the message "tail"
-    // anchored at the sender's outer-bottom corner.
-    final radius = BorderRadiusDirectional.only(
-      topStart: const Radius.circular(AppRadii.xl),
-      topEnd: const Radius.circular(AppRadii.xl),
-      bottomStart:
-          Radius.circular(isUser ? AppRadii.xl : AppRadii.xs + 2),
-      bottomEnd:
-          Radius.circular(isUser ? AppRadii.xs + 2 : AppRadii.xl),
-    ).resolve(dir);
-
-    final bubbleContent = isUser
-        ? Text(
-            message.content,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: Colors.white, height: 1.55),
-          )
-        : _AssistantContent(message: message, theme: theme, colors: colors);
-
+    final c = context.appColors;
+    final user = message.isUser;
+    final maxW = MediaQuery.sizeOf(context).width * (user ? 0.8 : 0.9);
     final bubble = Container(
-      constraints: const BoxConstraints(maxWidth: 304),
-      padding: EdgeInsets.fromLTRB(
-        isUser ? AppSpacing.md : AppSpacing.xs,
-        AppSpacing.sm + 2,
-        AppSpacing.md,
-        AppSpacing.sm + 2,
-      ),
+      constraints: BoxConstraints(maxWidth: maxW),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        gradient: isUser
-            ? const LinearGradient(
-                begin: Alignment(-1, -1),
-                end: Alignment(1, 1),
-                colors: [Color(0xFF2A4E7C), Color(0xFF0B1726)],
-                stops: [0.0, 1.0],
-              )
-            : null,
-        color: isUser ? null : colors.surface,
-        borderRadius: radius,
-        border: isUser
-            ? null
-            : Border.all(
-                color: colors.hairline.withValues(alpha: 0.5), width: 0.6),
-        boxShadow: isUser
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF0B1726).withValues(alpha: 0.28),
-                  blurRadius: 14,
-                  offset: const Offset(0, 5),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+        color: user ? AppPalette.navy : c.surface,
+        border: user ? null : Border.all(color: c.hairline),
+        borderRadius: BorderRadiusDirectional.only(
+          topStart: const Radius.circular(18),
+          topEnd: const Radius.circular(18),
+          bottomStart: Radius.circular(user ? 4 : 18),
+          bottomEnd: Radius.circular(user ? 18 : 4),
+        ).resolve(Directionality.of(context)),
+        boxShadow: user ? null : c.shadowSoft,
       ),
-      child: bubbleContent,
+      child: user
+          ? Text(message.content, style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.white))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(children: [
+                  Icon(Icons.auto_awesome_rounded, size: 14, color: AppPalette.gold500),
+                  const SizedBox(width: 4),
+                  Text(context.l10n.chatTitle, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                ]),
+                const SizedBox(height: 4),
+                Text(message.content, style: TextStyle(fontSize: 14, height: 1.55, color: c.inkStrong)),
+              ],
+            ),
     );
 
     return Column(
-      crossAxisAlignment:
-          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        // Assistant label strip
-        if (!isUser) ...[
-          _AssistantLabel(colors: colors, theme: theme),
-          const SizedBox(height: AppSpacing.xxs + 2),
-        ],
         Align(
-          alignment: isUser
-              ? AlignmentDirectional.centerEnd
-              : AlignmentDirectional.centerStart,
+          // The customer's words on the reading side, the answers across.
+          alignment: user ? AlignmentDirectional.centerStart : AlignmentDirectional.centerEnd,
           child: bubble,
         ),
         // Attached result cards
@@ -121,92 +80,6 @@ class ChatBubble extends StatelessWidget {
             children: [for (final cta in message.ctas) _CtaChip(cta: cta)],
           ),
         ],
-      ],
-    );
-  }
-}
-
-/// The content column inside an assistant bubble: gold start bar + text.
-class _AssistantContent extends StatelessWidget {
-  const _AssistantContent({
-    required this.message,
-    required this.theme,
-    required this.colors,
-  });
-  final ChatMessage message;
-  final ThemeData theme;
-  final AppColorsExt colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Gold start-edge accent bar
-          Container(
-            width: 3,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppPalette.gold400, AppPalette.gold300],
-              ),
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              message.content,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: colors.inkStrong, height: 1.55),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Tiny label strip above assistant bubbles: gold "AI" badge + sender name.
-class _AssistantLabel extends StatelessWidget {
-  const _AssistantLabel({required this.colors, required this.theme});
-  final AppColorsExt colors;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFC8A24B), AppPalette.gold400],
-            ),
-            borderRadius: AppRadii.pillAll,
-          ),
-          child: const Text(
-            'AI',
-            style: TextStyle(
-              color: AppPalette.navy,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.xxs + 2),
-        Text(
-          context.l10n.chatTitle,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colors.inkMuted,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ],
     );
   }
@@ -463,5 +336,40 @@ class _QuickReplyPill extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// What the assistant offers to start with, as cards (the staff app's look).
+class ChatSuggestions extends StatelessWidget {
+  const ChatSuggestions({super.key, required this.replies});
+  final List<String> replies;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    return Column(children: [
+      for (final r in replies)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: Material(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: () => context.read<ChatBloc>().add(ChatMessageSent(r)),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 12),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: c.hairline)),
+                child: Row(children: [
+                  Icon(Icons.chat_bubble_rounded, size: 18, color: AppPalette.gold600),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Text(r, style: TextStyle(fontSize: 14, color: c.ink))),
+                  Icon(Icons.north_west_rounded, size: 16, color: c.inkMuted),
+                ]),
+              ),
+            ),
+          ),
+        ),
+    ]);
   }
 }

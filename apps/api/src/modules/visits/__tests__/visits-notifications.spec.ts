@@ -51,7 +51,7 @@ function baseAppt(overrides: Partial<{
     id: 'a-1',
     visitNumber: 'V-1',
     status: AppointmentStatus.SCHEDULED,
-    scheduledAt: SCHEDULED_AT_FUTURE,
+    scheduledAt: SCHEDULED_AT_PAST, // completing needs the visit time to have come (F-051)
     assignedSalesId: SALES_ID,
     clientId: CUSTOMER_ID,
     leadId: null,

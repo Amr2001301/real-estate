@@ -1,8 +1,11 @@
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function ProjectsLoading() {
+export default async function ProjectsLoading() {
+  const t = accountT(await getLocale());
   return (
     <>
       <PageHero
@@ -11,7 +14,7 @@ export default function ProjectsLoading() {
         subtitle="مجموعة منتقاة من المشاريع السكنية والتجارية المصممة لأسلوب حياة أرقى."
       />
       <Section tone="canvas">
-        <span className="sr-only">جارٍ التحميل…</span>
+        <span className="sr-only">{t.loading}</span>
         {/* Filter bar */}
         <Skeleton className="h-24 w-full rounded-3xl" />
         {/* Card grid */}

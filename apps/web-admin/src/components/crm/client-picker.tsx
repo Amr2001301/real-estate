@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/form/field';
 import { cn } from '@/lib/cn';
+import { initials as sharedInitials } from '@/lib/initials';
 
 interface Props {
   /** Initial selected client (e.g. from `?clientId=` on the New Lead page). */
@@ -165,7 +166,7 @@ export function ClientPicker({ initialClient, clientIdName = 'clientId' }: Props
                       )}
                     >
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 text-xs font-bold shrink-0">
-                        {u.fullName.trim().charAt(0)}
+                        {sharedInitials(u.fullName)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-900 truncate">

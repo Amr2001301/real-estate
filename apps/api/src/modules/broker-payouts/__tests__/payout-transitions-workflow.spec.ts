@@ -346,6 +346,28 @@ describe('Broker payouts · transitions workflow', () => {
     expect(updateArgs.data.cancelReason).toBe('broker requested');
   });
 
+  it('cancel() on a PROCESSING payout (transfer rejected by the bank) frees its commissions', async () => {
+    payoutStore.current.status = 'PROCESSING';
+    payoutStore.commissionCount = 0; // no clawed-back commission on it
+    await request(app.getHttpServer())
+      .patch(`/broker-payouts/${PAYOUT_ID}/cancel`)
+      .send({ reason: 'bank rejected the transfer' })
+      .expect(200);
+    expect(payoutStore.current.status).toBe('CANCELLED');
+    const unlinkArgs = mock.brokerCommission.updateMany.mock.calls[0]![0] as { data: { payoutId: null } };
+    expect(unlinkArgs.data.payoutId).toBeNull();
+  });
+
+  it('cancel() on a PROCESSING payout holding a clawed-back commission is refused (409)', async () => {
+    payoutStore.current.status = 'PROCESSING';
+    mock.brokerCommission.count.mockResolvedValueOnce(1);
+    await request(app.getHttpServer())
+      .patch(`/broker-payouts/${PAYOUT_ID}/cancel`)
+      .send({ reason: 'bank rejected the transfer' })
+      .expect(409);
+    expect(mock.brokerCommission.updateMany).not.toHaveBeenCalled();
+  });
+
   it('cancel() on a PAID payout is rejected (400)', async () => {
     payoutStore.current.status = 'PAID';
     await request(app.getHttpServer())

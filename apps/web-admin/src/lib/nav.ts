@@ -23,6 +23,7 @@ import {
   Bell,
   PhoneCall,
   TrendingDown,
+  TrendingUp,
   Megaphone,
   BarChart3,
   Boxes,
@@ -93,11 +94,30 @@ export const NAV_ICONS = {
   Scale,
   PhoneCall,
   TrendingDown,
+  TrendingUp,
   Megaphone,
   CalendarDays,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
+
+/** The icon of each section's header in the sidebar. */
+export const SECTION_ICONS: Record<NavSectionKey, IconKey> = {
+  platform: 'Globe',
+  overview: 'LayoutDashboard',
+  sales: 'TrendingUp',
+  operations: 'Gauge',
+  brokers: 'Briefcase',
+  admin: 'ShieldCheck',
+  portal: 'Briefcase',
+  home: 'LayoutDashboard',
+  customers: 'UserCheck',
+  inventory: 'Building2',
+  finance: 'Wallet',
+  team: 'Target',
+  marketing: 'Megaphone',
+  more: 'Settings',
+};
 
 export interface NavItem {
   href: string;

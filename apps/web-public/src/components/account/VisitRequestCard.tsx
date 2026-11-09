@@ -14,37 +14,15 @@ import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeVisitRequest, MeAppointmentSummary } from '@/lib/api-types';
 import { StatusBadge } from '@/components/account/StatusBadge';
+import { formatDateTimeShort } from '@/lib/format';
 import { VisitConfirmActions } from '@/components/account/VisitConfirmActions';
 import { VisitFeedback } from '@/components/account/VisitFeedback';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 /** Visit statuses worth surfacing when there's no appointment yet. */
 const PROGRESSED = new Set(['APPROVED', 'SCHEDULED', 'COMPLETED']);
 
-/** Arabic label for the appointment lifecycle state — kept in lockstep with the
- *  admin badges so the customer reads the same vocabulary. */
-const APPOINTMENT_LABEL: Record<MeAppointmentSummary['status'], string> = {
-  SCHEDULED: 'بانتظار تأكيدك',
-  CONFIRMED: 'مؤكدة',
-  PENDING_RESCHEDULE: 'طلبت إعادة الجدولة',
-  COMPLETED: 'مكتملة',
-  CANCELLED: 'ملغاة',
-  NO_SHOW: 'لم تحضر',
-  RESCHEDULED: 'أُعيدت جدولتها',
-};
-
-function formatDateTime(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
-
-/**
- * One ticket line: gold icon chip + stacked label/value. No truncate or fixed
- * width — the date wraps gracefully and is never clipped.
- */
 function TicketRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -61,11 +39,14 @@ function TicketRow({ icon: Icon, label, value }: { icon: LucideIcon; label: stri
   );
 }
 
-export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
-  const projectName = visit.project ? pickAr(visit.project.name) : '';
-  const unitLabel = visit.unit ? `${unitTypeLabel(visit.unit.type)} · ${visit.unit.code}` : '';
-  const title = projectName || unitLabel || 'طلب زيارة';
-  const subtitle = projectName ? unitLabel || cityLabel(visit.project?.city) : '';
+export async function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
+  const locale = await getLocale();
+  const t = accountT(locale);
+  const tv = t.visit;
+  const projectName = visit.project ? pickAr(visit.project.name, '', locale) : '';
+  const unitLabel = visit.unit ? `${unitTypeLabel(visit.unit.type, null, locale)} · ${visit.unit.code}` : '';
+  const title = projectName || unitLabel || tv.title;
+  const subtitle = projectName ? unitLabel || cityLabel(visit.project?.city, locale) : '';
   const TypeIcon = visit.unit ? Home : Building2;
 
   const detailHref: Route | null = visit.unit
@@ -80,11 +61,11 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
   const awaitingCustomer = appointment?.status === 'SCHEDULED';
   const pendingReschedule = appointment?.status === 'PENDING_RESCHEDULE';
   const suggested = appointment?.scheduledAt ?? (!appointment ? visit.scheduledAt : null);
-  const suggestedLabel = appointment ? 'الموعد المقترح' : 'موعد محدد';
+  const suggestedLabel = appointment ? tv.suggested : tv.fixed;
 
   // A single, most-meaningful badge.
   const badge: { status: string; label?: string } | null = appointment
-    ? { status: appointment.status, label: APPOINTMENT_LABEL[appointment.status] }
+    ? { status: appointment.status, label: t.appointment[appointment.status] }
     : visit.requestStatus
       ? { status: visit.requestStatus }
       : PROGRESSED.has(visit.status)
@@ -103,7 +84,7 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
       {/* Stretched link: whole card navigates. Sibling overlay so the confirm
           controls can layer above it — a button inside an <a> is invalid HTML. */}
       {detailHref && (
-        <Link href={detailHref} aria-label={`عرض تفاصيل ${title}`} className="absolute inset-0 z-[1]" />
+        <Link href={detailHref} aria-label={tv.viewDetails(title)} className="absolute inset-0 z-[1]" />
       )}
 
       {/* ── Header: title (start) ⟷ badge (end) ── */}
@@ -129,10 +110,10 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
       {/* ── Visit Ticket ── */}
       <div className="mt-4 space-y-4 rounded-xl border border-hairline bg-surface-soft/60 p-4">
         <div className="space-y-3.5">
-          <TicketRow icon={CalendarClock} label="الموعد المفضل" value={formatDateTime(visit.preferredDate)} />
-          {suggested && <TicketRow icon={CalendarCheck} label={suggestedLabel} value={formatDateTime(suggested)} />}
+          <TicketRow icon={CalendarClock} label={tv.preferred} value={formatDateTimeShort(visit.preferredDate, locale)} />
+          {suggested && <TicketRow icon={CalendarCheck} label={suggestedLabel} value={formatDateTimeShort(suggested, locale)} />}
           {visit.assignedSales && (
-            <TicketRow icon={UserRound} label="المستشار" value={visit.assignedSales.fullName} />
+            <TicketRow icon={UserRound} label={tv.advisor} value={visit.assignedSales.fullName} />
           )}
         </div>
 
@@ -149,7 +130,7 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
 
       {pendingReschedule && appointment?.customerFeedback && (
         <p className="mt-3 rounded-xl bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
-          سبب طلب إعادة الجدولة: <span className="font-medium">{appointment.customerFeedback}</span>
+          {tv.rescheduleReason} <span className="font-medium">{appointment.customerFeedback}</span>
         </p>
       )}
 

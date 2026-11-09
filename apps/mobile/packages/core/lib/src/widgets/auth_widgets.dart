@@ -7,8 +7,8 @@ import '../design/theme/app_theme_ext.dart';
 import 'brand_mark.dart';
 
 // Navy depth constants — shared Devora design language.
-const _navyDeep = Color(0xFF0B1726);
-const _navyMid = Color(0xFF14273F);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyMid => AppPalette.navyMid;
 const _navyLight = Color(0xFF2A4E7C);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ class AuthHeader extends StatelessWidget {
         child: Stack(
           children: [
             // Deep navy base gradient
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
@@ -70,10 +70,10 @@ class AuthHeader extends StatelessWidget {
               child: Container(
                 width: 240,
                 height: 240,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x28C8A24B), Color(0x00C8A24B)],
+                    colors: [AppPalette.gold400.withValues(alpha: 0.16), AppPalette.gold400.withValues(alpha: 0.00)],
                     stops: [0.0, 0.65],
                   ),
                 ),
@@ -86,10 +86,10 @@ class AuthHeader extends StatelessWidget {
               child: Container(
                 width: 160,
                 height: 160,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [Color(0x14C8A24B), Color(0x00C8A24B)],
+                    colors: [AppPalette.gold400.withValues(alpha: 0.08), AppPalette.gold400.withValues(alpha: 0.00)],
                     stops: [0.0, 0.7],
                   ),
                 ),
@@ -165,11 +165,11 @@ class AuthHeader extends StatelessWidget {
                     width: 48,
                     height: 2,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         colors: [
-                          Color(0x00B8941F),
+                          AppPalette.gold400.withValues(alpha: 0.00),
                           AppPalette.gold400,
-                          Color(0x00B8941F),
+                          AppPalette.gold400.withValues(alpha: 0.00),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(999),

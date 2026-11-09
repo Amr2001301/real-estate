@@ -12,7 +12,8 @@
  *   METRICS-1: no token header, METRICS_TOKEN set → 401
  *   METRICS-2: wrong token, METRICS_TOKEN set → 401
  *   METRICS-3: correct token → 200 + Prometheus text/plain content
- *   METRICS-4: no METRICS_TOKEN in env → open (200 with no auth header) — documents the behaviour
+ *   METRICS-4: no METRICS_TOKEN in env, not production → open (200) — the dev default
+ *   METRICS-5: no METRICS_TOKEN in env, production → 401 (closed until a token is set)
  *
  * Importantly: this endpoint must NOT require a JWT. Prometheus has no concept
  * of user sessions. An unauthenticated HTTP request (no Authorization header
@@ -94,7 +95,20 @@ describe('METRICS-AUTH — /metrics endpoint access control', () => {
       delete process.env['METRICS_TOKEN'];
     });
 
-    it('METRICS-4: no token configured → 200 without auth (open endpoint — set METRICS_TOKEN in prod)', async () => {
+    it('METRICS-5: production with no token configured → closed (401), never open (F-055)', async () => {
+      const prev = process.env['NODE_ENV'];
+      process.env['NODE_ENV'] = 'production';
+      try {
+        const res = await http().get('/metrics');
+        expect(res.status).toBe(401);
+        expect(res.text).toBe('Unauthorized');
+      } finally {
+        if (prev === undefined) delete process.env['NODE_ENV'];
+        else process.env['NODE_ENV'] = prev;
+      }
+    });
+
+    it('METRICS-4: no token configured → 200 without auth (development only — closed in production)', async () => {
       const res = await http().get('/metrics');
       // Without METRICS_TOKEN the handler skips the token check entirely.
       // This is the dev default. Document it here so it is visible in CI.

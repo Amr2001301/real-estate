@@ -45,7 +45,7 @@ function makeService(prisma: ReturnType<typeof makePrisma>) {
 describe('PublicCompaniesService.search', () => {
   test('§28a — ACTIVE + customerAppEnabled=true company appears in search results', async () => {
     const company = makeCompany();
-    const prisma = makePrisma([{ slug: company.slug, name: company.name }]);
+    const prisma = makePrisma([{ slug: company.slug, name: company.name, customerAppEnabled: true }]);
     const service = makeService(prisma);
 
     const results = await service.search('acm');
@@ -55,7 +55,7 @@ describe('PublicCompaniesService.search', () => {
   });
 
   test('§28 — response contains no companyId', async () => {
-    const prisma = makePrisma([{ slug: 'acme', name: 'Acme Developer' }]);
+    const prisma = makePrisma([{ slug: 'acme', name: 'Acme Developer', customerAppEnabled: true }]);
     const service = makeService(prisma);
 
     const results = await service.search('acm');
@@ -74,9 +74,9 @@ describe('PublicCompaniesService.search', () => {
     expect(results).toHaveLength(0);
     const where = (prisma.company.findMany.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
     expect((where as { where: Record<string, unknown> }).where).toMatchObject({
-      customerAppEnabled: true,
       lifecycleStatus: 'ACTIVE',
       isActive: true,
+      AND: [{ OR: [{ customerAppEnabled: true }, { customerAppEnabled: null }] }],
     });
   });
 
@@ -101,7 +101,7 @@ describe('PublicCompaniesService.search', () => {
   });
 
   test('§25 — websiteEnabled=false + customerAppEnabled=true → still appears', async () => {
-    const prisma = makePrisma([{ slug: 'no-web', name: 'No Website Corp' }]);
+    const prisma = makePrisma([{ slug: 'no-web', name: 'No Website Corp', customerAppEnabled: true }]);
     const service = makeService(prisma);
 
     const results = await service.search('no-web');
@@ -114,8 +114,8 @@ describe('PublicCompaniesService.search', () => {
 
   test('§28 — both Company A and Company B independently discoverable', async () => {
     const prisma = makePrisma([
-      { slug: 'alpha', name: 'Alpha Corp' },
-      { slug: 'beta', name: 'Beta Corp' },
+      { slug: 'alpha', name: 'Alpha Corp', customerAppEnabled: true },
+      { slug: 'beta', name: 'Beta Corp', customerAppEnabled: true },
     ]);
     const service = makeService(prisma);
 
@@ -125,14 +125,16 @@ describe('PublicCompaniesService.search', () => {
     expect(results.map((r) => r.slug)).toEqual(['alpha', 'beta']);
   });
 
-  test('§28 — search result count bounded (take=10 passed to prisma)', async () => {
-    const prisma = makePrisma([]);
+  test('§28 — search result count bounded to 10 (more are read, the plan default drops some)', async () => {
+    const rows = Array.from({ length: 30 }, (_, i) => ({ slug: `co-${i}`, name: `Co ${i}`, customerAppEnabled: true }));
+    const prisma = makePrisma(rows);
     const service = makeService(prisma);
 
-    await service.search('any');
+    const results = await service.search('co');
 
+    expect(results).toHaveLength(10);
     const call = (prisma.company.findMany.mock.calls[0] as unknown[])[0] as { take: number };
-    expect(call.take).toBe(10);
+    expect(call.take).toBe(50);
   });
 
   test('trims whitespace from query before search', async () => {
@@ -154,7 +156,7 @@ describe('PublicCompaniesService.search', () => {
 
 describe('PublicCompaniesService.resolveBySlug', () => {
   test('§29a — valid eligible slug returns { slug, name }', async () => {
-    const prisma = makePrisma([], { slug: 'acme', name: 'Acme Developer' });
+    const prisma = makePrisma([], { slug: 'acme', name: 'Acme Developer', customerAppEnabled: true });
     const service = makeService(prisma);
 
     const result = await service.resolveBySlug('acme');
@@ -163,7 +165,7 @@ describe('PublicCompaniesService.resolveBySlug', () => {
   });
 
   test('§29 — response contains no companyId', async () => {
-    const prisma = makePrisma([], { slug: 'acme', name: 'Acme Developer' });
+    const prisma = makePrisma([], { slug: 'acme', name: 'Acme Developer', customerAppEnabled: true });
     const service = makeService(prisma);
 
     const result = await service.resolveBySlug('acme');
@@ -190,7 +192,7 @@ describe('PublicCompaniesService.resolveBySlug', () => {
     await service.resolveBySlug('no-customer');
 
     const call = (prisma.company.findFirst.mock.calls[0] as unknown[])[0] as { where: Record<string, unknown> };
-    expect(call.where.customerAppEnabled).toBe(true);
+    expect(call.where.AND).toEqual([{ OR: [{ customerAppEnabled: true }, { customerAppEnabled: null }] }]);
     const result = await service.resolveBySlug('no-customer');
     expect(result).toBeNull();
   });
@@ -224,5 +226,34 @@ describe('PublicCompaniesService.resolveBySlug', () => {
 
     const call = (prisma.company.findFirst.mock.calls[0] as unknown[])[0] as { where: { slug: string } };
     expect(call.where.slug).toBe('acme');
+  });
+});
+
+// ── QA run 1, F-016: a company made in the UI has the switch unset → the plan's default ──
+
+describe('customer app left to the plan default (customerAppEnabled = null)', () => {
+  const row = (plan: string, customerAppEnabled: boolean | null) => ({
+    slug: 'new-co', name: 'New Co', customerAppEnabled, subscriptionPlan: plan, capabilities: null, websiteEnabled: null, staffAppEnabled: null,
+  });
+
+  test('a TRIAL company (plan default: on) is found by slug and in search', async () => {
+    const prisma = makePrisma([row('TRIAL', null)], row('TRIAL', null));
+    const service = makeService(prisma);
+    expect(await service.resolveBySlug('new-co')).toEqual({ slug: 'new-co', name: 'New Co' });
+    expect(await service.search('new')).toEqual([{ slug: 'new-co', name: 'New Co' }]);
+  });
+
+  test('a STARTER company (plan default: off) is not found', async () => {
+    const prisma = makePrisma([row('STARTER', null)], row('STARTER', null));
+    const service = makeService(prisma);
+    expect(await service.resolveBySlug('new-co')).toBeNull();
+    expect(await service.search('new')).toEqual([]);
+  });
+
+  test('an explicit switch beats the plan default, both ways', async () => {
+    const off = makeService(makePrisma([], row('TRIAL', false)));
+    expect(await off.resolveBySlug('new-co')).toBeNull();
+    const on = makeService(makePrisma([], row('STARTER', true)));
+    expect(await on.resolveBySlug('new-co')).toEqual({ slug: 'new-co', name: 'New Co' });
   });
 });

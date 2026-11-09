@@ -85,6 +85,8 @@ function makeLead(overrides: Partial<{
   stage: string;
   unitInterestId: string | null;
   projectInterestId: string | null;
+  brokerId: string | null;
+  brokerAgentId: string | null;
 }> = {}) {
   return {
     id: LEAD_ID,
@@ -93,6 +95,8 @@ function makeLead(overrides: Partial<{
     projectInterestId: overrides.projectInterestId ?? null,
     // Client ownership: a rep reserves on their own leads.
     assignedSalesId: SALES_USER.sub,
+    brokerId: overrides.brokerId ?? null,
+    brokerAgentId: overrides.brokerAgentId ?? null,
   };
 }
 
@@ -278,6 +282,33 @@ describe('POST /reservations — dto.leadId unit mismatch guard', () => {
       .send(BASE_BODY);
     expect(res.status).toBe(201);
   });
+
+  // QA run 1, F-038: a rep reserving for an approved broker's lead dropped the
+  // broker, so the contract had none and no commission was ever created.
+  it("a broker's lead keeps its broker (and agent) on the reservation", async () => {
+    const mock = makePrismaMock({
+      stage: LeadStage.INTERESTED,
+      unitInterestId: UNIT_ID,
+      brokerId: 'broker-1',
+      brokerAgentId: 'agent-1',
+    });
+    app = await buildApp(mock);
+    const res = await request(app.getHttpServer()).post('/reservations').send(BASE_BODY);
+    expect(res.status).toBe(201);
+    const data = mock.reservation.create.mock.calls[0]![0].data as Record<string, unknown>;
+    expect(data.brokerId).toBe('broker-1');
+    expect(data.brokerAgentId).toBe('agent-1');
+  });
+
+  it('a lead that is not a broker lead stays unattributed', async () => {
+    const mock = makePrismaMock({ stage: LeadStage.INTERESTED, unitInterestId: UNIT_ID });
+    app = await buildApp(mock);
+    const res = await request(app.getHttpServer()).post('/reservations').send(BASE_BODY);
+    expect(res.status).toBe(201);
+    const data = mock.reservation.create.mock.calls[0]![0].data as Record<string, unknown>;
+    expect(data.brokerId).toBeNull();
+    expect(data.brokerAgentId).toBeNull();
+  });
 });
 
 // ─── Generic lead safety check ────────────────────────────────────────────────
@@ -313,6 +344,16 @@ describe('POST /reservations — dto.leadId generic lead safety check', () => {
       .send(BASE_BODY);
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/committed activities/i);
+  });
+
+  it('only a visit for ANOTHER unit commits the lead: the query excludes this unit (F-022)', async () => {
+    const mock = makePrismaMock({ stage: LeadStage.INTERESTED, unitInterestId: null, projectInterestId: null });
+    mock.visitAppointment.findFirst.mockResolvedValue(null); // no visit for any other unit
+    app = await buildApp(mock);
+    const res = await request(app.getHttpServer()).post('/reservations').send(BASE_BODY);
+    expect(res.status).toBe(201);
+    const where = (mock.visitAppointment.findFirst.mock.calls[0] as unknown[])[0] as { where: Record<string, unknown> };
+    expect(where.where).toEqual({ leadId: expect.any(String), unitId: { not: BASE_BODY.unitId } });
   });
 
   it('rejects 400 when generic lead has a linked contract', async () => {

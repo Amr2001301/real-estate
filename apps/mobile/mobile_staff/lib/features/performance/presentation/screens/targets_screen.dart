@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/sales_performance.dart';
 import '../cubit/targets_cubit.dart';
 import '../period.dart';
@@ -87,8 +86,8 @@ class _TargetsScreenState extends State<TargetsScreen> {
                                     Container(
                                       width: 42,
                                       height: 42,
-                                      decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
-                                      child: const Icon(Icons.track_changes_rounded, size: 21, color: AppPalette.gold500),
+                                      decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
+                                      child: Icon(Icons.track_changes_rounded, size: 21, color: AppPalette.gold500),
                                     ),
                                     const SizedBox(width: 11),
                                     Expanded(
@@ -125,9 +124,9 @@ class _Progress extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final p = perf;
-    Widget bar(double? pct, {Color color = AppPalette.gold400}) => ClipRRect(
+    Widget bar(double? pct, {Color? color}) => ClipRRect(
           borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(value: ((pct ?? 0) / 100).clamp(0, 1), minHeight: 8, backgroundColor: const Color(0xFFEFE8DC), color: color),
+          child: LinearProgressIndicator(value: ((pct ?? 0) / 100).clamp(0, 1), minHeight: 8, backgroundColor: homeLine(context), color: color ?? AppPalette.gold400),
         );
     final left = (p.targetAmount ?? 0) - p.achievedAmount;
     final unitsLeft = (p.targetUnits ?? 0) - p.achievedUnits;
@@ -140,8 +139,8 @@ class _Progress extends StatelessWidget {
               Container(
                 width: 42,
                 height: 42,
-                decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
-                child: const Icon(Icons.flag_outlined, size: 21, color: AppPalette.gold500),
+                decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
+                child: Icon(Icons.flag_outlined, size: 21, color: AppPalette.gold500),
               ),
               const SizedBox(width: 12),
               Expanded(child: Text(l10n.tgNoTarget, style: TextStyle(fontSize: 13.5, height: 1.5, color: colors.ink))),
@@ -161,7 +160,7 @@ class _Progress extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: AppPalette.gold400, borderRadius: BorderRadius.circular(99)),
-                    child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
+                    child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
                   ),
               ]),
               const SizedBox(height: 10),

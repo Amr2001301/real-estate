@@ -36,6 +36,7 @@ import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
 import { ConfirmButton } from '@/components/confirm-button';
 import { UnitMediaPanel } from './media-panel';
 import { MaintenanceItemsCard } from './maintenance-items-card';
+import { projectPlansT } from '@/messages/project-plans';
 import { deleteUnitAction } from '../actions';
 import {
   PremiumDetailLayout,
@@ -75,6 +76,12 @@ export default async function UnitDetailPage({
   const isAdmin = session?.role === 'ADMIN';
   const codes = await getMyCodes();
   const canEdit = isAdmin || codes.has('units:update');
+  // Which instalment plan(s) this unit takes and why (unit's own > its type's > the project's).
+  const canSeePlans = isAdmin || codes.has('installments:read');
+  const applicable = canSeePlans
+    ? (await safe(api.get<{ scope: 'UNIT' | 'TYPE' | 'PROJECT' | null; plans: { id: string; name: string; reservationAmount: number }[] }>(`/installment-plan-templates/applicable/${id}`))).data
+    : null;
+  const pp = projectPlansT(locale);
   const canDelete = isAdmin || codes.has('units:delete');
   const projectName = tx(unit.building?.phase?.project?.name);
   const phaseName = tx(unit.building?.phase?.name);
@@ -332,6 +339,32 @@ export default async function UnitDetailPage({
                 </div>
               )}
             </PremiumPanel>
+
+            {/* Applicable instalment plan and why */}
+            {applicable && (
+              <PremiumPanel title={pp.applicableTitle}>
+                {applicable.plans.length === 0 ? (
+                  <p className="text-sm text-slate-500">{pp.noApplicable}</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <p className="text-slate-500">
+                      {applicable.scope === 'UNIT' ? pp.scopeReasonUnit : applicable.scope === 'TYPE' ? pp.scopeReasonType : pp.scopeReasonProject}
+                      {applicable.plans.length > 1 ? ` — ${pp.moreThanOne}` : ''}
+                    </p>
+                    <ul className="space-y-1">
+                      {applicable.plans.map((p) => (
+                        <li key={p.id}>
+                          <Link href={`/dashboard/installments/${p.id}` as never} className="font-medium text-brand-700 hover:underline">
+                            {p.name}
+                          </Link>
+                          <span className="ms-2 text-slate-500 tabular-nums">{formatCurrency(p.reservationAmount, currency, locale)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </PremiumPanel>
+            )}
 
             {/* Maintenance / warranty items (ADMIN-only API) */}
             {isAdmin && <MaintenanceItemsCard unitId={id} locale={locale} />}

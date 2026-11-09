@@ -1,6 +1,6 @@
 import { Scale } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { pageMeta } from '@/lib/page-meta';
+import { apiFetch } from '@/lib/api-server';
 import type { PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
@@ -19,11 +19,9 @@ import { CompareView } from '@/components/compare/CompareView';
 const MAX = 3;
 const REVALIDATE = 60;
 
-export const metadata = buildMetadata({
-  title: 'مقارنة الوحدات',
-  description: 'قارن بين الوحدات المختارة جنبًا إلى جنب — السعر والمساحة والغرف والمزيد في مكان واحد.',
-  robots: { index: false, follow: true },
-});
+export async function generateMetadata() {
+  return pageMeta('compare', { robots: { index: false, follow: true } });
+}
 
 type SearchParams = Promise<{ ids?: string | string[] }>;
 
@@ -47,7 +45,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
 
   const [results, locale] = await Promise.all([
     Promise.all(
-      ids.map((id) => safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug })),
+      ids.map((id) => apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug })),
     ),
     getLocale(),
   ]);

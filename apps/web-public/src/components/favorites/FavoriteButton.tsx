@@ -1,5 +1,7 @@
 'use client';
 
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { extraT } from '@/messages/site-extra';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { Heart } from 'lucide-react';
@@ -28,15 +30,12 @@ export function FavoriteButton({
   className?: string;
 }) {
   const router = useRouter();
+  const t = extraT(useSiteLocale()).favorite;
   const { canFavorite, isFavorite, isPending, toggle } = useFavorites();
   const active = isFavorite(kind, id);
   const pending = isPending(kind, id);
 
-  const ariaLabel = !canFavorite
-    ? 'سجّل الدخول لحفظ المفضلة'
-    : active
-      ? 'إزالة من المفضلة'
-      : 'إضافة إلى المفضلة';
+  const ariaLabel = !canFavorite ? t.signInToSave : active ? t.remove : t.add;
 
   function onClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -65,7 +64,7 @@ export function FavoriteButton({
         )}
       >
         <Heart className={cn('h-5 w-5', active && 'fill-gold-500 text-gold-500')} aria-hidden />
-        {!canFavorite ? 'سجّل الدخول للحفظ' : active ? 'محفوظ في المفضلة' : 'حفظ في المفضلة'}
+        {!canFavorite ? t.signInShort : active ? t.saved : t.save}
       </button>
     );
   }

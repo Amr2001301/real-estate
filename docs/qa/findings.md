@@ -1,0 +1,344 @@
+# QA findings log
+
+One row per finding. Severity: Blocker (cannot work / data loss / money wrong /
+leak), Critical (core flow broken), High (feature broken, workaround exists),
+Medium (wrong but harmless), Low (polish). Status: open, fixed (PR), accepted
+(reason), wontfix (reason). Plan: `docs/QA_PLAN.md`.
+
+Run 1 — commit 4b81e561 (+ docs/seed-platform) — started 2026-11-06 from an empty database (platform super admin only).
+
+| Id | Run | Role | Surface | Phase / step | Steps to reproduce | Expected | Actual | Severity | Status | PR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| F-001 | 1 | Guest | Public site | 0 smoke | Open the website while the database has no company (or an unknown host) | A clear "this site is not available" page | The home shows the generic «404 — لم نتمكن من العثور على هذه الصفحة» page with the platform's brand, navigation and a "browse projects" button | Low | fixed — the home of a host with no company says «this site is not available» (no "browse projects" button); not covered by an automated test (needs a host with no company) | |
+| F-002 | 1 | Super admin | Onboarding | 1 company | After a wipe, create the first company in the UI | The company is usable right away | Checked: not a problem. The site and apps find the company by host / slug (a platform sub-domain `<slug>.<base-domain>` is created with the company); `DEFAULT_COMPANY_ID` is only a legacy fallback | — | not a defect | |
+| F-003 | 1 | Guest | Public site (local dev) | 1 company | Open `http://default.localhost:3002` in `next dev` | The company's site, found by its host | The proxy read `req.nextUrl.hostname`, which is always `localhost` in `next dev`, so a company host never resolved locally (the home 404'd) and per-company sites could not be tried on one machine | Medium | fixed (proxy reads the Host header) | |
+| F-004 | 1 | Super admin | Company page → domain | 1 company | Add the domain `elite.localhost` | Added, or a clear reason | Refused with the English text «Custom domains under localhost are reserved for platform use» in an Arabic screen | Low | fixed (the reserved-namespace message is Arabic) | |
+| F-005 | 1 | Guest | Public site | 1 company | Open the site of a company with no logo yet | The company's name/initials, never the platform's mark | The header shows the company name next to the platform (Devora) logo | Medium | fixed (a company without a logo shows its initials in the header and footer, never the platform mark — the platform logo only when there is no company; checked live; 4 tests) | |
+| F-006 | 1 | Super admin | New company form | 1 company | Submit the form with the country left on «اختر الدولة» | A message in the page's language | The browser's English native message «Please select an item in the list.» | Low | fixed — `NativeValidationMessages` puts the browser's own form errors in Arabic on the Arabic screens (`arabicNativeMessage`, unit-tested) | |
+| F-007 | 1 | Admin | Branding / any upload | 1 company | Upload a logo | Stored as `<uuid>.png` | Key was `<uuid>png` (the browser sends the extension without a dot) for every presigned upload | Medium | fixed (R2Service.normalizeExtension + test) | |
+| F-008 | 1 | Guest | Public site | 1 company | The company uploads a logo, then open any site page | The page shows with the company's logo | **Every page failed (500)**: the navbar and footer pass the logo URL to `next/image`, and the storage host is not in `images.remotePatterns` (`Invalid src prop`). A company with a logo had a dead website | Blocker | fixed (`unoptimized` on the brand logo + test) | |
+| F-009 | 1 | Guest | Public site | 1 company | Open the home of a branded company | The tab title carries the company's name | Title is «الرئيسية · ديفورا» (the platform name) | Medium | fixed (each page writes only its own title; the root layout sets «Company · tagline» and the template «%s · Company»; test) | |
+| F-010 | 1 | Admin | Sidebar account row | 1 company | Sign in as an admin named «مها السيد» | Initials «مس» | Shows «ما» (the article «ال» of the last name is used) | Low | fixed (one `initials()` skips the article «ال» and cuts by code point; shared by the admin and the public site; spec) | |
+| F-011 | 1 | Admin | Admin panel | 1 company | Sign in as a company admin | The company's identity | The sidebar header says «ديفورا / بوابة المسؤولين» (platform brand) | Low | not a defect — decided 2026-11-06: the admin panel and the staff app keep the platform's brand (Devora) for every company; only the public website and the customer app carry the company's identity | |
+| F-012 | 1 | Admin | Branding | 1 company | Save the branding, read `/public/branding` right away | The new logo | An older logo is returned for a short time after saving (cache not cleared on save?) — measure in phase 4 | Low (verify) | closed, by design — the API clears its branding cache on save (unit-tested); the public site re-reads it every 60 s (`revalidate: 60`), so a new logo shows within a minute | |
+| F-013 | 1 | Guest | Public site (dev) | 1 company | Open the site in `next dev` | No console error | «Encountered a script tag while rendering React component» from ThemeProvider (next-themes) shows the Next error overlay in dev | Low | accepted — a development-only React 19 warning from next-themes; production is unaffected | |
+| F-014 | 1 | Admin / Guest / Customer / Staff | Identity (site and apps) | 1 company | Set the primary colour to emerald and the accent to pink in the branding page, save, open the site and the apps | The company's own look | The colours are saved and reach the site as CSS variables (`--c-brand-primary/accent`), but the site's design uses fixed `navy` and `gold` for nearly everything (319 uses; only the nav underline and the footer rule read the brand variables), so the site looks the same as any other company's. Staff app sign-in also unchanged; only a few customer-app buttons follow the colour | High (the product promises an identity per company) | website: fixed (navy/gold scales come from the company's colours, tested); customer app: open | |
+| F-015 | 1 | Admin | New project form | 1 setup | Create a project with the latitude / longitude boxes empty | A clear message, the box marked required | The boxes are required but not marked; the browser's English «Please fill out this field.» appears and nothing is saved. The building code also needs 2+ characters (a single letter fails silently) | Low | fixed — the lat/lng boxes are already marked required; the browser messages are now Arabic (F-006), including the 2-character code rule | |
+| F-016 | 1 | Customer | Customer app start-up | 1 company | Open the customer app built for a company made in the super-admin UI | The company's app | «التطبيق غير متاح حاليًا»: `GET /public/companies/resolve` required `customerAppEnabled = true`, but a new company has it unset (= the plan's default, on for TRIAL), so every newly created company's customer app was refused until the super admin switched it on | High | fixed (the resolver uses the effective capability: own switch, else plan default; tests) | |
+| F-017 | 1 | Customer | Customer app start-up | 1 company | Open the company's app (cold start or offline) | Opens in the company's colours | The app did not keep its branding: until the request answered (or with no network) it showed the platform's default palette, a visible flash | Medium | fixed (the last branding is kept on the device per company and applied at once; refreshed from the server; tests) | |
+| F-018 | 1 | Admin | Data import preview | 1 setup | Upload a file with wrong rows | Messages in the page's language | Several messages are English («Unknown building "ZZ9"…», «must be greater than 0», «Phone … is not a recognised Egyptian mobile number») inside the Arabic screen | Low | fixed — the import preview shows the importer's row errors and warnings in Arabic (`translateImportMessage`, unit-tested); a message not in the table shows as the API wrote it | |
+| F-019 | 1 | Admin | Instalment plans | 1 setup | Create a plan | A plan one can apply to many units | A plan is bound to exactly one unit (the unit is required; the picker shows only units without a plan): a company with 300 units needs 300 plans, there is no project-wide plan or copy | Medium (decision) | fixed in two steps: the server (project / unit-type plans by percentages, validity dates, several plans, priority unit > type > project) is in this change; the new plan screen follows | |
+| F-020 | 1 | Admin | Instalment plans | 1 setup | Create a cash plan with a discount and no reservation amount | The form asks for it | It saves, then shows «يجب تحديد دفعة الحجز قبل استخدام الخطة» | Low | fixed — a plan without a booking amount shows a message under the field and the save button is disabled, for cash plans too | |
+| F-021 | 1 | Super admin / Admin | Dev storage | 1 setup | Restart the local storage emulator | n/a | Not a product defect: the emulator keeps objects in memory, so uploaded logos vanish (broken logo on the site) when it restarts | — | not a defect | |
+| F-022 | 2 | Sales / Manager | Reservation create | 1 company | A website lead books a visit for unit A1-101, the visit is planned; the rep creates a reservation for the same unit | The reservation is created | Refused: the guard rejected any lead that has a visit with a unit, even when it is the very unit being reserved (the normal road for a website lead) | High | fixed (the guard only counts a visit for another unit; test) | |
+| F-023 | 2 | Admin / Sales | API validation / import messages | all | Trigger a validation error | Messages in Arabic | Several API / DTO messages reach the UI in English (systemic; see F-018) | Low | partly fixed: the customer-facing OTP / account messages (F-027); the rest of the ~400 English exception texts in the API are still English — accepted as Low until a shared message catalogue (error codes translated by the apps) is built | |
+| F-024 | 2 | Manager | Team | 1 company | A manager signs in after reps are linked to him | Sees his team | Nothing in the UI says how to link a rep to a manager (it lives inside the user's edit row, hidden under a `<details>`); a manager with no linked reps sees an empty screen with no hint | Low | fixed — the Users list already has a «Sales manager» column with a change action; a manager with no reps now sees how they are linked | |
+| F-025 | 2 | Admin | New project form | 1 setup | Leave latitude empty | Arabic message | Native English browser message (see F-015) | Low | fixed (same as F-015) | |
+| F-026 | 2 | Admin / Customer | Reservation + contract | 1 company | Plan «مقدم 10%» with a 100,000 booking amount | The down payment shown matches what the customer pays up front | The booking (100,000) is paid on top of the 360,000 down payment, so the customer pays 460,000 up front (12.8%), while the plan reads «10%». Totals are right (100k + 360k + 84 × 37,380.95 = 3.6M); the wording is the issue | Low (decision) | fixed — the reservation page and the convert form now state «total paid up front» (booking + down payment); the maths is unchanged, the booking stays on top of the down payment (owner decision) | |
+| F-027 | 2 | Customer | Customer app sign-in by phone | 1 company | Ask for a code twice within a minute | A message in Arabic | The snackbar reads «Please wait before requesting another code» (English, from the API, `auth.service.ts:947/984`). Same family as F-023 | Low | fixed (the OTP refusals — wait, expired, wrong code, too many, bad phone, inactive account — are Arabic; 3 tests fail without the fix) | |
+| F-028 | 2 | Customer | Customer app sign-in by phone | 1 company | Type the number the way Egyptians write it: 01099887766 | The code is sent | «أدخل رقم هاتف صحيحًا»: the client validator `^\+?[1-9]\d{7,14}$` refuses a leading 0, so only +20… works. A customer who types 010… cannot sign in or register by phone | High (every Egyptian customer) | fixed (the validator accepts 01xxxxxxxxx; the API already turns it into +20; tests) | |
+| F-029 | 2 | Customer | Customer app: pay an instalment → send proof | 1 company | Pick a receipt and send | The proof reaches the admin for review | **Never worked**: receipts are stored in the private bucket, so the presign answer has only `key` (no `publicUrl`); the app posted the empty `publicUrl` and the API answered 400 «fileUrl is required». No customer could send a payment proof. The old tests faked a `publicUrl`, which hid it | Blocker (money flow) | fixed (the app posts the key; 3 tests that fail without the fix) | |
+| F-030 | 2 | Customer / Admin | Payment proof (API) | 1 company | Send a proof whose file reference is refused (it happened through F-029) | Nothing is saved | The proof row was written first and the file checked after: the customer got 400, but an orphan proof «قيد المراجعة» with no file stayed, and every retry was refused as «أرسلت إثباتاً لهذا القسط وهو قيد المراجعة» — the customer could not pay that instalment until staff rejected the orphan | High (money flow) | fixed (the reference is validated before any write, on the instalment, booking and resubmit paths; 2 tests that fail without the fix) | |
+| F-031 | 2 | Customer | Customer app headers / cards / filter chips | 1 company | Company primary = emerald; open the screens | Every header and card in the company's colour | Many headers, summary cards and the filter chips stayed the fixed navy (≈60 hard-coded shades in screens and shared widgets) next to emerald ones | Medium (identity) | fixed (shades are cut from the company's primary; platform values unchanged; test) | |
+| F-032 | 2 | Customer / Admin | Maintenance (new company) | 1 company | Open «طلب جديد» in the customer app right after the company is set up | Pick a category and send | «لا توجد فئات — فئات الصيانة غير متاحة حاليًا»: a new company has no maintenance categories, so no customer can send a request, and nothing in the setup tells the admin (categories are made in a form at the bottom of the maintenance page) | Medium (onboarding) | fixed (6 default categories — plumbing, electrical, HVAC, carpentry, painting & finishing, general — are given to a new company, and by a data migration to existing companies that have none; the admin edits them; 4 tests) | |
+| F-033 | 2 | Admin | Late fees | 1 company | Add the late-fee clause on a contract while the company setting reads `lateFee.enabled = false` | One clear rule | Fees are charged (1% after 7 days, once; verified 373.81 on 37,380.95, not charged twice) because the contract clause decides, while the stored company setting still says `enabled: false` — two switches with opposite words | Low | closed, by design — `lateFee.enabled` is the company default for NEW contracts (its label says so; read by `companyLateFeesOn` when a contract or reservation does not state the clause); the clause on the contract is what is charged. Not two competing switches, so nothing to change (owner decision) | |
+| F-034 | 2 | Admin | Payments list | 1 company | A 37,380.95 instalment | The exact amount | The list and the detail page show «37,381 ج.م» (rounded) where the schedule shows 37,380.95 | Low | fixed — a payment's amount on the list and the detail keeps its piastres (`formatExactCurrency`); totals stay whole pounds | |
+| F-035 | 2 | Customer | Maintenance request | 1 company | Open «طلب جديد» for a unit not yet handed over, fill the form, send | Told up front that requests open after the handover | The whole form is offered; only the send is refused («تُفتح طلبات الصيانة بعد تسليم الوحدة», 400) and the error is easy to miss. The screen should explain it before the form | Medium | fixed (the contract row already carries `handover`; the app reads it, shows a notice when the chosen unit is not handed over, and blocks the send; units now load for the fixed-unit entry too; 3 tests) | |
+| F-036 | 2 | Sales / Admin | Broker lead approval | 1 company | Admin approves a broker lead and assigns it to a rep in the same step | The rep is told | No «lead assigned» notification reaches the rep on this path (the website-lead path does notify); the rep finds the lead only by opening the list | Medium | fixed (approving with a rep sends `lead_assigned_sales` to that rep, not to the approver; 2 tests, one fails without the fix) | |
+| F-037 | 2 | Sales / Admin | Several forms | 1 company | Read the hints on the reservation form, the broker reservation footer and the new payout page | Arabic text | Internal English words show: «سيُسجَّل كـ FIXED», «(snapshot)», «عمولات بحالة APPROVED», «reservationAmount = 0» | Low | fixed (the four texts read in Arabic: «معتمدة», «دفعة الحجز», «مبلغ ثابت», «تثبيتها») | |
+| F-038 | 2 | Sales / Broker | Reservation made by a rep from an approved broker lead | 1 company | Admin approves a broker's lead and the rep reserves the unit for that customer | The sale stays the broker's, commission accrues | The reservation (and the contract) carry **no broker**: `brokerId` is not copied from the lead, so no BrokerCommission is ever created and the broker loses the commission silently (contract CON-2026-0002 signed, 0 commission rows). Only a reservation made in the broker portal is attributed | High (money, trust of brokers) | fixed (the reservation takes the lead's broker and agent; the rate is taken at signing from the grant in force when it was reserved; 2 tests) | |
+| F-039 | 2 | Broker / Admin | Broker reservation | 1 company | A broker reserves a unit that has no instalment plan | A clear way forward | «لا توجد خطة دفع متاحة للوسطاء لهذه الوحدة. تواصل مع الإدارة»: a broker can reserve only a unit that has its own plan visible to brokers (F-019: one plan per unit), so most of the inventory is closed to brokers until an admin builds a plan for each unit | Medium (onboarding) | fixed with F-019: a broker books a unit through its own plan, else its type's, else the project's | |
+| F-040 | 2 | Broker | Portal home | 1 company | The company default commission is 2.5% and the project grant 3% | The rate that applies to the sales the broker makes | The home shows «2.50% عمولة» (the default); the reservation locked 3% (the project grant). The broker is shown a rate that is not the one he earns on that project | Low | fixed (the portal home shows the rate granted on the broker's projects, a range when they differ, else the firm default, and nothing rather than «0.00%»; 4 tests) | |
+| F-041 | 2 | Admin | Payments list vs dashboard | 1 company | Cancel a contract and refund its 50,000 booking | One «collected» number everywhere | The dashboard and the financial report show 510,000 (net of the refund); the payments page header shows «إجمالي المحصّل 560,000» (gross) | Medium | fixed (the payments page said «إجمالي المحصّل» for what it sums — every payment received, before refunds; renamed «إجمالي المقبوض (قبل الاسترداد)» so it no longer reads as the same number as the dashboard's net «المحصّل») | |
+
+## Run 1 — master cycle summary (company A, 2026-11-06)
+
+Done end to end through the UI (SQL/API only to verify): website lead → visit → reservation → manager approval → booking paid → contract → signature → schedule (85 rows, totals = 3.6M with the booking) → customer app sign-in (OTP, `01…` after F-028) → proof (F-029/F-030) → admin rejects an orphan, approves the down payment → dashboard / financial report / payments reconciled with SQL (460,000) → time travel to 2026-12-20 (overdue marked once, notified to customer and staff; with the clause, 1% fee = 373.81 once; second run charges nothing) → handover → maintenance (customer → admin approve/assign → supervisor in the staff app: start, resolve, confirm → customer confirms with 4 stars) → broker (lead via portal, admin approves, F-038 for the rep-made reservation; portal reservation locks 3%, commission 72,000 on signing, approve, payout draft → approved → processing → paid, all 12 notifications) → cancellation (refund 50,000, unit released, clawback 72,000 recorded, reports 510,000 = SQL).
+
+Not yet done: second company in parallel (isolation), the variant matrix, per-role screen sweeps, the breadth checks, the second clean run from an empty database.
+| F-042 | 2 | Customer | Customer app screens | 1 company | Company accent = pink: open the notifications, the «المزيد» tiles, deposits, contracts, my property | Warm shades in the company accent | About 80 fixed gold / brown shades (dark-gold text, deeper golds, browns, translucent gold glows, the maintenance icon) stayed the platform gold | Medium (identity) | fixed (shades are cut from the accent in AppPalette; platform values unchanged; test) | |
+| F-043 | 2 | Manager / Sales | Deposits | 1 company | A manager or rep opens the payments list, then a payment | The detail opens | `GET /deposits` is allowed (200) but `GET /deposits/:id` is 403 for both, so the list shows rows whose detail the viewer cannot open | Low | fixed — a rep or manager opens the read-only detail of the payments the list shows them (own / team sales only, 404 otherwise); reversal and the documents card stay admin-only; tests in deposits-permissions.spec | |
+
+## Run 1 — isolation and permissions (2026-11-07)
+
+- **Tenant isolation: pass.** Company B's admin: every A object by id → 404, with a spoofed `X-Tenant-Slug: default` → 403, no write allowed; B's lists, reports (0), documents, audit log (own 2 rows) show nothing of A. A customer token on B's tenant → 403 `TENANT_CONTEXT_MISMATCH`; a customer token on staff endpoints → 403.
+- **Role matrix (API): pass.** Maintenance supervisor and broker: 403 on every admin/staff endpoint (reads and writes); manager and sales: 403 on users, settings, audit, reports, brokers, payouts; sales2 (no deals) sees 0 leads / contracts / reservations / deposits, sales1 only their own, manager his team's.
+- **Process note.** While probing, an admin-token call to the real cancel and delete endpoints cancelled CON-2026-0001 and soft-deleted sales1 in the QA database. Restored by SQL in one transaction (contract ACTIVE, 85 instalments back to PENDING/OVERDUE, cancellation row removed, user active); a stray «cancelled» notification to the customer remains. Probes now use non-existent ids for mutations.
+| F-044 | 3 | Admin | Convert reservation to contract (concurrency) | 1 company | 5 simultaneous `POST /reservations/:id/convert` for one reservation | One contract, the others a clean 409 | One contract is created (the DB unique key on `reservationId` holds — no duplicate), but the other four answer **500 Internal server error**: the unique-violation (P2002) is not mapped (`reservations.module.ts:2279`). Same race on the unit (4 reservations for one unit): 1 × 201, 3 × 409 «Unit is no longer available» — correct; 6 parallel booking-payment confirms: 6 × 201, exactly 1 deposit — correct | Medium | fixed (P2002 on `reservationId` → 409 «تم تحويل هذا الحجز إلى عقد بالفعل»; test fails without it) | |
+| F-045 | 3 | Guest | Public info request | 1 company | Send a message that contains a NUL character (`\u0000`) | 400 | **500 Internal server error**, and the lead for that visitor had already been created — a lead with no request behind it (Postgres refuses NUL in text) | Medium | fixed (a global pipe refuses NUL in body/query/params with a 400 before anything is written; 3 tests) | |
+| F-046 | 3 | Guest | Public info request | 1 company | A name that contains bidi override (U+202E) or zero-width characters | Cleaned | Stored as typed: staff can be shown a reversed or invisible name (spoofing) | Low | fixed — the public info-request and visit-request forms strip bidi overrides/isolates, zero-width space and BOM from the name (`cleanPersonName`); Arabic/Persian marks and joiners are kept | |
+| F-047 | 3 | All web users | Security headers (web-admin, web-public) | 1 setup | `curl -I` the two Next apps | CSP / X-Frame-Options / HSTS / Referrer-Policy / nosniff, no X-Powered-By | **None set** (the API has them all): the admin dashboard can be framed (clickjacking), no CSP, no HSTS, `X-Powered-By: Next.js` leaks. `next.config` has no `headers()` | High (security) | fixed (a shared list applied to every route + `poweredByHeader: false`; the CSP covers only framing/base/form/object so no page can break; tests; verified live: pages, a server-action form and the login work, framing is refused) | |
+
+## Run 1 — breadth (2026-11-07)
+
+- **Money SQL invariants: pass** — schedule + booking = contract total for both active contracts; no PAID instalment without an approved deposit and the reverse; no zero/negative amounts; no SOLD unit without an active contract; commission = basis × % (72,000); no two active contracts on a unit; no tenanted row without a company.
+- **Concurrency:** same-unit reservation ×4 → 1 created, 3 × 409 ✔; booking-payment confirm ×6 → exactly 1 deposit ✔; convert ×5 → 1 contract but 4 × 500 ✘ (F-044).
+- **Input:** XSS payloads in a name and a message render as text, nothing executes (checked on 5 admin pages); SQL-injection strings are stored inert; 100 KB body → 413; empty/invalid phone → 400 with a clear message; emoji OK; NUL → 500 (F-045).
+- **Auth:** tampered payload / companyId, `alg: none`, stripped signature, refresh-as-access, access-as-refresh → 401; refresh reuse refused; 5th wrong login in a minute → 429; CORS refuses an unknown origin.
+| F-048 | 3 | Admin | Lead / customer pages (avatar) | 1 company | Open a lead whose name starts with an emoji | The page renders | React **hydration error** (console + page regenerates on the client): five separate `initials()` helpers (`avatar.tsx`, `lead-card.tsx`, `sidebar.tsx`, `cockpit.tsx`, `list-cells.tsx`) cut the first character by UTF-16 unit, splitting the emoji's surrogate pair (server and client then disagree). Same helpers cause F-010 («ال» article used as the initial) | Medium | fixed (one shared `initials()` by code point that skips «ال», replacing 15 copies and 2 bare `charAt(0)` avatars; Playwright unit spec) | |
+| F-049 | 3 | Admin | Projects list on a phone (390 px) | 1 company | Open `/dashboard/projects` | No horizontal scroll | **Not a defect** — checked: the page cannot scroll sideways (`scrollX` 0, body and document `scrollLeft` 0); the table scrolls inside its own card as designed. The sweep flagged it because `document.scrollWidth` is inflated by the RTL inner scroller | — | not a defect | |
+| F-050 | 3 | Sales / Admin | Visits | 1 company | Book two visits for the same lead at the same time | A warning or a refusal | Both are created (201). A rep cannot be double-booked (409 «لدى موظف المبيعات زيارة أخرى في هذا الوقت»), but the same customer can be booked twice at one time | Low | fixed (one customer, lead or client, cannot be booked for two overlapping visits: 409 «للعميل زيارة أخرى في هذا الوقت»; 3 tests) | |
+| F-051 | 3 | Sales / Admin | Visits | 1 company | Mark a visit scheduled for next week as completed | Refused until its time (a no-show is refused before the time) | Completed (201) | Low | fixed (a visit cannot be completed before its time, as a no-show already could not; an admin may force it; 2 tests, existing fixtures moved to a past visit) | |
+| F-052 | 3 | Admin / Customer | Instalment payments | 1 company | The customer pays 200,000 of a 495,000 down payment | The part is recorded and the rest stays due | «الدفعات الجزئية غير مدعومة حالياً» (400): only the exact instalment amount can be recorded; a part-payment must be waited for or recorded by hand-editing the schedule. Product decision | Medium | accepted — decided 2026-11-07: part-payments are not supported; an instalment is paid in full (the message says so) | |
+| F-053 | 3 | Admin | Record a payment | 1 company | Record an instalment payment with a date 10 days ahead | Refused | Accepted: the instalment is PAID with `paidAt` 10 days in the future (money not yet received; the reports count it) | Medium (money) | fixed (a payment date after now — 5 min of clock difference allowed — is refused with 400; single and batch; test fails without the fix) | |
+| F-054 | 3 | Guest | Public site — share preview and tab icon | 2 companies | Read `og:image`, `og:title` and the favicon of a company's pages | The company's own | Every page carried the platform's `/og-default.png` and the page's own metadata overrode the root layout's (Next replaces `openGraph` as a whole): even a company with its own share image showed the platform's, and a company without one showed the platform mark | Medium (identity) | fixed (a page's metadata carries only its own title / cover / path; the root layout carries the company's name, share image (else its logo) and favicon (else its logo); 5 tests; checked live on two hosts) | |
+| F-055 | 3 | Operator | Metrics endpoint | production | Start the API in production without `METRICS_TOKEN` and `GET /metrics` with no credentials | Refused | 200: the route and traffic figures are published to anyone who can reach the API (the token was optional; the comment said "set it in production") | Medium (security / config) | fixed (in production the endpoint answers 401 until `METRICS_TOKEN` is set; development stays open; test fails without the fix) | |
+| F-056 | 3 | All users | Rate limits behind a proxy | production topology | Send sign-in / OTP requests from different people through the host's proxy | Each person has their own limit | The limits (login 5/min, OTP 3/min, global 100/min) are keyed on the socket address and the API never trusted a proxy header: behind any host proxy every user of every company shares one address, so one bucket (3 OTP requests a minute for the whole platform), and the address in audit/session lists is the proxy's. A client also cannot be told from another | High (availability at scale, not a leak) | fixed in code (`TRUST_PROXY_HOPS` = how many proxies to trust, default 0 = none so a client cannot choose its own address; refuses a bad value; 3 tests; documented in `.env.example` and the hosting backlog item). **To do at deployment:** set the host's real hop count (and for the web apps — which call the API from their server and forward the browser address in `X-Forwarded-For` — decide how that hop is trusted) | |
+| F-057 | 3 | Customer / Sales | Booking payment confirmed | 1 company | Confirm a booking payment twice, or six times at once | One «booking paid» notice | Every confirm told the customer and the rep again: six parallel confirms left 6 identical notices for one payment (one deposit, correctly) | Low | fixed (the status flips to PAID with a conditional update; only the call that flips it notifies; test fails without the fix) | |
+| F-058 | 3 | Admin | Audit log — data exports | 1 company | Download a report / unit list as CSV, XLSX or PDF, then read the audit log | A row: who, what, which filters | The interceptor logged only POST / PATCH / PUT / DELETE: a download is a GET, so bulk customer and money data could leave with no trace (only the one `DATA_EXPORT` screen was audited) | Medium (security / accountability) | fixed (a GET on `…/export[.csv|.xlsx|.pdf]` writes an `EXPORT` row with the actor, the path and the filters; 4 tests, 2 fail without the fix) | |
+| F-059 | 3 | Manager / Sales | Leads board | 1 company | Open the lead board as a rep or manager | No console error | React hydration mismatch (`aria-describedby="DndDescribedBy-0"` vs `-3`): the drag-and-drop context had no stable id | Low | fixed — `DndContext id="lead-pipeline-board"` | |
+| F-060 | 3 | Admin | English screens: assistant, reports | 1 company | Switch to English, open the AI assistant and the reports page | The page loads cleanly | «Hydration failed»: client components read the locale cookie in the browser (server rendered Arabic), and the reports period used `formatRange` whose dash spacing differs between server and browser ICU | Medium | fixed — `LocaleProvider` hands the server's locale to client components (`useClientLocale`); the period is built without `formatRange` | |
+| F-061 | 3 | Admin | English screens: shell, lead board, dashboard | 1 company | Switch to English, open the dashboard and the lead board | All English | Hard-coded Arabic: the sidebar subtitle «بوابة المسؤولين», the six lead-stage column names (and their toast / aria texts), the dashboard activity feed («عقد جديد», «دفعة جديدة»…) and the six chart months came from the API in Arabic | Low | fixed — English labels by type / month key (`activity-labels`), locale-aware board and sidebar | |
+| F-062 | 3 | Guest | Public site, OS in dark mode | 1 company | Open any page with the system theme on dark | No console error | Hydration mismatch on every page: the theme switch's label («switch to light») depended on the browser's theme, unknown on the server | Low | fixed — a neutral label until mounted (`ThemeToggle`) | |
+| F-063 | 3 | Guest | Public site in English | 1 company | Switch to English, open any page / the privacy and terms pages | All English | The chat launcher and the whole chat panel (21 strings), the theme switch label, and the privacy / terms subtitles were Arabic | Low | fixed — `chat`, `theme` and the subtitles are in `messages/site.ts`; `ChatWidget` takes the locale | |
+| F-064 | 3 | Guest / Customer | Public site in English | 1 company | Switch to English, open the units filter, contact, login and register, project cards | All English | Still Arabic: the unit-type filter («كل الأنواع»), the contact page's support block and opening hours, the login / register / OTP forms and their side panel (~100 strings), the «project details» / «units available» labels on the cards | Medium | fixed — (a) the sign-in screens are in `messages/auth.ts`; (b) the contact page's support block and hours, the project cards and facts, the unit filter's fixed ranges are in `messages/site-extra.ts`. Page tab titles of the sign-in pages stay Arabic | |
+| F-065 | 3 | Guest | Public site in English | 1 company | Switch to English and open the projects list while the company has English names and descriptions | English names | The site never sent `Accept-Language` to the API, so the API answered in Arabic and every record showed its Arabic text | Medium | fixed — `apiFetch` (`lib/api-server.ts`) sends the visitor's language from the server components; the browser-side `safeFetch` is unchanged | |
+| F-066 | 3 | Guest | Public site in English | 1 company | Switch to English and open the units list, a unit, compare, a project | All English | Still Arabic: the unit cards («متاحة», «الطابق», «حمام»), the compare table, prices and numbers (Arabic-Indic digits, «ج.م», «م²»: `lib/format.ts` is Arabic-only), city names stored only in Arabic, the company name in the header (branding has one name). The English public site is not finished | Medium (decision) | fixed — the English public site is complete: browsing pages and the customer area (phases 1–2, merged) and, in phase 3, the page titles in the browser tab (`messages/meta.ts`, `pageMeta`; no platform brand in any title or description) and the city filters. What still reads Arabic on the English site is data: the company name, a city or name typed only in Arabic, customers' own text, and notification bodies written at event time | |
+| F-067 | 3 | Admin | Company identity | 1 company | Give a company an Arabic name and open its English site | An English name in the header | The company has one name (`Company.name`, optional `displayName`), so the English site shows the Arabic name. A company that wants both needs a translatable display name | Low (feature) | fixed (owner: yes) — `Company.displayNameEn` (migration `20261107140000_company_display_name_en`), saved from the branding form («الاسم المعروض (إنجليزي)»), returned by `/public/branding`, and the English site's header, footer and page titles use it (`companyName(branding, locale)`); without one the Arabic name stays | |
+| F-068 | 2 | Admin | Broker payouts | 1 payout in PROCESSING | The bank rejects the transfer after the payout was sent for processing | The admin can undo the payout and pay again | A PROCESSING payout could only be marked paid — there was no cancel, so its commissions stayed locked to it for good | **Fixed**: a PROCESSING payout can be cancelled with a reason (its commissions return to eligible); refused when one of its commissions carries a clawback; the button shows on the page. Test in `payout-transitions-workflow.spec.ts` |
+
+## Run 1 — UI sweep (2026-11-07)
+
+~60 admin routes × desktop light / desktop dark / 390 px: no 5xx, no blank page, no horizontal overflow except F-049, hydration errors only for F-048. (The dark-mode check by background colour was not meaningful — the theme is switched by the toggle, not by the system scheme; dark mode was reviewed visually in phase 1.)
+
+## Run 1 — time
+
+Instalment dates are UTC midnight on the same day-of-month across the whole 84-month schedule (no DST drift); `addMonths` clamps month-ends and leap days (Jan 31 → Feb 28 → Mar 31 → Apr 30; Feb 29 2028 + 12 → Feb 28 2029; +48 → Feb 29 2032) without drifting; `markOverdue` waits until the whole due day has ended in the company's time zone.
+
+## Run 2 — variant matrix (in progress, 2026-11-07)
+
+Driven through the API on the QA database and read back (rows and SQL); each line says what was checked.
+
+- **Where the lead comes from — pass.** Website inquiry and visit request each make a lead (source «موقع الويب»); a walk-in by a rep; the same phone again (also in +20 form) and the same email with another phone → 409 `OPEN_LEAD_EXISTS`, and `allowDuplicate` adds anyway; a bad name/phone → 400; a lead without a phone → 400. (English messages remain: F-023.)
+- **Lead life — pass.** NEW → INTERESTED → VISIT → NEGOTIATION; WON by hand refused; LOST with a reason, reopened to NEW; a reason on a non-LOST stage refused; assign and reassign; merge refused across different customers and into itself.
+- **Visits — pass, 2 Low.** Create, confirm, reschedule (a new appointment; the old one is RESCHEDULED), complete, cancel, no-show; a past date must be saved as COMPLETED; completed/cancelled visits cannot change again; the same rep at the same time → 409. F-050, F-051.
+- **Reservation / plans (project plan, end to end) — pass.** A 3BR unit (4,950,000) takes the unit-type plan: booking 2% = 99,000, down 10% = 495,000, 84 months = 51,857.14; convert before approval and before the booking payment is confirmed are refused; the contract's schedule = 85 rows, 495,000 + 84 × 51,857.14 = 4,851,000, plus the 99,000 booking = 4,950,000 = the contract total.
+- **Money — pass, 1 Medium, 1 owner decision.** Exact-amount payments only (F-052); over-payment and an already-paid instalment refused; negative/zero refused; paying #3 before #1/#2 works; a future-dated payment was accepted (F-053, fixed); a cheque deposit leaves the instalment PENDING; deposit-at-bank then clear pays it; bounce (with a penalty and its due date) leaves it PENDING; a replacement must be deposited then cleared; a bank transfer pays at once and its reversal reopens the instalment.
+- **Contract changes — pass.** Each one is refused while a cheque or payment waits for review («سوِّها أولاً») and works after it is cleared: price change 4,950,000 → 4,800,000 (negative refused), reschedule the unpaid instalments over 96 months (0 refused; 86 → 103 rows), transfer (تنازل) with a 5,000 fee (to the same customer refused; the fee is a schedule row), unit swap C1-503 → A1-504 at 4,900,000 (the old unit goes back to AVAILABLE, the new one SOLD), handover (a future date refused, a second one refused). After every change: total = booking + the live schedule − the extra rows (150 bounce penalty, 5,000 fee) — checked by SQL each time.
+- **People — pass.** A new rep signs in; a permission removed while signed in blocks the very next call (403 «Missing permission»), and works again when given back; deactivate → the old token 401 and a new sign-in 403 «Account inactive»; reactivate → signs in; admin revokes sessions → the token 401; delete → 401; a wrong password 4 times in a minute → 429.
+- **Not run live in this block (covered by the e2e suites in CI):** broker commission rules / payout failures / clawbacks (v2-commissions, u2b, y4), sales targets and bonus months (u4, y3), 2FA on/off and the session list (tfa1, ses1), password reset, content & marketing (cms1, mc1–3), data import/migration (mg1–2), print documents (p4, p5), maintenance variants (u3c, prm2e). Still to check by hand: broker-customer visit, two companies' apps for one person, notification segments and opt-outs.
+
+## Run 2 — company identity (6c, in progress)
+
+- **Website per company — pass after F-054.** `default.localhost` and `riyada.localhost` each show only their own name, logo and colours (Riyada indigo/amber, restyling header, hero, buttons and links) with no trace of the other company; the tab title, `og:title`, `og:site_name`, `og:image` and the favicon follow the company (F-009, F-054 fixed). An unknown host shows a 404 page in the platform's brand with HTTP 200 (F-001 still open). The hero keeps the platform's gold on the word «بعناية» whatever the company accent (Low).
+- **Local note:** after the container restarted the local S3 lost the uploaded logos (404) — environment, not a defect; restored for the check.
+- **Customer app per company — pass.** A build with `COMPANY_SLUG=riyada` shows Riyada's indigo/amber brand, its logo, name and contact card, and none of Company A's projects or green/pink brand; the build for A shows A's. (Documents, notifications and e-mails: print documents are covered by `print-documents.spec`; notification wording per company still to check by hand.)
+
+## Run 2 — operations (2026-11-07)
+
+- **Backup and restore — pass.** `db-backup.sh` of the QA database (checksum OK) restored by `db-restore-test.sh` into a disposable database: identical row counts for contracts, instalments, deposits, reservations, leads, users, units, plans and the audit log, and the same total of deposits (1,079,380.93); `prisma migrate status`: 141 migrations, schema up to date; no schema drift.
+- **Health — pass.** `/health`, `/health/live`, `/health/ready` (database and redis ok) answer outside `/v1`.
+- **`/metrics` — F-055** (open without a token in production; now closed).
+- **Still to run:** performance with thousands of rows, files and private-link expiry, notification delivery once-and-to-the-right-person, CSRF on the cookie sessions, audit-log completeness, scheduled jobs idempotent over a restart.
+
+## Run 2 — performance (2026-11-07)
+
+6,000 extra leads + 6,000 customers on top of the QA data (removed afterwards): every list answers in 15–45 ms (pages 1 and 150, 100 rows, search, stage filter), the report endpoints in 11–101 ms (`admin-summary`, `financial-dashboard` ≈100 ms), exports: CSV 14 ms, XLSX ≈270 ms, PDF ≈450 ms (worst 1.8 s). With 10 parallel clients: p50 91 ms, p95 204 ms, p99 236 ms; at 30 parallel clients the per-minute cap of 100 requests per address answered 429 — by design, and the reason F-056 matters (a whole office behind one address shares that cap).
+
+## Run 2 — notifications (2026-11-07)
+
+Read back from the `Notification` table of the QA database (226 audit rows, ~190 notifications, 40 kinds): no notice is repeated for the same person and payload except one — `reservation_booking_paid`, six identical in the same 5 seconds (F-057, fixed). The repeats by entity (cheque/deposit events on one contract) are separate events. Still to check by hand: push and e-mail delivery with a real provider, opt-outs, a segment send.
+
+## Run 2 — audit log, CSRF, files (2026-11-07)
+
+- **Audit log.** Every mutating call is logged with actor, entity and the masked response; searched all rows for password / token / secret / OTP keys: none (the only hits are `code` of units and phases). Rows without an actor are the anonymous public calls; rows without a company are the super admin's. Exports were missing (F-058, fixed).
+- **CSRF — pass by design.** The API never reads a cookie (Bearer only); the web apps keep the tokens in `httpOnly`, `SameSite=Lax` cookies and call the API from their server, so a cross-site request carries no credential the API accepts.
+- **Private files.** Downloads are presigned and expire after 5 minutes, uploads after 5 minutes; whether the storage itself refuses an expired or unsigned link cannot be proven on the local S3 stand-in (moto): to check on MinIO / R2.
+
+## Run 2 — screens of every role (2026-11-07)
+
+Method: a script signs in as each role and opens every link of its navigation (plus the settings hub), recording status, console errors, failed requests, page errors and horizontal overflow. Variants: Arabic desktop, English desktop, Arabic phone width, Arabic dark.
+
+| Role | Pages | Result |
+|---|---|---|
+| Admin | 37 | clean in all four variants after F-060 / F-061 |
+| Sales manager | 24 | clean (F-059 on the lead board, fixed) |
+| Sales | 20 | clean (F-059, fixed) |
+| Broker (portal) | 11 | clean |
+| Maintenance supervisor | landing page | by design: the account works in the mobile app; the web shows an explanation and a sign-out |
+
+Not a defect: on a phone, the projects page reports a document overflow caused by an absolutely positioned screen-reader-only label; nothing is visible or scrollable (the table card now contains it).
+
+## Run 2 — public website sweep (2026-11-07)
+
+Method as for the admin screens (header / footer links, the first project and the first unit; Arabic, English, phone, dark). The dev server must run with `E2E_TENANT_BYPASS_SLUG=default` on localhost, otherwise every page is the «not found» page with status 200 (also true of the first pass of this sweep, which therefore did not count).
+
+Result after the fixes: 13 pages × (Arabic desktop / phone / dark) clean; English desktop and phone clean apart from F-066. The dev-only `ERR_TUNNEL_CONNECTION_FAILED` on the project page is the sandbox proxy refusing an external map tile, not the product.
+
+## Run 2 — the master cycle from an empty database (2026-11-07)
+
+**Start.** Local database dropped and re-created from the 141 migrations (`db:schema-check` = 0), Redis flushed, one platform account seeded; API, admin web, public web, customer app and staff app on `main` at `b055cb5e`. Nothing else existed: 0 companies, 1 user.
+
+**How it was driven.** The company was created in the super-admin UI; the website inquiry and the customer's sign-in and screens were driven through the real UIs (Playwright, the customer app's web build); the set-up (project, units, plans, staff) and the middle of the cycle went through the same API the apps call, each step read back in SQL. Every step below passed unless a note says otherwise.
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Super admin creates the company | Company + admin + `default.localhost` + 138 templates, 131 permissions, 6 default maintenance categories seeded |
+| 2 | Admin sets up | Published project, phase, building, 8 units (2BR, 3BR, 1BR, studio, shop, penthouse), a project-wide percentage plan (7 years, 10% down, 2% booking) and a cash plan, a manager, two reps, a maintenance supervisor |
+| 3 | Guest on the website | The company's own name in the tab and share preview (F-009/F-054 fixed); the inquiry form sends; a visit request |
+| 4 | Lead made and assigned | One lead (not two) for the same person, normalised phone, auto-assigned to a rep who is notified; manager and admin told of the inquiry |
+| 5 | Manager reassigns once | The new rep is told, the old rep is told it was taken; each sees only what is theirs |
+| 6 | Follow-up | Note, stages; a rep cannot back-date a visit (admin only, by design) |
+| 7 | Reservation | Unit-type/project plan gives booking 99,000, down 495,000, 51,857.14 × 84; the unit goes RESERVED; a second rep on the same unit is refused |
+| 8 | Approval and booking payment | Manager approves; the admin confirms the booking payment — twice — and exactly **one** «booking paid» notice goes out (F-057 fixed) |
+| 9 | Contract | Unsigned on conversion, signed by the admin: ACTIVE, unit SOLD, lead WON; shown in the customer's app |
+| 10 | Schedule | 85 rows = 495,000 + 84 × 51,857.14 = 4,851,000; plus the 99,000 booking = 4,950,000 = the contract |
+| 11 | The guest becomes a customer | She signs in to the app by OTP with the phone she gave, sees her unit, her contract and 85 instalments |
+| 12–13 | Proofs | Two proofs uploaded; the admin rejects one and approves the other; the customer sees both and re-uploads; approved: down payment and instalment 1 |
+| 14 | Reports | collected 645,857.14 in the KPIs, the financial report, the dashboard and SQL; remaining 4,304,142.86 = SQL |
+| 15 | Time moves to 2026-12-20 | Instalment 2 marked overdue once (a second run marks none), the customer and staff told once; with the clause the 1% fee 518.57 is charged once; paid → overdue 0 |
+| 16–18 | Maintenance | Handover, a request with a photo, approval, assignment to the supervisor, IN_PROGRESS → RESOLVED, the customer confirms with 4 stars; each step notified the right people |
+| 19 | Broker path | Firm registered, activated, the project granted at 3%; the broker's lead is refused a reservation until approved, then approved and assigned; the broker reserves through the project plan (F-039, booking 72,000); commission locked 3% = 108,000 on a 3,600,000 unit; approved, payout draft → approved → processing → paid |
+| 20 | Cancellation | Refund 72,000 and commission clawback decided at cancellation; the unit stays SOLD until the admin approves its release (company policy default), then AVAILABLE; clawback OUTSTANDING; the refund is recorded as paid |
+| 21 | Reconciliation | gross collected 770,232.85 − refunds 72,000 = **net 698,232.85**, which is the dashboard's `netCollected`; payments page shows the gross (labelled before refunds); SQL witness: no instalment ≤ 0, no PAID instalment without an approved payment, no SOLD unit without an active contract, no unit with two active contracts, no row without a company |
+
+**Findings of the run:** none new. Open from before and seen again: F-051 (a rep can complete a visit before its time), F-033 (the contract clause charges a late fee while the company setting reads off).
+
+**Not covered in this run:** the customer's own e-signature (the admin signed), a discount approval, the second website customer through a broker's customer, the second company in parallel (done in run 1), per-role screen sweeps.
+
+## Broker pay run (2026-11-08)
+
+Driven through the API on the QA database, SQL as the witness. Starting point: a cancelled deal whose 108,000.00 commission was paid, clawback OUTSTANDING 108,000.00 with an open netting adjustment.
+
+| Step | Result |
+|---|---|
+| Collect 8,000 | PARTIALLY_COLLECTED, collected 8,000.00; the open adjustment shrank to 100,000.00 (no double recovery in the next payout) |
+| Collect 100,001 | refused 400, "more than the remaining 100,000.00" |
+| Collect 0.005 | refused 400 (minimum 0.01) |
+| Collect 60,000 then 40,000 | PARTIALLY_COLLECTED, then COLLECTED at 108,000.00; the adjustment row is gone |
+| Collect 1 more / waive after collected | both refused 409 "already COLLECTED" |
+
+**Findings:** none new in this run. F-068 (a PROCESSING payout could not be cancelled) was found by reading the payout code and fixed in the same session.
+
+### A new broker sale, end to end (unit 2,400,000, 3% locked, 10% instalment markup of 211,000)
+
+| Step | Result |
+|---|---|
+| Sign | commission PENDING, basis 2,400,000.00, gross = net 72,000.00 (3%, markup excluded) |
+| Approve, then price up to 2,600,000 before any payout | back to PENDING at 71,670.00 (basis 2,389,000.00); approved again |
+| Payout PAY-2026-0002 → approve → process → mark paid | total net 71,670.00, PAID, commission linked |
+| Price down to 2,500,000 after payment | open CLAWBACK 3,000.00 (68,670.00 owed − 71,670.00 paid) |
+| Price up to 2,800,000 | open TOP_UP 9,000.00 (77,670.00 − 68,670.00) |
+| Payout with no commissions | nets both: total net 6,000.00; approves (top-ups alone are allowed) |
+| Process, then cancel as the bank rejected it (F-068) | CANCELLED, both adjustments open again |
+| New payout PAY-2026-0004 → approve → process → paid | net 6,000.00, PAID; the two adjustments stay attached to it as history |
+
+**Findings:** none new. Every amount matched the commission-basis rule (price after discount, markup excluded) and SQL.
+
+### Rules, reject / cancel and payout hold (same broker: default 2.5%, grant 3% on the project)
+
+| Case | Result |
+|---|---|
+| Reservation locked a fixed 50,000 (no %) on a 3,700,000 unit | gross 50,000.00, no % stored |
+| Reservation with no commission snapshot, 5,100,000 unit | falls back to the project grant 3% (not the broker default 2.5%): gross 153,000.00 |
+| Reject with a blank reason / with a reason | 400 "reason is required" / REJECTED |
+| Approve a rejected commission | allowed by design: it is reconsidered and the rejection fields are cleared |
+| Payout while the broker is on payout hold | 409 "payouts of this broker are on hold by management" |
+| Process an approved payout while on hold | 409 the same message; lifting the hold lets payouts move again |
+| Cancel a commission already linked to an approved payout | 409 naming the payout and its status; the commission stays APPROVED |
+
+**Findings:** none new.
+
+### Sales bonus and targets (rule 1% auto-apply, 1,632,000 net-price unit, markup 141,880)
+
+| Step | Result |
+|---|---|
+| Sign | bonus PENDING 16,320.00 = 1% of 1,632,000 (price after discount, markup excluded) |
+| Approve, pay | APPROVED, PAID |
+| Price up to 1.8M / 1.9M / 2.0M after payment | three ADJUSTMENT entries 261.20, 1,000.00, 1,000.00 (each the difference from what was already paid or adjusted); they are linked by `adjustsEntryId`, not by contract |
+| Target 3,000,000 / 2 units for the month | performance: realized 1,858,120 (net price of the one signed deal), 62% of the amount, 50% of the units; matches SQL |
+| Negative target | 400 |
+| Target with period `2026-13` | **accepted (201)** — F-069 |
+
+An admin-created reservation takes the admin as its sales owner, so a bonus would go to the admin unless a rep is set; seen, not changed.
+
+| F-069 | 4 | Admin | Sales targets, bonus entries | 1 rep | Create a target (or a manual bonus entry) for period `2026-13` | Refused: the period is YYYY-MM | Only `@IsString()` was on the period, so any text was stored and no report matched it | **Fixed**: the period must match YYYY-MM on both DTOs. Test `bonus-period-validation.spec.ts` |
+
+**Not yet driven live:** marketing and content, notification wording per company, print documents per company.
+
+## Marketing run (2026-11-08)
+
+Campaigns, spend and lead intake driven through the API, SQL as the witness.
+
+| Case | Result |
+|---|---|
+| Campaign with dates and a 10,000 budget | created, code made from the name (`qa-facebook-nov`) |
+| Same name again | a second campaign, code `qa-facebook-nov-1`; an Arabic name gets `campaign-1` |
+| End date before the start date | 400 |
+| Spend 2,500.50 and 1,500.00 | stored; amount 0 refused (minimum 0.01); the report's spend equals the SQL sum |
+| Start or spend day `2026-02-30` | **accepted and stored as 2026-03-02** — F-070 |
+| Lead intake with a key tied to the campaign | lead created and counted on the campaign; the same phone again returns the existing lead; a 1-letter name, a bad phone, a wrong key and a disabled key are all refused (400/401) |
+| Intake with an unknown campaign code | falls back to the key's campaign, as documented in the field comment |
+
+| F-070 | 4 | Admin | Campaigns | 1 campaign | Add spend, or set a start date, on a day that does not exist (2026-02-30) | Refused | Only a digits pattern checked the day, and `new Date()` rolled it into the next month, so the spend landed on 2026-03-02 and the period reports were wrong | **Fixed** for the campaign DTOs and the report filters: `IsCalendarDay` / `isCalendarDay`. Test `calendar-day.spec.ts`. The same weak pattern was then moved to it in the users DTO (birth date, ID issue date), the data-migration birth date, the leads lost-report and calendar filters, the ledger filters and `reportRange` (custom-field dates already checked the day properly) |
+
+## Notifications run (2026-11-08)
+
+| Case | Result |
+|---|---|
+| Broadcast preview per audience | customers 2, brokers 1, sales 2, maintenance supervisors 1, all active 10 — each equals the SQL count of active users of that role (the platform super admin is outside the company) |
+| Broadcast to all customers, in-app | 2 recipients, 2 rows `admin_broadcast` carrying both languages; failed 0 |
+| Target ROLE without a role / unknown user / PUSH without Firebase | 400 / 404 / 400 with a clear message; a role nobody has returns 0 recipients |
+| Template saved with an empty subject or body, or a blank code | **accepted** — F-071 |
+| Template with a 200 KB body | 413 |
+
+| F-071 | 3 | Admin | Notification templates | 1 company | Save a template with an empty subject/body, or a blank code | Refused | The DTO had `@IsString()` only, so a blank override replaced the platform wording and customers got an empty message; a blank code stored a junk row | **Fixed**: subject ≤ 200 and body ≤ 2000 characters, none empty; the code is a catalogue-style code (lowercase, digits, `_ . -`, 2–80). All 138 catalogue codes and the test codes match. Test `template-validation.spec.ts` |
+
+Seen, not changed: "all sales" excludes sales managers, and "all customers" excludes website accounts that have not bought (role CLIENT); both read as by design.
+
+**Not yet driven live:** CMS pages, opt-outs, print documents per company.
+
+## Printed documents run (2026-11-08)
+
+The amount in words on contracts, booking forms and receipts was checked on 45 amounts (units to billions) and on cents, in Arabic and English.
+
+| Case | Result |
+|---|---|
+| 1 to 999, thousands, millions, billions (e.g. 2,400,000 / 3,000,000 / 1,773,880 / 2,500,000,000) | read correctly |
+| 200,000 and 200,000,000 | **«مائتان ألف» / «مائتان مليون»** — should be «مائتا ألف» / «مائتا مليون» — F-072 |
+| 99.995 | **«تسعة وتسعون جنيه ومائة قرش»** — the rounded-up cents were not carried — F-072 |
+
+| F-072 | 4 | Admin | Contract / receipt print | 1 document | Print a contract worth 200,000 or 2,200,000 (or an amount whose cents round up) | The amount is written correctly | The words for 200 before a scale word used the plain form, and the cents were rounded after the pounds were cut off | **Fixed** in `document-template.ts`: «مائتا» before ألف/مليون/مليار; the amount is rounded to the minor unit first. Test `number-words.spec.ts` |
+
+Seen, not changed: the currency word does not agree with the number («ثلاثة جنيه مصري»), which is how contracts are usually typed.
+
+## Content run (2026-11-08)
+
+CMS pages, articles and banners driven through the API.
+
+| Case | Result |
+|---|---|
+| Page slug rules (letters, digits, dashes, 80) | already enforced; the public site shows pages under `/pages/<slug>`, so a page called `login` collides with nothing |
+| Article slug empty / `a b/c` / `Hello` / Arabic / 500 characters | **all saved** — F-073 |
+| Article or page with an empty title, excerpt or body | **saved** — F-073 |
+| Article cover `javascript:alert(1)` | **saved** — F-073 (an `<img src>`, so not executable in current browsers, but not a picture URL) |
+| Script and `onerror` in a page body | saved as written; the public article page sanitizes the body with DOMPurify before showing it |
+| 600 KB body | 413 |
+
+| F-073 | 3 | Admin | Articles, pages | 1 company | Save an article with slug `a b/c`, an empty slug, a 500-character slug, an empty title/body, or a `javascript:` cover | Refused | The article DTO had `@IsString()` only (the page DTO already checked its slug), so the article's address could be unusable or unreachable and the card could carry blank text | **Fixed**: the article slug uses the page slug rule (lowercase, digits, dashes, ≤ 80); titles ≤ 200, excerpts ≤ 500, none empty (page titles and bodies too); the cover must be an http(s) address ≤ 1000. Test `cms-validation.spec.ts` |
+
+## Notification opt-outs run (2026-11-08)
+
+| Case | Result |
+|---|---|
+| Preferences of a sales rep: read, unknown group, unknown channel | 200 (all on by default) / 400 / 400 |
+| Finance e-mail switched off, then a finance event (`deposit_recorded`) | the in-app row is created, no e-mail attempted |
+| Same user, an account event (`account_promoted_customer`, group still on) | an e-mail attempted (fails here only because SMTP is not configured) |
+| Send with a template code that does not exist | **500** — F-074 |
+| `GET /units?withoutPlan=false` or `=0` | **returned the same 4 units as `=true`** (8 without the flag) — F-075 |
+| Preferences body with the string `"no"` (or `"false"`) for a flag | **200 and the flag read as true** — F-075 |
+
+| F-074 | 4 | Admin | Notifications | 1 company | Send a notification with a template code that does not exist | A clear "not found" answer | The service threw a plain `Error`, which the API answered as 500 | **Fixed**: a not-found error (404) naming the code |
+| F-075 | 2 | All | Every filter or body with a boolean flag | any | Use `?withoutPlan=false` (or `0`), or send the string "false" for a flag | The flag is off | The global validation converts implicitly and `Boolean("false")` is true, so a query filter set to false filtered like true and a string "false" switched a flag on | **Fixed** in `BooleanStringsPipe` (before the validation pipe): for properties declared `@IsBoolean()` — nested DTOs included — it reads true/false/1/0 as what they say and answers 400 for any other string; real booleans are untouched. Test `boolean-strings.pipe.spec.ts`; checked live on units and on the preferences body |
+
+Notification opt-outs are otherwise as designed: an admin broadcast belongs to no group and always goes out; in-app notifications are never switched off.
+
+
+
+## Decisions on the three open points (2026-11-08)
+
+| Point | Decision | What changed |
+|---|---|---|
+| F-076 — "all sales" broadcast skipped sales managers | Include them | `ALL_SALES` now means active reps and sales managers; the admin label reads «كل فريق المبيعات» / "All Sales Team (reps and managers)". Test updated (inactive manager excluded) |
+| F-077 — an admin's reservation with no rep is recorded under the admin, so the sales bonus goes to the admin | Keep the behaviour (a small company's admin may be the seller; 11 e2e/security specs also depend on it), make it visible | The reservation form's empty option reads «أنا (بدون مندوب)» instead of «اختر مندوباً», with the hint «إن لم تختر مندوباً يُسجَّل البيع والمكافأة باسمك» |
+| "all customers" broadcast leaves out website accounts that have not bought | By design, unchanged | A separate "registered visitors" audience can be added later if a company asks |

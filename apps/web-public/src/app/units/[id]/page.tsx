@@ -1,11 +1,12 @@
 import type { Route } from 'next';
+import type { Locale } from '@/lib/locale';
 import { getSiteCurrency } from '@/lib/site-currency';
 import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
@@ -48,11 +49,11 @@ const DEFAULT_STATUS_TONE: StatusMeta['tone'] = 'success';
 type Params = Promise<{ id: string }>;
 
 function fetchUnit(id: string, tenantSlug: string) {
-  return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
+  return apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
 }
 
-function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة'): string {
-  return unit.type ? unitTypeLabel(unit.type, unit.typeName) : `${fallbackPrefix} ${unit.code}`;
+function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة', locale: Locale = 'ar'): string {
+  return unit.type ? unitTypeLabel(unit.type, unit.typeName, locale) : `${fallbackPrefix} ${unit.code}`;
 }
 
 /**
@@ -96,9 +97,9 @@ export async function generateMetadata({ params }: { params: Params }) {
   if (!result.ok) return buildMetadata({ title: m.unitDetail.errorTitle });
 
   const unit = result.data;
-  const project = unit.project ? pickAr(unit.project.name) : '';
-  const title = [unitTitle(unit, m.unitDetail.projectFallback), project].filter(Boolean).join(' · ');
-  const description = `${unitTitle(unit, m.unitDetail.projectFallback)}${project ? ` ${m.unitDetail.projectPrefix} ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price, currency)}.`;
+  const project = unit.project ? pickAr(unit.project.name, '', locale) : '';
+  const title = [unitTitle(unit, m.unitDetail.projectFallback, locale), project].filter(Boolean).join(' · ');
+  const description = `${unitTitle(unit, m.unitDetail.projectFallback, locale)}${project ? ` ${m.unitDetail.projectPrefix} ${project}` : ''} — ${formatArea(unit.area, locale)} · ${formatPrice(unit.price, currency, locale)}.`;
   const image = unit.coverImage ?? unit.media?.[0]?.url;
   return buildMetadata({ title, description, path: `/units/${id}`, ...(image ? { image } : {}) });
 }
@@ -129,10 +130,10 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   }
 
   const unit = result.data;
-  const title = unitTitle(unit, m.unitDetail.projectFallback);
+  const title = unitTitle(unit, m.unitDetail.projectFallback, locale);
   const statusLabel = m.unitDetail.status[unit.status as keyof typeof m.unitDetail.status] ?? m.unitDetail.status.AVAILABLE;
   const status: StatusMeta = { label: statusLabel, tone: STATUS_TONES[unit.status] ?? DEFAULT_STATUS_TONE };
-  const projectName = unit.project ? pickAr(unit.project.name) : '';
+  const projectName = unit.project ? pickAr(unit.project.name, '', locale) : '';
   const compareItem: CompareItem = {
     id: unit.id,
     label: [unit.type, projectName].filter(Boolean).join(' · ') || `${m.unitDetail.projectFallback} ${unit.code}`,
@@ -144,7 +145,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
   let similarUnits: PublicUnit[] = [];
   if (unit.project) {
-    const sim = await safeFetch<Paginated<PublicUnit>>(
+    const sim = await apiFetch<Paginated<PublicUnit>>(
       `/public/units?projectId=${unit.project.id}&pageSize=4`,
       { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     );
@@ -364,7 +365,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 <div
                   className="relative flex min-h-56 items-center justify-center border-b border-hairline"
                   style={{
-                    backgroundColor: '#0F1E33',
+                    backgroundColor: 'rgb(var(--c-navy))',
                     backgroundImage:
                       'linear-gradient(rgba(200,162,75,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(200,162,75,0.18) 1px, transparent 1px)',
                     backgroundSize: '28px 28px',
@@ -401,7 +402,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 unitId={unit.id}
                 price={unit.price}
                 unitCode={unit.code}
-                projectName={unit.project ? pickAr(unit.project.name) : ''}
+                projectName={unit.project ? pickAr(unit.project.name, '', locale) : ''}
                 locale={locale}
               />
             </div>
@@ -431,7 +432,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             step={80}
           >
             {similarUnits.map((u) => (
-              <UnitCard key={u.id} unit={u} />
+              <UnitCard key={u.id} unit={u} locale={locale} />
             ))}
           </Stagger>
         </Section>

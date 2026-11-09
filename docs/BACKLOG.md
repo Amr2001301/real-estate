@@ -53,7 +53,7 @@ detail in `docs/audit/08-functional-gaps.md` §7.
 
 | # | Item | What is needed |
 |---|---|---|
-| — | **Production hosting** | There is no production deployment today: the Railway account shows 0 projects and an expired trial, the `RAILWAY_TOKEN` secret was never set, and every `deploy.yml` run skipped its deploy jobs. Choose a host (Railway needs a paid plan), then: database, variables (`RUN_MIGRATIONS=true`, JWT, FCM, SMTP, `DEFAULT_COMPANY_ID`), the `RAILWAY_TOKEN` secret, first deploy. `Railway Status (Read-Only)` (#55) reports what is live once the token exists |
+| — | **Production hosting** | There is no production deployment today: the Railway account shows 0 projects and an expired trial, the `RAILWAY_TOKEN` secret was never set, and every `deploy.yml` run skipped its deploy jobs. Choose a host (Railway needs a paid plan), then: database, variables (`RUN_MIGRATIONS=true`, JWT, FCM, SMTP, `DEFAULT_COMPANY_ID`, `METRICS_TOKEN`, and `TRUST_PROXY_HOPS` = the host's proxy count — without it every user shares one rate-limit address, F-056), the `RAILWAY_TOKEN` secret, first deploy. `Railway Status (Read-Only)` (#55) reports what is live once the token exists |
 | 13 | Restrict the two Firebase keys | Firebase Console: package name + SHA-256. **The repository is public** — restriction is the only control |
 | 14 | Branch protection on `main` | Required check: `all checks passed` |
 | — | Actions on a public repository | Settings → Actions: require approval for outside collaborators |

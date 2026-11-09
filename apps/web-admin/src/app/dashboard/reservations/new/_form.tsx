@@ -16,7 +16,8 @@ import type { Locale } from '@/lib/locale';
 import { formatCurrency } from '@/lib/format';
 import { uiT } from '@/messages/ui';
 import { computeDurationOption } from '@/lib/installment-calc';
-import { createReservationAction, type ReservationFormState } from '../actions';
+import { createReservationAction, getApplicablePlansAction, type ReservationFormState } from '../actions';
+import { projectPlansT } from '@/messages/project-plans';
 import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Unit {
@@ -42,8 +43,7 @@ interface PlanOption {
   reservationAmount: string | number;
   downPaymentAmount?: string | number;
   durationOptions: DurationOption[];
-  projectId: string;
-  unitId: string | null;
+  scope?: 'UNIT' | 'TYPE' | 'PROJECT';
 }
 
 interface Lead {
@@ -71,7 +71,6 @@ interface Props {
   /** ADMIN only: book on a seller's behalf. */
   canChooseSeller?: boolean;
   salesOptions: SalesUser[];
-  plans: PlanOption[];
   /** The company currency (getReportsCurrency()). */
   currency: string;
   locale?: Locale;
@@ -86,7 +85,6 @@ function toFiniteOrEmpty(v: unknown): string {
 export default function NewReservationForm({
   canChooseSeller = false,
   salesOptions,
-  plans,
   currency,
   locale = 'ar',
 }: Props) {
@@ -127,22 +125,25 @@ export default function NewReservationForm({
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [percentInput, setPercentInput] = useState('');
 
-  const selectedProjectId =
-    selectedUnit?.building?.phase?.projectId ?? selectedUnit?.building?.phase?.project?.id ?? '';
-
-  const availablePlans = useMemo(() => {
-    if (!selectedUnitId || !selectedProjectId) return [] as PlanOption[];
-    return plans.filter(
-      (p) =>
-        p.projectId === selectedProjectId &&
-        (p.unitId === null || p.unitId === selectedUnitId),
-    );
-  }, [plans, selectedUnitId, selectedProjectId]);
+  // The plans the chosen unit takes (its own > its type's > the project's), worked out on its price.
+  const [availablePlans, setAvailablePlans] = useState<PlanOption[]>([]);
+  const [plansScope, setPlansScope] = useState<'UNIT' | 'TYPE' | 'PROJECT' | null>(null);
+  const pp = projectPlansT(locale);
 
   function handleUnitChange(unit: Unit | null) {
     setSelectedUnit(unit);
     setSelectedPlanId('');
     setSelectedDurationOptionId('');
+    setAvailablePlans([]);
+    setPlansScope(null);
+    if (unit) {
+      getApplicablePlansAction(unit.id).then((r) => {
+        setAvailablePlans(r?.plans ?? []);
+        setPlansScope(r?.scope ?? null);
+        // A single plan is chosen for the rep.
+        if (r && r.plans.length === 1 && r.plans[0]) setSelectedPlanId(r.plans[0].id);
+      });
+    }
   }
 
   function handlePlanChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -331,7 +332,7 @@ export default function NewReservationForm({
             {/* Only the admin books on someone's behalf (F17); a rep or a
                 manager books as themself. */}
             {canChooseSeller && (
-              <Field label={m.salesLabel} name="salesId">
+              <Field label={m.salesLabel} name="salesId" hint={m.salesHint}>
                 <Select name="salesId">
                   <option value="">{m.salesOptionEmpty}</option>
                   {salesOptions.map((s) => (
@@ -380,7 +381,11 @@ export default function NewReservationForm({
                   ? m.planHintNoUnit
                   : availablePlans.length === 0
                     ? m.planHintNone
-                    : m.planHintAvailable
+                    : plansScope === 'UNIT'
+                      ? `${pp.scopeReasonUnit}`
+                      : plansScope === 'TYPE'
+                        ? pp.scopeReasonType
+                        : `${pp.scopeReasonProject} — ${m.planHintAvailable}`
               }
             >
               <Select

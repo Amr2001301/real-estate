@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from 'react';
 import { formatPrice } from '@/lib/format';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
 
 const CurrencyContext = createContext('EGP');
 
@@ -17,5 +18,6 @@ export function useCurrency(): string {
 
 /** A price in the company's currency — usable from server and client components. */
 export function Price({ value }: { value: number | string | null | undefined }) {
-  return <>{formatPrice(value, useCurrency())}</>;
+  const locale = useSiteLocale();
+  return <>{formatPrice(value, useCurrency(), locale)}</>;
 }

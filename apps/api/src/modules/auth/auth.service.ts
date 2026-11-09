@@ -96,7 +96,7 @@ export class AuthService {
       where: { id: userId },
       select: { id: true, role: true, active: true, deletedAt: true, company: { select: { lifecycleStatus: true, subscriptionStatus: true } } },
     });
-    if (!user || !user.active || user.deletedAt) throw new UnauthorizedException('Account inactive');
+    if (!user || !user.active || user.deletedAt) throw new UnauthorizedException('الحساب غير مفعّل — تواصل مع الشركة');
     if (user.role !== 'SUPER_ADMIN' && user.company && !companyAccessAllowed(user.company)) throw companyAccessDenied();
     return user;
   }
@@ -127,7 +127,7 @@ export class AuthService {
       });
     }
     const user = matching[0]!;
-    if (!user.active) throw new ForbiddenException('Account inactive');
+    if (!user.active) throw new ForbiddenException('الحساب غير مفعّل — تواصل مع الشركة');
     if (
       user.role !== 'SUPER_ADMIN' &&
       user.role !== 'ADMIN' &&
@@ -702,7 +702,7 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
-    if (!user.active) throw new ForbiddenException('Account inactive');
+    if (!user.active) throw new ForbiddenException('الحساب غير مفعّل — تواصل مع الشركة');
 
     const staffRoles: UserRole[] = ['ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR', 'BROKER'];
     if (!staffRoles.includes(user.role)) {
@@ -758,7 +758,7 @@ export class AuthService {
     });
 
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
-    if (!user.active) throw new ForbiddenException('Account inactive');
+    if (!user.active) throw new ForbiddenException('الحساب غير مفعّل — تواصل مع الشركة');
 
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
@@ -789,7 +789,7 @@ export class AuthService {
       // Do not reveal that a staff account exists at this email in this company.
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (!user.active) throw new ForbiddenException('Account inactive');
+    if (!user.active) throw new ForbiddenException('الحساب غير مفعّل — تواصل مع الشركة');
 
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
@@ -898,13 +898,13 @@ export class AuthService {
       where: { id: otpId, consumed: false, attempts: { lt: OTP_MAX_ATTEMPTS } },
       data: { attempts: { increment: 1 } },
     });
-    if (claimed.count === 0) throw new ForbiddenException('Too many attempts; request a new code');
+    if (claimed.count === 0) throw new ForbiddenException('محاولات خاطئة كثيرة — اطلب رمزًا جديدًا');
   }
 
   /** A code signs in once: two requests with the same right code get one session. */
   private async consumeOtp(otpId: string) {
     const used = await this.prisma.otpCode.updateMany({ where: { id: otpId, consumed: false }, data: { consumed: true } });
-    if (used.count === 0) throw new BadRequestException('Code expired or not found');
+    if (used.count === 0) throw new BadRequestException('الرمز منتهي أو غير موجود — اطلب رمزًا جديدًا');
   }
 
   /** New codes are not new guesses without end: a few per phone per hour. */
@@ -913,7 +913,7 @@ export class AuthService {
       where: { phone, companyId, purpose, createdAt: { gte: new Date(Date.now() - 3600_000) } },
     });
     if (sent >= OTP_MAX_PER_HOUR) {
-      throw new HttpException('Too many codes requested — try again in an hour', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException('طلبت رموزًا كثيرة — حاول بعد ساعة', HttpStatus.TOO_MANY_REQUESTS);
     }
   }
 
@@ -928,7 +928,7 @@ export class AuthService {
 
   async requestOtpV2(companyId: string, country: string, rawPhone: string) {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
-    if (!phone) throw new BadRequestException('Invalid phone number');
+    if (!phone) throw new BadRequestException('رقم الهاتف غير صالح');
 
     await this.assertCompanyAccessible(companyId);
     // Phase 2: OTP is the customer-app login path; gate before sending SMS cost.
@@ -944,7 +944,7 @@ export class AuthService {
       where: { phone, companyId, purpose: OTP_LOGIN, createdAt: { gte: new Date(Date.now() - 60_000) } },
       orderBy: { createdAt: 'desc' },
     });
-    if (recent) throw new BadRequestException('Please wait before requesting another code');
+    if (recent) throw new BadRequestException('انتظر دقيقة قبل طلب رمز جديد');
     await this.assertOtpHourlyCap(phone, companyId, OTP_LOGIN);
 
     const code = String(randomInt(100_000, 999_999));
@@ -973,7 +973,7 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException('Invalid session');
     const phone = await phoneForWrite(this.prisma, rawPhone, companyId);
-    if (!phone) throw new BadRequestException('Invalid phone number');
+    if (!phone) throw new BadRequestException('رقم الهاتف غير صالح');
     if (phone === user.phone) throw new BadRequestException('هذا هو رقمك الحالي');
     // Taken by another account of the company (a CRM record included).
     const taken = await this.prisma.user.findFirst({ where: { companyId, phone, id: { not: userId } }, select: { id: true } });
@@ -981,7 +981,7 @@ export class AuthService {
     const recent = await this.prisma.otpCode.findFirst({
       where: { phone, companyId, purpose: OTP_PHONE_CHANGE, createdAt: { gte: new Date(Date.now() - 60_000) } },
     });
-    if (recent) throw new BadRequestException('Please wait before requesting another code');
+    if (recent) throw new BadRequestException('انتظر دقيقة قبل طلب رمز جديد');
     await this.assertOtpHourlyCap(phone, companyId, OTP_PHONE_CHANGE);
 
     const code = String(randomInt(100_000, 999_999));
@@ -1007,10 +1007,10 @@ export class AuthService {
       where: { phone, companyId, purpose: OTP_PHONE_CHANGE, consumed: false, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
-    if (!otp) throw new BadRequestException('Code expired or not found');
+    if (!otp) throw new BadRequestException('الرمز منتهي أو غير موجود — اطلب رمزًا جديدًا');
     await this.claimOtpAttempt(otp.id);
     if (createHash('sha256').update(code).digest('hex') !== otp.codeHash) {
-      throw new BadRequestException('Invalid code');
+      throw new BadRequestException('الرمز غير صحيح');
     }
     await this.consumeOtp(otp.id);
     try {
@@ -1045,7 +1045,7 @@ export class AuthService {
     fullName?: string,
   ) {
     const phone = canonicalPhone(rawPhone) ?? canonicalPhone(rawPhone, country);
-    if (!phone) throw new BadRequestException('Invalid phone number');
+    if (!phone) throw new BadRequestException('رقم الهاتف غير صالح');
 
     await this.assertCompanyAccessible(companyId);
     // Phase 2: gate before consuming the OTP code.
@@ -1061,12 +1061,12 @@ export class AuthService {
       where: { phone, companyId, purpose: OTP_LOGIN, consumed: false, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
-    if (!otp) throw new BadRequestException('Code expired or not found');
+    if (!otp) throw new BadRequestException('الرمز منتهي أو غير موجود — اطلب رمزًا جديدًا');
     await this.claimOtpAttempt(otp.id);
 
     const codeHash = createHash('sha256').update(code).digest('hex');
     if (codeHash !== otp.codeHash) {
-      throw new UnauthorizedException('Invalid code');
+      throw new UnauthorizedException('الرمز غير صحيح');
     }
     await this.consumeOtp(otp.id);
 
@@ -1083,9 +1083,9 @@ export class AuthService {
     } else {
       // This is the customer sign-in: a staff account at this number gets no
       // session here — a phone code alone must never open the staff side.
-      if (user.role !== 'CLIENT' && user.role !== 'CUSTOMER') throw new UnauthorizedException('Invalid code');
+      if (user.role !== 'CLIENT' && user.role !== 'CUSTOMER') throw new UnauthorizedException('الرمز غير صحيح');
       // A deactivated account gets no session — and no CRM claim — by OTP either.
-      if (user.deletedAt || user.active === false) throw new ForbiddenException('Account inactive');
+      if (user.deletedAt || user.active === false) throw new ForbiddenException('الحساب غير مفعّل — تواصل مع الشركة');
       await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: now, phoneVerifiedAt: now } });
     }
     await this.tryClaimSyntheticPeers(user.id, companyId);

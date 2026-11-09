@@ -34,6 +34,15 @@ const STAGES: Array<{ stage: LeadStage; label: string; tone: Tone }> = [
   { stage: 'LOST', label: 'خسارة', tone: 'danger' },
 ];
 
+const STAGE_LABEL_EN: Record<LeadStage, string> = {
+  NEW: 'New leads',
+  INTERESTED: 'Interested',
+  VISIT: 'Visit scheduled',
+  NEGOTIATION: 'Negotiation',
+  WON: 'Won',
+  LOST: 'Lost',
+};
+
 interface Props {
   initialLeads: Lead[];
   locale?: Locale;
@@ -155,8 +164,8 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
       setGrouped(snapshot);
       toast.show({
         tone: 'danger',
-        title: 'تعذّر تحديث المرحلة',
-        description: (err as Error).message || 'حدث خطأ غير متوقع',
+        title: locale === 'en' ? 'Could not update the stage' : 'تعذّر تحديث المرحلة',
+        description: (err as Error).message || (locale === 'en' ? 'An unexpected error occurred' : 'حدث خطأ غير متوقع'),
       });
     } finally {
       setPendingIds((prev) => {
@@ -179,7 +188,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
         if (ask) void moveLead(ask.leadId, ask.sourceStage, 'LOST', why);
       }}
     />
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext id="lead-pipeline-board" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-thin pb-1">
         <div className="flex gap-4 pb-6 pt-1 min-w-max">
           {STAGES.map((s) => {
@@ -189,7 +198,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
               <DroppableStageColumn
                 key={s.stage}
                 stage={s.stage}
-                label={s.label}
+                label={locale === 'en' ? STAGE_LABEL_EN[s.stage] : s.label}
                 tone={s.tone}
                 count={total}
               >
@@ -203,7 +212,7 @@ export function LeadPipelineBoard({ initialLeads, counts, locale = 'ar' }: Props
                 ))}
                 {items.length > 0 && total > items.length && (
                   <p className="text-center text-2xs text-slate-400 pt-2">
-                    + {total - items.length} عميل إضافي
+                    + {total - items.length} {locale === 'en' ? 'more' : 'عميل إضافي'}
                   </p>
                 )}
               </DroppableStageColumn>
@@ -285,7 +294,7 @@ function DraggableLeadCard({ lead, isPending, locale = 'ar' }: { lead: Lead; isP
       <button
         ref={setActivatorNodeRef}
         type="button"
-        aria-label={`اسحب لتغيير مرحلة ${lead.client?.fullName ?? lead.fullName}`}
+        aria-label={`${locale === 'en' ? 'Drag to change the stage of' : 'اسحب لتغيير مرحلة'} ${lead.client?.fullName ?? lead.fullName}`}
         {...listeners}
         {...attributes}
         onClick={(e) => e.preventDefault()}

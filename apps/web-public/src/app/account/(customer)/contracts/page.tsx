@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { FileText } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -13,11 +13,9 @@ import { Pagination } from '@/components/projects/Pagination';
 import { ContractCard } from '@/components/account/ContractCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
-export const metadata = buildMetadata({
-  title: 'العقود',
-  description: 'عقودك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('contracts', { robots: { index: false, follow: false } });
+}
 
 const PAGE_SIZE = 10;
 

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../leads/presentation/follow_up_labels.dart';
 import '../domain/security.dart';
 import 'security_cubit.dart';
@@ -830,7 +829,7 @@ class _Card extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, size: 19, color: AppPalette.gold600),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -876,7 +875,7 @@ class _GoldButton extends StatelessWidget {
           child: Ink(
             height: 46,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
+              gradient: LinearGradient(colors: [AppPalette.gold600, AppPalette.gold400]),
               borderRadius: BorderRadius.circular(AppRadii.md),
             ),
             child: Center(

@@ -18,6 +18,7 @@
  * approval is shown apart, dated by its creation. The amounts are those of
  * the financial report (same definitions), so the two always agree.
  */
+import { isCalendarDay } from '../../common/validators/calendar-day';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import {
   BonusEntryStatus,
@@ -78,7 +79,6 @@ export interface LedgerRow {
 const D = (v: Prisma.Decimal | number | string | null | undefined) => new Prisma.Decimal(v ?? 0);
 const ZERO = new Prisma.Decimal(0);
 const DAY = 24 * 60 * 60 * 1000;
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const OPEN_ROW: InstallmentStatus[] = [InstallmentStatus.PENDING, InstallmentStatus.OVERDUE];
 const UNSENT_PAYOUT: BrokerPayoutStatus[] = [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED];
@@ -104,7 +104,7 @@ export class LedgerService {
 
   private async context(f: LedgerFilter) {
     for (const d of [f.dateFrom, f.dateTo]) {
-      if (d && !DATE_ONLY.test(d)) throw new BadRequestException('التاريخ بصيغة YYYY-MM-DD');
+      if (d && !isCalendarDay(d)) throw new BadRequestException('التاريخ بصيغة YYYY-MM-DD');
     }
     if (f.dateFrom && f.dateTo && f.dateFrom > f.dateTo) throw new BadRequestException('بداية الفترة بعد نهايتها');
     const companyId = getRequiredCompanyId();

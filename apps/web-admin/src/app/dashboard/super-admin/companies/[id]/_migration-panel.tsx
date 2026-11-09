@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { formatDate } from '@/lib/format';
 import { readError } from '@/components/ai/ai-strings';
 import { migrationApiBase } from './_migration-api-base';
@@ -130,7 +130,7 @@ const T = {
 // company, hands its key to the other system, follows what came in and what
 // is kept for mapping, and finishes it.
 export function CompanyMigrationPanel({ companyId }: { companyId: string }) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => T[locale === 'en' ? 'en' : 'ar'], [locale]);
   const base = `/api-proxy/super-admin/companies/${companyId}/migrations`;
   const [runs, setRuns] = useState<Run[] | null>(null);

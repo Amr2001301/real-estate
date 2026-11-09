@@ -5,10 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../common/broker_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contract_page_screen.dart' show ContractParty, KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show ContractCardView, contractBadge, contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
 import 'broker_contracts_data.dart';
 
 /// The broker's contracts (owner-approved design k4, 2026-11-04), as the
@@ -274,7 +272,7 @@ class _Figures extends StatelessWidget {
           child: Container(
             key: key,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(k, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15, colors.inkStrong)),
@@ -287,7 +285,7 @@ class _Figures extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

@@ -1,4 +1,5 @@
 import { Plus, AlertCircle } from 'lucide-react';
+import { activityActionLabel, monthChartLabel } from '@/lib/activity-labels';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
@@ -229,7 +230,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
     (summary?.recentActivity ?? []).map((it) => {
       const rawId = it.id.includes(':') ? it.id.split(':').slice(1).join(':') : it.id;
       return {
-        id: it.id, type: it.type, who: it.title, action: it.action, ref: it.context,
+        id: it.id, type: it.type, who: it.title, action: activityActionLabel(it.type, it.action, locale), ref: it.context,
         when: relativeTime(it.createdAt, m), href: activityHref(it.type, rawId), amount: it.amount,
       };
     }),
@@ -352,7 +353,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
             sub={m.charts.reservationDesc}
             badge={m.charts.reservationBadge}
             empty={m.charts.empty}
-            data={(summary?.reservationTrend ?? []).map((t) => ({ label: t.label, value: t.value }))}
+            data={(summary?.reservationTrend ?? []).map((t) => ({ label: monthChartLabel(t.month, t.label, locale), value: t.value }))}
           />
         </div>
         <div className="flex flex-col gap-6">

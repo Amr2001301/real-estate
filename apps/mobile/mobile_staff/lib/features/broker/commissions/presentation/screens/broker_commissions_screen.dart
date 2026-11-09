@@ -5,9 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../common/staff_list_skeleton.dart';
-import '../../../../catalog/kit/catalog_kit.dart';
 import '../../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/broker_commission.dart';
 import '../../view/broker_payouts_data.dart';
 import '../cubit/broker_commissions_cubit.dart';
@@ -177,7 +175,7 @@ class CommissionCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if (basis != null && pct != null) TextSpan(text: ' · ${context.l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                       ]),
                       maxLines: 2,
@@ -238,7 +236,7 @@ class _PayoutCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Flexible(child: Text(p.number == null ? '—' : ltr(p.number!), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
+              Flexible(child: Text(p.number == null ? '—' : ltr(p.number!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
               const SizedBox(width: 6),
               CatalogBadge.status(label, tone),
             ]),

@@ -8,6 +8,8 @@ import { telHref, whatsappHref } from '@/lib/contact';
 import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
 import { ButtonLink } from '@/components/ui/Button';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
+import { extraT } from '@/messages/site-extra';
+import type { Locale } from '@/lib/locale';
 
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
@@ -23,12 +25,13 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-export function InquiryCard({ projectId, projectName }: { projectId: string; projectName: string }) {
+export function InquiryCard({ projectId, projectName, locale = 'ar' }: { projectId: string; projectName: string; locale?: Locale }) {
+  const t = extraT(locale).inquiry;
   const info  = `${routes.contact}?projectId=${projectId}` as Route;
   const visit = `${routes.contact}?type=visit&projectId=${projectId}` as Route;
 
   const { phone: contactPhone, whatsapp: whatsappPhone } = useCompanyContact();
-  const waMessage     = `مرحبًا، أنا مهتم بمشروع ${projectName}. أرجو تزويدي بمزيد من التفاصيل.`;
+  const waMessage     = t.whatsappMessage(projectName);
 
   return (
     <>
@@ -57,7 +60,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
 
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500">
-                استفسر عن المشروع
+                {t.eyebrow}
               </p>
               <p className="mt-0.5 truncate text-[15px] font-bold leading-snug text-ink-strong">
                 {projectName}
@@ -65,7 +68,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
               {/* Availability dot */}
               <div className="mt-1.5 flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                <span className="text-[11px] text-ink-muted">فريق المبيعات متاح</span>
+                <span className="text-[11px] text-ink-muted">{t.salesAvailable}</span>
               </div>
             </div>
           </div>
@@ -84,12 +87,12 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
             className="w-full shadow-[0_4px_20px_-6px_rgba(11,23,38,0.35)]"
           >
             <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
-            طلب معلومات مجانية
+            {t.freeInfo}
           </ButtonLink>
 
           <ButtonLink href={visit} variant="gold" size="md" className="w-full">
             <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
-            طلب زيارة ميدانية
+            {t.fieldVisit}
           </ButtonLink>
         </div>
 
@@ -108,13 +111,13 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
               className="flex-1"
             >
               <Users className="h-4 w-4 shrink-0" aria-hidden />
-              تحدث مع مستشار
+              {t.talk}
             </ButtonLink>
 
             {contactPhone && (
               <a
                 href={telHref(contactPhone)}
-                aria-label="اتصل بنا"
+                aria-label={t.callUs}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-transparent text-ink-muted transition-colors duration-200 hover:border-gold-300 hover:bg-gold-50 hover:text-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50"
               >
                 <Phone className="h-[18px] w-[18px]" aria-hidden />
@@ -124,7 +127,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
             {whatsappPhone && (
               <a
                 href={whatsappHref(whatsappPhone, waMessage)}
-                aria-label="تواصل عبر واتساب"
+                aria-label={t.whatsapp}
                 className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-colors duration-200 hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/30"
               >
                 <WhatsAppIcon className="h-[18px] w-[18px] text-[#25D366]" />
@@ -141,7 +144,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
         {/* ── Trust footer ── */}
         <div className="mx-5 flex items-center gap-2 border-t border-hairline py-3.5 text-xs text-ink-muted/65">
           <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
-          بياناتك آمنة ولن تُستخدم إلا للتواصل معك.
+          {t.safe}
         </div>
       </div>
 
@@ -152,23 +155,23 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-surface/95 px-4 py-3 shadow-[0_-4px_24px_-4px_rgba(11,23,38,0.12)] backdrop-blur-lg lg:hidden"
         role="region"
-        aria-label="خيارات التواصل السريع"
+        aria-label={t.quickOptions}
       >
         <div className="mx-auto flex max-w-md items-center gap-2">
           <ButtonLink href={info} variant="primary" size="md" className="min-w-0 flex-1 truncate">
             <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
-            طلب معلومات
+            {t.info}
           </ButtonLink>
 
           <ButtonLink href={visit} variant="gold" size="md" className="min-w-0 flex-1 truncate">
             <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
-            طلب زيارة
+            {t.visit}
           </ButtonLink>
 
           {whatsappPhone && (
             <a
               href={whatsappHref(whatsappPhone, waMessage)}
-              aria-label="تواصل عبر واتساب"
+              aria-label={t.whatsapp}
               className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-all duration-200 ease-smooth hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
             >
               <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />

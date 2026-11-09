@@ -8,8 +8,6 @@ import '../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../contracts/create/contract_form_kit.dart';
 import '../../contracts/create/manual_contract_screen.dart' show PickSheet;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/filter_kit.dart' show FilterOption, FilterRadioList;
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../installments/domain/entities/installment.dart';
 import '../../installments/domain/repositories/installments_repository.dart';
 import '../presentation/cubit/create_reservation_cubit.dart';
@@ -228,7 +226,7 @@ class _NewReservationScreenState extends State<NewReservationScreen> {
                       if (state.fixedUnit)
                         _Picked(
                           key: const Key('new-res-unit-fixed'),
-                          leading: const Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
+                          leading: Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
                           title: unit == null ? l10n.rnUnitFixed : ltr(unit.code as String),
                           subtitle: l10n.rnUnitFixed,
                         )
@@ -257,7 +255,7 @@ class _NewReservationScreenState extends State<NewReservationScreen> {
                         if (state.hasUnit && unit != null)
                           _Picked(
                             key: const Key('new-res-unit-picked'),
-                            leading: const Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
+                            leading: Icon(Icons.door_front_door_rounded, size: 18, color: AppPalette.gold300),
                             title: ltr(unit.code as String),
                             subtitle: state.projects.where((p) => p.id == state.selectedProjectId).map((p) => p.name.resolve(lang)).firstOrNull,
                             onChange: () => _pickUnit(cubit, state),
@@ -422,7 +420,7 @@ InputDecoration _deco(BuildContext context, String? hint) => InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFFB9B0A3)),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: homeField(context),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
@@ -447,7 +445,7 @@ class _Progress extends StatelessWidget {
                 key: Key('new-res-progress-$i'),
                 duration: const Duration(milliseconds: 200),
                 height: 5,
-                decoration: BoxDecoration(color: done ? AppPalette.gold400 : const Color(0xFFEFE8DC), borderRadius: BorderRadius.circular(9)),
+                decoration: BoxDecoration(color: done ? AppPalette.gold400 : homeLine(context), borderRadius: BorderRadius.circular(9)),
               ),
             ),
           ],
@@ -480,7 +478,7 @@ class _Picked extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.navy, width: 1.5)),
+      decoration: BoxDecoration(color: homeField(context), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.navy, width: 1.5)),
       child: Row(children: [
         Container(
           width: 38,
@@ -497,7 +495,7 @@ class _Picked extends StatelessWidget {
           ]),
         ),
         if (onChange != null)
-          TextButton(onPressed: onChange, child: Text(context.l10n.rnChange, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
+          TextButton(onPressed: onChange, child: Text(context.l10n.rnChange, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
       ]),
     );
   }
@@ -518,10 +516,10 @@ class _PlanCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: selected ? const Color(0xFFFFFCF5) : Colors.white,
+        color: selected ? homeSelected(context) : homeField(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: selected ? AppPalette.navy : const Color(0xFFECE4D6), width: selected ? 1.6 : 1.5),
+          side: BorderSide(color: selected ? AppPalette.navy : homeLine(context), width: selected ? 1.6 : 1.5),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -535,7 +533,7 @@ class _PlanCard extends StatelessWidget {
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: selected ? Border.all(color: AppPalette.navy, width: 6) : Border.all(color: const Color(0xFFD9D0C2), width: 2),
+                  border: selected ? Border.all(color: AppPalette.navy, width: 6) : Border.all(color: homeLine(context), width: 2),
                 ),
               ),
               const SizedBox(width: 10),
@@ -604,8 +602,8 @@ class _HoldChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: selected ? AppPalette.navy : Colors.white,
-      shape: StadiumBorder(side: BorderSide(color: selected ? AppPalette.navy : const Color(0xFFECE4D6), width: 1.5)),
+      color: selected ? AppPalette.navy : homeField(context),
+      shape: StadiumBorder(side: BorderSide(color: selected ? AppPalette.navy : homeLine(context), width: 1.5)),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,

@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../cubit/create_broker_reservation_cubit.dart';
-import '../../../../dashboard/home_kit/home_kit.dart';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -344,7 +343,7 @@ class _SectionLabel extends StatelessWidget {
           width: 3,
           height: 15,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold300],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

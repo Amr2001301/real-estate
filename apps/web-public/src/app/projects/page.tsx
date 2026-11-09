@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import { buildMetadata } from '@/lib/seo';
-import { safeFetch } from '@/lib/api';
+import { pageMeta } from '@/lib/page-meta';
+import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -18,12 +18,9 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { Stagger } from '@/components/motion/Stagger';
 
-export const metadata = buildMetadata({
-  path: '/projects',
-  title: 'المشاريع العقارية',
-  description:
-    'استكشف مجموعة منتقاة من المشاريع السكنية والتجارية الفاخرة المصممة لأسلوب حياة أرقى — مواقع مميزة وتصاميم استثنائية.',
-});
+export async function generateMetadata() {
+  return pageMeta('projects', { path: '/projects' });
+}
 
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
@@ -52,11 +49,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   if (sort) params.set('sort', sort);
 
   const [result, citiesResult, locale] = await Promise.all([
-    safeFetch<Paginated<PublicProjectListItem>>(
+    apiFetch<Paginated<PublicProjectListItem>>(
       `/public/projects?${params.toString()}`,
       { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     ),
-    safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
+    apiFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
     getLocale(),
   ]);
   const m = siteT(locale);
@@ -121,10 +118,10 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
               )}
               <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
                 {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+                  <ProjectCard key={project.id} project={project} locale={locale} />
                 ))}
               </Stagger>
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
+              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
             </>
           )}
       </Section>

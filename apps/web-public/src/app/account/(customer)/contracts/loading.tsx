@@ -1,9 +1,12 @@
 import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function ContractsLoading() {
+export default async function ContractsLoading() {
+  const t = accountT(await getLocale());
   return (
     <div className="space-y-6">
-      <span className="sr-only">جارٍ التحميل…</span>
+      <span className="sr-only">{t.loading}</span>
       <div className="space-y-2">
         <Skeleton className="h-7 w-40 rounded-full" />
         <Skeleton className="h-4 w-72 rounded-full" />

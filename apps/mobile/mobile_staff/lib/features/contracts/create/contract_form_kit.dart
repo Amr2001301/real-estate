@@ -2,7 +2,6 @@ import 'package:core/core.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../../dashboard/home_kit/home_kit.dart';
 import 'contract_create_data.dart';
 
 /// The pieces the convert page and the manual contract share: a white card
@@ -60,7 +59,7 @@ class FormValueBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: Colors.white,
+      color: homeField(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(13),
         side: BorderSide(color: invalid ? colors.error : colors.hairline),
@@ -199,7 +198,7 @@ class FormBottomBar extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
               foregroundColor: colors.inkStrong,
-              side: const BorderSide(color: AppPalette.navy, width: 1.2),
+              side: BorderSide(color: AppPalette.navy, width: 1.2),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
             ),
@@ -213,7 +212,7 @@ class FormBottomBar extends StatelessWidget {
             key: confirmKey,
             onPressed: busy ? null : onConfirm,
             icon: busy
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
                 : Icon(icon, size: 19),
             label: Text(label),
             style: FilledButton.styleFrom(
@@ -243,7 +242,7 @@ class FormWarning extends StatelessWidget {
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: error ? const Color(0xFFF8E6E4) : const Color(0xFFFFF6E6),
+          color: error ? const Color(0xFFF8E6E4) : homeWarnFill(context),
           border: Border.all(color: error ? const Color(0xFFF1C9C4) : const Color(0xFFF1D9A8)),
           borderRadius: BorderRadius.circular(14),
         ),

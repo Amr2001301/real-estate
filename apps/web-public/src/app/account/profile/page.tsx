@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Mail, ShieldCheck, CalendarDays, Clock, BadgeCheck, MailWarning } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
@@ -11,11 +11,9 @@ import { ProfileForm } from '@/components/account/ProfileForm';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { ResendVerificationButton } from '@/components/account/ResendVerificationButton';
 
-export const metadata = buildMetadata({
-  title: 'الملف الشخصي',
-  description: 'إدارة بياناتك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('profile', { robots: { index: false, follow: false } });
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';

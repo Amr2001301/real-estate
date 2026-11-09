@@ -28,26 +28,38 @@ class FavoriteDto {
     final unit = json['unit'] as Map<String, dynamic>?;
     final embedded = isProject ? project : unit;
 
-    Map<String, dynamic>? nameMap;
+    // A name arrives as {ar, en} or, when the API flattens it for the
+    // language, as a plain string; a unit has no name of its own, so its
+    // project's name (when embedded) or its code stands in.
+    Object? name;
     String? subtitle;
     if (isProject) {
-      nameMap = project?['name'] as Map<String, dynamic>?;
+      name = project?['name'];
       subtitle = project?['city'] as String?;
     } else {
       final unitProject = unit?['project'] as Map<String, dynamic>?;
-      nameMap = unitProject?['name'] as Map<String, dynamic>?;
+      name = unitProject?['name'] ?? unit?['code'];
       subtitle = unit?['type'] as String?;
     }
+    final (nameAr, nameEn) = _names(name);
 
     return FavoriteDto(
       id: json['id'] as String,
       isProject: isProject,
       targetId: (isProject ? projectId : unitId) ?? '',
-      titleAr: nameMap?['ar'] as String? ?? '',
-      titleEn: nameMap?['en'] as String? ?? '',
+      titleAr: nameAr,
+      titleEn: nameEn,
       subtitle: subtitle,
       coverImage: _firstMediaUrl(embedded?['media']),
     );
+  }
+
+  static (String, String) _names(Object? name) {
+    if (name is Map) {
+      return (name['ar'] as String? ?? '', name['en'] as String? ?? '');
+    }
+    if (name is String) return (name, name);
+    return ('', '');
   }
 
   static String? _firstMediaUrl(Object? media) {

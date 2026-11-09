@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Star, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeAppointmentSummary } from '@/lib/api-types';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 /**
  * Gap 7 — post-visit feedback for the customer account ticket. Only meaningful
@@ -15,8 +17,9 @@ import type { MeAppointmentSummary } from '@/lib/api-types';
  * Warm-luxe RTL styling; no admin KPI look.
  */
 function Stars({ value, className }: { value: number; className?: string }) {
+  const t = accountT(useSiteLocale()).visitFeedback;
   return (
-    <span className={cn('inline-flex items-center gap-0.5', className)} aria-label={`${value} من 5`}>
+    <span className={cn('inline-flex items-center gap-0.5', className)} aria-label={t.outOf(value)}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star
           key={n}
@@ -29,6 +32,7 @@ function Stars({ value, className }: { value: number; className?: string }) {
 }
 
 export function VisitFeedback({ appointment }: { appointment: MeAppointmentSummary }) {
+  const t = accountT(useSiteLocale()).visitFeedback;
   const router = useRouter();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -44,7 +48,7 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
     return (
       <div className="mt-3 rounded-xl border border-hairline bg-surface-soft/60 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-ink-strong">تقييمك للزيارة</span>
+          <span className="text-xs font-semibold text-ink-strong">{t.yours}</span>
           <Stars value={appointment.customerRating} />
         </div>
         {appointment.customerRatingText && (
@@ -59,7 +63,7 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (rating < 1) {
-      setError('يرجى اختيار تقييم من 1 إلى 5 نجوم.');
+      setError(t.pick);
       return;
     }
     setError(null);
@@ -74,7 +78,7 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
       setDone(true);
       startTransition(() => router.refresh());
     } catch {
-      setError('تعذّر إرسال التقييم. يُرجى المحاولة مرة أخرى.');
+      setError(t.fail);
     }
   }
 
@@ -82,22 +86,22 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
     return (
       <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-success/[0.06] px-3 py-2.5 text-xs font-semibold text-success">
         <CheckCircle2 className="h-4 w-4" aria-hidden />
-        شكراً لك! تم استلام تقييمك.
+        {t.thanks}
       </p>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 rounded-xl border border-hairline bg-surface-soft/60 p-4">
-      <p className="text-xs font-semibold text-ink-strong">كيف كانت زيارتك؟</p>
-      <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label="تقييم الزيارة">
+      <p className="text-xs font-semibold text-ink-strong">{t.how}</p>
+      <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label={t.group}>
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
             type="button"
             role="radio"
             aria-checked={rating === n}
-            aria-label={`${n} نجوم`}
+            aria-label={t.stars(n)}
             onClick={() => setRating(n)}
             onMouseEnter={() => setHover(n)}
             onMouseLeave={() => setHover(0)}
@@ -119,7 +123,7 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
         onChange={(e) => setComment(e.target.value)}
         maxLength={1000}
         rows={2}
-        placeholder="أضف ملاحظة عن زيارتك أو عن المستشار (اختياري)"
+        placeholder={t.note}
         className="mt-3 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
         disabled={pending}
       />
@@ -134,7 +138,7 @@ export function VisitFeedback({ appointment }: { appointment: MeAppointmentSumma
         disabled={pending}
         className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
       >
-        إرسال التقييم
+        {t.submit}
       </button>
     </form>
   );

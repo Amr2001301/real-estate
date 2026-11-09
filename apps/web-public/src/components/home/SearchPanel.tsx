@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { cityLabel } from '@/lib/format';
 
 const SELECT_CLS =
   'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40';
@@ -93,7 +94,7 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
           >
             <option value="">{m.allCities}</option>
             {cities.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
             ))}
           </select>
         )}

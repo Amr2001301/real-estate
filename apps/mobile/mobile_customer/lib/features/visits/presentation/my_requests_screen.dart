@@ -6,9 +6,9 @@ import '../domain/entities/visit_request.dart';
 import 'my_visits_cubit.dart';
 
 // ─── palette ──────────────────────────────────────────────────────────────────
-const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─── local filter ─────────────────────────────────────────────────────────────
 enum _FilterKey { all, pending, confirmed, completed, cancelled }
@@ -45,8 +45,8 @@ typedef _CardTheme = ({Color accent, IconData icon});
 _CardTheme _cardTheme(VisitRequest req, bool dark) {
   Color pick(Color light, Color darkC) => dark ? darkC : light;
   final green = pick(const Color(0xFF15803D), const Color(0xFF4ADE80));
-  final gold = pick(const Color(0xFF9A6F1E), AppPalette.gold300);
-  final amber = pick(const Color(0xFFB45309), const Color(0xFFFBD27A));
+  final gold = pick(AppPalette.goldInk, AppPalette.gold300);
+  final amber = pick(const Color(0xFFB45309), AppPalette.goldPale);
   final red = pick(const Color(0xFFB91C1C), const Color(0xFFF87171));
   final blue = pick(const Color(0xFF1D4ED8), const Color(0xFF93C5FD));
   final appt = req.latestAppointment;
@@ -302,7 +302,7 @@ class _FilterRow extends StatelessWidget {
         _FilterKey.cancelled => l10n.requestsCancelled,
       };
 
-  static const _dots = {
+  static final _dots = {
     _FilterKey.all:       Colors.white,
     _FilterKey.pending:   AppPalette.gold300,
     _FilterKey.confirmed: Color(0xFF93C5FD),
@@ -444,7 +444,7 @@ class _VisitSummary extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [_navyLight, _navyDeep],
@@ -479,7 +479,7 @@ class _VisitSummary extends StatelessWidget {
                           color: AppPalette.gold300.withValues(alpha: 0.35),
                         ),
                       ),
-                      child: const Icon(Icons.event_note_rounded,
+                      child: Icon(Icons.event_note_rounded,
                           color: AppPalette.gold300, size: 17),
                     ),
                     const SizedBox(width: 10),
@@ -494,7 +494,7 @@ class _VisitSummary extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '$total',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppPalette.gold300,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,

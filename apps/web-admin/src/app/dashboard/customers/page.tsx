@@ -33,6 +33,7 @@ import {
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -40,10 +41,7 @@ export const fetchCache = 'force-no-store';
 const PAGE_SIZE = 20;
 
 function initials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 2);
-  return parts[0]![0]! + parts[parts.length - 1]![0]!;
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 const PALETTE = [

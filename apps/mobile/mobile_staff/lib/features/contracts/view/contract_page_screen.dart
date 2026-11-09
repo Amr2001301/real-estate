@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../catalog/kit/catalog_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;
 import 'contracts_data.dart';
@@ -205,7 +203,7 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
               if ((p.pdfUrl ?? '').isNotEmpty) ...[
                 ListTile(
                   key: const Key('contract-pdf'),
-                  leading: const Icon(Icons.picture_as_pdf_rounded, color: AppPalette.gold500),
+                  leading: Icon(Icons.picture_as_pdf_rounded, color: AppPalette.gold500),
                   title: Text(l10n.kcContractPdf, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(ltr('${p.row.displayNumber}.pdf')),
                   trailing: const Icon(Icons.chevron_right_rounded),
@@ -215,7 +213,7 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
               ],
               ListTile(
                 key: const Key('contract-documents'),
-                leading: const Icon(Icons.folder_open_rounded, color: AppPalette.gold500),
+                leading: Icon(Icons.folder_open_rounded, color: AppPalette.gold500),
                 title: Text(l10n.kcAllDocuments, style: const TextStyle(fontWeight: FontWeight.w700)),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => context.push(
@@ -323,7 +321,7 @@ class _Figures extends StatelessWidget {
             value: page.collectedPct / 100,
             minHeight: 8,
             backgroundColor: colors.surfaceSoft,
-            valueColor: const AlwaysStoppedAnimation(AppPalette.gold500),
+            valueColor: AlwaysStoppedAnimation(AppPalette.gold500),
           ),
         ),
         const SizedBox(height: 5),
@@ -666,8 +664,8 @@ class _Payments extends StatelessWidget {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
-                child: const Icon(Icons.payments_rounded, size: 18, color: AppPalette.gold500),
+                decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
+                child: Icon(Icons.payments_rounded, size: 18, color: AppPalette.gold500),
               ),
               const SizedBox(width: 10),
               Expanded(

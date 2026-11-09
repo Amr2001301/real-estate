@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 import '../../common/staff_list_skeleton.dart';
-import '../dashboard/home_kit/filter_kit.dart';
-import '../dashboard/home_kit/home_kit.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
 
 /// What the customers and visitors asked through the apps and the website —
@@ -433,11 +431,11 @@ class _Primary extends StatelessWidget {
         child: Container(
           height: 42,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(13)),
+          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(13)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 18, color: AppPalette.gold600),
             const SizedBox(width: 7),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
           ]),
         ),
       );

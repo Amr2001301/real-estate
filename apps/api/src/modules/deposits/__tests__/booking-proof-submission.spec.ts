@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   Global,
@@ -36,7 +37,7 @@ const RES_ID = 'eeeeeeee-1111-4111-8111-111111111111';
 const INST_ID = 'aaaaaaaa-2222-4222-8222-222222222222';
 const NEW_DEPOSIT_ID = 'dddddddd-cccc-4ccc-8ccc-cccccccccccc';
 
-const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
+const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }), assertFileRef: jest.fn() };
 const notificationsMock = {
   sendToUser: jest.fn().mockResolvedValue(undefined),
   sendToUsers: jest.fn().mockResolvedValue(undefined),
@@ -282,6 +283,38 @@ describe('Deposits · customer booking-amount proof submission (Gap 3)', () => {
     expect(createArgs.data.installmentId).toBe(INST_ID);
     // The booking-only reservation write must not run on the installment path.
     expect(mock.reservation.update).not.toHaveBeenCalled();
+    expect(mock.reservation.updateMany).not.toHaveBeenCalled();
+  });
+
+  // QA run 1, F-030: a bad file reference used to be found only AFTER the proof row
+  // was written — 400 to the customer, but an orphan proof «under review» that
+  // blocked the retry as a duplicate.
+  it('a bad file reference writes no proof row (instalment path)', async () => {
+    documentsMock.assertFileRef.mockImplementationOnce(() => {
+      throw new BadRequestException('fileUrl is required');
+    });
+    await request(app.getHttpServer())
+      .post('/me/deposits')
+      .send({
+        installmentId: INST_ID,
+        amount: 20000,
+        paidAt: '2030-04-10T00:00:00.000Z',
+        paymentMethod: 'BANK_TRANSFER',
+        receiptUrl: '',
+      })
+      .expect(400);
+    expect(mock.deposit.create).not.toHaveBeenCalled();
+  });
+
+  it('a bad file reference writes no proof row (booking path)', async () => {
+    documentsMock.assertFileRef.mockImplementationOnce(() => {
+      throw new BadRequestException('fileUrl is required');
+    });
+    await request(app.getHttpServer())
+      .post('/me/deposits')
+      .send({ ...bookingBody, receiptUrl: '' })
+      .expect(400);
+    expect(mock.deposit.create).not.toHaveBeenCalled();
     expect(mock.reservation.updateMany).not.toHaveBeenCalled();
   });
 

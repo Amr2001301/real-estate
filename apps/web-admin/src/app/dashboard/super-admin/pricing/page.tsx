@@ -6,7 +6,7 @@ import {
   Plus, Pencil, Trash2, FileText, Tag, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, Sparkles,
 } from 'lucide-react';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { pricingT } from '@/messages/super-admin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,7 @@ function fmt(val: string | null, currency: string) {
 }
 
 export default function PricingPage() {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => pricingT(locale), [locale]);
 
   const [packages, setPackages] = useState<PricingPackage[]>([]);

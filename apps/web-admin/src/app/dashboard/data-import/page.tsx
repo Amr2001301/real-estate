@@ -9,6 +9,7 @@
  * The import button is disabled (and the reason stated) when hasErrors is true.
  */
 
+import { translateImportMessage } from '@/lib/import-messages';
 import { useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -712,7 +713,7 @@ function IssueTable({
                   <td className="px-5 py-2.5 font-semibold text-slate-700">{SHEET_LABELS[e.sheet] ?? e.sheet}</td>
                   <td className="num px-3 py-2.5 text-center text-slate-500">{e.rowNumber}</td>
                   <td className="px-3 py-2.5 font-mono text-[11.5px] text-slate-500">{e.column ?? '—'}</td>
-                  <td className={cn('px-5 py-2.5', tone === 'danger' ? 'text-danger-700' : 'text-warning-700')}>{e.message}</td>
+                  <td className={cn('px-5 py-2.5', tone === 'danger' ? 'text-danger-700' : 'text-warning-700')}>{translateImportMessage(e.message, 'ar')}</td>
                 </tr>
               ))}
             </tbody>

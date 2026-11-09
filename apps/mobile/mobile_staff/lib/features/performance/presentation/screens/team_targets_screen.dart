@@ -7,7 +7,6 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../../contracts/create/manual_contract_screen.dart' show PickSheet;
 import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/sales_performance.dart';
 import '../cubit/team_targets_cubit.dart';
 import '../period.dart';
@@ -270,12 +269,12 @@ class _TargetSheetState extends State<TargetSheet> {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
           child: Container(
-            decoration: const BoxDecoration(color: Color(0xFFFAF6EE), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+            decoration: BoxDecoration(color: homeSheet(context), borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
             padding: EdgeInsets.fromLTRB(16, 14, 16, 16 + MediaQuery.paddingOf(context).bottom),
             child: Form(
               key: _formKey,
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: const Color(0xFFD9D0C2), borderRadius: BorderRadius.circular(9)))),
+                Center(child: Container(width: 42, height: 5, decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)))),
                 const SizedBox(height: 12),
                 Text(_editing ? l10n.tmEditTitle : l10n.teamTargetAddNew, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 const SizedBox(height: 12),
@@ -308,7 +307,7 @@ class _TargetSheetState extends State<TargetSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: saving ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: colors.inkStrong, side: const BorderSide(color: AppPalette.navy, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48), foregroundColor: colors.inkStrong, side: BorderSide(color: AppPalette.navy, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                       child: Text(l10n.actionCancel),
                     ),
                   ),
@@ -318,7 +317,7 @@ class _TargetSheetState extends State<TargetSheet> {
                     child: FilledButton.icon(
                       key: const Key('target-save'),
                       onPressed: saving ? null : _save,
-                      icon: saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
+                      icon: saving ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
                       label: Text(l10n.actionSave),
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: AppPalette.gold400, foregroundColor: AppPalette.navy, textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                     ),

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/tenant_mismatch_notifier.dart';
 import '../cubit/staff_auth_cubit.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import 'staff_two_factor_panel.dart';
 
 class StaffLoginScreen extends StatefulWidget {
@@ -204,7 +203,7 @@ class StaffAuthHero extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
           ),
-          child: const Icon(Icons.apartment_rounded, size: 32, color: AppPalette.navy),
+          child: Icon(Icons.apartment_rounded, size: 32, color: AppPalette.navy),
         ),
       ),
     );

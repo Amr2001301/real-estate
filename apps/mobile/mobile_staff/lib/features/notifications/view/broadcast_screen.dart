@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../contracts/create/manual_contract_screen.dart' show PickSheet;
-import '../../dashboard/home_kit/home_kit.dart';
 import 'broadcast_data.dart';
 
 /// Send a notification by hand, for the admin (design n3, owner-approved
@@ -194,7 +193,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: colors.hairline)),
                         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(width: 42, height: 42, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.campaign_rounded, color: AppPalette.gold600)),
+                          Container(width: 42, height: 42, decoration: BoxDecoration(color: AppPalette.gold500.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)), child: Icon(Icons.campaign_rounded, color: AppPalette.gold600)),
                           const SizedBox(width: 11),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -244,7 +243,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                           onTap: () => cubit.setConfirmed(!s.confirmed),
                           child: Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: const Color(0xFFFCEBCF), borderRadius: BorderRadius.circular(14)),
+                            decoration: BoxDecoration(color: homeWarnFill(context), borderRadius: BorderRadius.circular(14)),
                             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Icon(s.confirmed ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded, color: AppPalette.navy),
                               const SizedBox(width: 10),
@@ -269,7 +268,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                           foregroundColor: colors.inkStrong,
-                          side: const BorderSide(color: AppPalette.navy, width: 1.2),
+                          side: BorderSide(color: AppPalette.navy, width: 1.2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
                         ),
@@ -280,7 +279,7 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                       child: FilledButton.icon(
                         key: const Key('bc-send'),
                         onPressed: s.canSend ? cubit.send : null,
-                        icon: s.sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.send_rounded, size: 18),
+                        icon: s.sending ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.send_rounded, size: 18),
                         label: Text(p != null && p.recipients > 0 && needEstimate ? l10n.bcSendN(p.recipients) : l10n.bcSend, maxLines: 1, overflow: TextOverflow.ellipsis),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
@@ -320,7 +319,7 @@ class _Opt extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           decoration: BoxDecoration(
-            color: on ? const Color(0xFFFFFCF5) : colors.surface,
+            color: on ? homeSelected(context) : colors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: on ? AppPalette.navy : colors.hairline, width: 1.5),
           ),
@@ -399,7 +398,7 @@ class _ResultCard extends StatelessWidget {
     final l10n = context.l10n;
     final o = result.outcome;
     final color = o == 0 ? const Color(0xFF2F6B4A) : (o == 1 ? const Color(0xFF8A5A12) : const Color(0xFFB3261E));
-    final bg = o == 0 ? const Color(0xFFE6F2EA) : (o == 1 ? const Color(0xFFFCEBCF) : const Color(0xFFFBE7E4));
+    final bg = o == 0 ? homeOkFill(context) : (o == 1 ? homeWarnFill(context) : homeErrFill(context));
     Widget line(String k, int v) => Text('$k: ${ltr('$v')}', style: TextStyle(fontSize: 12, height: 1.8, color: color));
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),

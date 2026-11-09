@@ -97,6 +97,7 @@ import { getTenantContext, runInCompany, runTenantContext } from '../../common/t
 import { isUniqueConflictOn } from '../../common/utils/contract-number';
 import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
 import { addMonths } from '../../common/utils/add-months';
+import { isLive, materializePlan } from '../installments/plan-scope';
 import { currentCompanyTimeZone, startOfLocalToday } from '../../common/time/company-timezone';
 import { assertUnitOnSale } from '../projects/inventory-blockers';
 // BrokerCommissionsModule/Service no longer imported here. Commission
@@ -470,11 +471,20 @@ export class ReservationsService {
         status: true,
         projectId: true,
         unitId: true,
+        percentPriced: true,
+        unitTypes: true,
+        validFrom: true,
+        validTo: true,
         totalPrice: true,
+        discountAmount: true,
+        discountType: true,
+        discountValue: true,
         netPrice: true,
         reservationAmount: true,
         reservationAmountType: true,
         reservationAmountValue: true,
+        downPaymentType: true,
+        downPaymentValue: true,
         downPaymentAmount: true,
         finalPaymentAmount: true,
         installmentsCount: true,
@@ -491,22 +501,33 @@ export class ReservationsService {
     if (plan.status !== PlanTemplateStatus.ACTIVE) {
       throw new BadRequestException('خطة التقسيط غير مفعّلة');
     }
-    // Plan must match either the exact unit, or be a project-wide plan for the same project
+    // Plan must match either the exact unit, or be a project / unit-type plan for the same project
     if (plan.unitId && plan.unitId !== unitId) {
       throw new BadRequestException('خطة التقسيط مرتبطة بوحدة مختلفة');
     }
     if (plan.projectId !== projectId) {
       throw new BadRequestException('خطة التقسيط لا تنتمي إلى مشروع هذه الوحدة');
     }
+    const unit = await this.prisma.unit.findUnique({ where: { id: unitId }, select: { price: true, type: true } });
+    // A plan offered between dates is not sold outside them.
+    if (!isLive(plan, new Date())) {
+      throw new BadRequestException('خطة التقسيط خارج فترة صلاحيتها');
+    }
+    // A unit-type plan is for those types only.
+    if (!plan.unitId && plan.unitTypes.length > 0 && unit && !plan.unitTypes.includes(unit.type)) {
+      throw new BadRequestException('خطة التقسيط لا تشمل نوع هذه الوحدة');
+    }
     // A unit's plan is priced at the unit's price; once the unit is repriced
     // the plan is stale and would sell at the old price.
     if (plan.unitId) {
-      const unit = await this.prisma.unit.findUnique({ where: { id: plan.unitId }, select: { price: true } });
       if (unit && !new Prisma.Decimal(unit.price).equals(plan.totalPrice)) {
         throw new BadRequestException('تغيّر سعر الوحدة بعد إنشاء خطة الأسعار — حدّث الخطة أولاً');
       }
+      return plan;
     }
-    return plan;
+    // A project / unit-type plan holds percentages: its amounts on THIS unit's
+    // price (plan-scope.ts). Nothing downstream reads the raw percentages.
+    return materializePlan(plan, unit?.price ?? 0);
   }
 
   /**
@@ -602,6 +623,11 @@ export class ReservationsService {
     let clientPhone: string | null = null;
     let clientEmail: string | null = null;
     let genericLeadId: string | null = null;
+    // A broker's lead keeps its broker on the reservation (and so on the
+    // contract and the commission) — QA run 1, F-038. The commission rate is
+    // then taken at signing (the grant in force when the sale was reserved).
+    let leadBrokerId: string | null = null;
+    let leadBrokerAgentId: string | null = null;
     if (dto.clientId) {
       const clientUser = await resolveTenantUser(
         this.prisma,
@@ -630,12 +656,16 @@ export class ReservationsService {
           projectInterestId: true,
           stage: true,
           assignedSalesId: true,
+          brokerId: true,
+          brokerAgentId: true,
         },
       });
       if (!lead) {
         throw new BadRequestException('Lead not found');
       }
       assertLeadInScope(ownerScope, lead.assignedSalesId);
+      leadBrokerId = lead.brokerId;
+      leadBrokerAgentId = lead.brokerAgentId;
       // The sale is the lead's rep's: a manager or admin booking it on their
       // behalf does not take the credit (and the commission) for it.
       if (!sellerChosen && actor.role !== UserRole.SALES && lead.assignedSalesId) {
@@ -657,8 +687,11 @@ export class ReservationsService {
             where: { leadId: dto.leadId, status: { not: ReservationStatus.CANCELLED } },
             select: { id: true },
           }),
+          // A visit for ANOTHER unit commits the lead elsewhere; a visit for this very
+          // unit is the normal road to its reservation (a website lead has no unit
+          // until its rep books the visit) — QA run 1, F-022. `not` also drops nulls.
           this.prisma.visitAppointment.findFirst({
-            where: { leadId: dto.leadId, unitId: { not: null } },
+            where: { leadId: dto.leadId, unitId: { not: dto.unitId } },
             select: { id: true },
           }),
           this.prisma.contract.findFirst({
@@ -871,6 +904,8 @@ export class ReservationsService {
           salesId: effectiveSalesId,
           leadId: dto.leadId ?? null,
           clientId: resolvedClientId,
+          brokerId: leadBrokerId,
+          brokerAgentId: leadBrokerAgentId,
           notes: dto.notes ?? null,
           expiresAt,
           status: ReservationStatus.PENDING,
@@ -1664,6 +1699,17 @@ export class ReservationsService {
             },
           })
         : null;
+      // The status flips to PAID once: only the call that flips it tells the customer
+      // and the rep (F-057 — confirming again, or six confirms at once, sent six
+      // «booking paid» notices for one payment).
+      let firstPaid = false;
+      if (!instrument) {
+        const flipped = await tx.reservation.updateMany({
+          where: { id, bookingPaymentStatus: { not: ReservationBookingPaymentStatus.PAID } },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PAID, bookingPaidAt: paidAt },
+        });
+        firstPaid = flipped.count === 1;
+      }
       const updated = await tx.reservation.update({
         where: { id },
         data: instrument
@@ -1709,10 +1755,12 @@ export class ReservationsService {
             : { verified: true }),
         },
       });
-      return updated;
-    }).then(async (updated) => {
+      return { updated, firstPaid };
+    }).then(async ({ updated, firstPaid }) => {
       // A cheque is not money yet: the "booking paid" notice waits for it.
       if (byCheque) return updated;
+      // Already paid: nothing new to tell anyone.
+      if (!firstPaid) return updated;
       // P4 — event: booking payment confirmed. Notify customer + sales rep.
       const payload = await this.buildReservationPayload(updated.id);
       await this.notifications.sendToUsers(
@@ -2657,6 +2705,12 @@ export class ReservationsService {
           throw new BadRequestException(
             'تعذّر إنشاء رقم العقد بعد عدة محاولات، يرجى المحاولة مرة أخرى.',
           );
+        }
+        // A concurrent conversion of this very reservation won the race: the
+        // unique key on reservationId held (one contract), the loser is told so
+        // instead of a 500 — QA run 1, F-044.
+        if (err?.code === 'P2002' && Array.isArray(err?.meta?.target) && err.meta!.target!.includes('reservationId')) {
+          throw new ConflictException('تم تحويل هذا الحجز إلى عقد بالفعل');
         }
         throw e;
       }

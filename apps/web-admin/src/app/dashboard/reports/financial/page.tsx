@@ -39,6 +39,8 @@ import { ReportsTabs } from '../_components/reports-tabs';
 import { getMyCodes } from '@/lib/permissions';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
 import { CashflowChart } from './_components/cashflow-chart';
+import { CompareView } from './_components/compare-view';
+import { buildCompareData, type FinancialComparison } from './_components/compare-data';
 import { EntityLink } from '@/components/entity-link';
 
 export const dynamic    = 'force-dynamic';
@@ -47,7 +49,7 @@ export const fetchCache = 'force-no-store';
 // ── Search params ─────────────────────────────────────────────────────────────
 interface Search {
   mode?: string; month?: string; year?: string; quarter?: string;
-  dateFrom?: string; dateTo?: string; compare?: string;
+  dateFrom?: string; dateTo?: string; compare?: string; view?: string;
   projectId?: string; q?: string; type?: string; showFilters?: string;
 }
 
@@ -77,6 +79,29 @@ function getDepositPayer(d: FinancialDepositRow): { kind: 'customer' | 'client' 
   return null;
 }
 
+/**
+ * A period's name: «نوفمبر 2026», «2026», «الربع 4 2026»; a part of a month
+ * says so («أول 7 أيام من أكتوبر 2026»); a running period says «حتى اليوم».
+ */
+function rangeName(r: { dateFrom: string; dateTo: string }, today: string, locale: string, other = false): string {
+  const en = locale === 'en';
+  const loc = intlLocale(locale as never);
+  const a = new Date(`${r.dateFrom}T00:00:00Z`);
+  const b = new Date(`${r.dateTo}T00:00:00Z`);
+  const month = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(a);
+  const lastOfMonth = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 0)).getUTCDate();
+  const startsMonth = a.getUTCDate() === 1;
+  const sameMonth = a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();
+  const days = Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1;
+  let name: string;
+  if (startsMonth && sameMonth && b.getUTCDate() === lastOfMonth) name = month;
+  else if (startsMonth && sameMonth) name = en ? `First ${days} days of ${month}` : `أول ${days} ${days <= 10 ? 'أيام' : 'يومًا'} من ${month}`;
+  else if (startsMonth && a.getUTCMonth() === 0 && b.getUTCMonth() === 11 && a.getUTCFullYear() === b.getUTCFullYear()) name = String(a.getUTCFullYear());
+  else if (startsMonth && days >= 89 && days <= 92 && a.getUTCMonth() % 3 === 0) name = en ? `Q${a.getUTCMonth() / 3 + 1} ${a.getUTCFullYear()}` : `الربع ${a.getUTCMonth() / 3 + 1} ${a.getUTCFullYear()}`;
+  else name = `${r.dateFrom} → ${r.dateTo}`;
+  return !other && r.dateTo >= today && r.dateFrom <= today ? (en ? `${name} (to date)` : `${name} (حتى اليوم)`) : name;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default async function FinancialReportsPage({
   searchParams,
@@ -95,6 +120,9 @@ export default async function FinancialReportsPage({
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
   const compare  = (sp.compare ?? 'none') as CompareMode;
   const cmpRange = resolveComparisonDateRange(resolved, compare, today);
+  // With a comparison chosen, the page shows either the report or the comparison
+  // (a switch under the filters): the comparison first, since it was just asked for.
+  const showCompare = !!cmpRange && sp.view !== 'report';
 
   const PAYMENT_TYPE_LABELS: Partial<Record<PlanPaymentType, string>> = m.paymentTypeLabels;
   const PAYMENT_TYPE_CLS: Partial<Record<PlanPaymentType, string>> = {
@@ -124,7 +152,13 @@ export default async function FinancialReportsPage({
     return `/reports/financial-dashboard${qs ? `?${qs}` : ''}`;
   }
 
-  const [dashRes, cmpDashRes, projectsRes, refundsRes] = await Promise.all([
+  const compareQs = new URLSearchParams();
+  if (cmpRange) {
+    compareQs.set('dateFrom', dateFrom); compareQs.set('dateTo', dateTo);
+    compareQs.set('prevFrom', cmpRange.dateFrom); compareQs.set('prevTo', cmpRange.dateTo);
+    for (const k of ['projectId', 'type', 'q'] as const) if (sp[k]) compareQs.set(k, sp[k]!);
+  }
+  const [dashRes, cmpDashRes, projectsRes, refundsRes, compareRes] = await Promise.all([
     safe(api.get<FinancialDashboard>(apiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
     cmpRange
       // The same filters as the current period, only the dates differ.
@@ -132,6 +166,7 @@ export default async function FinancialReportsPage({
       : Promise.resolve({ data: null, error: null }),
     safe(fetchProjectOptions()),
     safe(api.get<OutstandingRefunds>('/contracts/refunds/outstanding')),
+    cmpRange ? safe(api.get<FinancialComparison>(`/reports/financial-comparison?${compareQs.toString()}`)) : Promise.resolve({ data: null, error: null }),
   ]);
   const refundsOwedRows = refundsRes.data?.data ?? [];
 
@@ -275,9 +310,50 @@ export default async function FinancialReportsPage({
         defaultQ={sp.q ?? ''}
         defaultType={sp.type ?? ''}
         defaultShowFilters={showFilters}
+        defaultView={sp.view}
         projects={projectOptions}
         locale={locale}
       />
+
+      {compareRes.error && (
+        <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{compareRes.error}</div>
+      )}
+      {cmpRange && (
+        <div role="tablist" aria-label={en ? 'View' : 'العرض'} className="inline-flex w-fit items-center gap-1 self-start rounded-full border border-hairline bg-surface p-1" data-testid="fin-view-switch">
+          {([['compare', en ? 'Comparison' : 'المقارنة'], ['report', en ? 'Report' : 'التقرير']] as const).map(([v, label]) => {
+            const qs = new URLSearchParams();
+            for (const [k, val] of Object.entries(sp)) if (val && k !== 'view') qs.set(k, String(val));
+            if (v === 'report') qs.set('view', 'report');
+            const on = (v === 'compare') === showCompare;
+            return (
+              <Link
+                key={v}
+                role="tab"
+                aria-selected={on}
+                href={`/dashboard/reports/financial?${qs.toString()}` as never}
+                className={cn('inline-flex h-10 items-center rounded-full px-6 text-[14px] transition-colors', on ? 'bg-brand-500/15 font-bold text-brand-700' : 'text-slate-600 hover:text-slate-900')}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+      {showCompare && compareRes.data && cmpRange && (
+        <CompareView
+          data={buildCompareData(compareRes.data, {
+            en,
+            money: cmoney,
+            short,
+            count,
+            name: (v) => tx(v as never) || '—',
+            typeLabel: (k) => DEPOSIT_TYPE_LABELS[k as DepositType] ?? k,
+            periodLabel: rangeName({ dateFrom, dateTo }, today, locale),
+            prevLabel: rangeName(cmpRange, today, locale, true),
+            asOf: { dueToDate, overdue: overdueAmt, contractValue: contractVal },
+          })}
+        />
+      )}
 
       {dashRes.error && (
         <div className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">
@@ -285,6 +361,8 @@ export default async function FinancialReportsPage({
         </div>
       )}
 
+      {!showCompare && (
+      <>
       {/* ─── Hero: what came in, the rate, the months ───────────────────── */}
       <section data-testid="fin-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
@@ -964,6 +1042,8 @@ export default async function FinancialReportsPage({
           </div>
         )}
       </PremiumPanel>
+      </>
+      )}
     </div>
   );
 }

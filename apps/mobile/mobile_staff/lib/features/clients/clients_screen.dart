@@ -4,7 +4,6 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../dashboard/home_kit/home_kit.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import 'clients_data.dart';
 
@@ -225,7 +224,7 @@ class ClientCard extends StatelessWidget {
                   ),
                 )
               else
-                const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+                Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
             ]),
           ]),
         ),

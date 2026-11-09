@@ -30,6 +30,8 @@ export interface FinancialFilterBarProps {
   defaultQ?: string;
   defaultType?: string;
   defaultShowFilters?: boolean;
+  /** 'report' keeps the plain report on screen while a comparison is chosen. */
+  defaultView?: string;
   projects: { id: string; name: string }[];
   locale?: Locale;
 }
@@ -42,6 +44,7 @@ export function FinancialFilterBar({
   defaultDateFrom, defaultDateTo, defaultCompare,
   defaultProjectId = '', defaultQ = '', defaultType = '',
   defaultShowFilters = false,
+  defaultView = '',
   projects,
   locale = 'ar',
 }: FinancialFilterBarProps) {
@@ -73,6 +76,7 @@ export function FinancialFilterBar({
       if (dateTo)   p.set('dateTo',   dateTo);
     }
     if (compare !== 'none') p.set('compare', compare);
+    if (compare !== 'none' && defaultView === 'report') p.set('view', 'report');
     if (!opts.clearAdvanced) {
       if (projectId) p.set('projectId', projectId);
       if (q)         p.set('q',         q);

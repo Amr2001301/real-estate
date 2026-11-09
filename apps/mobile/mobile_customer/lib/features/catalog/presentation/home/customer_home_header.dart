@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../notifications/presentation/widgets/customer_notification_button.dart';
 
-const _navy = Color(0xFF0B1726);
-const _navyMid = Color(0xFF0F1E32);
-const _navyAccent = Color(0xFF182A43);
+Color get _navy => AppPalette.navyDeep;
+Color get _navyMid => AppPalette.navyTop;
+Color get _navyAccent => AppPalette.navyAccent;
 
 class CustomerHomeHeader extends StatelessWidget {
   const CustomerHomeHeader({
@@ -33,7 +33,7 @@ class CustomerHomeHeader extends StatelessWidget {
       child: Container(
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
@@ -168,7 +168,7 @@ class CustomerHomeHeader extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.auto_awesome_rounded,
                               size: 10,
                               color: AppPalette.gold300,
@@ -292,8 +292,8 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFCFAA52), AppPalette.gold500],
+        gradient: LinearGradient(
+          colors: [AppPalette.goldWarm, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -317,7 +317,7 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               color: _navy,
               fontSize: 13,
               fontWeight: FontWeight.w800,

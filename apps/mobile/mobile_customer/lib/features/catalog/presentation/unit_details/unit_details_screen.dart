@@ -134,6 +134,22 @@ class _DetailPageState extends State<_DetailPage> {
         NavHeaderGlass(child: _CompareButton(unit: unit)),
       ],
       photos: unit.galleryImages,
+      card: AppPriceCard(
+        label: l10n.detailTotalPrice,
+        price: price,
+        caption: monthlyLine,
+        facts: [
+          if (offer != null)
+            AppPriceFact(
+              l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
+              PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
+            ),
+          if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
+          if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
+        ],
+        actionLabel: offer != null ? l10n.detailCalcInstallment : null,
+        onAction: offer != null ? _openCalculator : null,
+      ),
       photoBadge: UnitStatusChip(unit.status),
       bottomBar: AppDetailBottomBar(
         price: price,
@@ -157,27 +173,6 @@ class _DetailPageState extends State<_DetailPage> {
         ],
       ),
       slivers: [
-        AppDetailPage.box(
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: AppPriceCard(
-              label: l10n.detailTotalPrice,
-              price: price,
-              caption: monthlyLine,
-              facts: [
-                if (offer != null)
-                  AppPriceFact(
-                    l10n.detailUpfrontPct(offer.downPaymentPercentLabel),
-                    PriceFormatter.format(offer.downPayment.round(), languageCode: lang),
-                  ),
-                if (longest != null) AppPriceFact(l10n.detailTerm, durationText(l10n, longest.durationMonths)),
-                if (handover != null) AppPriceFact(l10n.detailHandover, '${handover.year}'),
-              ],
-              actionLabel: offer != null ? l10n.detailCalcInstallment : null,
-              onAction: offer != null ? _openCalculator : null,
-            ),
-          ),
-        ),
         AppDetailPage.box(
           Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: _SpecsRow(unit: unit)),
         ),
@@ -314,7 +309,7 @@ class _AboutCard extends StatelessWidget {
             Container(
               width: 3,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [AppPalette.gold300, AppPalette.gold500],
@@ -482,7 +477,7 @@ class _BlueprintCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: Stack(
           children: [
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -518,7 +513,7 @@ class _BlueprintCard extends StatelessWidget {
                           color: AppPalette.gold400.withValues(alpha: 0.55),
                         ),
                       ),
-                      child: const Icon(Icons.architecture_rounded,
+                      child: Icon(Icons.architecture_rounded,
                           color: AppPalette.gold300, size: 28),
                     ),
                   ),
@@ -670,24 +665,15 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            SizedBox(
-              height: 370,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                itemCount: units.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppSpacing.md),
-                itemBuilder: (context, i) {
-                  final unit = units[i];
-                  return UnitCard(
-                    unit: unit,
-                    width: 280,
-                    onTap: () => context.push('/units/${unit.id}'),
-                  );
-                },
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Column(children: [
+                for (final unit in units.take(3))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: UnitCard(unit: unit, onTap: () => context.push('/units/${unit.id}')),
+                  ),
+              ]),
             ),
           ],
         );

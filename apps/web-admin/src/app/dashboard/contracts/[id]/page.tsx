@@ -63,6 +63,7 @@ import {
   PremiumPanel,
   PremiumEmptyNote,
 } from '@/components/premium';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 
@@ -1163,12 +1164,7 @@ function PartyLabel({ children }: { children: React.ReactNode }) {
 }
 
 function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('');
+  const initials = sharedInitials(name, { single: 2, fallback: '·' });
   return (
     <span
       aria-hidden

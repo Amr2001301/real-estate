@@ -3,7 +3,7 @@ import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { Wallet, CalendarClock } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -17,11 +17,9 @@ import { DepositCard } from '@/components/account/DepositCard';
 import { SubmitProofTrigger } from '@/components/account/SubmitProofTrigger';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
-export const metadata = buildMetadata({
-  title: 'الدفعات',
-  description: 'سجل دفعاتك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('deposits', { robots: { index: false, follow: false } });
+}
 
 function TotalItem({ label, value }: { label: string; value: string | undefined }) {
   return (
@@ -114,7 +112,7 @@ export default async function AccountDepositsPage() {
                   <Price value={totals.totalAmount} />
                 </div>
                 <span className="mt-1 inline-block rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-                  {formatNumber(totals.count)} {m.depositLabel}
+                  {formatNumber(totals.count, locale)} {m.depositLabel}
                 </span>
               </div>
 

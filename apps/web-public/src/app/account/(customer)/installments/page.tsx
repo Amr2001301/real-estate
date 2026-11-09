@@ -7,12 +7,12 @@ import Link from 'next/link';
 import {
   CalendarClock, CheckCircle2, Clock, AlertCircle, Building2, Home, Upload, Wallet,
 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
-import { pickAr, unitTypeLabel, formatPrice } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatPrice, formatDateShort } from '@/lib/format';
 import type { MeInstallment, MeInstallmentsResponse } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
@@ -21,17 +21,17 @@ import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/componen
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
 import { cn } from '@/lib/cn';
+import { accountT } from '@/messages/account';
+import type { Locale } from '@/lib/locale';
 
-export const metadata = buildMetadata({
-  title: 'الأقساط',
-  description: 'جدول أقساط عقودك في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('installments', { robots: { index: false, follow: false } });
+}
 
-const STATUS_LABELS: Record<MeInstallment['status'], { label: string; tone: 'success' | 'accent' | 'muted' | 'error' }> = {
-  PENDING: { label: 'قيد الاستحقاق', tone: 'accent' },
-  PAID: { label: 'مدفوع', tone: 'success' },
-  OVERDUE: { label: 'متأخر', tone: 'error' },
+const STATUS_TONES: Record<MeInstallment['status'], 'success' | 'accent' | 'muted' | 'error'> = {
+  PENDING: 'accent',
+  PAID: 'success',
+  OVERDUE: 'error',
 };
 
 const STATUS_TONE_CLS: Record<'success' | 'accent' | 'muted' | 'error', string> = {
@@ -47,19 +47,10 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
-function formatDate(iso: string | null): string {
+function fmtMonthYear(iso: string | null, locale: Locale): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
-
-function fmtMonthYear(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { month: 'long', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { month: 'long', year: 'numeric' }).format(new Date(iso));
   } catch {
     return '—';
   }
@@ -74,11 +65,12 @@ function statusIcon(status: MeInstallment['status']) {
 // To the piaster, as the statement of account: rounded to the pound, the
 // figures here did not match it (129,222.22 read 129,222).
 const AMT_FMT = new Intl.NumberFormat('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-function fmtAmt(s: string | null | undefined): string {
+const AMT_FMT_EN = new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+function fmtAmt(s: string | null | undefined, locale: Locale = 'ar'): string {
   if (!s) return '—';
   const n = Number(s);
   if (!Number.isFinite(n)) return '—';
-  return AMT_FMT.format(n);
+  return (locale === 'en' ? AMT_FMT_EN : AMT_FMT).format(n);
 }
 
 export default async function AccountInstallmentsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -149,7 +141,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     return {
       contractId: c.id,
       label: unit
-        ? `${unit.code} — ${unitTypeLabel(unit.type)}`
+        ? `${unit.code} — ${unitTypeLabel(unit.type, null, locale)}`
         : (c.contractNumber ?? `#${c.id.slice(0, 6)}`),
     };
   });
@@ -176,7 +168,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
         />
       ) : (
         <>
-          {summary && <SummaryStrip summary={summary} m={m} symbol={currencySymbol(currency)} />}
+          {summary && <SummaryStrip summary={summary} m={m} symbol={currencySymbol(currency, locale)} locale={locale} />}
 
           {/* Filter row */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -236,7 +228,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
           ) : (
             <div className="space-y-4">
               {installments.map((inst) => (
-                <InstallmentCard key={inst.id} installment={inst} m={m} />
+                <InstallmentCard key={inst.id} installment={inst} m={m} locale={locale} />
               ))}
             </div>
           )}
@@ -308,7 +300,7 @@ function SummaryBlock({
 type InstallmentsMessages = ReturnType<typeof siteT>['accountPages']['installments'];
 
 /** Single AccountCard containing all four financial KPIs in one horizontal row. */
-function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages; symbol: string }) {
+function SummaryStrip({ summary, m, symbol, locale }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages; symbol: string; locale: Locale }) {
   const hasOverdue = Number(summary.late?.amount ?? summary.overdue) > 0;
   return (
     <AccountCard accent="gold" className="p-5 sm:p-7">
@@ -316,18 +308,18 @@ function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallme
         <SummaryBlock
           icon={CheckCircle2}
           label={m.totalPaid}
-          value={fmtAmt(summary.totalPaid)}
+          value={fmtAmt(summary.totalPaid, locale)}
           sub={`${summary.counts.paid} ${m.paidCount}`}
           currency={symbol}
         />
         <SummaryBlock
           icon={Wallet}
           label={m.remaining}
-          value={fmtAmt(summary.remaining)}
+          value={fmtAmt(summary.remaining, locale)}
           sub={[
             `${summary.counts.pending + summary.counts.overdue} ${m.unpaidCount}`,
             // The remaining includes fees and penalties: said, not hidden.
-            Number(summary.fees?.open ?? 0) > 0 ? m.feesNote(`${fmtAmt(summary.fees!.open)} ${symbol}`) : null,
+            Number(summary.fees?.open ?? 0) > 0 ? m.feesNote(`${fmtAmt(summary.fees!.open, locale)} ${symbol}`) : null,
           ].filter(Boolean).join(' · ')}
           separator
           currency={symbol}
@@ -335,7 +327,7 @@ function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallme
         <SummaryBlock
           icon={AlertCircle}
           label={m.overdue}
-          value={fmtAmt(summary.late?.amount ?? summary.overdue)}
+          value={fmtAmt(summary.late?.amount ?? summary.overdue, locale)}
           sub={`${summary.late?.count ?? summary.counts.overdue} ${m.overdueCount}`}
           separator
           overdue={hasOverdue}
@@ -344,10 +336,10 @@ function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallme
         <SummaryBlock
           icon={CalendarClock}
           label={m.nextDue}
-          value={fmtAmt(summary.nextDue?.amount ?? null)}
+          value={fmtAmt(summary.nextDue?.amount ?? null, locale)}
           sub={
             summary.nextDue
-              ? `${m.duePrefix} ${formatDate(summary.nextDue.dueDate)}`
+              ? `${m.duePrefix} ${formatDateShort(summary.nextDue.dueDate, locale)}`
               : m.noDue
           }
           separator
@@ -359,15 +351,16 @@ function SummaryStrip({ summary, m, symbol }: { summary: NonNullable<MeInstallme
 }
 
 /** Single installment — mirrors the ReservationCard layout. */
-function InstallmentCard({ installment, m }: { installment: MeInstallment; m: InstallmentsMessages }) {
+function InstallmentCard({ installment, m, locale }: { installment: MeInstallment; m: InstallmentsMessages; locale: Locale }) {
   const contract = installment.plan?.contract ?? null;
   const project = contract?.unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name) : '';
+  const projectName = project ? pickAr(project.name, '', locale) : '';
   const unitLabel = contract?.unit
-    ? `${unitTypeLabel(contract.unit.type)} · ${contract.unit.code}`
+    ? `${unitTypeLabel(contract.unit.type, null, locale)} · ${contract.unit.code}`
     : '';
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
-  const { label, tone } = STATUS_LABELS[installment.status];
+  const label = accountT(locale).installmentStatus[installment.status] ?? installment.status;
+  const tone = STATUS_TONES[installment.status] ?? 'muted';
   const Icon = statusIcon(installment.status);
   // Not while a proof or cheque waits on it: the API refuses a second one.
   const waiting = installment.status !== 'PAID' && !!installment.paymentOnItsWay;
@@ -387,7 +380,7 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
           </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              {m.typeLabels[installment.type] ?? m.installmentLabel} {fmtMonthYear(installment.dueDate)}
+              {m.typeLabels[installment.type] ?? m.installmentLabel} {fmtMonthYear(installment.dueDate, locale)}
             </h3>
             {subtitle && (
               <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
@@ -420,13 +413,13 @@ function InstallmentCard({ installment, m }: { installment: MeInstallment; m: In
         </Block>
         <Block label={m.dateCol} separator>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            {formatDate(installment.dueDate)}
+            {formatDateShort(installment.dueDate, locale)}
           </div>
         </Block>
         <Block label={paidOn ? m.paidDateCol : m.statusCol} separator>
           {paidOn ? (
             <div className="text-sm font-semibold text-ink-strong" dir="auto">
-              {formatDate(paidOn)}
+              {formatDateShort(paidOn, locale)}
             </div>
           ) : (
             <span

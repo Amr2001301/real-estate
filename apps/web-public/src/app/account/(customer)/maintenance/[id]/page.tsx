@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ArrowRight, Home, Clock, RefreshCw, Wrench, type LucideIcon } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -45,11 +45,9 @@ function InfoCard({
   );
 }
 
-export const metadata = buildMetadata({
-  title: 'تفاصيل طلب الصيانة',
-  description: 'تفاصيل طلب الصيانة في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('maintenanceDetail', { robots: { index: false, follow: false } });
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -104,8 +102,8 @@ export default async function AccountMaintenanceDetailPage({
     );
   }
 
-  const categoryName = req.category ? pickAr(req.category.name) : '';
-  const unitLabel = req.unit ? `${unitTypeLabel(req.unit.type)} · ${req.unit.code}` : '—';
+  const categoryName = req.category ? pickAr(req.category.name, '', locale) : '';
+  const unitLabel = req.unit ? `${unitTypeLabel(req.unit.type, null, locale)} · ${req.unit.code}` : '—';
 
   return (
     <div className="space-y-6">

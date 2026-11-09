@@ -2,6 +2,8 @@ import type { Route } from 'next';
 import Link from 'next/link';
 import { type LucideIcon } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 /**
  * Account stat card — same gold-glow language as the marketing-site feature
@@ -17,7 +19,7 @@ const GLOW = {
   background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.14), transparent 62%)',
 } as const;
 
-export function SummaryTile({
+export async function SummaryTile({
   icon: Icon,
   label,
   value,
@@ -30,7 +32,8 @@ export function SummaryTile({
   valueText?: string | null;
   href: string;
 }) {
-  const display = valueText != null ? valueText : value !== null ? formatNumber(value) : null;
+  const locale = await getLocale();
+  const display = valueText != null ? valueText : value !== null ? formatNumber(value, locale) : null;
 
   return (
     <Link
@@ -50,7 +53,7 @@ export function SummaryTile({
             {display}
           </div>
         ) : (
-          <div className="text-base font-semibold text-gold-600">عرض القسم</div>
+          <div className="text-base font-semibold text-gold-600">{accountT(locale).viewSection}</div>
         )}
         <div className="mt-2.5 text-sm font-medium text-ink-muted">{label}</div>
       </div>

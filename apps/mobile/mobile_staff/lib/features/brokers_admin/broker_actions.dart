@@ -1,7 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-import '../dashboard/home_kit/home_kit.dart';
 import '../permissions/staff_permissions.dart';
 import 'brokers_hub_screen.dart';
 
@@ -325,7 +324,7 @@ class _DetailSheetState extends State<_DetailSheet> {
               Container(
                 width: 46,
                 height: 46,
-                decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(15)),
+                decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(15)),
                 child: Icon(brokerTabIcon(widget.tab), size: 23, color: AppPalette.gold500),
               ),
               const SizedBox(width: 12),

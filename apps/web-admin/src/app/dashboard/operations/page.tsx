@@ -25,6 +25,7 @@ import { cn } from '@/lib/cn';
 import { intlLocale } from '@/lib/format';
 import { ActivityTrendChart } from './_trend-chart';
 import { areaLabel } from './_area-label';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -225,8 +226,7 @@ const KIND_COLORS: Record<ActionKind, string> = {
 };
 
 function initials(name: string | null | undefined): string {
-  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '·';
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function Avatar({ name, size = 'md' }: { name: string | null | undefined; size?: 'sm' | 'md' }) {

@@ -29,18 +29,21 @@ export interface Metric {
   ring?:      number;
 }
 
-function Ring({ pct }: { pct: number }) {
+function Ring({ pct, children }: { pct: number; children: ReactNode }) {
   const r = 18;
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, pct));
   return (
-    <svg viewBox="0 0 44 44" className="h-11 w-11 shrink-0 -rotate-90" aria-hidden>
-      <circle cx="22" cy="22" r={r} fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="3" />
-      <circle
-        cx="22" cy="22" r={r} fill="none" stroke="#D8B66A" strokeWidth="3" strokeLinecap="round"
-        strokeDasharray={`${(p / 100) * c} ${c}`}
-      />
-    </svg>
+    <span className="relative inline-grid h-[84px] w-[84px] shrink-0 place-items-center">
+      <svg viewBox="0 0 44 44" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
+        <circle cx="22" cy="22" r={r} fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="3" />
+        <circle
+          cx="22" cy="22" r={r} fill="none" stroke="#D8B66A" strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={`${(p / 100) * c} ${c}`}
+        />
+      </svg>
+      <span className="relative flex items-baseline gap-px leading-none">{children}</span>
+    </span>
   );
 }
 
@@ -174,6 +177,21 @@ export function PremiumMetricStrip({
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] leading-snug text-[#A9B0BD] line-clamp-2">{m.label}</p>
+                {m.ring !== undefined ? (
+                  <div className="mt-2 flex items-center gap-3">
+                    <Ring pct={m.ring}>
+                      <span className="num text-[28px] font-semibold text-[#F4ECD8]">{num}</span>
+                      {autoUnit && <span className="text-[12px] font-bold text-[#D8B66A]">{autoUnit}</span>}
+                    </Ring>
+                    <div className="min-w-0">
+                      {m.sub && <p className="text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
+                      {m.trend && (
+                        <p className={cn('mt-1.5 text-[11.5px] font-bold leading-snug', trendColour(m.trendCls))}>{m.trend}</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                <>
                 <div className="mt-1 flex items-center gap-3">
                 <p className="flex flex-wrap items-baseline gap-x-1.5 leading-none">
                   <span
@@ -189,13 +207,14 @@ export function PremiumMetricStrip({
                   </span>
                   {autoUnit && <span className="text-[13px] font-bold text-[#D8B66A]">{autoUnit}</span>}
                 </p>
-                {m.ring !== undefined && <Ring pct={m.ring} />}
                 </div>
                 {m.sub && <p className="mt-2 text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
                 {m.trend && (
                   <p className={cn('mt-1.5 text-[11.5px] font-bold leading-none', trendColour(m.trendCls))}>
                     {m.trend}
                   </p>
+                )}
+                </>
                 )}
               </div>
             </div>

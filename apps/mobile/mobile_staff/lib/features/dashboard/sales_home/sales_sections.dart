@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../common/lead_stage_label.dart';
 import '../../leads/domain/entities/lead.dart';
 import '../../leads/presentation/follow_up_labels.dart';
-import '../home_kit/home_kit.dart';
 import 'sales_home_cubit.dart';
 import 'sales_home_data.dart';
 
@@ -45,8 +44,8 @@ class HomeFollowUps extends StatelessWidget {
             const SizedBox(width: 5),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(color: AppPalette.gold100, borderRadius: BorderRadius.circular(6)),
-              child: Text(ltr('$n'), style: const TextStyle(fontSize: 12, color: AppPalette.gold600)),
+              decoration: BoxDecoration(color: homeTintBorder(context), borderRadius: BorderRadius.circular(6)),
+              child: Text(ltr('$n'), style: TextStyle(fontSize: 12, color: AppPalette.gold600)),
             ),
           ]),
         ),
@@ -148,7 +147,7 @@ class _FollowUpTile extends StatelessWidget {
                       ]),
                       const SizedBox(height: 3),
                       Row(children: [
-                        const Icon(Icons.schedule_rounded, size: 14, color: AppPalette.gold500),
+                        Icon(Icons.schedule_rounded, size: 14, color: AppPalette.gold500),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -288,7 +287,7 @@ class HomeAgenda extends StatelessWidget {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(color: context.appColors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.update_rounded, size: 15, color: AppPalette.gold500),
+                  Icon(Icons.update_rounded, size: 15, color: AppPalette.gold500),
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
@@ -399,8 +398,8 @@ class HomePipeline extends StatelessWidget {
   final Map<String, int> stages;
   final VoidCallback onLeads;
 
-  static const _open = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION'];
-  static const _fills = {
+  static final _open = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION'];
+  static final _fills = {
     'NEW': [Color(0xFF8A7F70), Color(0xFF6B6256)],
     'INTERESTED': [AppPalette.navy600, AppPalette.navy],
     'VISIT': [AppPalette.gold300, AppPalette.gold500],

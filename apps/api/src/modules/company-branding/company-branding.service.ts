@@ -38,6 +38,7 @@ const BRANDING_SELECT = {
   slug: true,
   name: true,
   displayName: true,
+  displayNameEn: true,
   logoUrl: true,
   faviconUrl: true,
   ogImageUrl: true,
@@ -70,6 +71,7 @@ export interface CompanyBrandingResponse {
   slug: string;
   name: string;
   displayName?: string;
+  displayNameEn?: string;
   logoUrl?: string;
   faviconUrl?: string;
   ogImageUrl?: string;
@@ -103,6 +105,7 @@ type BrandingRow = {
   slug: string;
   name: string;
   displayName: string | null;
+  displayNameEn: string | null;
   logoUrl: string | null;
   faviconUrl: string | null;
   ogImageUrl: string | null;
@@ -131,6 +134,7 @@ type BrandingRow = {
 function buildResponse(row: BrandingRow): CompanyBrandingResponse {
   const res: CompanyBrandingResponse = { slug: row.slug, name: row.name, currency: normalizeCurrency(row.currency) };
   if (row.displayName != null)      res.displayName      = row.displayName;
+  if (row.displayNameEn != null)    res.displayNameEn    = row.displayNameEn;
   if (row.logoUrl != null)          res.logoUrl          = row.logoUrl;
   if (row.faviconUrl != null)       res.faviconUrl       = row.faviconUrl;
   if (row.ogImageUrl != null)       res.ogImageUrl       = row.ogImageUrl;
@@ -252,6 +256,7 @@ export class CompanyBrandingService {
   async updateBranding(companyId: string, dto: PatchCompanyBrandingDto): Promise<BrandingRow> {
     const data: Record<string, unknown> = {};
     if (dto.displayName    !== undefined) data.displayName    = dto.displayName;
+    if (dto.displayNameEn  !== undefined) data.displayNameEn  = dto.displayNameEn;
     if (dto.tagline        !== undefined) data.tagline        = dto.tagline;
     if (dto.logoUrl        !== undefined) data.logoUrl        = dto.logoUrl;
     if (dto.faviconUrl     !== undefined) data.faviconUrl     = dto.faviconUrl;

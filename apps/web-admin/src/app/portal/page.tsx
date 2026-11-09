@@ -44,6 +44,8 @@ import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerStatusBadge, BrokerLeadStatusBadge } from '@/components/badges';
+import { initials as sharedInitials } from '@/lib/initials';
+import { brokerCommissionRange } from '@/lib/broker-commission-range';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -59,7 +61,7 @@ function convPct(num: number, denom: number): string | null {
 }
 
 function initials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function SectionLabel({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
@@ -368,6 +370,9 @@ export default async function PortalDashboard() {
 
   const me           = meRes.data;
   const projects     = projectsRes.data ?? [];
+  // The rate the broker earns is the one granted on each project, else the firm's default (F-040):
+  // the default alone showed a rate that is not the one locked on a granted project.
+  const commissionRange = brokerCommissionRange(projects, me.broker.defaultCommissionPct);
   const availableCount = unitsRes.data?.meta.total ?? 0;
   const activity     = activityRes.data?.data ?? [];
   const perf         = perfRes.data?.summary;
@@ -419,13 +424,13 @@ export default async function PortalDashboard() {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                   <span className="text-sm font-bold text-slate-700">{me.broker.companyName}</span>
                   <span className="text-slate-200 select-none hidden sm:inline">·</span>
-                  <span className="inline-flex items-center gap-1">
-                    <BadgePercent className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                    <span className="text-sm font-extrabold text-amber-700 tabular-nums">
-                      {Number(me.broker.defaultCommissionPct ?? 0).toFixed(2)}%
+                  {commissionRange && (
+                    <span className="inline-flex items-center gap-1">
+                      <BadgePercent className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span className="text-sm font-extrabold text-amber-700 tabular-nums">{commissionRange}</span>
+                      <span className="text-xs text-slate-400">{m.home.commission}</span>
                     </span>
-                    <span className="text-xs text-slate-400">{m.home.commission}</span>
-                  </span>
+                  )}
                   {hasContract && (
                     <>
                       <span className="text-slate-200 select-none hidden sm:inline">·</span>

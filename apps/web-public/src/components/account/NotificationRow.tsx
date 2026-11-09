@@ -4,6 +4,8 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { useTransition } from 'react';
 import { markNotificationReadAction } from '@/lib/account-actions';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 /**
  * Interactive shell for one notification row. The visual content (`children`)
@@ -31,6 +33,7 @@ export function NotificationRow({
   className: string;
   children: React.ReactNode;
 }) {
+  const locale = useSiteLocale();
   const [, startTransition] = useTransition();
 
   const markRead = () => {
@@ -47,7 +50,7 @@ export function NotificationRow({
 
   if (unread) {
     return (
-      <button type="button" onClick={markRead} aria-label="تحديد كمقروء" className={className}>
+      <button type="button" onClick={markRead} aria-label={accountT(locale).markRead} className={className}>
         {children}
       </button>
     );

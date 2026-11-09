@@ -75,7 +75,7 @@ const fixture: {
     visitRequestId: 'b2222222-2222-4222-8222-222222222222',
     // Default: 1h in the future. Per-transition tests override this when they
     // need a past time (e.g. NO_SHOW happy path).
-    scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
+    scheduledAt: new Date(Date.now() - 60 * 60 * 1000),
     salesNotes: null,
     resultNotes: null,
     cancellationReason: null,
@@ -221,7 +221,7 @@ describe('Visits module · permissions enforcement', () => {
       assignedSalesId: null,
       leadId: 'lead-1',
       visitRequestId: 'b2222222-2222-4222-8222-222222222222',
-      scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
+      scheduledAt: new Date(Date.now() - 60 * 60 * 1000),
       salesNotes: null,
       resultNotes: null,
       cancellationReason: null,

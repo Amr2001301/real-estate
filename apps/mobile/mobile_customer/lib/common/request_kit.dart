@@ -131,7 +131,7 @@ class RequestReplyNote extends StatelessWidget {
     final colors = context.appColors;
     return Row(
       children: [
-        const Icon(Icons.schedule_rounded, size: 17, color: AppPalette.gold500),
+        Icon(Icons.schedule_rounded, size: 17, color: AppPalette.gold500),
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(context.l10n.requestReplyNote, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
@@ -229,4 +229,26 @@ class RequestDoneView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// One titled step of a request form, in the staff app's look.
+class RequestStep extends StatelessWidget {
+  const RequestStep({super.key, required this.icon, required this.title, required this.child});
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.md),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            AppDetailSectionTitle(title, icon: icon),
+            const SizedBox(height: 12),
+            child,
+          ]),
+        ),
+      );
 }

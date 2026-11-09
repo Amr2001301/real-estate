@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/entities/contract_statement.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 /// The share of the contract paid so far, 0–1: what was paid over the
 /// contract value and its fees.
@@ -36,7 +36,7 @@ class ContractMoneyCard extends StatelessWidget {
       key: const Key('contract-money'),
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: [_navyLight, _navyDeep], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(AppRadii.xl),
         boxShadow: [BoxShadow(color: _navyDeep.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 8))],
       ),
@@ -63,13 +63,13 @@ class ContractMoneyCard extends StatelessWidget {
               value: share,
               minHeight: 8,
               backgroundColor: Colors.white.withValues(alpha: 0.14),
-              valueColor: const AlwaysStoppedAnimation(AppPalette.gold400),
+              valueColor: AlwaysStoppedAnimation(AppPalette.gold400),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             l10n.contractPaidShare(percent),
-            style: const TextStyle(color: AppPalette.gold300, fontSize: 12, fontWeight: FontWeight.w700),
+            style: TextStyle(color: AppPalette.gold300, fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -137,7 +137,7 @@ class SectionTitle extends StatelessWidget {
           width: 3,
           height: 18,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               colors: [AppPalette.gold400, AppPalette.gold300],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,

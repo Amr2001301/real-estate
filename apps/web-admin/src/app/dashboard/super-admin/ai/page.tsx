@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field } from '@/components/form/field';
 import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { formatDate } from '@/lib/format';
 import { aiT, readError, usageTone, type AiPlanView } from '@/components/ai/ai-strings';
 
@@ -27,7 +27,7 @@ interface Attention extends AiPlanView {
 
 // The platform owner's AI assistant packages, and the companies to follow up.
 export default function SuperAdminAiPage() {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => aiT(locale), [locale]);
   const [packages, setPackages] = useState<AiPackage[]>([]);
   const [attention, setAttention] = useState<Attention[]>([]);

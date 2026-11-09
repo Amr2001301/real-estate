@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../domain/ledger.dart';
 import 'ledger_labels.dart';
 

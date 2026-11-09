@@ -150,4 +150,39 @@ void main() {
       expect(find.text('1,000,000 ج.م'), findsOneWidget);
     });
   });
+
+  // Project / unit-type plans (F-019 / F-039): the staff list row carries `sample`,
+  // the plan's amounts on a price of 100 — right for the shares, not a unit's money.
+  test('a project plan reads its sample amounts (shares are right at any price)', () {
+    final o = installmentOfferFromTemplateJson({
+      'name': 'تقسيط 7 سنوات',
+      'unit': null,
+      'isCash': false,
+      'netPrice': 0,
+      'reservationAmount': 0,
+      'downPaymentAmount': 0,
+      'durationOptions': [
+        {'durationMonths': 84, 'increasePercentage': '0', 'order': 0},
+      ],
+      'sample': {'netPrice': 95.0, 'reservationAmount': 2.0, 'downPaymentAmount': 9.5, 'discountAmount': 5.0, 'finalPaymentAmount': 0.0},
+    });
+    expect(o.netPrice, 95.0);
+    expect(o.downPaymentPercent, 10.0);
+    expect(o.options.single.durationMonths, 84);
+  });
+
+  test('a unit plan (no sample) reads its own amounts as before', () {
+    final o = installmentOfferFromTemplateJson({
+      'name': 'خطة الوحدة',
+      'isCash': false,
+      'netPrice': 3420000,
+      'reservationAmount': 100000,
+      'downPaymentAmount': 342000,
+      'durationOptions': [
+        {'durationMonths': 84, 'increasePercentage': '0', 'order': 0},
+      ],
+    });
+    expect(o.netPrice, 3420000);
+    expect(o.booking, 100000);
+  });
 }

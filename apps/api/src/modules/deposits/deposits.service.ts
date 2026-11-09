@@ -152,6 +152,23 @@ const INSTALLMENT_CANCELLED_MESSAGE =
 const PROOF_AMOUNT_CHANGED_MESSAGE =
   'مبلغ الإثبات لا يطابق قيمة القسط الحالية بعد تعديل العقد — ارفض الإثبات وأرسل إثباتاً جديداً بالمبلغ الصحيح';
 
+/**
+ * The date a payment was received: today unless given, and never in the future —
+ * a payment dated ahead marked the instalment PAID for money not yet received
+ * (QA F-053). A few minutes of clock difference between the device and the
+ * server are allowed.
+ */
+export function paymentDate(value?: string): Date {
+  const now = new Date();
+  if (!value) return now;
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) throw new BadRequestException('تاريخ الدفع غير صالح');
+  if (at.getTime() > now.getTime() + 5 * 60_000) {
+    throw new BadRequestException('تاريخ الدفع لا يمكن أن يكون في المستقبل');
+  }
+  return at;
+}
+
 @Injectable()
 export class DepositsService {
   private readonly logger = new Logger(DepositsService.name);
@@ -204,12 +221,26 @@ export class DepositsService {
     }
   }
 
-  async findOne(id: string) {
-    const deposit = await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
+  /**
+   * `salesIds` limits the read to the payments of those reps' sales (the same rule
+   * as the list, PRM2); a payment outside it is «not found», not «forbidden», so
+   * its existence is not revealed. `canReverse` is false for a read-only viewer.
+   */
+  async findOne(id: string, opts: { salesIds?: string[]; canReverse?: boolean } = {}) {
+    const { salesIds, canReverse = true } = opts;
+    const deposit = salesIds
+      ? await this.prisma.deposit.findFirst({
+          where: {
+            id,
+            OR: [{ contract: { reservation: { salesId: { in: salesIds } } } }, { reservation: { salesId: { in: salesIds } } }],
+          },
+          include: DEPOSIT_INCLUDE,
+        })
+      : await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
     if (!deposit) throw new NotFoundException('Deposit not found');
     // Lets the admin page offer "reverse" only when POST /reverse would succeed.
     const d = await this.prisma.deposit.findUnique({ where: { id }, select: REVERSAL_SELECT });
-    const reversible = !!d && !d.deletedAt && (await this.stillPays(d));
+    const reversible = canReverse && !!d && !d.deletedAt && (await this.stillPays(d));
     return { ...withDepositState(deposit), reversible };
   }
 
@@ -315,7 +346,7 @@ export class DepositsService {
 
     const depositType = depositTypeForInstallment(installment.type);
 
-    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    const paidAt = paymentDate(dto.paidAt);
 
     // FG-01 — the payment method decides when the installment counts as paid
     // (decided 2026-10-08): cash and bank transfers at once; a cheque only
@@ -478,7 +509,7 @@ export class DepositsService {
     if (dto.amount !== undefined && Math.round(dto.amount * 100) !== totalCents) {
       throw new BadRequestException(`المبلغ لا يساوي مجموع الأقساط المختارة (${(totalCents / 100).toFixed(2)})`);
     }
-    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    const paidAt = paymentDate(dto.paidAt);
 
     const deposits = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.installment.updateMany({
@@ -1152,6 +1183,8 @@ export class DepositsService {
    * service contract — DB row first, push best-effort try/catch).
    */
   async submitProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    // Before any write: a bad file reference must not leave a proof row behind (F-030).
+    this.documents.assertFileRef(dto.receiptUrl);
     // Exactly one target — an installment OR a reservation booking amount.
     const hasInstallment = !!dto.installmentId;
     const hasReservation = !!dto.reservationId;
@@ -1275,6 +1308,7 @@ export class DepositsService {
    * rejection reverts it to UNPAID (see rejectProof).
    */
   async submitBookingProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    this.documents.assertFileRef(dto.receiptUrl);
     const reservation = await this.prisma.reservation.findUnique({
       where: { id: dto.reservationId },
       select: {
@@ -1390,6 +1424,7 @@ export class DepositsService {
     depositId: string,
     dto: CustomerResubmitProofDto,
   ) {
+    this.documents.assertFileRef(dto.receiptUrl);
     // The same ownership as /me/deposits: an installment payment by who owned
     // the contract when it was made, a booking payment (no contract) by the
     // reservation's client. Checking contract.customerId alone 404'd every

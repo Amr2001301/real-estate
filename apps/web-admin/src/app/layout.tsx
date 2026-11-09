@@ -3,6 +3,8 @@ import { getLocale } from '@/lib/locale';
 import './fonts.css';
 import './globals.css';
 import { ThemeScript } from '@/components/ui/theme-script';
+import { LocaleProvider } from '@/components/locale-provider';
+import { NativeValidationMessages } from '@/components/form/native-validation-messages';
 
 // U5 type: Almarai for text, Noto Naskh Arabic for headings, Cormorant
 // Garamond for large numbers (lining numerals) — served from public/fonts
@@ -26,7 +28,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <ThemeScript />
       </head>
-      <body>{children}</body>
+      <body>
+        <NativeValidationMessages locale={locale} />
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+      </body>
     </html>
   );
 }

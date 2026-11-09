@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { upfrontTotal } from '@/lib/upfront-total';
 import { getLetterhead } from '@/lib/letterhead';
 import { companyNameOf } from '@/components/print/PrintDocument';
 import { SignatureCard, type SignatureRequestView } from './_components/signature-card';
@@ -51,6 +52,7 @@ import {
   PremiumEmptyNote,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
+import { initials as sharedInitials } from '@/lib/initials';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +118,7 @@ export default async function ReservationDetailPage({
   const steps = journeySteps(reservation, m);
   const down = Number(reservation.snapshotDownPaymentAmount ?? 0);
   const financed = Number(reservation.snapshotFinancedAmount ?? 0);
+  const upfront = upfrontTotal(bookingAmount, down);
   const downPct = down + financed > 0 ? Math.round((down / (down + financed)) * 100) : 0;
 
   return (
@@ -420,6 +423,15 @@ export default async function ReservationDetailPage({
                       />
                     )}
                   </div>
+
+                  {upfront != null && (
+                    <p data-testid="reservation-upfront-total" className="text-[13px] text-slate-600">
+                      {m.upfrontTotalLabel}{' '}
+                      <span className="font-semibold tabular-nums text-slate-900" dir="ltr">
+                        {nf(upfront)} {symbol}
+                      </span>
+                    </p>
+                  )}
 
                   {down + financed > 0 && (
                     <div>
@@ -768,12 +780,7 @@ function PartyLabel({ children }: { children: React.ReactNode }) {
 }
 
 function Avatar({ name, small }: { name: string; small?: boolean }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('');
+  const initials = sharedInitials(name, { single: 2, fallback: '·' });
   return (
     <span
       aria-hidden

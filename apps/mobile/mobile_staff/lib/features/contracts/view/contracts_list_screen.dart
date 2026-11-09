@@ -5,10 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../catalog/units_list/units_list_screen.dart';
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import 'contracts_data.dart';
 
 /// The contracts list (owner-approved design, 2026-11-04), as the website's
@@ -288,7 +285,7 @@ class ContractCardView extends StatelessWidget {
                     ]),
                     const SizedBox(height: 2),
                     Text.rich(TextSpan(children: [
-                      TextSpan(text: ltr(row.displayNumber), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                      TextSpan(text: ltr(row.displayNumber), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                       TextSpan(text: ' · $source', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                     ])),
                     if (where.isNotEmpty)
@@ -330,7 +327,7 @@ class ContractCardView extends StatelessWidget {
                     const Spacer(),
                   if ((row.downPayment ?? 0) > 0)
                     Text(l10n.kcDown(contractMoney(row.downPayment!)),
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                 ]),
               ),
           ]),

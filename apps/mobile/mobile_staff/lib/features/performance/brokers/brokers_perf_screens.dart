@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import 'brokers_perf_data.dart';
 
@@ -251,7 +250,7 @@ class PerfFunnel extends StatelessWidget {
                   builder: (context, box) => Container(
                     height: 26,
                     alignment: AlignmentDirectional.centerStart,
-                    decoration: BoxDecoration(color: const Color(0xFFEFE8DC), borderRadius: BorderRadius.circular(9)),
+                    decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
                     child: Container(
                       width: (box.maxWidth * (v / max)).clamp(28, box.maxWidth),
                       height: 26,
@@ -391,7 +390,7 @@ class BrokerPerfCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(b.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
                 Text.rich(TextSpan(children: [
-                  if (b.code != null) TextSpan(text: ltr(b.code!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                  if (b.code != null) TextSpan(text: ltr(b.code!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                   if (b.conversionRate != null) TextSpan(text: ' · ${l10n.bpConv(ltr('${(b.conversionRate! * 100).round()}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                 ])),
               ]),
@@ -399,7 +398,7 @@ class BrokerPerfCard extends StatelessWidget {
             if (b.status == 'ACTIVE')
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFE6F2EA), borderRadius: BorderRadius.circular(99)),
+                decoration: BoxDecoration(color: homeOkFill(context), borderRadius: BorderRadius.circular(99)),
                 child: Text(l10n.bpActiveBadge, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2F6B4A))),
               ),
           ]),

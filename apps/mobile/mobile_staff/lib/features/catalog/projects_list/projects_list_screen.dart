@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
-import '../../dashboard/home_kit/home_kit.dart';
-import '../kit/catalog_kit.dart';
 import 'projects_list_data.dart';
 
 /// The projects list (owner-approved design, 2026-11-04), with the website's
@@ -238,7 +236,7 @@ class ProjectCard extends StatelessWidget {
                   Text(row.name.resolve(lang), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(18, Colors.white)),
                   if (place.isNotEmpty)
                     Row(children: [
-                      const Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
+                      Icon(Icons.location_on_rounded, size: 14, color: AppPalette.gold300),
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(place,

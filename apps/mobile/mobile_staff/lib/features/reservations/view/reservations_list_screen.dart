@@ -5,10 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../catalog/kit/catalog_kit.dart';
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../presentation/screens/reservation_decision_card.dart' show askReservationRejectReason, confirmReservationApprove;
 import 'reservations_data.dart';
 
@@ -271,8 +268,8 @@ class ReservationLink extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-            const Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+            Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
           ]),
         ),
       );
@@ -402,10 +399,10 @@ class ReservationCardView extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(children: [
-                        TextSpan(text: ltr(row.displayNumber), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
+                        TextSpan(text: ltr(row.displayNumber), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
                         if (showConsultant && (row.salesName ?? '').isNotEmpty) TextSpan(text: ' · ${row.salesName}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
                         if (row.viaBroker && route == '/reservations')
-                          TextSpan(text: ' · ${l10n.rvByBroker}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
+                          TextSpan(text: ' · ${l10n.rvByBroker}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
                       ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

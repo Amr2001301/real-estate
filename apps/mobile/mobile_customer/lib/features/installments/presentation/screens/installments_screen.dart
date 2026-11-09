@@ -7,20 +7,20 @@ import '../../domain/entities/installment.dart';
 import '../cubit/installments_cubit.dart';
 import '../widgets/installment_card.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyLight => AppPalette.navyLight;
 
 // ── Status colors ─────────────────────────────────────────────────────────────
 
 const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
 const _paidAccent = Color(0xFF4ADE80);
-const _overdueGradient = [
+final _overdueGradient = [
   Color(0xFF9B2020),
   Color(0xFF620D0D),
 ]; // warmer crimson
-const _overdueAccent = Color(0xFFF87171);
-const _pendingGradient = [_navyLight, _navyDeep];
-const _pendingAccent = AppPalette.gold300;
+final _overdueAccent = Color(0xFFF87171);
+List<Color> get _pendingGradient => [_navyLight, _navyDeep];
+Color get _pendingAccent => AppPalette.gold300;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Installments Screen
@@ -214,7 +214,7 @@ class _InstallmentsSummary extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [_navyLight, _navyDeep],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

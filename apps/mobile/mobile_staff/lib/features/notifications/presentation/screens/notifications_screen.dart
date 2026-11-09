@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/app_notification.dart';
 import '../cubit/notifications_cubit.dart';
 import '../cubit/unread_count_cubit.dart';
@@ -182,7 +181,7 @@ class _Tile extends StatelessWidget {
     final s = _style(n.templateCode);
     final unread = !n.read;
     return Material(
-      color: unread ? const Color(0xFFFFFCF5) : colors.surface,
+      color: unread ? homeSelected(context) : colors.surface,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -194,7 +193,7 @@ class _Tile extends StatelessWidget {
           if (route != null) context.push(route);
         },
         child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? const Color(0xFFE7D6A8) : colors.hairline)),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? homeTintBorder(context) : colors.hairline)),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -209,7 +208,7 @@ class _Tile extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(child: Text(title, style: TextStyle(fontSize: 13.5, fontWeight: unread ? FontWeight.w800 : FontWeight.w700, color: colors.inkStrong))),
-                    if (unread) Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: const BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
+                    if (unread) Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
                   ]),
                   if (body != null) ...[
                     const SizedBox(height: 2),

@@ -3,6 +3,7 @@
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { api } from '@/lib/api';
+import type { PlanPreview, PlanScopeInfo } from '@/lib/types';
 
 export interface PlanFormState {
   error?: string;
@@ -202,6 +203,123 @@ export async function setPlansVisibilityAction(
     const res = await api.post<{ updated: number }>('/installment-plan-templates/visibility', { ids, visibility });
     revalidateAll();
     return { updated: res.updated };
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+}
+
+// ─── Project / unit-type plans (F-019) ──────────────────────────────────────
+
+function projectPlanPayload(formData: FormData): Record<string, unknown> {
+  const str = (k: string) => String(formData.get(k) ?? '').trim();
+  const num = (k: string) => {
+    const v = str(k);
+    if (v === '') return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  let durationOptions: { durationMonths: number; increasePercentage: number }[] = [];
+  try {
+    const parsed = JSON.parse(str('durationOptions') || '[]');
+    if (Array.isArray(parsed)) {
+      durationOptions = parsed
+        .map((o) => ({ durationMonths: Number(o?.durationMonths), increasePercentage: Number(o?.increasePercentage) }))
+        .filter((o) => Number.isFinite(o.durationMonths) && o.durationMonths > 0 && Number.isFinite(o.increasePercentage) && o.increasePercentage >= 0);
+    }
+  } catch {
+    /* treated as empty */
+  }
+  let unitTypes: string[] = [];
+  try {
+    const parsed = JSON.parse(str('unitTypes') || '[]');
+    if (Array.isArray(parsed)) unitTypes = parsed.map(String).filter(Boolean);
+  } catch {
+    /* treated as empty */
+  }
+  const isCash = str('isCash') === 'true';
+  const date = (k: string) => str(k) || null;
+  return {
+    name: str('name'),
+    description: str('description') || undefined,
+    projectId: str('projectId'),
+    unitTypes,
+    validFrom: date('validFrom'),
+    validTo: date('validTo'),
+    isCash,
+    discountType: 'PERCENTAGE',
+    discountValue: num('discountValue') ?? 0,
+    reservationAmountType: str('reservationAmountType') === 'PERCENTAGE' ? 'PERCENTAGE' : 'FIXED',
+    reservationAmountValue: num('reservationAmountValue') ?? 0,
+    ...(isCash
+      ? { startDateRule: 'AFTER_CONTRACT' }
+      : {
+          downPaymentType: 'PERCENTAGE',
+          downPaymentValue: num('downPaymentValue') ?? 0,
+          startDateRule: str('startDateRule') || 'AFTER_RESERVATION',
+          manualStartDate: date('manualStartDate'),
+          durationOptions,
+        }),
+    status: str('status') || 'DRAFT',
+    visibility: str('visibility') || 'SALES_ONLY',
+  };
+}
+
+export async function createProjectPlanAction(_prev: PlanFormState, formData: FormData): Promise<PlanFormState> {
+  const payload = projectPlanPayload(formData);
+  if (!payload.name) return { error: 'اسم الخطة مطلوب' };
+  if (!payload.projectId) return { error: 'المشروع مطلوب' };
+  if (!payload.isCash && (payload.durationOptions as unknown[]).length === 0) {
+    return { error: 'أضف خيار مدة واحدًا على الأقل' };
+  }
+  // A create must not carry nulls the DTO would reject.
+  if (payload.validFrom === null) delete payload.validFrom;
+  if (payload.validTo === null) delete payload.validTo;
+  if (payload.manualStartDate === null) delete payload.manualStartDate;
+  let id: string;
+  try {
+    id = (await api.post<{ id: string }>('/installment-plan-templates', payload)).id;
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidateAll();
+  redirect(`/dashboard/installments/${id}`);
+}
+
+export async function updateProjectPlanAction(id: string, _prev: PlanFormState, formData: FormData): Promise<PlanFormState> {
+  let payload = projectPlanPayload(formData);
+  if (!payload.name) return { error: 'اسم الخطة مطلوب' };
+  // Open reservations freeze the terms: send only what may still change.
+  if (String(formData.get('termsLocked') ?? '') === 'true') {
+    const { name, description, status, visibility, unitTypes, validFrom, validTo } = payload;
+    payload = { name, description, status, visibility, unitTypes, validFrom, validTo };
+  }
+  try {
+    await api.patch(`/installment-plan-templates/${id}`, payload);
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidateAll(id);
+  redirect(`/dashboard/installments/${id}`);
+}
+
+/** Unit types of a project with their unit counts (the scope picker). */
+export async function getScopeInfoAction(projectId: string): Promise<PlanScopeInfo | null> {
+  if (!projectId) return null;
+  try {
+    return await api.get<PlanScopeInfo>(`/installment-plan-templates/scope-info?projectId=${encodeURIComponent(projectId)}`);
+  } catch (e: unknown) {
+    unstable_rethrow(e);
+    return null;
+  }
+}
+
+/** The plan's numbers on real units of the project, without saving. */
+export async function previewProjectPlanAction(body: Record<string, unknown>): Promise<PlanPreview | { error: string }> {
+  try {
+    return await api.post<PlanPreview>('/installment-plan-templates/preview', body);
   } catch (e: unknown) {
     unstable_rethrow(e);
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };

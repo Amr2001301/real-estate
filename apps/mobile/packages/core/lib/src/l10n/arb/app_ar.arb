@@ -470,6 +470,7 @@
   "maintenanceNoAttachments": "لم تُرفق صور أو مستندات بعد.",
   "maintenanceUnitLabel": "أيّ وحدة؟",
   "maintenanceUnitRequired": "يرجى اختيار وحدة.",
+  "maintenanceBeforeHandover": "تُفتح طلبات الصيانة بعد تسليم الوحدة. سنُعلمك فور تسليم وحدتك.",
   "maintenanceNoUnitsTitle": "لا توجد وحدات",
   "maintenanceNoUnitsMessage": "ليست لديك وحدات لتقديم طلب صيانة لها بعد.",
   "maintenanceCategoryLabel": "ما الذي يحتاج إلى صيانة؟",
@@ -3130,5 +3131,19 @@
   "frCompare": "المقارنة",
   "frCompareOff": "بدون مقارنة",
   "frCompareOn": "مقارنة بالفترة السابقة",
-  "brkConfirmHint": "هل تريد تنفيذ هذا الإجراء؟"
+  "brkConfirmHint": "هل تريد تنفيذ هذا الإجراء؟",
+  "ctProjectsCountN": "{n, plural, =0{لا مشاريع} =1{مشروع واحد} =2{مشروعان} few{{n} مشاريع} other{{n} مشروعًا}}",
+  "@ctProjectsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "ctUnitsCountN": "{n, plural, =0{لا وحدات} =1{وحدة واحدة} =2{وحدتان} few{{n} وحدات} other{{n} وحدة}}",
+  "@ctUnitsCountN": {"placeholders": {"n": {"type": "int"}}},
+  "financeInstallmentsPaid": "مدفوعة",
+  "financeOverdue": "المتأخرة",
+  "financeAllOnTime": "لا متأخرات",
+  "financeNeedsPayment": "تحتاج سدادًا",
+  "financeNextInstallment": "القسط القادم",
+  "financeServices": "الخدمات المالية",
+  "myPropertyUnitsLabel": "وحداتي",
+  "myPropertyOwnedLabel": "مملوكة",
+  "myPropertyOwnedHint": "عقد موقّع",
+  "myPropertyWithPlanHint": "بخطة سداد"
 }

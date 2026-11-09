@@ -298,9 +298,9 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final (label, fg, bg) = switch (status) {
-      'APPROVED' => (l10n.brokerLeadStatusApproved, AppPalette.successLight, const Color(0xFFE6F2EA)),
-      'REJECTED' => (l10n.brokerLeadStatusRejected, const Color(0xFFC0392B), const Color(0xFFFBE7E5)),
-      'DUPLICATE' => (l10n.brokerLeadStatusDuplicate, const Color(0xFF8A6D1E), const Color(0xFFF6EED8)),
+      'APPROVED' => (l10n.brokerLeadStatusApproved, AppPalette.successLight, homeOkFill(context)),
+      'REJECTED' => (l10n.brokerLeadStatusRejected, const Color(0xFFC0392B), homeErrFill(context)),
+      'DUPLICATE' => (l10n.brokerLeadStatusDuplicate, const Color(0xFF8A6D1E), homeWarnFill(context)),
       'EXPIRED' => (l10n.brokerLeadStatusExpired, context.appColors.inkMuted, context.appColors.surfaceSoft),
       _ => (l10n.brokerLeadStatusPending, AppPalette.gold600, AppPalette.gold50),
     };
@@ -349,7 +349,7 @@ class _ProjectsStrip extends StatelessWidget {
                   if (p.coverImageUrl?.isNotEmpty ?? false)
                     AppNetworkImage(url: p.coverImageUrl!)
                   else
-                    const DecoratedBox(decoration: BoxDecoration(gradient: homeNavyGradient)),
+                    DecoratedBox(decoration: BoxDecoration(gradient: homeNavyGradient)),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -366,7 +366,7 @@ class _ProjectsStrip extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
                       child: Text(l10n.bhUnitsAvailable(units),
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
                     ),
                   ),
                   PositionedDirectional(
@@ -378,7 +378,7 @@ class _ProjectsStrip extends StatelessWidget {
                           maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15, Colors.white)),
                       if (p.city?.isNotEmpty ?? false)
                         Row(children: [
-                          const Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
+                          Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
                           const SizedBox(width: 3),
                           Text(p.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
                         ]),

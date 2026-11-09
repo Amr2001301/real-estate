@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../design/tokens/app_colors.dart';
 
 // Brand palette
-const _kNavy = AppPalette.navy;        // 0xFF0F1E33
-const _kGold = AppPalette.gold400;     // 0xFFC8A24B
+Color get _kNavy => AppPalette.navy;        // 0xFF0F1E33
+Color get _kGold => AppPalette.gold400;     // 0xFFC8A24B
 const _kBody = AppPalette.darkInkMuted; // 0xFF9AA6B6
 
 OverlayEntry? _activeBanner;
@@ -264,7 +264,7 @@ class _BannerCard extends StatelessWidget {
                         width: 0.5,
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.notifications_outlined,
                       color: _kGold,
                       size: 17,

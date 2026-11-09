@@ -1,4 +1,4 @@
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
@@ -7,12 +7,9 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { PageHero } from '@/components/layout/PageHero';
 import { InlineNotice } from '@/components/states/InlineNotice';
 
-export const metadata = buildMetadata({
-  title: 'سياسة الخصوصية',
-  description: 'سياسة الخصوصية لمنصة ديفورا العقارية.',
-  // Placeholder content — keep out of search indexes until the final legal text lands.
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('privacy', { robots: { index: false, follow: false } });
+}
 
 export default async function PrivacyPage() {
   const locale = await getLocale();
@@ -23,7 +20,7 @@ export default async function PrivacyPage() {
       <PageHero
         eyebrow={m.privacy.eyebrow}
         title={m.privacy.title}
-        subtitle="نوضح هنا كيف نتعامل مع بياناتك. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا."
+        subtitle={m.privacy.subtitle}
       />
 
       <Section tone="canvas">

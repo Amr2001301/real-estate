@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../contracts/view/contracts_list_screen.dart' show contractMoney;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/entities/sales_performance.dart';
 import '../cubit/team_performance_cubit.dart';
 import '../period.dart';
@@ -100,15 +99,19 @@ class _MemberCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final p = member.performance;
-    Widget chip(IconData icon, String text, {Color bg = const Color(0xFFEEF2F7), Color fg = const Color(0xFF26405F)}) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(99)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 13, color: fg),
-            const SizedBox(width: 4),
-            Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
-          ]),
-        );
+    Widget chip(IconData icon, String text, {Color? bg, Color? fg}) {
+      final back = bg ?? (homeIsDark(context) ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFEEF2F7));
+      final front = fg ?? (homeIsDark(context) ? colors.inkStrong : const Color(0xFF26405F));
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(color: back, borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: front),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: front)),
+        ]),
+      );
+    }
     return Container(
       key: Key('team-member-${member.salesId}'),
       padding: const EdgeInsets.all(12),
@@ -139,14 +142,14 @@ class _MemberCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(color: AppPalette.gold400, borderRadius: BorderRadius.circular(99)),
-              child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
+              child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
             ),
         ]),
         if (p.targetAmountPercent != null) ...[
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(value: (p.targetAmountPercent! / 100).clamp(0, 1), minHeight: 8, backgroundColor: const Color(0xFFEFE8DC), color: AppPalette.gold400),
+            child: LinearProgressIndicator(value: (p.targetAmountPercent! / 100).clamp(0, 1), minHeight: 8, backgroundColor: homeLine(context), color: AppPalette.gold400),
           ),
         ],
         const SizedBox(height: 10),
@@ -154,7 +157,7 @@ class _MemberCard extends StatelessWidget {
           chip(Icons.person_rounded, '${p.leadsCount} ${l10n.tpFunnelLeads}'),
           chip(Icons.event_rounded, '${p.visitsCount} ${l10n.tpVisits}'),
           chip(Icons.bookmark_rounded, '${p.reservationsCount} ${l10n.tpBookings}'),
-          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: const Color(0xFFE6F2EA), fg: const Color(0xFF2F6B4A)),
+          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: homeOkFill(context), fg: homeIsDark(context) ? const Color(0xFF7FD1A0) : const Color(0xFF2F6B4A)),
         ]),
       ]),
     );

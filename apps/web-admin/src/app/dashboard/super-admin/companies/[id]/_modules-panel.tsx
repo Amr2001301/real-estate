@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from 'react';
 import { CheckCircle2, XCircle, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PremiumSectionCard } from '@/components/premium';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import { modulesT } from '@/messages/super-admin';
 
 type ModuleKey = 'broker' | 'website' | 'maintenance' | 'reports' | 'leads' | 'visits' | 'contracts' | 'installments' | 'deposits';
@@ -20,7 +20,7 @@ interface Props {
 }
 
 export function CompanyModulesPanel({ companyId, initialModules }: Props) {
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => modulesT(locale), [locale]);
 
   const [modules, setModules] = useState<Record<ModuleKey, boolean>>(initialModules);

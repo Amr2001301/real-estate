@@ -223,6 +223,10 @@ class CustomerApp extends StatelessWidget {
           BlocProvider<BrandingCubit>(
             create: (ctx) => BrandingCubit(
               ctx.read<BrandingRepository>(),
+              // The last branding saved on this device, so the app opens in the
+              // company's colours at once (and offline).
+              prefs: ctx.read<SharedPreferences>(),
+              initialSlug: ctx.read<CustomerTenantStorage>().selectedCompanySlug,
               // A company's own app shows its name before branding loads.
               fallbackName: kLockedCompanyName.isEmpty ? null : kLockedCompanyName,
             ),
@@ -321,11 +325,12 @@ class _CustomerRootState extends State<_CustomerRoot> {
 
   void _loadBranding() {
     final slug = context.read<CustomerTenantStorage>().selectedCompanySlug;
-    // Clear before fetching so A's tokens never appear on B's screens while the
-    // new request is in-flight. Also clears on logout (slug becomes null).
-    context.read<BrandingCubit>().clear();
+    // [load] swaps to this company's saved copy first, so A's tokens never show
+    // on B's screens while the request is in flight. No slug (logout) clears.
     if (slug != null && slug.isNotEmpty) {
       context.read<BrandingCubit>().load(slug);
+    } else {
+      context.read<BrandingCubit>().clear();
     }
   }
 
@@ -469,6 +474,11 @@ class _CustomerRootState extends State<_CustomerRoot> {
     final locale = context.watch<LocaleCubit>().state;
     final isArabic = locale.languageCode == 'ar';
     final brandTokens = context.watch<BrandingCubit>().state;
+    // The company's colours reach every screen through the palette (the platform's
+    // staff app never does this). Applied before the tree below is built; a change
+    // (the branding arriving after start-up) rebuilds the tree under a new key.
+    AppPalette.applyBrand(primary: brandTokens?.primaryColor, accent: brandTokens?.accentColor);
+    final brandKey = ValueKey('${brandTokens?.primaryColor}-${brandTokens?.accentColor}');
 
     return BlocListener<SessionCubit, SessionState>(
       listenWhen: (a, b) => a.isAuthenticated != b.isAuthenticated,
@@ -504,11 +514,14 @@ class _CustomerRootState extends State<_CustomerRoot> {
                 (system * kCustomerTextBoost).clamp(1.0, 1.6),
               ),
             ),
-            child: Column(
-              children: [
-                const OfflineBanner(),
-                Expanded(child: child ?? const SizedBox.shrink()),
-              ],
+            child: KeyedSubtree(
+              key: brandKey,
+              child: Column(
+                children: [
+                  const OfflineBanner(),
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                ],
+              ),
             ),
           );
         },

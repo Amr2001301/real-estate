@@ -3,6 +3,8 @@
 import { useRef, useState, useTransition, type ChangeEvent, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
+import { accountT } from '@/messages/account';
 
 interface Props {
   /** Installment proof mode. Exactly one of installmentId / reservationId is set. */
@@ -28,12 +30,7 @@ const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp
 const MAX_SIZE_BYTES = 25 * 1024 * 1024;
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp';
 
-const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
-  { value: 'BANK_TRANSFER', label: 'حوالة بنكية' },
-  { value: 'CASH', label: 'نقدًا' },
-  { value: 'CHEQUE', label: 'شيك' },
-  { value: 'OTHER', label: 'أخرى' },
-];
+const PAYMENT_METHOD_VALUES = ['BANK_TRANSFER', 'CASH', 'CHEQUE', 'OTHER'];
 
 function formatSize(b: number): string {
   if (b < 1024) return `${b} B`;
@@ -48,6 +45,7 @@ export function SubmitPaymentProofForm({
   resubmitDepositId,
   onClose,
 }: Props) {
+  const t = accountT(useSiteLocale()).proof;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('BANK_TRANSFER');
@@ -64,11 +62,11 @@ export function SubmitPaymentProofForm({
     if (!f) return;
     setError(null);
     if (f.size > MAX_SIZE_BYTES) {
-      setError(`الملف أكبر من الحد المسموح (${formatSize(MAX_SIZE_BYTES)}).`);
+      setError(t.tooBig(formatSize(MAX_SIZE_BYTES)));
       return;
     }
     if (!ALLOWED_TYPES.includes(f.type)) {
-      setError('نوع الملف غير مدعوم. يُقبل PDF أو صور (JPG/PNG/WebP) فقط.');
+      setError(t.badType);
       return;
     }
     setPickedFile(f);
@@ -77,7 +75,7 @@ export function SubmitPaymentProofForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!pickedFile) {
-      setError('يرجى اختيار ملف إثبات الدفع أولاً.');
+      setError(t.pickFile);
       return;
     }
     setError(null);
@@ -97,7 +95,7 @@ export function SubmitPaymentProofForm({
         }),
       });
       if (!presignRes.ok) {
-        throw new Error('تعذّر تجهيز عملية الرفع. يُرجى المحاولة لاحقًا.');
+        throw new Error(t.prepFail);
       }
       const { uploadUrl, publicUrl } = (await presignRes.json()) as {
         uploadUrl: string;
@@ -115,9 +113,9 @@ export function SubmitPaymentProofForm({
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error('تعذّر رفع الإثبات. يُرجى المحاولة مرة أخرى.'));
+          else reject(new Error(t.uploadFail));
         };
-        xhr.onerror = () => reject(new Error('انقطاع في الاتصال أثناء رفع الإثبات.'));
+        xhr.onerror = () => reject(new Error(t.connection));
         xhr.send(pickedFile);
       });
 
@@ -149,7 +147,7 @@ export function SubmitPaymentProofForm({
         body: JSON.stringify(body),
       });
       if (!submitRes.ok) {
-        throw new Error('تعذّر إرسال الإثبات. يُرجى المحاولة لاحقًا.');
+        throw new Error(t.submitFail);
       }
       setPhase('done');
       startTransition(() => {
@@ -168,29 +166,29 @@ export function SubmitPaymentProofForm({
     <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl bg-surface border border-hairline p-5">
       <div>
         <h3 className="text-base font-semibold text-ink-strong">
-          {resubmitDepositId ? 'إعادة إرسال إثبات الدفع' : 'إرسال إثبات الدفع'}
+          {resubmitDepositId ? t.titleResubmit : t.title}
         </h3>
         <p className="mt-0.5 text-xs text-ink-muted">
-          سيُراجع فريقنا الإثبات ويعلمك بالنتيجة عبر الإشعارات.
+          {t.review}
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-ink-strong">طريقة الدفع</label>
+        <label className="block text-sm font-medium text-ink-strong">{t.method}</label>
         <select
           value={paymentMethod}
           onChange={(e) => setPaymentMethod(e.target.value)}
           className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
           disabled={busy}
         >
-          {PAYMENT_METHOD_OPTIONS.map((o) => (
+          {PAYMENT_METHOD_VALUES.map((value) => ({ value, label: t.methods[value] ?? value })).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-ink-strong">تاريخ الدفع</label>
+        <label className="block text-sm font-medium text-ink-strong">{t.paidAt}</label>
         <input
           type="date"
           value={paidAt}
@@ -202,7 +200,7 @@ export function SubmitPaymentProofForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-ink-strong">ملف الإثبات</label>
+        <label className="block text-sm font-medium text-ink-strong">{t.file}</label>
         <input
           ref={inputRef}
           type="file"
@@ -212,7 +210,7 @@ export function SubmitPaymentProofForm({
           disabled={busy}
         />
         <p className="mt-1 text-xs text-ink-muted">
-          PDF أو صورة (JPG/PNG/WebP) — حتى {formatSize(MAX_SIZE_BYTES)}.
+          {t.fileHint(formatSize(MAX_SIZE_BYTES))}
         </p>
         {pickedFile && (
           <p className="mt-1 text-xs text-ink-muted" dir="ltr">
@@ -222,13 +220,13 @@ export function SubmitPaymentProofForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-ink-strong">ملاحظة (اختياري)</label>
+        <label className="block text-sm font-medium text-ink-strong">{t.note}</label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           maxLength={500}
           rows={2}
-          placeholder="مثلاً: رقم مرجع الحوالة"
+          placeholder={t.noteHint}
           className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
           disabled={busy}
         />
@@ -250,7 +248,7 @@ export function SubmitPaymentProofForm({
       {phase === 'done' && (
         <p className="flex items-center gap-1.5 text-xs text-success">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          تم إرسال الإثبات بنجاح. سنُعلمك بنتيجة المراجعة قريبًا.
+          {t.done}
         </p>
       )}
 
@@ -262,7 +260,7 @@ export function SubmitPaymentProofForm({
             className="rounded-full px-4 py-2 text-sm text-ink-muted hover:text-ink-strong"
             disabled={busy}
           >
-            إلغاء
+            {t.cancel}
           </button>
         )}
         <button
@@ -271,7 +269,7 @@ export function SubmitPaymentProofForm({
           className="inline-flex items-center gap-1 rounded-full bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy/90 disabled:opacity-60"
         >
           <Upload className="h-3.5 w-3.5" aria-hidden />
-          {phase === 'submitting' ? 'جارٍ الإرسال…' : phase === 'uploading' ? `${progress}%` : 'إرسال الإثبات'}
+          {phase === 'submitting' ? t.sending : phase === 'uploading' ? `${progress}%` : t.send}
         </button>
       </div>
     </form>

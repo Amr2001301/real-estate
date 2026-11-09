@@ -108,6 +108,7 @@ export 'src/widgets/adaptive_app_bar.dart';
 export 'src/widgets/adaptive_dialog.dart';
 export 'src/widgets/adaptive_icon_button.dart';
 export 'src/widgets/app_bottom_nav.dart';
+export 'src/widgets/app_floating_nav.dart';
 export 'src/widgets/app_button.dart';
 export 'src/widgets/app_card.dart';
 export 'src/widgets/app_filter_pills.dart';
@@ -135,3 +136,9 @@ export 'src/widgets/offline_banner.dart';
 
 // Gallery (dev/visual verification)
 export 'src/gallery/component_gallery_screen.dart';
+
+// Staff-look kit (hero, bands, pills, filter sheet, catalog pieces) shared by both apps
+export 'src/kit/catalog_kit.dart';
+export 'src/kit/filter_kit.dart';
+export 'src/kit/home_kit.dart';
+export 'src/kit/profile_kit.dart';

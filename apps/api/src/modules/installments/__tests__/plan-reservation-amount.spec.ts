@@ -37,7 +37,9 @@ function makePrismaMock() {
     // the company cap (no cap set) and recorded.
     setting: { findFirst: jest.fn().mockResolvedValue(null) },
     auditLog: { create: jest.fn().mockResolvedValue({}) },
+    reservation: { count: jest.fn().mockResolvedValue(0) },
     unit: {
+      count: jest.fn().mockResolvedValue(1),
       findUnique: jest.fn().mockResolvedValue({
         id: UNIT_ID,
         price: 1_000_000,

@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { MediaUploader } from '@/components/media-uploader';
 import { patchBrandingAction, type BrandingPayload } from '../actions';
 import { CURRENCY_OPTIONS, currencySymbol } from '@/lib/currency-format';
+import { initials as sharedInitials } from '@/lib/initials';
 
 // ── Curated palette ─────────────────────────────────────────────────────────
 // All colours satisfy ≥ 3:1 contrast ratio against white — safe to use as
@@ -42,6 +43,7 @@ const ACCENT_PALETTE = [
 
 type RawBranding = {
   displayName?: string | null;
+  displayNameEn?: string | null;
   tagline?: { ar?: string; en?: string } | null;
   logoUrl?: string | null;
   faviconUrl?: string | null;
@@ -173,6 +175,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
   const obj = (v: Record<string, string> | null | undefined) => v ?? {};
 
   const [displayName, setDisplayName] = useState(str(initial.displayName));
+  const [displayNameEn, setDisplayNameEn] = useState(str(initial.displayNameEn));
   const [taglineAr, setTaglineAr] = useState(str(initial.tagline?.ar));
   const [taglineEn, setTaglineEn] = useState(str(initial.tagline?.en));
   const [logoUrl, setLogoUrl] = useState(str(initial.logoUrl));
@@ -218,6 +221,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
   function handleSubmit() {
     const payload: BrandingPayload = {};
     if (displayName)    payload.displayName    = displayName;
+    if (displayNameEn)  payload.displayNameEn  = displayNameEn;
     if (taglineAr || taglineEn) payload.tagline = { ar: taglineAr || undefined, en: taglineEn || undefined };
     if (logoUrl)        payload.logoUrl        = logoUrl;
     if (faviconUrl)     payload.faviconUrl     = faviconUrl;
@@ -258,6 +262,9 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
           <div className="grid gap-5 sm:grid-cols-2">
             <Field label="الاسم المعروض">
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="اسم الشركة للعرض العام" dir="rtl" />
+            </Field>
+            <Field label="الاسم المعروض (إنجليزي)">
+              <Input value={displayNameEn} onChange={(e) => setDisplayNameEn(e.target.value)} placeholder="Company name on the English site" dir="ltr" data-testid="branding-display-name-en" />
             </Field>
             <Field label="رقم السجل التجاري">
               <Input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="رقم الترخيص" dir="ltr" />
@@ -423,7 +430,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
                     <img src={logoUrl} alt="" className="h-7 w-7 rounded-lg bg-white/10 object-contain" />
                   ) : (
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-[12px] font-bold" style={{ backgroundColor: shownAccent }}>
-                      {shownName.charAt(0)}
+                      {sharedInitials(shownName)}
                     </span>
                   )}
                   <span className="truncate text-[13px] font-bold">{shownName}</span>

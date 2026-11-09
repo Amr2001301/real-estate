@@ -7,9 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
 import '../../../common/staff_share.dart';
-import '../../dashboard/home_kit/filter_kit.dart';
-import '../../dashboard/home_kit/home_kit.dart';
-import '../kit/catalog_kit.dart';
 import 'units_list_data.dart';
 
 /// The units list (owner-approved design, 2026-11-04), as the website's
@@ -225,8 +222,8 @@ class UnitsActiveChip extends StatelessWidget {
         avatar: Icon(icon, size: 16, color: AppPalette.gold500),
         label: Text(label),
         labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: context.appColors.inkStrong),
-        backgroundColor: AppPalette.gold50,
-        side: const BorderSide(color: AppPalette.gold300),
+        backgroundColor: homeTint(context),
+        side: BorderSide(color: AppPalette.gold300),
         shape: const StadiumBorder(),
         deleteIcon: const Icon(Icons.close_rounded, size: 16),
         onDeleted: onRemove,
@@ -281,7 +278,7 @@ class UnitCard extends StatelessWidget {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
-                    child: const Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
+                    child: Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
                   ),
                   PositionedDirectional(
                     bottom: -3,
@@ -339,7 +336,7 @@ class UnitCard extends StatelessWidget {
               Container(
                 margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0xFFFFF6E6), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(color: homeWarnFill(context), borderRadius: BorderRadius.circular(10)),
                 child: Row(children: [
                   const Icon(Icons.timer_rounded, size: 14, color: Color(0xFF8A5A12)),
                   const SizedBox(width: 4),

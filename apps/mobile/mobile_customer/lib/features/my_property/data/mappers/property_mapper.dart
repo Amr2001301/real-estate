@@ -20,5 +20,6 @@ extension PropertyRowDtoMapper on PropertyRowDto {
         reservationNumber: reservationNumber,
         monthlyAmount: monthlyAmount,
         totalMonths: totalMonths,
+        handedOver: handedOver,
       );
 }

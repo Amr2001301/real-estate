@@ -531,6 +531,33 @@ const SITE_MESSAGES = {
     },
 
     // ── Not found ────────────────────────────────────────────────────────────────
+    chat: {
+      confirmClear: 'سيتم إخفاء هذه المحادثة من هذا الجهاز فقط. هل تريد المتابعة؟',
+      whatsapp: 'تواصل عبر واتساب',
+      assistantName: 'مساعد ديفورا الذكي',
+      panelTitle: 'المساعد العقاري',
+      panelSub: 'مساعد ذكي مجاني للبحث والاستفسار',
+      closeChat: 'إغلاق المحادثة',
+      close: 'إغلاق',
+      options: 'خيارات المحادثة',
+      newChat: 'محادثة جديدة',
+      clearChat: 'مسح المحادثة',
+      retry: 'إعادة المحاولة',
+      placeholder: 'اكتب رسالتك…',
+      inputLabel: 'اكتب رسالتك',
+      send: 'إرسال',
+      typing: 'جارٍ كتابة الرد…',
+      areaUnit: 'م²',
+      helpful: 'إجابة مفيدة',
+      notHelpful: 'إجابة غير مفيدة',
+    },
+    theme: { toLight: 'التبديل إلى الوضع الفاتح', toDark: 'التبديل إلى الوضع الداكن', toggle: 'تبديل المظهر' },
+
+    siteUnavailable: {
+      title: 'هذا الموقع غير متاح حاليًا',
+      message: 'تعذّر العثور على الشركة المرتبطة بهذا العنوان. تأكد من الرابط أو تواصل مع الجهة التي أعطتك إياه.',
+    },
+
     notFound: {
       code: '٤٠٤',
       title: 'لم نتمكن من العثور على هذه الصفحة',
@@ -543,6 +570,7 @@ const SITE_MESSAGES = {
     privacy: {
       eyebrow: 'خصوصيتك تهمنا',
       title: 'خصوصيتك تهمنا',
+      subtitle: 'نوضح هنا كيف نتعامل مع بياناتك. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا.',
       notice: 'هذا المحتوى مبدئي لأغراض العرض، وسيتم استبداله بالنص القانوني النهائي لاحقًا.',
       sections: [
         {
@@ -567,6 +595,7 @@ const SITE_MESSAGES = {
     terms: {
       eyebrow: 'شروط استخدام المنصة',
       title: 'شروط استخدام المنصة',
+      subtitle: 'تنظّم هذه الشروط استخدامك للموقع. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا.',
       notice: 'هذا المحتوى مبدئي لأغراض العرض، وسيتم استبداله بالنص القانوني النهائي لاحقًا.',
       sections: [
         {
@@ -1453,6 +1482,33 @@ const SITE_MESSAGES = {
       },
     },
 
+    chat: {
+      confirmClear: 'This chat will be hidden on this device only. Continue?',
+      whatsapp: 'Chat on WhatsApp',
+      assistantName: 'Devora AI assistant',
+      panelTitle: 'Property assistant',
+      panelSub: 'A free smart assistant for search and questions',
+      closeChat: 'Close chat',
+      close: 'Close',
+      options: 'Chat options',
+      newChat: 'New chat',
+      clearChat: 'Clear chat',
+      retry: 'Try again',
+      placeholder: 'Type your message…',
+      inputLabel: 'Type your message',
+      send: 'Send',
+      typing: 'Typing a reply…',
+      areaUnit: 'm²',
+      helpful: 'Helpful answer',
+      notHelpful: 'Not a helpful answer',
+    },
+    theme: { toLight: 'Switch to light mode', toDark: 'Switch to dark mode', toggle: 'Toggle theme' },
+
+    siteUnavailable: {
+      title: 'This site is not available right now',
+      message: 'We could not find the company behind this address. Check the link or contact whoever gave it to you.',
+    },
+
     notFound: {
       code: '404',
       title: 'We could not find this page',
@@ -1464,6 +1520,7 @@ const SITE_MESSAGES = {
     privacy: {
       eyebrow: 'Your Privacy Matters',
       title: 'Your Privacy Matters',
+      subtitle: 'How we handle your data. This is a preliminary version and will be replaced with the final text soon.',
       notice: 'This content is preliminary for display purposes and will be replaced with the final legal text.',
       sections: [
         {
@@ -1488,6 +1545,7 @@ const SITE_MESSAGES = {
     terms: {
       eyebrow: 'Platform Terms of Use',
       title: 'Platform Terms of Use',
+      subtitle: 'These terms govern your use of the site. This is a preliminary version and will be replaced with the final text soon.',
       notice: 'This content is preliminary for display purposes and will be replaced with the final legal text.',
       sections: [
         {

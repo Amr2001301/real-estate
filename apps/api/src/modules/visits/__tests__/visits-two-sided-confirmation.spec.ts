@@ -80,7 +80,7 @@ const baseAppt: ApptFixture = {
   clientId: CUSTOMER_ID,
   projectId: 'p1',
   unitId: null,
-  scheduledAt: new Date(Date.now() + 60 * 60 * 1000), // 1h in the future
+  scheduledAt: new Date(Date.now() - 60 * 60 * 1000), // 1h ago: a visit can be completed only once its time has come (F-051)
   salesNotes: null,
   resultNotes: null,
   cancellationReason: null,
@@ -271,6 +271,24 @@ describe('Visits · two-sided confirmation (P2)', () => {
         .send({})
         .expect(201);
       expect(mock.visitAppointment.update).toHaveBeenCalled();
+    });
+  });
+
+  // F-051: a visit scheduled for later cannot be marked completed (a no-show already could not).
+  describe('COMPLETED requires scheduledAt ≤ now', () => {
+    it('completing a visit before its time → 400, nothing updated', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN };
+      fixture.appointment.status = AppointmentStatus.CONFIRMED;
+      fixture.appointment.scheduledAt = new Date(Date.now() + 60 * 60 * 1000); // future
+      await request(app.getHttpServer()).post(`/visits/appointments/${APPT_ID}/complete`).send({}).expect(400);
+      expect(mock.visitAppointment.update).not.toHaveBeenCalled();
+    });
+
+    it('an admin may force it (the customer came early)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN };
+      fixture.appointment.status = AppointmentStatus.CONFIRMED;
+      fixture.appointment.scheduledAt = new Date(Date.now() + 60 * 60 * 1000);
+      await request(app.getHttpServer()).post(`/visits/appointments/${APPT_ID}/complete`).send({ force: true }).expect(201);
     });
   });
 

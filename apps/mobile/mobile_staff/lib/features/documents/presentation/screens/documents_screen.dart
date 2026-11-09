@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../cubit/documents_cubit.dart';
 import '../widgets/document_tile.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 class StaffDocumentsScreen extends StatefulWidget {
   const StaffDocumentsScreen({

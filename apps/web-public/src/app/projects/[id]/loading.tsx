@@ -1,11 +1,14 @@
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
-export default function ProjectDetailLoading() {
+export default async function ProjectDetailLoading() {
+  const t = accountT(await getLocale());
   return (
     <>
-      <span className="sr-only">جارٍ التحميل…</span>
+      <span className="sr-only">{t.loading}</span>
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
           <Skeleton className="aspect-[16/10] w-full rounded-4xl sm:aspect-[16/9]" />

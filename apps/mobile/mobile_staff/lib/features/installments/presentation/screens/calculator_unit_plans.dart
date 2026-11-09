@@ -5,7 +5,6 @@ import '../../../catalog/domain/entities/staff_project.dart';
 import '../../../catalog/domain/repositories/staff_catalog_repository.dart';
 import '../../../contracts/create/contract_create_data.dart' show PickHit;
 import '../../../contracts/create/manual_contract_screen.dart' show PickSheet;
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../domain/repositories/installments_repository.dart';
 
 /// The calculator's first step, as the website's plan page: pick the project,
@@ -370,7 +369,7 @@ class _PlanCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     return Material(
-      color: selected ? const Color(0xFFFFFCF5) : colors.surface,
+      color: selected ? homeSelected(context) : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(

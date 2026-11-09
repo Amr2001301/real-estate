@@ -7,6 +7,7 @@ import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import PlanForm from '../../_form';
+import ProjectPlanForm from '../../_project-plan-form';
 
 export default async function EditInstallmentPlanPage({
   params,
@@ -54,7 +55,11 @@ export default async function EditInstallmentPlanPage({
           </div>
         </div>
       </div>
-      <PlanForm projects={projects} initialData={plan} mode="edit" currency={currency} locale={locale} />
+      {!plan.unitId && plan.percentPriced ? (
+        <ProjectPlanForm projects={projects} initialData={plan} mode="edit" currency={currency} locale={locale} />
+      ) : (
+        <PlanForm projects={projects} initialData={plan} mode="edit" currency={currency} locale={locale} />
+      )}
     </div>
   );
 }

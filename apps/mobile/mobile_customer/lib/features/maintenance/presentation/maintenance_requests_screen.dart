@@ -7,19 +7,11 @@ import '../domain/entities/maintenance_request.dart';
 import 'maintenance_format.dart';
 import 'maintenance_requests_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
 
 // ── Status palette ────────────────────────────────────────────────────────────
 
-const _openGradient = [_navyLight, _navyDeep];
-const _openAccent = AppPalette.gold300;
 
-const _inProgressGradient = [Color(0xFF0F3460), Color(0xFF061830)];
-const _inProgressAccent = Color(0xFF60A5FA);
 
-const _closedGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
-const _closedAccent = Color(0xFF4ADE80);
 
 // ── Filter key enum ───────────────────────────────────────────────────────────
 
@@ -112,43 +104,24 @@ class _MaintenanceRequestsScreenState
                       r.status == MaintenanceStatus.resolved ||
                       r.status == MaintenanceStatus.closed)
                   .length;
-              return _FilterRow(
-                selected: _filter?.name,
-                items: [
-                  _FilterItem(
-                    key: null,
-                    label: context.l10n.leadsFilterAll,
-                    dotColor: null,
-                    activeGradient: _openGradient,
-                    count: all.length,
-                  ),
-                  _FilterItem(
-                    key: _FilterKey.open.name,
-                    label: context.l10n.maintenanceStatusOpen,
-                    dotColor: _openAccent,
-                    activeGradient: _openGradient,
-                    count: openCount,
-                  ),
-                  _FilterItem(
-                    key: _FilterKey.inProgress.name,
-                    label: context.l10n.maintenanceStatusInProgress,
-                    dotColor: _inProgressAccent,
-                    activeGradient: _inProgressGradient,
-                    count: inProgressCount,
-                  ),
-                  _FilterItem(
-                    key: _FilterKey.closed.name,
-                    label: context.l10n.maintenanceStatusClosed,
-                    dotColor: _closedAccent,
-                    activeGradient: _closedGradient,
-                    count: closedCount,
-                  ),
-                ],
-                onSelect: (k) => setState(() {
-                  _filter = k == null
-                      ? null
-                      : _FilterKey.values.firstWhere((f) => f.name == k);
-                }),
+              HomePill pill(String? key, String label, int count, {Color? dot}) => HomePill(
+                    id: key ?? 'all',
+                    label: label,
+                    count: count,
+                    dot: dot,
+                    selected: _filter?.name == key,
+                    onTap: () => setState(() {
+                      _filter = key == null ? null : _FilterKey.values.firstWhere((f) => f.name == key);
+                    }),
+                  );
+              return Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: HomePills(pills: [
+                  pill(null, context.l10n.leadsFilterAll, all.length),
+                  pill(_FilterKey.open.name, context.l10n.maintenanceStatusOpen, openCount, dot: catalogReserved),
+                  pill(_FilterKey.inProgress.name, context.l10n.maintenanceStatusInProgress, inProgressCount, dot: const Color(0xFF3B82F6)),
+                  pill(_FilterKey.closed.name, context.l10n.maintenanceStatusClosed, closedCount, dot: catalogAvailable),
+                ]),
               );
             },
           ),
@@ -188,14 +161,14 @@ class _MaintenanceRequestsScreenState
                           context.read<MaintenanceRequestsCubit>().load(),
                       child: ListView.separated(
                         padding: EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
                           AppSpacing.md,
-                          AppSpacing.lg,
-                          96 + MediaQuery.of(context).padding.bottom,
+                          14,
+                          AppSpacing.md,
+                          110 + MediaQuery.of(context).padding.bottom,
                         ),
                         itemCount: visible.length + 1, // +1 for summary
                         separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: 10),
                         itemBuilder: (context, i) {
                           if (i == 0) {
                             return _MaintSummary(requests: all, l10n: l10n);
@@ -253,377 +226,114 @@ class _MaintSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final openCount = requests
-        .where((r) =>
-            r.status == MaintenanceStatus.open ||
-            r.status == MaintenanceStatus.assigned)
-        .length;
-    final inProgressCount =
-        requests.where((r) => r.status == MaintenanceStatus.inProgress).length;
-    final closedCount = requests
-        .where((r) =>
-            r.status == MaintenanceStatus.resolved ||
-            r.status == MaintenanceStatus.closed)
-        .length;
-
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_navyLight, _navyDeep],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: _navyDeep.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.08),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.l10n.supervisorSummaryTotalLabel,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${requests.length}',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: AppPalette.gold300,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                        ),
-                      ),
-                      child: Text(
-                        '${requests.length} ${l10n.accountMaintenance}',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.75),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Container(height: 1, color: Colors.white.withValues(alpha: 0.12)),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SummaryCell(
-                        value: '$openCount',
-                        label: context.l10n.maintenanceStatusOpenPlural,
-                        accent: _openAccent,
-                        theme: theme,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                    Expanded(
-                      child: _SummaryCell(
-                        value: '$inProgressCount',
-                        label: context.l10n.maintenanceStatusInProgress,
-                        accent: _inProgressAccent,
-                        theme: theme,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                    Expanded(
-                      child: _SummaryCell(
-                        value: '$closedCount',
-                        label: context.l10n.supervisorFilterClosed,
-                        accent: _closedAccent,
-                        theme: theme,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    final open = requests.where((r) => r.status == MaintenanceStatus.open || r.status == MaintenanceStatus.assigned).length;
+    final progress = requests.where((r) => r.status == MaintenanceStatus.inProgress).length;
+    final done = requests.where((r) => r.status == MaintenanceStatus.resolved || r.status == MaintenanceStatus.closed).length;
+    return HomeBand(figures: [
+      HomeFigure(id: 'open', value: '$open', label: l10n.maintenanceStatusOpen, hint: l10n.serviceRequests, warn: open > 0),
+      HomeFigure(id: 'progress', value: '$progress', label: l10n.maintenanceStatusInProgress, hint: l10n.serviceRequests),
+      HomeFigure(id: 'done', value: '$done', label: l10n.maintenanceStatusClosed, hint: l10n.serviceRequests),
+    ]);
   }
 }
-
-class _SummaryCell extends StatelessWidget {
-  const _SummaryCell({
-    required this.value,
-    required this.label,
-    required this.accent,
-    required this.theme,
-  });
-  final String value;
-  final String label;
-  final Color accent;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            color: accent,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.65),
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Card theme config ─────────────────────────────────────────────────────────
-
-class _CardTheme {
-  const _CardTheme({required this.accent, required this.icon});
-  final Color accent;
-  final IconData icon;
-}
-
-// ── Request card ──────────────────────────────────────────────────────────────
 
 class _RequestCard extends StatelessWidget {
   const _RequestCard({required this.request});
   final MaintenanceRequest request;
 
-  _CardTheme _cardTheme(bool dark) => switch (request.status) {
-        MaintenanceStatus.inProgress => _CardTheme(
-            accent: dark ? _inProgressAccent : const Color(0xFF1D4ED8),
-            icon: Icons.sync_rounded,
-          ),
-        MaintenanceStatus.resolved || MaintenanceStatus.closed => _CardTheme(
-            accent: dark ? _closedAccent : const Color(0xFF15803D),
-            icon: Icons.check_circle_rounded,
-          ),
-        _ => _CardTheme(
-            accent: dark ? _openAccent : const Color(0xFF9A6F1E),
-            icon: Icons.build_rounded,
-          ),
+  (Color, IconData) _look() => switch (request.status) {
+        MaintenanceStatus.inProgress => (const Color(0xFF3B82F6), Icons.sync_rounded),
+        MaintenanceStatus.resolved || MaintenanceStatus.closed => (catalogAvailable, Icons.check_circle_rounded),
+        _ => (catalogReserved, Icons.build_rounded),
       };
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
-    final dark = theme.brightness == Brightness.dark;
-
-    final ct = _cardTheme(dark);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final (accent, icon) = _look();
     final category = request.categoryName?.resolve(lang);
-    final title =
-        (category?.isNotEmpty == true) ? category! : l10n.accountMaintenance;
+    final title = (category?.isNotEmpty == true) ? category! : l10n.accountMaintenance;
     final hasDescription = request.description.trim().isNotEmpty;
-
-    return GestureDetector(
-      onTap: () =>
-          context.push('/account/maintenance/${request.id}', extra: request),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: ct.accent.withValues(alpha: 0.13),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(ct.icon, color: ct.accent, size: 24),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: colors.inkStrong,
-                          fontWeight: FontWeight.w800,
-                        ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => context.push('/account/maintenance/${request.id}', extra: request),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
+                child: Icon(icon, color: AppPalette.gold300, size: 22),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(16, colors.inkStrong)),
+                  if (request.unitCode?.isNotEmpty == true)
+                    Row(children: [
+                      Icon(AppIcons.property, size: 13, color: colors.inkMuted),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(ltr(request.unitCode!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
                       ),
-                      if (request.unitCode?.isNotEmpty == true) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              AppIcons.property,
-                              size: 14,
-                              color: colors.inkMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                request.unitCode!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colors.inkMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: ct.accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    maintenanceStatusLabel(l10n, request.status),
-                    style: TextStyle(
-                      color: ct.accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Divider(height: 1, color: colors.hairline),
-            const SizedBox(height: AppSpacing.md),
+                    ]),
+                ]),
+              ),
+              const SizedBox(width: 8),
+              CatalogBadge.status(maintenanceStatusLabel(l10n, request.status), accent),
+            ]),
+            const SizedBox(height: 10),
             Text(
-              hasDescription
-                  ? request.description
-                  : context.l10n.supervisorNoDescription,
+              hasDescription ? request.description : l10n.supervisorNoDescription,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: hasDescription ? colors.ink : colors.inkMuted,
-                height: 1.55,
-                fontStyle:
-                    hasDescription ? FontStyle.normal : FontStyle.italic,
-              ),
+              style: TextStyle(fontSize: 13.5, height: 1.5, color: hasDescription ? colors.ink : colors.inkMuted),
             ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                if (request.createdAt != null) ...[
-                  Expanded(
-                    child: _InfoCell(
-                      icon: AppIcons.calendar,
-                      label: context.l10n.maintenanceRequestDate,
-                      value: DateFormatter.shortDate(
-                        request.createdAt!,
-                        languageCode: lang,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                ],
-                Expanded(
-                  child: _InfoCell(
-                    icon: Icons.flag_rounded,
-                    label: context.l10n.maintenancePriorityLabel,
-                    value: maintenancePriorityLabel(l10n, request.priority),
-                    accent: _priorityAccent(request.priority, dark),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _DetailsRow(accent: ct.accent),
-          ],
+            const SizedBox(height: 10),
+            Row(children: [
+              if (request.createdAt != null)
+                _Chip(Icons.calendar_today_rounded, DateFormatter.shortDate(request.createdAt!, languageCode: lang)),
+              const SizedBox(width: 6),
+              _Chip(Icons.flag_rounded, maintenancePriorityLabel(l10n, request.priority), color: _priorityAccent(request.priority, dark)),
+              const Spacer(),
+              Icon(Icons.chevron_right_rounded, size: 22, color: colors.inkStrong),
+            ]),
+          ]),
         ),
       ),
     );
   }
 }
 
+class _Chip extends StatelessWidget {
+  const _Chip(this.icon, this.text, {this.color});
+  final IconData icon;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: color ?? AppPalette.gold500),
+          const SizedBox(width: 4),
+          Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
+        ]),
+      );
+}
+
 Color _priorityAccent(MaintenancePriority p, bool dark) => switch (p) {
       MaintenancePriority.medium =>
-        dark ? AppPalette.gold400 : const Color(0xFF9A6F1E),
+        dark ? AppPalette.gold400 : AppPalette.goldInk,
       MaintenancePriority.high =>
         dark ? const Color(0xFFF87171) : const Color(0xFFB91C1C),
       MaintenancePriority.urgent =>
@@ -632,126 +342,6 @@ Color _priorityAccent(MaintenancePriority p, bool dark) => switch (p) {
     };
 
 // ── "عرض التفاصيل" row ────────────────────────────────────────────────────────
-
-class _DetailsRow extends StatelessWidget {
-  const _DetailsRow({required this.accent});
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accent.withValues(alpha: 0.22), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(Icons.visibility_rounded, color: accent, size: 16),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                context.l10n.supervisorViewDetails,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkStrong,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              child: Icon(AppIcons.chevronForward, color: accent, size: 16),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Info cell (date / priority) ───────────────────────────────────────────────
-
-class _InfoCell extends StatelessWidget {
-  const _InfoCell({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.accent,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    final iconColor = accent ?? colors.inkMuted;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: colors.inkMuted.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: iconColor),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.inkMuted,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: accent ?? colors.inkStrong,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Gold ring avatar ──────────────────────────────────────────────────────────
 
 class _GoldRingAvatar extends StatelessWidget {
   const _GoldRingAvatar({required this.name});
@@ -781,78 +371,3 @@ class _GoldRingAvatar extends StatelessWidget {
 
 // ── Filter row ────────────────────────────────────────────────────────────────
 
-class _FilterItem {
-  const _FilterItem({
-    required this.key,
-    required this.label,
-    required this.dotColor,
-    required this.activeGradient,
-    required this.count,
-  });
-  final String? key;
-  final String label;
-  final Color? dotColor;
-  final List<Color> activeGradient;
-  final int count;
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.items,
-    required this.selected,
-    required this.onSelect,
-  });
-  final List<_FilterItem> items;
-  final String? selected;
-  final void Function(String?) onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 58,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 8),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final item = items[i];
-          return AppFilterChip(
-            label: item.label,
-            count: item.count,
-            dotColor: item.dotColor,
-            selected: item.key == selected,
-            onTap: () => onSelect(item.key),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── Dot texture ───────────────────────────────────────────────────────────────
-
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 20.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}

@@ -120,11 +120,14 @@ void main() {
     expect(find.text('Mona'), findsOneWidget);
     expect(find.text('Ali'), findsNothing);
 
-    if (CalendarCubit.saturdayOf(today) == CalendarCubit.saturdayOf(tomorrow)) {
-      await tester.tap(find.byKey(ValueKey('day-${calendarDay(tomorrow)}')));
-    } else {
+    // On a Friday tomorrow starts the next week: go there first. Going to
+    // another week keeps the weekday that was picked, so tomorrow is tapped
+    // in either case.
+    if (CalendarCubit.saturdayOf(today) != CalendarCubit.saturdayOf(tomorrow)) {
       await tester.tap(find.byKey(const Key('calendar-next')));
+      await tester.pumpAndSettle();
     }
+    await tester.tap(find.byKey(ValueKey('day-${calendarDay(tomorrow)}')));
     await tester.pumpAndSettle();
     expect(find.text('Ali'), findsOneWidget);
     expect(find.text('Mona'), findsNothing);

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Building2 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -13,11 +13,9 @@ import { Pagination } from '@/components/projects/Pagination';
 import { PropertyCard } from '@/components/account/PropertyCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
-export const metadata = buildMetadata({
-  title: 'عقاراتي',
-  description: 'الوحدات التي تملكها في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('property', { robots: { index: false, follow: false } });
+}
 
 const PAGE_SIZE = 20;
 

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { cityLabel } from '@/lib/format';
 
 interface ProjectsFilterBarProps {
   initialQ: string;
@@ -102,7 +103,7 @@ export function ProjectsFilterBar({
             >
               <option value="">{t.allCities}</option>
               {cities.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
               ))}
             </Select>
             <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />

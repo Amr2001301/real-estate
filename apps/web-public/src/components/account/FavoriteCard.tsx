@@ -41,14 +41,14 @@ export async function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
     if (fav.unit) {
       const u = fav.unit;
       const specs: Spec[] = [];
-      if (u.bedrooms > 0) specs.push({ Icon: BedDouble, text: `${formatNumber(u.bedrooms)} ${m.rooms}` });
-      if (u.area > 0) specs.push({ Icon: Maximize2, text: `${formatNumber(u.area)} ${m.sqm}` });
+      if (u.bedrooms > 0) specs.push({ Icon: BedDouble, text: `${formatNumber(u.bedrooms, locale)} ${m.rooms}` });
+      if (u.area > 0) specs.push({ Icon: Maximize2, text: `${formatNumber(u.area, locale)} ${m.sqm}` });
       return {
         href: routes.unit(u.id) as Route,
         thumb: u.media[0]?.url ?? null,
         badge: m.badgeUnit,
         BadgeIcon: Home,
-        title: `${unitTypeLabel(u.type)} · ${u.code}`,
+        title: `${unitTypeLabel(u.type, null, locale)} · ${u.code}`,
         specs,
         price: u.price,
       };
@@ -61,7 +61,7 @@ export async function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
         thumb: p.media[0]?.url ?? null,
         badge: m.badgeProject,
         BadgeIcon: Building2,
-        title: pickAr(p.name) || m.badgeProject,
+        title: pickAr(p.name, '', locale) || m.badgeProject,
         specs: city ? [{ Icon: MapPin, text: city }] : [],
         price: null,
       };

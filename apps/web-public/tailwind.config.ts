@@ -35,20 +35,23 @@ const config: Config = {
         'brand-primary': 'rgb(var(--c-brand-primary) / <alpha-value>)',
         'brand-accent':  'rgb(var(--c-brand-accent)  / <alpha-value>)',
 
+        // The brand's two scales: defaults in globals.css (navy / gold), replaced
+        // per company by the root layout from the company's own colours.
         navy: {
-          DEFAULT: '#0F1E33',
-          700: '#1C3050',
-          600: '#26405F',
+          DEFAULT: 'rgb(var(--c-navy) / <alpha-value>)',
+          700: 'rgb(var(--c-navy-700) / <alpha-value>)',
+          600: 'rgb(var(--c-navy-600) / <alpha-value>)',
         },
 
         gold: {
-          50: '#FBF6EA',
-          100: '#F4E8C9',
-          200: '#E2C792',
-          300: '#D4B36A',
-          400: '#C8A24B',
-          500: '#B7902F',
-          600: '#9C7A26',
+          50: 'rgb(var(--c-gold-50) / <alpha-value>)',
+          100: 'rgb(var(--c-gold-100) / <alpha-value>)',
+          200: 'rgb(var(--c-gold-200) / <alpha-value>)',
+          300: 'rgb(var(--c-gold-300) / <alpha-value>)',
+          400: 'rgb(var(--c-gold-400) / <alpha-value>)',
+          500: 'rgb(var(--c-gold-500) / <alpha-value>)',
+          600: 'rgb(var(--c-gold-600) / <alpha-value>)',
+          700: 'rgb(var(--c-gold-700) / <alpha-value>)',
         },
 
         ink: {

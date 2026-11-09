@@ -4,6 +4,12 @@ import { BrokerPortalReservationsService } from '../broker-portal-reservations.s
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { ReservationsService } from '../../reservations/reservations.module';
 
+// The plan loader scopes by company (tenant context).
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  ...jest.requireActual('../../../common/tenant/tenant-context'),
+  getRequiredCompanyId: () => 'c0000000-0000-4000-8000-000000000001',
+}));
+
 /**
  * Booking-amount resolution for broker reservations. The reservation MUST
  * carry a booking amount derived from an admin-controlled active installment
@@ -25,7 +31,7 @@ function decimal(n: number) {
 }
 
 interface Fixture {
-  plans: Array<{ id: string; unitId: string | null; reservationAmount: Prisma.Decimal }>;
+  plans: Array<{ id: string; unitId: string | null; reservationAmount: Prisma.Decimal; visibility?: string }>;
 }
 
 function makeService(fixture: Fixture) {
@@ -68,6 +74,13 @@ function makeService(fixture: Fixture) {
         price: decimal(500000),
         building: { phase: { projectId: PROJECT_ID } },
       }),
+      // The plan loader (installments/plan-applicable.ts) reads the unit's type.
+      findFirst: jest.fn().mockResolvedValue({
+        id: UNIT_ID,
+        type: '2BR',
+        price: decimal(500000),
+        building: { phase: { projectId: PROJECT_ID } },
+      }),
     },
     reservation: { findFirst: jest.fn().mockResolvedValue(null) },
     contract: { count: jest.fn().mockResolvedValue(0) },
@@ -76,10 +89,28 @@ function makeService(fixture: Fixture) {
         fixture.plans.map((p) => ({
           id: p.id,
           name: `خطة ${p.id.slice(0, 4)}`,
+          status: 'ACTIVE',
+          visibility: p.visibility ?? 'PUBLIC',
+          projectId: PROJECT_ID,
           unitId: p.unitId,
+          unitTypes: [],
+          validFrom: null,
+          validTo: null,
+          totalPrice: decimal(500000),
+          discountAmount: decimal(0),
+          discountType: 'PERCENTAGE',
+          discountValue: decimal(0),
+          netPrice: decimal(500000),
           reservationAmount: p.reservationAmount,
+          reservationAmountType: 'FIXED',
+          reservationAmountValue: p.reservationAmount,
+          downPaymentType: 'FIXED',
+          downPaymentValue: decimal(50000),
           downPaymentAmount: decimal(50000),
+          finalPaymentAmount: null,
+          isCash: false,
           durationOptions: [],
+          scheduleItems: [],
         })),
       ),
     },
@@ -185,10 +216,10 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
     );
   });
 
-  it('requires an explicit choice when several active plans apply', async () => {
+  it('requires an explicit choice when several active plans of the same scope apply', async () => {
     const { svc } = makeService({
       plans: [
-        { id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000) },
+        { id: PLAN_ID, unitId: null, reservationAmount: decimal(25000) },
         { id: 'd5555555-5555-4555-8555-555555555555', unitId: null, reservationAmount: decimal(30000) },
       ],
     });
@@ -200,7 +231,7 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
   it('uses the explicitly-provided plan when multiple apply', async () => {
     const { svc, createdReservation } = makeService({
       plans: [
-        { id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000) },
+        { id: PLAN_ID, unitId: null, reservationAmount: decimal(25000) },
         { id: 'd5555555-5555-4555-8555-555555555555', unitId: null, reservationAmount: decimal(30000) },
       ],
     });
@@ -213,8 +244,7 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
   });
 
   it('blocks creation when the resolved plan has a zero reservation amount', async () => {
-    // findMany filters reservationAmount > 0, but if a stale/explicit plan id
-    // resolves to 0 via validateBookingPlan, the guard still rejects.
+    // A plan with no booking amount is not offered, so an explicit id for it is refused.
     const { svc } = makeService({
       plans: [{ id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(0) }],
     });
@@ -223,6 +253,29 @@ describe('BrokerPortalReservationsService · booking amount resolution', () => {
         ...baseInput,
         dto: { ...baseInput.dto, installmentPlanTemplateId: PLAN_ID },
       }),
-    ).rejects.toThrow(/مبلغ الحجز/);
+    ).rejects.toThrow(/غير متاحة للوسطاء|مبلغ الحجز/);
+  });
+
+  // F-019 / F-039: a unit's own plan overrides the project's, which is not offered on that unit.
+  it("a unit's own plan overrides the project's plan (the broker is not asked to choose)", async () => {
+    const { svc, createdReservation } = makeService({
+      plans: [
+        { id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000) },
+        { id: 'd5555555-5555-4555-8555-555555555555', unitId: null, reservationAmount: decimal(30000) },
+      ],
+    });
+    await svc.createForActor(baseInput);
+    expect(createdReservation.data?.installmentPlanTemplateId).toBe(PLAN_ID);
+  });
+
+  // A unit whose own plan is sales-only offers brokers nothing: the project's plan must not show through.
+  it("a unit's sales-only plan hides the project's public plan from brokers", async () => {
+    const { svc } = makeService({
+      plans: [
+        { id: PLAN_ID, unitId: UNIT_ID, reservationAmount: decimal(25000), visibility: 'SALES_ONLY' },
+        { id: 'd5555555-5555-4555-8555-555555555555', unitId: null, reservationAmount: decimal(30000) },
+      ],
+    });
+    await expect(svc.createForActor(baseInput)).rejects.toThrow(/لا توجد خطة دفع متاحة للوسطاء/);
   });
 });

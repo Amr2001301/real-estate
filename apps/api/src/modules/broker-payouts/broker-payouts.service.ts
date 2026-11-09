@@ -442,12 +442,15 @@ export class BrokerPayoutsService {
 
   async cancel(id: string, dto: CancelPayoutDto, actor: AuthUser) {
     const payout = await this.assertExists(id);
+    // PROCESSING is cancellable too: that is how a transfer the bank rejected
+    // is undone. Nothing is recorded as paid until mark-paid.
     if (
       payout.status !== BrokerPayoutStatus.DRAFT &&
-      payout.status !== BrokerPayoutStatus.APPROVED
+      payout.status !== BrokerPayoutStatus.APPROVED &&
+      payout.status !== BrokerPayoutStatus.PROCESSING
     ) {
       throw new BadRequestException(
-        'Only DRAFT or APPROVED payouts can be cancelled',
+        'Only DRAFT, APPROVED or PROCESSING payouts can be cancelled',
       );
     }
     const reason = dto.reason.trim();
@@ -456,7 +459,7 @@ export class BrokerPayoutsService {
     await this.prisma.$transaction(async (tx) => {
       // Status first: it locks the row, so a payout moved on meanwhile (to
       // PROCESSING, or cancelled twice) is refused before anything changes.
-      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED], {
+      await this.moveStatus(tx, id, [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED, BrokerPayoutStatus.PROCESSING], {
         status: BrokerPayoutStatus.CANCELLED,
         cancelledById: actor.sub,
         cancelledAt: new Date(),
@@ -467,6 +470,16 @@ export class BrokerPayoutsService {
         totalWithholding: new Prisma.Decimal(0),
         totalNet: new Prisma.Decimal(0),
       });
+      // A cancelled deal's commission treats a PROCESSING payout as paid (its
+      // clawback is then owed): that payout cannot be undone from here.
+      if (payout.status === BrokerPayoutStatus.PROCESSING) {
+        const clawed = await tx.brokerCommission.count({ where: { payoutId: id, clawbackStatus: { not: null } } });
+        if (clawed > 0) {
+          throw new ConflictException(
+            'لا يمكن إلغاء دفعة قيد التنفيذ مرتبط بها استرداد عمولة — عالج الاسترداد أولاً',
+          );
+        }
+      }
       // Unlink commissions so they can be paid via a different payout later;
       // its top-ups and clawbacks wait for the next payout too.
       await tx.brokerCommission.updateMany({

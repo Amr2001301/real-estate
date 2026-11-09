@@ -1,5 +1,6 @@
 import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import { initials } from '@/lib/initials';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -25,14 +26,6 @@ const PALETTE = [
   'bg-success-100 text-success-700',
   'bg-warning-100 text-warning-700',
 ];
-
-function initials(name?: string): string {
-  if (!name) return '·';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0) return '·';
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
 
 function paletteFor(name?: string): string {
   if (!name) return PALETTE[0]!;
@@ -64,7 +57,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
 
   return (
     <span ref={ref} className={base} {...rest}>
-      {initials(name)}
+      {initials(name, { single: 2, fallback: '·' })}
     </span>
   );
 });

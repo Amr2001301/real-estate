@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import { Menu, X, UserCircle2, LogOut } from 'lucide-react';
@@ -10,33 +9,24 @@ import { cn } from '@/lib/cn';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import type { Locale } from '@/lib/locale';
-import type { BrandingData } from '@/lib/branding';
+import { companyName, type BrandingData } from '@/lib/branding';
 import { siteT } from '@/messages/site';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { LangToggle } from '@/components/theme/LangToggle';
+import { CompanyMark } from './CompanyMark';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
 
-const PLATFORM_LOGO = '/brand/devora-logo.png';
-
-function Wordmark({ invert, branding }: { invert: boolean; branding?: BrandingData }) {
-  const logo = branding?.logoUrl ?? PLATFORM_LOGO;
-  const name = branding?.displayName ?? branding?.name ?? SITE.name;
+function Wordmark({ invert, branding, locale }: { invert: boolean; branding?: BrandingData; locale: Locale }) {
+  const name = companyName(branding, locale, SITE.name);
   return (
     <Link
       href={routes.home}
       className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
     >
-      <Image
-        src={logo}
-        alt={name}
-        width={28}
-        height={28}
-        priority
-        className="h-7 w-7 rounded-md object-cover"
-      />
+      <CompanyMark branding={branding} name={name} size={28} priority className="h-7 w-7" />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
         {name}
       </span>
@@ -76,7 +66,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
       )}
     >
       <Container className="flex h-20 items-center justify-between py-4">
-        <Wordmark invert={!solid} branding={branding} />
+        <Wordmark invert={!solid} branding={branding} locale={locale} />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {PRIMARY_NAV.map((item) => {
@@ -109,6 +99,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
             className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
           />
           <ThemeToggle
+            locale={locale}
             className={cn(
               'rounded-lg',
               solid ? 'text-ink-muted hover:bg-surface-soft' : 'text-white/80 hover:bg-white/10 hover:text-white',
@@ -161,7 +152,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
             current={locale}
             className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
           />
-          <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
+          <ThemeToggle locale={locale} className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
           <button
             type="button"
             aria-label={open ? m.nav.closeMenu : m.nav.openMenu}

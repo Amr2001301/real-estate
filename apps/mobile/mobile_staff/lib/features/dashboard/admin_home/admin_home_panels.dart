@@ -1,7 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-import '../home_kit/home_kit.dart';
 import 'admin_home_data.dart';
 
 /// A thin bar split in coloured parts by their share of the whole.
@@ -73,8 +72,8 @@ class AdminProjectHealth extends StatelessWidget {
                   Container(
                     width: 38,
                     height: 38,
-                    decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppPalette.gold100)),
-                    child: const Icon(Icons.apartment_rounded, size: 20, color: AppPalette.gold500),
+                    decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(12), border: Border.all(color: homeTintBorder(context))),
+                    child: Icon(Icons.apartment_rounded, size: 20, color: AppPalette.gold500),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

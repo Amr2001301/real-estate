@@ -5,19 +5,154 @@ import 'package:flutter/widgets.dart';
 /// in [AppColorsExt] / the theme builders — screens should read tokens from the
 /// theme extension, not from here directly.
 abstract final class AppPalette {
-  // ---- Brand: Gold (stays literal across light/dark) ------------------------
-  static const gold50 = Color(0xFFFBF6EA);
-  static const gold100 = Color(0xFFF4E8C9);
-  static const gold200 = Color(0xFFE2C792);
-  static const gold300 = Color(0xFFD4B36A);
-  static const gold400 = Color(0xFFC8A24B); // primary accent
-  static const gold500 = Color(0xFFB7902F);
-  static const gold600 = Color(0xFF9C7A26);
+  // ---- Brand: Gold / Navy (the platform's own; one company's app replaces them) --
+  // The platform's tools (staff app, admin) never call [applyBrand]; a company's
+  // customer app calls it once its branding is known, so every screen that reads
+  // these gets the company's colours. Read them at build time, not in `const`.
+  static const _gold = [
+    Color(0xFFFBF6EA), Color(0xFFF4E8C9), Color(0xFFE2C792), Color(0xFFD4B36A),
+    Color(0xFFC8A24B), Color(0xFFB7902F), Color(0xFF9C7A26),
+  ];
+  static const _navy = [Color(0xFF0F1E33), Color(0xFF1C3050), Color(0xFF26405F)];
+  static List<Color> _g = _gold;
+  static List<Color> _n = _navy;
 
-  // ---- Brand: Navy (stays literal across light/dark) ------------------------
-  static const navy = Color(0xFF0F1E33);
-  static const navy700 = Color(0xFF1C3050);
-  static const navy600 = Color(0xFF26405F);
+  // The deeper / lighter shades the customer app's headers and cards use. The
+  // platform values are what those screens always had; a company's are cut from
+  // its own primary so every header carries its identity, not a fixed navy.
+  static const _shades = [
+    Color(0xFF0B1726), // deep
+    Color(0xFF14273F), // mid
+    Color(0xFF243F62), // light
+    Color(0xFF152236), // card
+    Color(0xFF091524), // darkest
+    Color(0xFF0B1D30), // foot
+    Color(0xFF1E3A62), // bright
+    Color(0xFF0F2137), // mid2
+    Color(0xFF1A3352), // panel
+    Color(0xFF1E3A6E), // hero
+    Color(0xFF0B1F42), // ink
+    Color(0xFF0F1E32), // top
+    Color(0xFF182A43), // accent
+    Color(0xFF1E3451), // accent2
+  ];
+  static List<Color> _s = _shades;
+
+  // Warm accent shades (dark gold text, deeper/lighter golds, browns) — cut from
+  // the company's accent; the platform values are what the screens always had.
+  static const _goldShades = [
+    Color(0xFF9A6F1E), // ink
+    Color(0xFFCFAA52), // warm
+    Color(0xFFC99A2E), // warm2
+    Color(0xFFB07818), // deepA
+    Color(0xFF8A5F10), // deepB
+    Color(0xFF7A5C1E), // brown1
+    Color(0xFF5A4214), // brown2
+    Color(0xFF3D2800), // brown3
+    Color(0xFF7C5200), // brown4
+    Color(0xFFFBD27A), // pale
+  ];
+  static List<Color> _gs = _goldShades;
+  static Color get goldInk => _gs[0];
+  static Color get goldWarm => _gs[1];
+  static Color get goldWarm2 => _gs[2];
+  static Color get goldDeepA => _gs[3];
+  static Color get goldDeepB => _gs[4];
+  static Color get goldBrown1 => _gs[5];
+  static Color get goldBrown2 => _gs[6];
+  static Color get goldBrown3 => _gs[7];
+  static Color get goldBrown4 => _gs[8];
+  static Color get goldPale => _gs[9];
+  static Color get navyDeep => _s[0];
+  static Color get navyMid => _s[1];
+  static Color get navyLight => _s[2];
+  static Color get navyCard => _s[3];
+  static Color get navyDarkest => _s[4];
+  static Color get navyFoot => _s[5];
+  static Color get navyBright => _s[6];
+  static Color get navyMid2 => _s[7];
+  static Color get navyPanel => _s[8];
+  static Color get navyHero => _s[9];
+  static Color get navyInk => _s[10];
+  static Color get navyTop => _s[11];
+  static Color get navyAccent => _s[12];
+  static Color get navyAccent2 => _s[13];
+
+  static Color get gold50 => _g[0];
+  static Color get gold100 => _g[1];
+  static Color get gold200 => _g[2];
+  static Color get gold300 => _g[3];
+  static Color get gold400 => _g[4]; // primary accent
+  static Color get gold500 => _g[5];
+  static Color get gold600 => _g[6];
+
+  static Color get navy => _n[0];
+  static Color get navy700 => _n[1];
+  static Color get navy600 => _n[2];
+
+  /// A company's colours as the app's two scales (navy = the dark surfaces,
+  /// gold = the accent). A light primary is darkened until white text reads on
+  /// it; an accent that would vanish on the primary is lightened. With neither
+  /// colour the platform's own palette stays.
+  static void applyBrand({Color? primary, Color? accent}) {
+    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+    double contrast(Color a, Color b) {
+      final x = a.computeLuminance(), y = b.computeLuminance();
+      return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+    }
+
+    var p = primary;
+    var a = accent;
+    if (p != null) {
+      for (var i = 0; i < 12 && p!.computeLuminance() > 0.18; i++) {
+        p = mix(p, const Color(0xFF000000), 0.12);
+      }
+      _n = [p!, mix(p, const Color(0xFFFFFFFF), 0.07), mix(p, const Color(0xFFFFFFFF), 0.14)];
+      const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
+      _s = [
+        mix(p, k, 0.25),
+        mix(p, w, 0.04),
+        mix(p, w, 0.15),
+        mix(p, w, 0.05),
+        mix(p, k, 0.32),
+        mix(p, k, 0.1),
+        mix(p, w, 0.12),
+        mix(p, k, 0.02),
+        mix(p, w, 0.10),
+        mix(p, w, 0.16),
+        mix(p, k, 0.2),
+        mix(p, k, 0.0),
+        mix(p, w, 0.06),
+        mix(p, w, 0.1),
+      ];
+    } else {
+      _n = _navy;
+      _s = _shades;
+    }
+    if (a != null) {
+      final base = p ?? _navy[0];
+      for (var i = 0; i < 12 && contrast(a!, base) < 3; i++) {
+        a = mix(a, const Color(0xFFFFFFFF), 0.12);
+      }
+      const w = Color(0xFFFFFFFF), k = Color(0xFF000000);
+      _g = [mix(a!, w, 0.9), mix(a, w, 0.8), mix(a, w, 0.55), mix(a, w, 0.22), a, mix(a, k, 0.1), mix(a, k, 0.22)];
+      _gs = [
+        mix(a, k, 0.38),
+        mix(a, w, 0.06),
+        mix(a, k, 0.04),
+        mix(a, k, 0.12),
+        mix(a, k, 0.3),
+        mix(a, k, 0.48),
+        mix(a, k, 0.65),
+        mix(a, k, 0.8),
+        mix(a, k, 0.42),
+        mix(a, w, 0.45),
+      ];
+    } else {
+      _g = _gold;
+      _gs = _goldShades;
+    }
+  }
 
   // ---- Light surfaces -------------------------------------------------------
   static const lightCanvas = Color(0xFFFAF7F2);

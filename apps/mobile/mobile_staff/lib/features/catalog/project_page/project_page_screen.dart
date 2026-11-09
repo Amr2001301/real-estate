@@ -6,10 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_share.dart';
-import '../../dashboard/home_kit/home_kit.dart';
 import '../../installments/domain/repositories/installments_repository.dart';
 import '../../leads/domain/repositories/leads_repository.dart';
-import '../kit/catalog_kit.dart';
 import '../kit/catalog_media.dart';
 import '../units_list/units_list_screen.dart';
 import 'project_page_data.dart';
@@ -170,7 +168,7 @@ class _Occupancy extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Row(children: [
@@ -217,7 +215,7 @@ class _Ring extends StatelessWidget {
             strokeWidth: 8,
             strokeCap: StrokeCap.round,
             backgroundColor: colors.surfaceSoft,
-            valueColor: const AlwaysStoppedAnimation(AppPalette.gold500),
+            valueColor: AlwaysStoppedAnimation(AppPalette.gold500),
           ),
         ),
         Column(mainAxisSize: MainAxisSize.min, children: [
@@ -278,8 +276,8 @@ class _About extends StatelessWidget {
                 Container(
                   width: 28,
                   height: 28,
-                  decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(9)),
-                  child: const Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
+                  decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(9)),
+                  child: Icon(Icons.check_rounded, size: 16, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(s, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.inkStrong))),
@@ -346,8 +344,8 @@ class _Phases extends StatelessWidget {
                 Container(
                   width: 34,
                   height: 34,
-                  decoration: BoxDecoration(color: AppPalette.gold50, borderRadius: BorderRadius.circular(11)),
-                  child: const Icon(Icons.domain_rounded, size: 18, color: AppPalette.gold500),
+                  decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(11)),
+                  child: Icon(Icons.domain_rounded, size: 18, color: AppPalette.gold500),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -408,7 +406,7 @@ class _Bar extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
               foregroundColor: AppPalette.navy,
-              side: const BorderSide(color: AppPalette.navy, width: 1.5),
+              side: BorderSide(color: AppPalette.navy, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             ),
           ),

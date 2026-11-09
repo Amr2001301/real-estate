@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 import '../../common/staff_list_skeleton.dart';
-import '../dashboard/home_kit/filter_kit.dart';
-import '../dashboard/home_kit/home_kit.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import '../permissions/staff_permissions.dart';
 import 'broker_actions.dart';
@@ -421,7 +419,7 @@ class _BrokerCard extends StatelessWidget {
                       : Container(
                           width: 44,
                           height: 44,
-                          decoration: BoxDecoration(color: AppPalette.gold50, border: Border.all(color: AppPalette.gold100), borderRadius: BorderRadius.circular(14)),
+                          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
                           child: Icon(brokerTabIcon(tab), size: 21, color: AppPalette.gold500),
                         ),
                   const SizedBox(width: 11),

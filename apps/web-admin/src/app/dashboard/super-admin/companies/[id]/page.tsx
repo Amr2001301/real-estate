@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
 import { formatDate } from '@/lib/format';
-import { getClientLocale } from '@/lib/locale-client';
+import { useClientLocale } from '@/components/locale-provider';
 import type { Locale } from '@/lib/locale';
 import { saT, type SaStrings } from '@/messages/super-admin';
 import { CompanyPricingPanel } from './_pricing-panel';
@@ -64,7 +64,7 @@ async function fetchCompany(id: string): Promise<CompanyDetail | null> {
 
 export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const locale = getClientLocale();
+  const locale = useClientLocale();
   const m = useMemo(() => saT(locale), [locale]);
 
   const [company, setCompany] = useState<CompanyDetail | null>(null);

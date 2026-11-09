@@ -22,14 +22,14 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { extractPaginatedData } from '@/lib/extract-paginated';
-import { pickAr, unitTypeLabel, formatPrice, formatNumber } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatPrice, formatNumber, formatDateTimeShort } from '@/lib/format';
 import type {
   FavoriteItem,
   Paginated,
@@ -53,14 +53,14 @@ import { RecentRow } from '@/components/account/RecentRow';
 import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { notificationTitle } from '@/components/account/NotificationCard';
+import { accountT } from '@/messages/account';
+import type { Locale } from '@/lib/locale';
 import { JourneyTracker } from '@/components/account/JourneyTracker';
 import { ContactSpecialist } from '@/components/account/ContactSpecialist';
 
-export const metadata = buildMetadata({
-  title: 'لوحة الحساب',
-  description: 'منطقة العميل في ديفورا.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('account', { robots: { index: false, follow: false } });
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -70,32 +70,23 @@ const GLOW = {
 
 // ── Format helpers ────────────────────────────────────────────────────────────
 
-function formatDateTime(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(iso),
-    );
-  } catch {
-    return '—';
-  }
-}
-
 function entityTitle(
   project: VisitProjectRef | null,
   unit: VisitUnitRef | null,
   fallback: string,
+  locale: Locale,
 ): string {
-  if (project) return pickAr(project.name) || fallback;
-  if (unit) return `${unitTypeLabel(unit.type)} · ${unit.code}`;
+  if (project) return pickAr(project.name, '', locale) || fallback;
+  if (unit) return `${unitTypeLabel(unit.type, null, locale)} · ${unit.code}`;
   return fallback;
 }
 
-function contractTitle(c: MeContract): string {
+function contractTitle(c: MeContract, locale: Locale): string {
   const project = c.unit?.building?.phase?.project ?? null;
-  if (project) return pickAr(project.name) || `عقد رقم ${c.contractNumber ?? '—'}`;
-  if (c.unit) return `${unitTypeLabel(c.unit.type)} · ${c.unit.code}`;
-  return `عقد رقم ${c.contractNumber ?? '—'}`;
+  const numbered = accountT(locale).property.contractNo + ' ' + (c.contractNumber ?? '—');
+  if (project) return pickAr(project.name, '', locale) || numbered;
+  if (c.unit) return `${unitTypeLabel(c.unit.type, null, locale)} · ${c.unit.code}`;
+  return numbered;
 }
 
 // ── KPI Metric Tile ───────────────────────────────────────────────────────────
@@ -369,8 +360,8 @@ export default async function AccountPage() {
     const notifications    = extractPaginatedData<MeNotification>(notificationsRaw);
 
     contractsCount     = contracts   ? contracts.meta.total                    : null;
-    depositsTotalText  = deposits    ? formatPrice(deposits.totals.totalAmount, currency) : null;
-    depositsAmountText = deposits    ? formatNumber(deposits.totals.totalAmount): null;
+    depositsTotalText  = deposits    ? formatPrice(deposits.totals.totalAmount, currency, locale) : null;
+    depositsAmountText = deposits    ? formatNumber(deposits.totals.totalAmount, locale): null;
     maintenanceCount   = maintenance ? maintenance.meta.total                   : null;
 
     recentContracts      = contracts?.data ?? [];
@@ -378,10 +369,10 @@ export default async function AccountPage() {
     primaryContract      = recentContracts[0] ?? null;
   }
 
-  const fmt = (n: number | null) => (n != null ? formatNumber(n) : '—');
+  const fmt = (n: number | null) => (n != null ? formatNumber(n, locale) : '—');
   const sum = (...vals: (number | null)[]) => {
     const present = vals.filter((v): v is number => v != null);
-    return present.length ? formatNumber(present.reduce((a, b) => a + b, 0)) : '—';
+    return present.length ? formatNumber(present.reduce((a, b) => a + b, 0), locale) : '—';
   };
 
   // ── KPI Tiles ─────────────────────────────────────────────────────────────
@@ -391,7 +382,7 @@ export default async function AccountPage() {
           icon:     Wallet,
           label:    m.totalPayments,
           value:    depositsAmountText ?? '—',
-          currency: depositsAmountText ? currencySymbol(currency) : undefined,
+          currency: depositsAmountText ? currencySymbol(currency, locale) : undefined,
           hint:     m.totalCollected,
           href:     routes.accountDeposits,
         },
@@ -455,7 +446,7 @@ export default async function AccountPage() {
         key={`c-${c.id}`}
         href={routes.accountContracts}
         icon={FileText}
-        title={contractTitle(c)}
+        title={contractTitle(c, locale)}
         subtitle={`${m.contractPrefix} ${c.contractNumber ?? '—'}`}
         trailing={
           <span className="whitespace-nowrap text-sm font-bold text-ink-strong">
@@ -470,7 +461,7 @@ export default async function AccountPage() {
         href={routes.accountReservations}
         icon={BookmarkCheck}
         title={`${m.reservationPrefix} ${r.reservationNumber ?? '—'}`}
-        subtitle={r.unit ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}` : undefined}
+        subtitle={r.unit ? `${unitTypeLabel(r.unit.type, null, locale)} · ${r.unit.code}` : undefined}
         trailing={<StatusBadge status={r.status} />}
       />
     )),
@@ -480,16 +471,16 @@ export default async function AccountPage() {
     ...recentNotifications.map((n) => (
       <TimelineItem
         key={`n-${n.id}`}
-        title={notificationTitle(n.templateCode, n.title)}
-        subtitle={formatDateTime(n.createdAt)}
+        title={notificationTitle(n.templateCode, n.title, locale)}
+        subtitle={formatDateTimeShort(n.createdAt, locale)}
         trailing={!n.read ? <Badge tone="gold">{m.newBadge}</Badge> : undefined}
       />
     )),
     ...recentVisits.map((v) => (
       <TimelineItem
         key={`v-${v.id}`}
-        title={entityTitle(v.project, v.unit, m.visitLabel)}
-        subtitle={`${m.preferredDate} ${formatDateTime(v.preferredDate)}`}
+        title={entityTitle(v.project, v.unit, m.visitLabel, locale)}
+        subtitle={`${m.preferredDate} ${formatDateTimeShort(v.preferredDate, locale)}`}
         trailing={<StatusBadge status={v.requestStatus} />}
       />
     )),
@@ -525,7 +516,7 @@ export default async function AccountPage() {
               href={routes.accountInstallments}
               icon={CreditCard}
               label={m.installmentSchedule}
-              description={unpaidCount > 0 ? `${formatNumber(unpaidCount)} ${m.installmentDue}` : m.viewInstallments}
+              description={unpaidCount > 0 ? `${formatNumber(unpaidCount, locale)} ${m.installmentDue}` : m.viewInstallments}
             />
             <QuickActionTile
               href={routes.accountMaintenanceNew}

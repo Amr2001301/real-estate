@@ -10,7 +10,7 @@ import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import type { EntityKind } from '@/components/entity-link';
 import type { PagedDeposits, Deposit, DepositType } from '@/lib/types';
-import { formatCurrency, formatDate, tx, intlLocale } from '@/lib/format';
+import { formatCurrency, formatExactCurrency, formatDate, tx, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
@@ -439,7 +439,7 @@ export default async function DepositsPage({
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="font-bold tabular-nums text-slate-900">{formatCurrency(d.amount, currency, locale)}</span>
+                        <span className="font-bold tabular-nums text-slate-900">{formatExactCurrency(d.amount, currency, locale)}</span>
                         {d.receiptUrl && (
                           <a
                             href={d.receiptUrl}

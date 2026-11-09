@@ -96,6 +96,7 @@ function makePrismaMock() {
         status: 'DRAFT',
         projectId: 'p1',
         unitId: null,
+        unitTypes: [],
         durationOptions: [],
         scheduleItems: [],
       }),
@@ -121,8 +122,12 @@ function makePrismaMock() {
     },
     project: {
       findUnique: jest.fn().mockResolvedValue({ id: 'p1' }),
+      findFirst: jest.fn().mockResolvedValue({ id: 'p1' }),
     },
+    unitType: { findMany: jest.fn().mockResolvedValue([]) },
+    reservation: { count: jest.fn().mockResolvedValue(0) },
     unit: {
+      count: jest.fn().mockResolvedValue(0),
       // validateUnit() reads unit.building.phase.projectId — provide the
       // nested include shape so create() doesn't trip on undefined access.
       findUnique: jest.fn().mockResolvedValue({
@@ -310,18 +315,17 @@ describe('Installments module · permissions enforcement', () => {
       await request(app.getHttpServer())
         .post('/installment-plan-templates')
         .send({
+          // A project plan (no unit): percentages only.
           name: 'Test plan',
           projectId: 'a1111111-1111-4111-8111-111111111111',
-          totalPrice: 100000,
-          discountAmount: 0,
-          netPrice: 100000,
-          reservationAmount: 5000,
-          downPaymentType: 'FIXED',
-          downPaymentValue: 10000,
-          downPaymentAmount: 10000,
+          discountType: 'PERCENTAGE',
+          discountValue: 0,
+          reservationAmountType: 'PERCENTAGE',
+          reservationAmountValue: 2,
+          downPaymentType: 'PERCENTAGE',
+          downPaymentValue: 10,
           frequency: 'MONTHLY',
           startDateRule: 'MANUAL',
-          installmentsCount: 12,
           durationOptions: [{ durationMonths: 12, increasePercentage: 0, order: 1 }],
         })
         .expect(201);

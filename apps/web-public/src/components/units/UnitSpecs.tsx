@@ -19,10 +19,10 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
 
   const specs: Spec[] = [];
   if (Number.isFinite(unit.area) && unit.area > 0)
-    specs.push({ icon: Maximize,   label: s.area,      value: formatArea(unit.area) });
+    specs.push({ icon: Maximize,   label: s.area,      value: formatArea(unit.area, locale) });
   for (const f of ['netArea', 'gardenArea', 'roofArea', 'terraceArea', 'landArea'] as const) {
     const v = unit[f];
-    if (v && v > 0) specs.push({ icon: f === 'gardenArea' ? Trees : Maximize, label: s[f], value: formatArea(v) });
+    if (v && v > 0) specs.push({ icon: f === 'gardenArea' ? Trees : Maximize, label: s[f], value: formatArea(v, locale) });
   }
   if (unit.finishing)
     specs.push({ icon: Paintbrush, label: s.finishing, value: s.finishingLabels[unit.finishing] ?? unit.finishing });
@@ -31,11 +31,11 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
     specs.push({ icon: Compass, label: s.orientation, value: s.orientationLabels[unit.orientation] ?? unit.orientation });
   // Only a residential unit has bedrooms.
   if (!unit.usage || unit.usage === 'RESIDENTIAL')
-    specs.push({ icon: BedDouble,  label: s.bedrooms,   value: formatNumber(unit.bedrooms) });
-  specs.push({ icon: Bath,       label: s.bathrooms,  value: formatNumber(unit.bathrooms) });
-  specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor) });
+    specs.push({ icon: BedDouble,  label: s.bedrooms,   value: formatNumber(unit.bedrooms, locale) });
+  specs.push({ icon: Bath,       label: s.bathrooms,  value: formatNumber(unit.bathrooms, locale) });
+  specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor, locale) });
   if (unit.type)
-    specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type, unit.typeName) });
+    specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type, unit.typeName, locale) });
   if (unit.model) {
     const name = typeof unit.model.name === 'string' ? unit.model.name : (unit.model.name[locale] ?? unit.model.name.ar);
     specs.push({ icon: LayoutTemplate, label: s.model, value: name || unit.model.code });

@@ -13,7 +13,6 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_detail_cubit.dart';
 import '../maintenance_format.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const _navyDeep = Color(0xFF0B1726);
@@ -872,7 +871,7 @@ class _LocationCard extends StatelessWidget {
             ),
 
             if (_hasLocation) ...[
-              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              Divider(height: 1, color: homeLine(context)),
 
               // Address line
               if (address != null)
@@ -1250,8 +1249,8 @@ class _WorkflowActionCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
                 color: accentColor?.withValues(alpha: 0.07),
-                border: const Border(
-                  bottom: BorderSide(color: Color(0xFFF0F0F0)),
+                border: Border(
+                  bottom: BorderSide(color: homeLine(context)),
                 ),
               ),
               child: Row(
@@ -1552,7 +1551,7 @@ class _AttachmentsCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            Divider(height: 1, color: homeLine(context)),
 
             // Image thumbnail grid
             if (imageDocs.isNotEmpty)
@@ -1659,7 +1658,7 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          color: const Color(0xFFF0F0F0),
+          color: homeLine(context),
           child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       );
@@ -1669,7 +1668,7 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          color: const Color(0xFFF0F0F0),
+          color: homeLine(context),
           child: const Center(
             child: Icon(
               Icons.broken_image_rounded,
@@ -1688,14 +1687,14 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
             loadingBuilder: (ctx, child, progress) {
               if (progress == null) return child;
               return Container(
-                color: const Color(0xFFF0F0F0),
+                color: homeLine(context),
                 child: const Center(
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               );
             },
             errorBuilder: (ctx, err, stack) => Container(
-              color: const Color(0xFFF0F0F0),
+              color: homeLine(context),
               child: const Icon(
                 Icons.broken_image_rounded,
                 color: Color(0xFF9CA3AF),
@@ -1707,7 +1706,7 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
             _bytes!,
             fit: BoxFit.cover,
             errorBuilder: (ctx, err, stack) => Container(
-              color: const Color(0xFFF0F0F0),
+              color: homeLine(context),
               child: const Icon(
                 Icons.broken_image_rounded,
                 color: Color(0xFF9CA3AF),
@@ -1862,8 +1861,8 @@ class _FileTile extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: homeLine(context))),
       ),
       child: Row(
         children: [
@@ -1979,8 +1978,8 @@ class _CardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: homeLine(context))),
       ),
       child: Row(
         children: [

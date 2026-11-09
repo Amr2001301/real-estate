@@ -6,9 +6,9 @@ import '../../documents/presentation/widgets/documents_list_view.dart';
 import '../domain/entities/deposit.dart';
 import 'deposit_format.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
+Color get _navyLight => AppPalette.navyLight;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Deposit Detail Screen
@@ -326,14 +326,14 @@ class _ReceiptsSection extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
                 size: 17,
                 color: AppPalette.gold300,
@@ -379,14 +379,14 @@ List<Color> _typeGradient(DepositType type) => switch (type) {
         ],
       DepositType.downPayment => [_navyLight, _navyCard, _navyDeep],
       DepositType.installment => [
-          const Color(0xFF1E3A6E),
+          AppPalette.navyHero,
           const Color(0xFF122346),
-          const Color(0xFF0B1F42),
+          AppPalette.navyInk,
         ],
       DepositType.finalPayment => [
-          const Color(0xFF7A5C1E),
-          const Color(0xFF5A4214),
-          const Color(0xFF3D2800),
+          AppPalette.goldBrown1,
+          AppPalette.goldBrown2,
+          AppPalette.goldBrown3,
         ],
       DepositType.fee => [
           const Color(0xFF7A2E1E),
@@ -400,7 +400,7 @@ Color _typeAccent(DepositType type) => switch (type) {
       DepositType.bookingAmount => const Color(0xFF4ADE80),
       DepositType.downPayment => AppPalette.gold300,
       DepositType.installment => const Color(0xFF93C5FD),
-      DepositType.finalPayment => const Color(0xFFFBD27A),
+      DepositType.finalPayment => AppPalette.goldPale,
       DepositType.fee => const Color(0xFFFCA5A5),
       DepositType.unknown => AppPalette.gold300,
     };

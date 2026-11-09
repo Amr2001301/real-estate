@@ -17,7 +17,10 @@ class AuthValidators {
 
   String? phone(String? v) {
     if (v == null || v.trim().isEmpty) return l10n.validationRequired;
-    final ok = RegExp(r'^\+?[1-9]\d{7,14}$').hasMatch(v.trim());
+    // International (+20…) or the local way Egyptians write it (01099887766):
+    // the API turns a local number into E.164 with the company's country.
+    // QA run 1, F-028: a leading 0 used to be refused, so 010… could not sign in.
+    final ok = RegExp(r'^(\+?[1-9]\d{7,14}|0\d{9,11})$').hasMatch(v.trim());
     return ok ? null : l10n.validationPhone;
   }
 

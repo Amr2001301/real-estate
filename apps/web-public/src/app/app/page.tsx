@@ -1,8 +1,7 @@
-import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Apple, Play, ArrowLeft } from 'lucide-react';
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { detectMobileOS, storeLinks } from '@/lib/app-links';
 import { fetchBranding } from '@/lib/branding';
@@ -10,13 +9,9 @@ import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 
-export const metadata: Metadata = buildMetadata({
-  path: '/app',
-  title: 'التجربة الرقمية',
-  description: 'ابدأ رحلتك العقارية مع ديفورا — تجربة رقمية واضحة وسريعة من البحث حتى القرار.',
-  // Smart landing / redirect target — keep it out of the index.
-  robots: { index: false, follow: true },
-});
+export async function generateMetadata() {
+  return pageMeta('app', { path: '/app', robots: { index: false, follow: true } });
+}
 
 export default async function AppLandingPage() {
   const h = await headers();

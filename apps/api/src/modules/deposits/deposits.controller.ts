@@ -192,14 +192,16 @@ export class DepositsController {
   }
 
   // Single deposit detail (with contract/reservation/installment context).
-  // Declared before the parametric write routes; ADMIN, or a staff member
-  // with the whole company's payments (PRM2).
-  @Roles(UserRole.ADMIN)
+  // Declared before the parametric write routes. Read-only for a rep or manager,
+  // and only for the payments the list shows them (their own sales / their team's,
+  // PRM2); ADMIN or deposits:read:all, the whole company. The proof download and
+  // every write stay admin-only (QA F-043).
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @GrantedBy('deposits:read:all')
   @Permissions('deposits:read')
   @Get('deposits/:id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser, @Req() req: ReqWithCodes) {
+    return this.svc.findOne(id, { salesIds: await this.owned(user, req), canReverse: user.role === UserRole.ADMIN });
   }
 
   // Attach/replace the payment proof after creation — links a RECEIPT document

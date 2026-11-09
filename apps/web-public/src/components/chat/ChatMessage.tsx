@@ -7,14 +7,18 @@ import { CoverImage } from '@/components/ui/CoverImage';
 import { cn } from '@/lib/cn';
 import { whatsappHref } from '@/lib/contact';
 import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
+import { siteT } from '@/messages/site';
+import type { Locale } from '@/lib/locale';
 import type { ChatCard, ChatCta, ChatUiMessage, FeedbackRating } from '@/lib/chat';
 
 interface ChatMessageProps {
   message: ChatUiMessage;
+  locale?: Locale;
   onFeedback?: (messageId: string, rating: FeedbackRating) => void;
 }
 
-export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
+export function ChatMessage({ message, onFeedback, locale = 'ar' }: ChatMessageProps) {
+  const t = siteT(locale).chat;
   const isUser = message.role === 'USER';
   return (
     <div className={cn('flex flex-col gap-2', isUser ? 'items-start' : 'items-stretch')}>
@@ -32,7 +36,7 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
       {message.cards && message.cards.length > 0 && (
         <div className="flex flex-col gap-2">
           {message.cards.map((card) => (
-            <ChatResultCard key={`${card.type}-${card.id}`} card={card} />
+            <ChatResultCard key={`${card.type}-${card.id}`} card={card} locale={locale} />
           ))}
         </div>
       )}
@@ -46,13 +50,13 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
       )}
 
       {!isUser && message.serverId && onFeedback && (
-        <FeedbackButtons messageId={message.id} onFeedback={onFeedback} />
+        <FeedbackButtons messageId={message.id} onFeedback={onFeedback} locale={locale} />
       )}
     </div>
   );
 }
 
-function ChatResultCard({ card }: { card: ChatCard }) {
+function ChatResultCard({ card, locale }: { card: ChatCard; locale: Locale }) {
   return (
     <Link
       href={card.href}
@@ -65,7 +69,7 @@ function ChatResultCard({ card }: { card: ChatCard }) {
         <p className="truncate text-[14px] font-semibold text-ink-strong">{card.title}</p>
         {card.subtitle && <p className="truncate text-xs text-ink-muted">{card.subtitle}</p>}
         {card.type === 'unit' ? (
-          <UnitMeta card={card} />
+          <UnitMeta card={card} locale={locale} />
         ) : (
           card.city && (
             <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
@@ -79,7 +83,8 @@ function ChatResultCard({ card }: { card: ChatCard }) {
   );
 }
 
-function UnitMeta({ card }: { card: Extract<ChatCard, { type: 'unit' }> }) {
+function UnitMeta({ card, locale }: { card: Extract<ChatCard, { type: 'unit' }>; locale: Locale }) {
+  const t = siteT(locale).chat;
   return (
     <div className="flex flex-col gap-0.5">
       {card.price && <span className="text-[13px] font-semibold text-gold-600">{card.price}</span>}
@@ -101,7 +106,7 @@ function UnitMeta({ card }: { card: Extract<ChatCard, { type: 'unit' }> }) {
         )}
         {card.area !== undefined && (
           <span className="inline-flex items-center gap-0.5">
-            <Ruler className="h-3 w-3" aria-hidden /> {card.area} م²
+            <Ruler className="h-3 w-3" aria-hidden /> {card.area} {t.areaUnit}
           </span>
         )}
       </div>
@@ -151,10 +156,13 @@ function ChatCtaButton({ cta }: { cta: ChatCta }) {
 function FeedbackButtons({
   messageId,
   onFeedback,
+  locale,
 }: {
   messageId: string;
   onFeedback: (messageId: string, rating: FeedbackRating) => void;
+  locale: Locale;
 }) {
+  const t = siteT(locale).chat;
   const [rated, setRated] = useState<FeedbackRating | null>(null);
   const rate = (rating: FeedbackRating) => {
     if (rated) return;
@@ -166,7 +174,7 @@ function FeedbackButtons({
       <button
         type="button"
         onClick={() => rate('UP')}
-        aria-label="إجابة مفيدة"
+        aria-label={t.helpful}
         aria-pressed={rated === 'UP'}
         disabled={rated !== null}
         className={cn(
@@ -179,7 +187,7 @@ function FeedbackButtons({
       <button
         type="button"
         onClick={() => rate('DOWN')}
-        aria-label="إجابة غير مفيدة"
+        aria-label={t.notHelpful}
         aria-pressed={rated === 'DOWN'}
         disabled={rated !== null}
         className={cn(

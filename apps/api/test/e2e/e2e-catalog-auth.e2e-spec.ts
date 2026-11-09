@@ -1573,6 +1573,19 @@ describe('Flow B — Lead journey (e2e)', () => {
     expect(lead!.projectInterestId).toBe(fixtures.projects.p1Id);
   });
 
+  it('B1b: a name with bidi overrides or zero-width characters is stored clean (F-046)', async () => {
+    const phone = phoneFor('9146');
+    const res = await http().post('/v1/public/info-request').send({
+      message: 'Name spoofing check.',
+      name: 'Mona\u202E evil\u200B Name',
+      phone,
+      projectId: fixtures.projects.p1Id,
+    });
+    expect(res.status).toBe(201);
+    const client = await testApp.rawPrisma.user.findFirstOrThrow({ where: { phone }, select: { fullName: true } });
+    expect(client.fullName).toBe('Mona evil Name');
+  });
+
   it('B2: POST /v1/public/visit-request (no auth) creates a Lead AND a VisitRequest', async () => {
     const phone = phoneFor('B2');
     const res = await http().post('/v1/public/visit-request').send({
@@ -2248,6 +2261,11 @@ describe('Flow C — Visit journey (e2e)', () => {
     });
 
     it('C7: SALES completes → COMPLETED, VisitActivity(VISIT_COMPLETED) logged', async () => {
+      // A visit is completed once its time has come (F-051): the walk-through has happened.
+      await testApp.rawPrisma.visitAppointment.update({
+        where: { id: apptId },
+        data: { scheduledAt: new Date(Date.now() - 60 * 60 * 1000) },
+      });
       const res = await http()
         .post(`/v1/visits/appointments/${apptId}/complete`)
         .set('Authorization', bearer(salesToken))

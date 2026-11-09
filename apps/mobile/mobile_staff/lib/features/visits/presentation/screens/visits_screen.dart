@@ -6,8 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../../../common/visit_status_label.dart';
-import '../../../dashboard/home_kit/filter_kit.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 import '../../../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import '../../domain/entities/visit.dart';
 import '../cubit/visits_cubit.dart';
@@ -269,7 +267,7 @@ class _VisitTile extends StatelessWidget {
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.ink),
                 ),
               ),
-              const Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
+              Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
             ]),
           ]),
         ),

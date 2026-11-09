@@ -20,6 +20,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 // DepositsModule now imports DocumentsModule (for receipt-document linking).
 // Override the service so tests never touch R2; ConfigModule satisfies its deps.
 const documentsMock = {
+  assertFileRef: jest.fn(),
   create: jest.fn().mockImplementation(async (uploadedById: string, dto: Record<string, unknown>) => ({
     id: 'doc-1',
     uploadedById,
@@ -211,7 +212,7 @@ describe('Deposits · recording + verification workflow', () => {
         contractId: CONTRACT_ID,
         installmentId: INSTALLMENT_ID,
         amount: 5000,
-        paidAt: '2030-03-15T00:00:00Z',
+        paidAt: '2026-03-15T00:00:00Z',
       })
       .expect(201);
 
@@ -304,6 +305,23 @@ describe('Deposits · recording + verification workflow', () => {
       .post('/deposits')
       .send({ contractId: CONTRACT_ID, installmentId: INSTALLMENT_ID, amount: 6000 })
       .expect(400);
+    expect(mock.deposit.create).not.toHaveBeenCalled();
+    expect(mock.installment.update).not.toHaveBeenCalled();
+  });
+
+  // F-053: a payment dated ahead marked the instalment PAID for money not yet received.
+  it('rejects a payment dated in the future (400) and records nothing', async () => {
+    fixture.installment = { id: INSTALLMENT_ID, type: 'INSTALLMENT', status: 'PENDING', amount: 5000 };
+    const res = await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        paidAt: new Date(Date.now() + 10 * 864e5).toISOString(),
+      })
+      .expect(400);
+    expect(String(res.body.message)).toMatch(/المستقبل/);
     expect(mock.deposit.create).not.toHaveBeenCalled();
     expect(mock.installment.update).not.toHaveBeenCalled();
   });

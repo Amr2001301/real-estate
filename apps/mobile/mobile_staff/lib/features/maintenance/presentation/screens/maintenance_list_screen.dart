@@ -9,8 +9,6 @@ import '../../../auth/presentation/cubit/staff_auth_cubit.dart';
 import '../../domain/entities/maintenance_request.dart';
 import '../cubit/maintenance_list_cubit.dart';
 import '../maintenance_format.dart';
-import '../../../dashboard/home_kit/filter_kit.dart';
-import '../../../dashboard/home_kit/home_kit.dart';
 
 // ── Color palette (mirrors Customer App) ─────────────────────────────────────
 
@@ -18,7 +16,7 @@ const _navyDeep  = Color(0xFF0B1726);
 const _navyLight = Color(0xFF243F62);
 
 const _activeGradient    = [_navyLight, _navyDeep];
-const _activeAccent      = AppPalette.gold300;
+final _activeAccent      = AppPalette.gold300;
 
 const _inProgressGradient = [Color(0xFF0F3460), Color(0xFF061830)];
 const _inProgressAccent   = Color(0xFF60A5FA);

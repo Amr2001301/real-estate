@@ -1,20 +1,13 @@
 import { Home, Building2, Wrench } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
+import { formatNumber, pickAr, unitTypeLabel, formatDateShort } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeContract } from '@/lib/api-types';
 import { AccountCard } from '@/components/account/AccountCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
-  } catch {
-    return '—';
-  }
-}
+import { getLocale } from '@/lib/locale';
+import { accountT } from '@/messages/account';
 
 function Fact({
   label,
@@ -44,12 +37,14 @@ function Fact({
  * here the unit is the headline, with a quick maintenance CTA. No reservation
  * status, no broker, no payment.
  */
-export function PropertyCard({ contract }: { contract: MeContract }) {
+export async function PropertyCard({ contract }: { contract: MeContract }) {
+  const locale = await getLocale();
+  const t = accountT(locale).property;
   const unit = contract.unit;
   const project = unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name) : '';
-  const unitLabel = unit ? `${unitTypeLabel(unit.type)} · ${unit.code}` : '';
-  const title = projectName || unitLabel || 'وحدة';
+  const projectName = project ? pickAr(project.name, '', locale) : '';
+  const unitLabel = unit ? `${unitTypeLabel(unit.type, null, locale)} · ${unit.code}` : '';
+  const title = projectName || unitLabel || accountT(locale).unit;
   const plan = contract.installmentPlan;
 
   return (
@@ -73,19 +68,19 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
       {/* Strict geometric 2-column micro-grid — blocks hug opposite edges */}
       <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-hairline pb-3 mb-3">
         <Fact
-          label="رقم العقد"
+          label={t.contractNo}
           value={contract.contractNumber ?? '—'}
           align="start"
           valueClassName="font-bold tracking-wide font-mono"
         />
         <Fact
-          label="تاريخ التوقيع"
-          value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'}
+          label={t.signedAt}
+          value={contract.signedAt ? formatDateShort(contract.signedAt, locale) : t.unsigned}
           align="end"
           valueClassName="font-semibold text-ink"
         />
         {plan && (
-          <Fact label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} align="start" />
+          <Fact label={t.plan} value={t.months(formatNumber(plan.totalMonths, locale))} align="start" />
         )}
       </div>
 
@@ -99,7 +94,7 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
             className="h-auto rounded-xl px-3.5 py-2 text-xs font-semibold shadow-sm"
           >
             <Wrench className="h-4 w-4" aria-hidden />
-            طلب صيانة
+            {t.maintenance}
           </ButtonLink>
         ) : (
           <span aria-hidden />
@@ -108,8 +103,8 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
         <DocumentDownloadByOwner
           ownerType="CONTRACT"
           ownerId={contract.id}
-          label="عرض العقد PDF"
-          emptyLabel="العقد غير متاح بعد"
+          label={t.viewContract}
+          emptyLabel={t.contractMissing}
           variant="compact"
         />
       </div>

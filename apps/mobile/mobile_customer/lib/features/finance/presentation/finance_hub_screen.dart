@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../home_summary/presentation/home_summary_cubit.dart';
 import '../../notifications/presentation/widgets/customer_notification_button.dart';
-
-const _navyDeep = Color(0xFF0B1726);
-const _navyLight = Color(0xFF243F62);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Finance Hub Screen
@@ -19,46 +17,74 @@ class FinanceHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final session = context.watch<SessionCubit>().state;
-    final displayName =
-        session.sessionOrNull?.displayName ?? session.sessionOrNull?.email;
+    final displayName = session.sessionOrNull?.displayName ?? session.sessionOrNull?.email;
 
     return Column(
       children: [
         _FinanceHeader(displayName: displayName, l10n: l10n),
         Expanded(
           child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg + MediaQuery.of(context).padding.bottom,
-            ),
+            padding: EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 110 + MediaQuery.of(context).padding.bottom),
             children: [
-              _PortalCard(
-                icon: AppIcons.installments,
-                title: l10n.installmentsTitle,
-                subtitle: l10n.financeInstallmentsDesc,
-                gradientColors: const [Color(0xFFC8A24B), Color(0xFF9A6F1E)],
-                iconColor: Colors.white,
-                onTap: () => context.push('/account/installments'),
+              BlocBuilder<HomeSummaryCubit, HomeSummaryState>(
+                builder: (context, state) {
+                  final inst = state.data?.installments;
+                  if (inst == null) return const SizedBox.shrink();
+                  final next = inst.nextDue;
+                  final lang = Localizations.localeOf(context).languageCode;
+                  final (amount, unit) = next == null ? ('—', '') : homeCompact(num.tryParse(next.amount) ?? 0, l10n);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: HomeBand(figures: [
+                      HomeFigure(
+                        id: 'paid',
+                        value: '${inst.paidCount}/${inst.totalCount}',
+                        label: l10n.installmentsTitle,
+                        hint: l10n.financeInstallmentsPaid,
+                      ),
+                      HomeFigure(
+                        id: 'overdue',
+                        value: '${inst.overdueCount}',
+                        label: l10n.financeOverdue,
+                        hint: inst.overdueCount == 0 ? l10n.financeAllOnTime : l10n.financeNeedsPayment,
+                        warn: inst.overdueCount > 0,
+                      ),
+                      HomeFigure(
+                        id: 'next',
+                        value: amount,
+                        label: l10n.financeNextInstallment,
+                        hint: next == null ? '—' : [if (unit.isNotEmpty) unit, DateFormatter.shortDate(next.dueDate, languageCode: lang)].join(' · '),
+                        warn: next?.isOverdue ?? false,
+                      ),
+                    ]),
+                  );
+                },
               ),
-              const SizedBox(height: AppSpacing.md),
-              _PortalCard(
-                icon: AppIcons.deposit,
-                title: l10n.accountDeposits,
-                subtitle: l10n.financeDepositsDesc,
-                gradientColors: const [_navyLight, _navyDeep],
-                iconColor: AppPalette.gold300,
-                onTap: () => context.push('/account/deposits'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _PortalCard(
-                icon: AppIcons.contract,
-                title: l10n.accountContracts,
-                subtitle: l10n.financeContractsDesc,
-                gradientColors: const [Color(0xFF2D7A5F), Color(0xFF1B4A3A)],
-                iconColor: Colors.greenAccent,
-                onTap: () => context.push('/account/contracts'),
+              HomeSection(
+                icon: Icons.account_balance_wallet_rounded,
+                title: l10n.financeServices,
+                child: Column(children: [
+                  _PortalCard(
+                    icon: AppIcons.installments,
+                    title: l10n.installmentsTitle,
+                    subtitle: l10n.financeInstallmentsDesc,
+                    onTap: () => context.push('/account/installments'),
+                  ),
+                  const SizedBox(height: 10),
+                  _PortalCard(
+                    icon: AppIcons.deposit,
+                    title: l10n.accountDeposits,
+                    subtitle: l10n.financeDepositsDesc,
+                    onTap: () => context.push('/account/deposits'),
+                  ),
+                  const SizedBox(height: 10),
+                  _PortalCard(
+                    icon: AppIcons.contract,
+                    title: l10n.accountContracts,
+                    subtitle: l10n.financeContractsDesc,
+                    onTap: () => context.push('/account/contracts'),
+                  ),
+                ]),
               ),
             ],
           ),
@@ -94,92 +120,42 @@ class _FinanceHeader extends StatelessWidget {
 // ── Portal card ───────────────────────────────────────────────────────────────
 
 class _PortalCard extends StatelessWidget {
-  const _PortalCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.gradientColors,
-    required this.iconColor,
-    required this.onTap,
-  });
+  const _PortalCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final List<Color> gradientColors;
-  final Color iconColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: gradientColors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(icon, color: iconColor, size: 26),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colors.inkStrong,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.inkMuted,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Icon(AppIcons.chevronForward, size: 20, color: colors.inkMuted),
-              ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: homeCard(context, radius: 22),
+          child: Row(children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
+              child: Icon(icon, color: AppPalette.gold300, size: 24),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: homeDisplay(16, colors.inkStrong)),
+                const SizedBox(height: 3),
+                Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.45, color: colors.inkMuted)),
+              ]),
+            ),
+            const SizedBox(width: 6),
+            Icon(AppIcons.chevronForward, size: 20, color: colors.inkMuted),
+          ]),
         ),
       ),
     );

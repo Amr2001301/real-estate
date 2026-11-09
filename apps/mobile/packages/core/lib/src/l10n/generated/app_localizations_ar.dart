@@ -1330,6 +1330,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maintenanceUnitRequired => 'يرجى اختيار وحدة.';
 
   @override
+  String get maintenanceBeforeHandover =>
+      'تُفتح طلبات الصيانة بعد تسليم الوحدة. سنُعلمك فور تسليم وحدتك.';
+
+  @override
   String get maintenanceNoUnitsTitle => 'لا توجد وحدات';
 
   @override
@@ -9503,4 +9507,62 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brkConfirmHint => 'هل تريد تنفيذ هذا الإجراء؟';
+
+  @override
+  String ctProjectsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n مشروعًا',
+      few: '$n مشاريع',
+      two: 'مشروعان',
+      one: 'مشروع واحد',
+      zero: 'لا مشاريع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ctUnitsCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n وحدة',
+      few: '$n وحدات',
+      two: 'وحدتان',
+      one: 'وحدة واحدة',
+      zero: 'لا وحدات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get financeInstallmentsPaid => 'مدفوعة';
+
+  @override
+  String get financeOverdue => 'المتأخرة';
+
+  @override
+  String get financeAllOnTime => 'لا متأخرات';
+
+  @override
+  String get financeNeedsPayment => 'تحتاج سدادًا';
+
+  @override
+  String get financeNextInstallment => 'القسط القادم';
+
+  @override
+  String get financeServices => 'الخدمات المالية';
+
+  @override
+  String get myPropertyUnitsLabel => 'وحداتي';
+
+  @override
+  String get myPropertyOwnedLabel => 'مملوكة';
+
+  @override
+  String get myPropertyOwnedHint => 'عقد موقّع';
+
+  @override
+  String get myPropertyWithPlanHint => 'بخطة سداد';
 }

@@ -8,7 +8,7 @@ import '../../notifications/presentation/widgets/customer_notification_button.da
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
 
-const _navyDeep = Color(0xFF0B1726);
+Color get _navyDeep => AppPalette.navyDeep;
 
 // Money for tight spaces, without losing piasters below a million.
 String _compact(String raw, String lang) {
@@ -79,33 +79,30 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
                   ),
                 DataStatus.success => RefreshIndicator(
                     onRefresh: () => context.read<MyPropertyCubit>().load(),
-                    child: ListView.builder(
+                    child: ListView.separated(
                       padding: EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
                         AppSpacing.md,
-                        AppSpacing.lg,
-                        AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+                        14,
+                        AppSpacing.md,
+                        110 + MediaQuery.of(context).padding.bottom,
                       ),
-                      itemCount: properties.length,
-                      itemBuilder: (context, i) => Padding(
-                        padding: EdgeInsets.only(
-                          bottom: i < properties.length - 1 ? AppSpacing.lg : 0,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => context.push(
-                            '/account/property/detail',
-                            extra: properties[i],
-                          ),
-                          child: _PropertyCard(property: properties[i], index: i),
-                        ).animate(delay: Duration(milliseconds: 70 * i))
-                            .fadeIn(duration: 360.ms)
-                            .slideY(
-                              begin: 0.06,
-                              end: 0,
-                              duration: 360.ms,
-                              curve: Curves.easeOut,
-                            ),
-                      ),
+                      itemCount: properties.length + 1,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, i) {
+                        if (i == 0) {
+                          final withPlan = properties.where((p) => p.hasInstallmentPlan).length;
+                          return HomeBand(figures: [
+                            HomeFigure(id: 'units', value: '${properties.length}', label: l10n.myPropertyUnitsLabel, hint: l10n.accountMyProperty),
+                            HomeFigure(id: 'owned', value: '$ownedCount', label: l10n.myPropertyOwnedLabel, hint: l10n.myPropertyOwnedHint),
+                            HomeFigure(id: 'plans', value: '$withPlan', label: l10n.installmentsTitle, hint: l10n.myPropertyWithPlanHint),
+                          ]);
+                        }
+                        final property = properties[i - 1];
+                        return GestureDetector(
+                          onTap: () => context.push('/account/property/detail', extra: property),
+                          child: _PropertyCard(property: property, index: i - 1),
+                        );
+                      },
                     ),
                   ),
               },
@@ -203,8 +200,8 @@ class _PortfolioPill extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFC8A24B), AppPalette.gold500],
+            gradient: LinearGradient(
+              colors: [AppPalette.gold400, AppPalette.gold500],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -219,7 +216,7 @@ class _PortfolioPill extends StatelessWidget {
           ),
           child: Text(
             context.l10n.unitsCount(totalCount),
-            style: const TextStyle(
+            style: TextStyle(
               color: _navyDeep,
               fontSize: 12,
               fontWeight: FontWeight.w800,
@@ -424,7 +421,7 @@ class _CardHeader extends StatelessWidget {
             ),
             child: Icon(
               Icons.domain_rounded,
-              color: dark ? AppPalette.gold300 : const Color(0xFF9A6F1E),
+              color: dark ? AppPalette.gold300 : AppPalette.goldInk,
               size: 26,
             ),
           ),
@@ -472,7 +469,7 @@ class _StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ownedColor = dark ? const Color(0xFF4ADE80) : const Color(0xFF15803D);
-    final reservedColor = dark ? AppPalette.gold300 : const Color(0xFF9A6F1E);
+    final reservedColor = dark ? AppPalette.gold300 : AppPalette.goldInk;
     final dotColor = owned ? ownedColor : reservedColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

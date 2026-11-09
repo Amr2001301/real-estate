@@ -1,15 +1,13 @@
-import { buildMetadata } from '@/lib/seo';
+import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { ResetPasswordCard } from '@/components/auth/ResetPasswordCard';
 
-export const metadata = buildMetadata({
-  title: 'إعادة تعيين كلمة المرور',
-  description: 'أدخل كلمة المرور الجديدة لإتمام إعادة التعيين.',
-  robots: { index: false, follow: false },
-});
+export async function generateMetadata() {
+  return pageMeta('resetPassword', { robots: { index: false, follow: false } });
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -25,9 +23,10 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       subtitle={m.auth.resetPassword.subtitle}
       switchPrompt={m.auth.resetPassword.backPrompt}
       switchLabel={m.auth.resetPassword.backLabel}
+      locale={locale}
       switchHref={routes.login}
     >
-      <ResetPasswordCard token={token} />
+      <ResetPasswordCard token={token} locale={locale} />
     </AuthShell>
   );
 }

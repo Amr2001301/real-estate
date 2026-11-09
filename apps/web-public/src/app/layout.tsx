@@ -5,13 +5,14 @@ import './fonts.css';
 import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
-import { fetchBranding, hexToRgbVars } from '@/lib/branding';
+import { brandThemeVars, fetchBranding } from '@/lib/branding';
 import { fetchPageLinks } from '@/lib/cms';
 import { DEFAULT_CURRENCY } from '@/lib/site-currency';
 import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { SiteLocaleProvider } from '@/components/locale/SiteLocaleProvider';
 import { FavoritesProvider } from '@/components/favorites/FavoritesProvider';
 import { ChatWidget } from '@/components/chat/ChatWidget';
 import { CompanyContactProvider } from '@/components/contact/CompanyContactProvider';
@@ -36,7 +37,7 @@ async function getResolvedSlug(): Promise<string> {
 export async function generateMetadata(): Promise<Metadata> {
   const [locale, slug] = await Promise.all([getLocale(), getResolvedSlug()]);
   const branding = slug ? await fetchBranding(slug) : null;
-  return buildMetadata({ branding: branding ?? undefined, locale });
+  return buildMetadata({ branding: branding ?? undefined, locale, root: true });
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -47,12 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Build inline CSS only when the tenant supplies at least one colour.
   // globals.css provides fallbacks (navy / gold-400) so brand-* utilities always
   // resolve even when no <style> tag is emitted.
-  const primaryVars = branding?.primaryColor ? hexToRgbVars(branding.primaryColor) : null;
-  const accentVars  = branding?.accentColor  ? hexToRgbVars(branding.accentColor)  : null;
-  const cssOverrides = [
-    primaryVars ? `--c-brand-primary:${primaryVars}` : null,
-    accentVars  ? `--c-brand-accent:${accentVars}`   : null,
-  ].filter(Boolean).join(';');
+  const cssOverrides = brandThemeVars(branding?.primaryColor, branding?.accentColor) ?? '';
 
   return (
     <html
@@ -85,16 +81,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PageViewTracker />
         <UtmCapture />
         <ThemeProvider>
+          <SiteLocaleProvider locale={locale}>
           <CurrencyProvider currency={branding?.currency ?? DEFAULT_CURRENCY}>
           <FavoritesProvider>
           <CompanyContactProvider contact={companyContact(branding)}>
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
             <Footer locale={locale} branding={branding ?? undefined} pages={pages} />
-            <ChatWidget />
+            <ChatWidget locale={locale} />
           </CompanyContactProvider>
           </FavoritesProvider>
           </CurrencyProvider>
+          </SiteLocaleProvider>
         </ThemeProvider>
       </body>
     </html>

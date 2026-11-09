@@ -98,7 +98,7 @@ test.describe('Record deposit — contract picker', () => {
 
 test.describe('New installment plan — unit picker', () => {
   test('waits for a project, then searches units without a plan', async ({ page }) => {
-    await gotoReady(page, '/dashboard/installments/new');
+    await gotoReady(page, '/dashboard/installments/new?scope=unit');
     await expect(page.locator('#unitId')).toBeDisabled();
     await page.locator('select[name="projectId"]').selectOption({ label: SEEDED_PROJECT_NAME_AR });
     await expect(page.locator('#unitId')).toBeEnabled();
@@ -139,5 +139,16 @@ test.describe('Admin broker reservation — lead and unit pickers', () => {
     await pick(page, 'leadId', 'E2E Broker1', 'E2E Broker1 Client');
 
     await pickFirst(page, 'unitId');
+  });
+});
+
+test.describe('New installment plan — booking amount (F-020)', () => {
+  test('a plan without a booking amount says so and cannot be saved', async ({ page }) => {
+    await gotoReady(page, '/dashboard/installments/new?scope=unit');
+    await page.locator('#reservationAmountValue').fill('0');
+    await expect(page.getByTestId('reservation-required')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'إنشاء الخطة' })).toBeDisabled();
+    await page.locator('#reservationAmountValue').fill('50000');
+    await expect(page.getByTestId('reservation-required')).toHaveCount(0);
   });
 });

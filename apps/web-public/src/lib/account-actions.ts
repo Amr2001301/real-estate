@@ -11,6 +11,8 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { authFetch, AuthError, ForbiddenError, refreshSession } from '@/lib/api-auth';
+import { getLocale } from '@/lib/locale';
+import { actionT } from '@/messages/account-actions';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -42,15 +44,16 @@ export type ChangePasswordResult =
  * which omits Content-Type so fetch sets the multipart boundary itself.
  */
 export async function uploadAvatarAction(formData: FormData): Promise<AvatarActionResult> {
+  const t = actionT(await getLocale());
   const file = formData.get('file');
   if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: 'لم يتم اختيار صورة.' };
+    return { ok: false, error: t.noImage };
   }
   if (!AVATAR_TYPES.includes(file.type)) {
-    return { ok: false, error: 'صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP.' };
+    return { ok: false, error: t.badImageType };
   }
   if (file.size > AVATAR_MAX_BYTES) {
-    return { ok: false, error: 'حجم الصورة كبير — الحد الأقصى ٥ ميجابايت.' };
+    return { ok: false, error: t.imageTooBig };
   }
 
   const body = new FormData();
@@ -61,13 +64,13 @@ export async function uploadAvatarAction(formData: FormData): Promise<AvatarActi
       method: 'POST',
       body,
     });
-    if (!user?.avatarUrl) return { ok: false, error: 'تعذّر حفظ الصورة حاليًا. حاول مرة أخرى.' };
+    if (!user?.avatarUrl) return { ok: false, error: t.avatarSaveFail };
     revalidatePath('/account/profile');
     revalidatePath('/account');
     return { ok: true, avatarUrl: user.avatarUrl };
   } catch (e) {
-    if (e instanceof AuthError) return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
-    return { ok: false, error: 'تعذّر رفع الصورة حاليًا. حاول مرة أخرى بعد لحظات.' };
+    if (e instanceof AuthError) return { ok: false, error: t.sessionEnded };
+    return { ok: false, error: t.avatarUploadFail };
   }
 }
 
@@ -84,16 +87,17 @@ export async function changePasswordAction(input: {
   currentPassword: string;
   newPassword: string;
 }): Promise<ChangePasswordResult> {
+  const t = actionT(await getLocale());
   const currentPassword = input.currentPassword ?? '';
   const newPassword = input.newPassword ?? '';
   if (!currentPassword) {
-    return { ok: false, error: 'يرجى إدخال كلمة المرور الحالية.', field: 'currentPassword' };
+    return { ok: false, error: t.needCurrentPassword, field: 'currentPassword' };
   }
   if (newPassword.length < 8) {
-    return { ok: false, error: 'كلمة المرور الجديدة يجب ألا تقل عن ٨ أحرف.', field: 'newPassword' };
+    return { ok: false, error: t.newPasswordMin, field: 'newPassword' };
   }
   if (newPassword === currentPassword) {
-    return { ok: false, error: 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.', field: 'newPassword' };
+    return { ok: false, error: t.newPasswordSame, field: 'newPassword' };
   }
 
   async function post(): Promise<Response> {
@@ -117,11 +121,11 @@ export async function changePasswordAction(input: {
     if (res.status === 401) {
       // Genuine session expiry — refresh once, then retry.
       const refreshed = await refreshSession();
-      if (!refreshed) return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      if (!refreshed) return { ok: false, error: t.sessionEnded };
       res = await post();
     }
   } catch {
-    return { ok: false, error: 'تعذّر الاتصال بالخادم. حاول مرة أخرى بعد لحظات.' };
+    return { ok: false, error: t.offline };
   }
 
   if (res.ok) {
@@ -134,15 +138,15 @@ export async function changePasswordAction(input: {
   const msg = typeof raw === 'string' ? raw : '';
 
   if (msg === 'Current password is incorrect') {
-    return { ok: false, error: 'كلمة المرور الحالية غير صحيحة.', field: 'currentPassword' };
+    return { ok: false, error: t.currentPasswordWrong, field: 'currentPassword' };
   }
   if (msg === 'New password must be different from the current one') {
-    return { ok: false, error: 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.', field: 'newPassword' };
+    return { ok: false, error: t.newPasswordSame, field: 'newPassword' };
   }
   if (msg === 'No password is set for this account') {
-    return { ok: false, error: 'لا توجد كلمة مرور مرتبطة بهذا الحساب.' };
+    return { ok: false, error: t.noPassword };
   }
-  return { ok: false, error: 'تعذّر تغيير كلمة المرور حاليًا. حاول مرة أخرى بعد لحظات.' };
+  return { ok: false, error: t.passwordChangeFail };
 }
 
 /**
@@ -156,16 +160,17 @@ export async function updateProfileAction(input: {
   phone: string;
   initialPhone: string;
 }): Promise<ProfileActionResult> {
+  const t = actionT(await getLocale());
   const fullName = input.fullName?.trim() ?? '';
   const phone = (input.phone ?? '').replace(/[\s-]/g, '');
 
   if (fullName.length < 2) {
-    return { ok: false, error: 'يرجى إدخال الاسم الكامل.', field: 'fullName' };
+    return { ok: false, error: t.fullNameRequired, field: 'fullName' };
   }
   if (!PHONE_RE.test(phone)) {
     return {
       ok: false,
-      error: 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX',
+      error: t.phoneInvalid,
       field: 'phone',
     };
   }
@@ -177,9 +182,9 @@ export async function updateProfileAction(input: {
     });
   } catch (e) {
     if (e instanceof AuthError) {
-      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      return { ok: false, error: t.sessionEnded };
     }
-    return { ok: false, error: 'تعذّر حفظ التغييرات حاليًا. حاول مرة أخرى بعد لحظات.' };
+    return { ok: false, error: t.saveFail };
   }
 
   const phoneChanged = phone !== (input.initialPhone ?? '').replace(/[\s-]/g, '');
@@ -188,16 +193,16 @@ export async function updateProfileAction(input: {
       await authFetch('/auth/me/phone', { method: 'POST', body: JSON.stringify({ phone }) });
     } catch (e) {
       if (e instanceof AuthError) {
-        return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+        return { ok: false, error: t.sessionEnded };
       }
       const msg = (e as Error).message;
       if (msg.includes('409')) {
-        return { ok: false, error: 'هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة.', field: 'phone' };
+        return { ok: false, error: t.phoneTaken, field: 'phone' };
       }
       if (msg.includes('400') || msg.includes('429')) {
-        return { ok: false, error: 'تعذّر إرسال الرمز — تأكد من الرقم أو انتظر دقيقة ثم أعد المحاولة.', field: 'phone' };
+        return { ok: false, error: t.codeSendFailRetry, field: 'phone' };
       }
-      return { ok: false, error: 'تعذّر إرسال رمز التحقق حاليًا. حاول مرة أخرى بعد لحظات.' };
+      return { ok: false, error: t.codeSendFail };
     }
   }
 
@@ -207,18 +212,19 @@ export async function updateProfileAction(input: {
 
 /** The code sent to the new phone → POST /v1/auth/me/phone/confirm. */
 export async function confirmPhoneAction(code: string): Promise<ConfirmPhoneResult> {
+  const t = actionT(await getLocale());
   const clean = (code ?? '').replace(/\s/g, '');
-  if (!/^[0-9]{6}$/.test(clean)) return { ok: false, error: 'الرمز مكوّن من ٦ أرقام.' };
+  if (!/^[0-9]{6}$/.test(clean)) return { ok: false, error: t.codeFormat };
   try {
     await authFetch('/auth/me/phone/confirm', { method: 'POST', body: JSON.stringify({ code: clean }) });
   } catch (e) {
     if (e instanceof AuthError) {
-      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      return { ok: false, error: t.sessionEnded };
     }
     const msg = (e as Error).message;
-    if (e instanceof ForbiddenError) return { ok: false, error: 'محاولات كثيرة — اطلب رمزًا جديدًا.' };
-    if (msg.includes('409')) return { ok: false, error: 'هذا الرقم مستخدم في حساب آخر — تواصل مع الشركة.' };
-    return { ok: false, error: 'الرمز غير صحيح أو انتهت صلاحيته.' };
+    if (e instanceof ForbiddenError) return { ok: false, error: t.tooMany };
+    if (msg.includes('409')) return { ok: false, error: t.phoneTaken };
+    return { ok: false, error: t.codeWrong };
   }
   revalidatePath('/account/profile');
   return { ok: true };
@@ -266,26 +272,27 @@ export type MaintenanceActionResult =
  * the backend — we never trust the client.
  */
 export async function createMaintenanceRequestAction(formData: FormData): Promise<MaintenanceActionResult> {
+  const t = actionT(await getLocale());
   const unitId = ((formData.get('unitId') as string) ?? '').trim();
   const categoryId = ((formData.get('categoryId') as string) ?? '').trim();
   const description = ((formData.get('description') as string) ?? '').trim();
 
-  if (!unitId) return { ok: false, error: 'يرجى اختيار الوحدة.', field: 'unitId' };
-  if (!categoryId) return { ok: false, error: 'يرجى اختيار فئة الصيانة.', field: 'categoryId' };
+  if (!unitId) return { ok: false, error: t.pickUnit, field: 'unitId' };
+  if (!categoryId) return { ok: false, error: t.pickCategory, field: 'categoryId' };
   if (description.length < 5) {
-    return { ok: false, error: 'يرجى كتابة وصف للمشكلة لا يقل عن ٥ أحرف.', field: 'description' };
+    return { ok: false, error: t.descMin, field: 'description' };
   }
 
   const files = formData.getAll('attachments').filter((f): f is File => f instanceof File && f.size > 0);
   if (files.length > ATTACH_MAX_COUNT) {
-    return { ok: false, error: 'يمكن إرفاق ٥ ملفات كحد أقصى.' };
+    return { ok: false, error: t.maxFiles };
   }
   for (const f of files) {
     if (!ATTACH_TYPES.includes(f.type)) {
-      return { ok: false, error: 'صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP أو PDF.' };
+      return { ok: false, error: t.badFileType };
     }
     if (f.size > ATTACH_MAX_BYTES) {
-      return { ok: false, error: `الملف "${f.name}" كبير — الحد الأقصى ٥ ميجابايت.` };
+      return { ok: false, error: t.fileTooBig(f.name) };
     }
   }
 
@@ -298,8 +305,8 @@ export async function createMaintenanceRequestAction(formData: FormData): Promis
   try {
     await authFetch('/me/maintenance-requests', { method: 'POST', body });
   } catch (e) {
-    if (e instanceof AuthError) return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
-    return { ok: false, error: 'تعذّر إرسال الطلب حاليًا. حاول مرة أخرى بعد لحظات.' };
+    if (e instanceof AuthError) return { ok: false, error: t.sessionEnded };
+    return { ok: false, error: t.maintenanceFail };
   }
 
   revalidatePath('/account/maintenance');
@@ -337,6 +344,7 @@ export type VisitActionResult =
 export async function confirmVisitAppointmentAction(
   appointmentId: string,
 ): Promise<VisitActionResult> {
+  const t = actionT(await getLocale());
   try {
     await authFetch(`/me/visit-appointments/${appointmentId}/confirm`, {
       method: 'POST',
@@ -344,9 +352,9 @@ export async function confirmVisitAppointmentAction(
     });
   } catch (e) {
     if (e instanceof AuthError) {
-      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      return { ok: false, error: t.sessionEnded };
     }
-    return { ok: false, error: 'تعذّر تأكيد الزيارة حاليًا. حاول مرة أخرى بعد لحظات.' };
+    return { ok: false, error: t.visitConfirmFail };
   }
   revalidatePath('/account/visits');
   return { ok: true };
@@ -362,6 +370,7 @@ export async function requestVisitRescheduleAction(
   appointmentId: string,
   reason: string,
 ): Promise<VisitActionResult> {
+  const t = actionT(await getLocale());
   const trimmed = (reason ?? '').trim().slice(0, 500);
   try {
     await authFetch(`/me/visit-appointments/${appointmentId}/request-reschedule`, {
@@ -370,11 +379,11 @@ export async function requestVisitRescheduleAction(
     });
   } catch (e) {
     if (e instanceof AuthError) {
-      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+      return { ok: false, error: t.sessionEnded };
     }
     return {
       ok: false,
-      error: 'تعذّر إرسال طلب إعادة الجدولة حاليًا. حاول مرة أخرى بعد لحظات.',
+      error: t.rescheduleFail,
     };
   }
   revalidatePath('/account/visits');

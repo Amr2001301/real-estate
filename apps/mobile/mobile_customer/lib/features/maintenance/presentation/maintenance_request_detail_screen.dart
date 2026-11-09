@@ -11,9 +11,9 @@ import 'maintenance_detail_cubit.dart';
 import 'maintenance_format.dart';
 
 // ─── colour palette ──────────────────────────────────────────────────────────
-const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
-const _navyLight = Color(0xFF243F62);
+Color get _navyDeep => AppPalette.navyDeep;
+Color get _navyCard => AppPalette.navyPanel;
+Color get _navyLight => AppPalette.navyLight;
 
 List<Color> _statusGradient(MaintenanceStatus s) => switch (s) {
       MaintenanceStatus.open || MaintenanceStatus.assigned => [_navyLight, _navyDeep],
@@ -265,7 +265,7 @@ class _SummaryCard extends StatelessWidget {
 Color _lightAccent(MaintenanceStatus s) => switch (s) {
       MaintenanceStatus.inProgress => const Color(0xFF1D4ED8),
       MaintenanceStatus.open || MaintenanceStatus.assigned =>
-        const Color(0xFF9A6F1E),
+        AppPalette.goldInk,
       _ => const Color(0xFF15803D),
     };
 
