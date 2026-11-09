@@ -1096,6 +1096,8 @@ export class ReservationsService {
             },
           },
           client: { select: { fullName: true } },
+          // A reservation made from a lead has no client until it converts.
+          lead: { select: { fullName: true } },
         },
       });
       if (!r) return { reservationId, ...extras };
@@ -1107,7 +1109,7 @@ export class ReservationsService {
         reference: r.reservationNumber ?? '',
         unitCode: r.unit?.code ?? '',
         projectName: project?.ar || project?.en || '',
-        customerName: r.client?.fullName ?? '',
+        customerName: r.client?.fullName ?? r.lead?.fullName ?? '',
         status: r.status,
         ...extras,
       };
