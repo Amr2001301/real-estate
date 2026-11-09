@@ -1,4 +1,5 @@
 import { campaignForUtm } from '../campaigns/campaign-attribution';
+import { nextVisitRequestNumber, withNumberRetry } from '../../common/utils/visit-numbers';
 import { routeArrivedLead } from '../leads/lead-routing';
 import {
   BadRequestException,
@@ -529,8 +530,9 @@ export class RequestsService {
     // dashboard request detail). Mirroring keeps both surfaces accurate
     // without a data backfill.
     const customerMessage = dto.notes?.trim() || null;
-    const created = await this.prisma.visitRequest.create({
+    const created = await withNumberRetry(async () => this.prisma.visitRequest.create({
       data: {
+        requestNumber: await nextVisitRequestNumber(this.prisma),
         userId: actor.userId ?? null,
         leadId,
         projectId: dto.projectId,
@@ -545,7 +547,7 @@ export class RequestsService {
         customerPhone: dto.phone ?? null,
         customerEmail: dto.email ?? null,
       },
-    });
+    }));
 
     // P3 — event A: fan out to admins + sales managers. Safe placeholders
     // only: identity, project/unit context, preferred date/time. No phone,

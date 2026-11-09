@@ -1525,7 +1525,7 @@ model VisitRequest {
   updatedAt       DateTime    @updatedAt
 
   // v2 fields — additive, all nullable, coexist with legacy columns above
-  requestNumber          String?             @unique
+  requestNumber          String?
   customerName           String?
   customerPhone          String?
   customerEmail          String?
@@ -1558,11 +1558,12 @@ model VisitRequest {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@unique([companyId, requestNumber])
 }
 
 model VisitAppointment {
   id                 String            @id @default(uuid()) @db.Uuid
-  visitNumber        String            @unique
+  visitNumber        String
   visitRequestId     String?           @db.Uuid
   visitRequest       VisitRequest?     @relation(fields: [visitRequestId], references: [id])
   leadId             String?           @db.Uuid
@@ -1632,6 +1633,7 @@ model VisitAppointment {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@unique([companyId, visitNumber])
 }
 
 model VisitActivity {

@@ -17,6 +17,7 @@ import {
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { nextVisitAppointmentNumber, nextVisitRequestNumber, withNumberRetry } from '../../common/utils/visit-numbers';
 import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { NotificationsService } from '../notifications/notifications.module';
@@ -365,6 +366,10 @@ export class VisitsService {
   // ─── Schedule Visit ────────────────────────────────────────────────────────
 
   async scheduleVisit(requestId: string, dto: ScheduleVisitDto, user: AuthUser) {
+    return withNumberRetry(() => this.scheduleVisitOnce(requestId, dto, user));
+  }
+
+  private async scheduleVisitOnce(requestId: string, dto: ScheduleVisitDto, user: AuthUser) {
     const req = await this.prisma.visitRequest.findUnique({
       where: { id: requestId },
       include: { lead: { select: { id: true, assignedSalesId: true } } },
@@ -627,7 +632,7 @@ export class VisitsService {
         ? AppointmentStatus.COMPLETED
         : AppointmentStatus.SCHEDULED;
 
-    return this.withUniqueRetry(async () => {
+    return withNumberRetry(async () => {
       const visitNumber = await this.nextVisitNumber();
       const requestNumber = await this.nextRequestNumber();
 
@@ -754,25 +759,8 @@ export class VisitsService {
     });
   }
 
-  private async withUniqueRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
-    let lastError: unknown;
-    for (let i = 0; i < attempts; i++) {
-      try {
-        return await fn();
-      } catch (e) {
-        const isUniqueConflict =
-          e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
-        if (!isUniqueConflict) throw e;
-        lastError = e;
-      }
-    }
-    throw lastError;
-  }
-
   private async nextRequestNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const count = await this.prisma.visitRequest.count();
-    return `VR-${year}-${String(count + 1).padStart(4, '0')}`;
+    return nextVisitRequestNumber(this.prisma);
   }
 
   // ─── Appointments ─────────────────────────────────────────────────────────
@@ -1141,6 +1129,10 @@ export class VisitsService {
   }
 
   async reschedule(id: string, dto: RescheduleVisitDto, user: AuthUser) {
+    return withNumberRetry(() => this.rescheduleOnce(id, dto, user));
+  }
+
+  private async rescheduleOnce(id: string, dto: RescheduleVisitDto, user: AuthUser) {
     const appt = await this.prisma.visitAppointment.findUnique({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
 
@@ -1625,8 +1617,6 @@ export class VisitsService {
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   private async nextVisitNumber(): Promise<string> {
-    const year = new Date().getFullYear();
-    const count = await this.prisma.visitAppointment.count();
-    return `VA-${year}-${String(count + 1).padStart(4, '0')}`;
+    return nextVisitAppointmentNumber(this.prisma);
   }
 }

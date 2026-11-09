@@ -124,6 +124,8 @@ function makePrismaMock() {
       })),
     },
     visitRequest: {
+      // F-078 — the number generator reads this company's existing numbers.
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'visit-1',
         ...data,
@@ -255,6 +257,8 @@ describe('Public website · info/visit request intake', () => {
 
     const visit = mock.visitRequest.create.mock.calls[0][0].data;
     expect(visit).toMatchObject({ projectId: PROJECT_ID, unitId: UNIT_ID, source: 'WEBSITE' });
+    // F-078 — a website visit request carries a company-scoped VR- number.
+    expect(visit.requestNumber).toMatch(/^VR-\d{4}-0001$/);
   });
 
   it('visit-request rejects assignedSalesId / internal workflow fields', async () => {
