@@ -342,3 +342,10 @@ Notification opt-outs are otherwise as designed: an admin broadcast belongs to n
 | F-076 — "all sales" broadcast skipped sales managers | Include them | `ALL_SALES` now means active reps and sales managers; the admin label reads «كل فريق المبيعات» / "All Sales Team (reps and managers)". Test updated (inactive manager excluded) |
 | F-077 — an admin's reservation with no rep is recorded under the admin, so the sales bonus goes to the admin | Keep the behaviour (a small company's admin may be the seller; 11 e2e/security specs also depend on it), make it visible | The reservation form's empty option reads «أنا (بدون مندوب)» instead of «اختر مندوباً», with the hint «إن لم تختر مندوباً يُسجَّل البيع والمكافأة باسمك» |
 | "all customers" broadcast leaves out website accounts that have not bought | By design, unchanged | A separate "registered visitors" audience can be added later if a company asks |
+
+
+## Third master cycle (2026-11-09, empty database)
+
+| # | Sev | Role | Area | Setup | Steps | Expected | Actual | Status |
+|---|---|---|---|---|---|---|---|---|
+| F-078 | High | Admin / guest / broker | Visits (multi-tenant) | 2 companies | Company A books its first direct visit; company B books its first direct visit | Each company counts its own visits (`VA-<year>-0001` in both) | `VisitRequest.requestNumber` and `VisitAppointment.visitNumber` were unique across the whole database but generated per company, so after company A's first visit every direct visit in company B answered 500 (unique constraint). Visit requests from the public site and the broker portal were saved with no number at all | **Fixed**: numbers are max+1 per company with retry, unique per company (`companyId + number`, migration `20261109190000_visit_numbers_per_company`); website and broker requests now get `VR-` numbers. Test `e2e-visit-numbers-per-company.e2e-spec.ts` (fails with 500 on the old code) |

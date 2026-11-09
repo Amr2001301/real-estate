@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { nextVisitRequestNumber, withNumberRetry } from '../../common/utils/visit-numbers';
 import {
   Prisma,
   VisitRequestSource,
@@ -132,8 +133,9 @@ export class BrokerPortalVisitsService {
     // 3) Create the VisitRequest with broker attribution. Status starts as
     //    PENDING (legacy column) + NEW (v2 requestStatus), matching the public
     //    visit-request flow. Admin processes from there; we don't auto-confirm.
-    const visitRequest = await this.prisma.visitRequest.create({
+    const visitRequest = await withNumberRetry(async () => this.prisma.visitRequest.create({
       data: {
+        requestNumber: await nextVisitRequestNumber(this.prisma),
         leadId,
         projectId: dto.projectId,
         unitId: dto.unitId ?? null,
@@ -148,7 +150,7 @@ export class BrokerPortalVisitsService {
         brokerAgentId: scope.brokerAgentUserId,
       },
       include: VISIT_REQUEST_INCLUDE,
-    });
+    }));
 
     // 4) Record the event on the lead's activity timeline so the broker
     //    activity feed (which reads LeadActivity) surfaces the visit request.
