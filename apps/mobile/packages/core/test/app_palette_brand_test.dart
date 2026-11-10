@@ -79,4 +79,57 @@ void main() {
     AppPalette.applyBrand();
     expect(all(), platform);
   });
+
+  group('dark surfaces', () {
+    double spread(Color c) {
+      final v = [c.r, c.g, c.b]..sort();
+      return (v.last - v.first) * 255;
+    }
+
+    double contrast(Color a, Color b) {
+      final x = a.computeLuminance(), y = b.computeLuminance();
+      return (x > y ? x + 0.05 : y + 0.05) / (x > y ? y + 0.05 : x + 0.05);
+    }
+
+    List<Color> surfaces() => [
+          AppPalette.darkCanvas, AppPalette.darkSurface, AppPalette.darkSurfaceSoft, AppPalette.darkHairline,
+        ];
+
+    test("the platform's own tools keep the navy dark surfaces", () {
+      AppPalette.applyBrand();
+      expect(AppPalette.darkCanvas, const Color(0xFF0E1A2E));
+      expect(AppPalette.darkSurface, const Color(0xFF1A2840));
+    });
+
+    test("a company's app gets neutral charcoal, whatever its colour", () {
+      for (final primary in [const Color(0xFF166534), const Color(0xFF1D4ED8), const Color(0xFFB91C1C), null]) {
+        AppPalette.applyBrand(primary: primary, neutralDark: true);
+        for (final c in surfaces()) {
+          expect(spread(c), lessThanOrEqualTo(10), reason: 'dark surface $c took a hue ($primary)');
+        }
+      }
+    });
+
+    test('the company colour stays on its scale, not in the dark surfaces', () {
+      AppPalette.applyBrand(primary: const Color(0xFF166534), neutralDark: true);
+      final green = surfaces();
+      AppPalette.applyBrand(primary: const Color(0xFF1D4ED8), neutralDark: true);
+      expect(surfaces(), green);
+      expect(AppPalette.navy, isNot(green.first));
+    });
+
+    test('text stays readable on every neutral surface', () {
+      AppPalette.applyBrand(neutralDark: true);
+      for (final c in [AppPalette.darkCanvas, AppPalette.darkSurface, AppPalette.darkSurfaceSoft]) {
+        expect(contrast(AppPalette.darkInk, c), greaterThanOrEqualTo(10));
+        expect(contrast(AppPalette.darkInkMuted, c), greaterThanOrEqualTo(4.5));
+      }
+    });
+
+    test('clearing the brand restores the navy', () {
+      AppPalette.applyBrand(neutralDark: true);
+      AppPalette.applyBrand();
+      expect(AppPalette.darkCanvas, const Color(0xFF0E1A2E));
+    });
+  });
 }

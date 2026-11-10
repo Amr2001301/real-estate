@@ -477,7 +477,11 @@ class _CustomerRootState extends State<_CustomerRoot> {
     // The company's colours reach every screen through the palette (the platform's
     // staff app never does this). Applied before the tree below is built; a change
     // (the branding arriving after start-up) rebuilds the tree under a new key.
-    AppPalette.applyBrand(primary: brandTokens?.primaryColor, accent: brandTokens?.accentColor);
+    AppPalette.applyBrand(
+      primary: brandTokens?.primaryColor,
+      accent: brandTokens?.accentColor,
+      neutralDark: true,
+    );
     final brandKey = ValueKey('${brandTokens?.primaryColor}-${brandTokens?.accentColor}');
 
     return BlocListener<SessionCubit, SessionState>(

@@ -93,8 +93,10 @@ abstract final class AppPalette {
   /// A company's colours as the app's two scales (navy = the dark surfaces,
   /// gold = the accent). A light primary is darkened until white text reads on
   /// it; an accent that would vanish on the primary is lightened. With neither
-  /// colour the platform's own palette stays.
-  static void applyBrand({Color? primary, Color? accent}) {
+  /// colour the platform's own palette stays. With [neutralDark] the dark mode
+  /// uses neutral charcoal surfaces for every company instead of the platform's navy.
+  static void applyBrand({Color? primary, Color? accent, bool neutralDark = false}) {
+    _d = neutralDark ? _darkNeutral : _darkNavy;
     Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
     double contrast(Color a, Color b) {
       final x = a.computeLuminance(), y = b.computeLuminance();
@@ -164,10 +166,16 @@ abstract final class AppPalette {
   static const lightInkStrong = Color(0xFF0F1E33);
 
   // ---- Dark surfaces --------------------------------------------------------
-  static const darkCanvas = Color(0xFF0E1A2E);
-  static const darkSurface = Color(0xFF1A2840);
-  static const darkSurfaceSoft = Color(0xFF121D31);
-  static const darkHairline = Color(0xFF33445F);
+  // The platform's own tools keep the navy dark surfaces. A company's customer
+  // app asks for the neutral charcoal ones ([applyBrand] `neutralDark`): the
+  // company's colour stays on headers, buttons and accents, never in the page.
+  static const _darkNavy = [Color(0xFF0E1A2E), Color(0xFF1A2840), Color(0xFF121D31), Color(0xFF33445F)];
+  static const _darkNeutral = [Color(0xFF131416), Color(0xFF1D1F22), Color(0xFF18191C), Color(0xFF33363B)];
+  static List<Color> _d = _darkNavy;
+  static Color get darkCanvas => _d[0];
+  static Color get darkSurface => _d[1];
+  static Color get darkSurfaceSoft => _d[2];
+  static Color get darkHairline => _d[3];
   static const darkInk = Color(0xFFECE6DB);
   static const darkInkMuted = Color(0xFF9AA6B6);
   static const darkInkStrong = Color(0xFFF5F1EA);
