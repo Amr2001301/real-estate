@@ -12,9 +12,9 @@ describe('English formatting', () => {
     expect(currencySymbol('SAR', 'en')).toBe('SAR');
   });
 
-  it('Arabic stays the default', () => {
-    expect(formatPrice('2500000', 'EGP')).toBe('٢٬٥٠٠٬٠٠٠ ج.م');
-    expect(formatArea(120)).toBe('١٢٠ م²');
+  it('Arabic stays the default, with Western digits like the dashboard', () => {
+    expect(formatPrice('2500000', 'EGP')).toBe('2,500,000 ج.م');
+    expect(formatArea(120)).toBe('120 م²');
     expect(cityLabel('riyadh')).toBe('الرياض');
   });
 

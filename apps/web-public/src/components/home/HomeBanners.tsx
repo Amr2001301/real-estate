@@ -37,12 +37,12 @@ export function HomeBanners({ banners, locale }: { banners: PublicBanner[]; loca
   const rtl = locale === 'ar';
 
   return (
-    <Container className="pt-10 sm:pt-12">
+    <Container className="pt-16 sm:pt-20">
       <section
         aria-roledescription="carousel"
         aria-label={m.label}
         data-testid="home-banners"
-        className="relative overflow-hidden rounded-4xl bg-navy shadow-card"
+        className="relative overflow-hidden rounded-[1.75rem] bg-navy"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onFocus={() => setPaused(true)}
@@ -54,9 +54,15 @@ export function HomeBanners({ banners, locale }: { banners: PublicBanner[]; loca
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={b.imageUrl} alt="" className="h-full w-full object-cover" loading={i === 0 ? 'eager' : 'lazy'} />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background: `linear-gradient(to ${rtl ? 'left' : 'right'}, color-mix(in srgb, rgb(var(--c-navy)) 50%, black) 0%, color-mix(in srgb, color-mix(in srgb, rgb(var(--c-navy)) 50%, black) 65%, transparent) 50%, transparent 100%)`,
+                  }}
+                  aria-hidden
+                />
                 {b.title && (
-                  <p className="absolute inset-x-0 bottom-0 p-5 text-lg font-bold text-white sm:p-8 sm:text-2xl lg:text-3xl">{b.title}</p>
+                  <p className="absolute bottom-0 start-0 max-w-xl p-6 font-display text-xl font-semibold leading-[1.55] text-white sm:p-10 sm:text-[1.875rem] lg:text-[2.25rem]">{b.title}</p>
                 )}
               </>
             );

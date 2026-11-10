@@ -53,8 +53,9 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
     setUser(readClientUser());
   }, [pathname]);
 
-  const isHome = pathname === '/';
-  const solid = !isHome || scrolled || open;
+  // Solid on every page: the homepage hero is a panel below the bar now, not
+  // a full-bleed photo the bar floated over. `scrolled` only deepens the shadow.
+  const solid = true;
 
   const accountLabel = user?.fullName?.trim().split(/\s+/)[0] || m.nav.myAccount;
 
@@ -62,7 +63,7 @@ export function Navbar({ locale, branding }: { locale: Locale; branding?: Brandi
     <header
       className={cn(
         'fixed inset-x-0 top-0 z-50 border-b transition-all duration-300 ease-smooth',
-        solid ? 'border-hairline bg-canvas/90 shadow-soft backdrop-blur-md' : 'border-transparent bg-transparent',
+        solid ? cn('border-hairline bg-canvas/90 backdrop-blur-md', scrolled && 'shadow-soft') : 'border-transparent bg-transparent',
       )}
     >
       <Container className="flex h-20 items-center justify-between py-4">

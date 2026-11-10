@@ -2,7 +2,9 @@ import type { Locale } from '@/lib/locale';
 
 /** Formatting helpers for the public website (Arabic by default; English when asked). */
 
-const NUM = new Intl.NumberFormat('ar-SA');
+// Western digits on the Arabic site too, like the dashboard and the apps
+// (owner's choice with the new homepage): «3,450,000 ج.م», not «٣٬٤٥٠٬٠٠٠».
+const NUM = new Intl.NumberFormat('ar-SA-u-nu-latn');
 const NUM_EN = new Intl.NumberFormat('en-US');
 const numFor = (locale: Locale) => (locale === 'en' ? NUM_EN : NUM);
 
