@@ -1,13 +1,14 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import { Container } from '@/components/ui/Container';
-import { Section } from '@/components/ui/Section';
-import { PremiumCard } from '@/components/ui/PremiumCard';
-import { PageHero } from '@/components/layout/PageHero';
+import { ListHero } from '@/components/layout/ListHero';
+import { ArticleCard, type ArticleSummary } from '@/components/content/ArticleCard';
+import { ContactCta } from '@/components/marketing/ContactCta';
+import { fetchBranding } from '@/lib/branding';
+import { formatNumber } from '@/lib/format';
 
 export async function generateMetadata() {
   return pageMeta('articles');
@@ -15,15 +16,6 @@ export async function generateMetadata() {
 
 export const revalidate = 120;
 
-interface ArticleSummary {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  coverUrl: string | null;
-  published: boolean;
-  createdAt: string;
-}
 
 export default async function ArticlesListPage() {
   const tenant = await getResolvedTenant();
@@ -36,54 +28,38 @@ export default async function ArticlesListPage() {
 
   const list = articles.ok ? articles.data : [];
   const isRtl = locale === 'ar';
+  const [lead, ...rest] = list;
+  const branding = await fetchBranding(tenant.slug);
 
   return (
     <>
-      <PageHero
-        eyebrow={isRtl ? 'مقالاتنا' : 'Articles'}
-        title={isRtl ? 'أحدث المقالات' : 'Latest Articles'}
-        subtitle={isRtl ? 'نصائح ومعلومات عقارية مختارة بعناية' : 'Curated real estate insights and tips'}
+      <ListHero
+        homeLabel={isRtl ? 'الرئيسية' : 'Home'}
+        title={isRtl ? 'مقالات ونصائح عقارية' : 'Articles & insights'}
+        subtitle={isRtl ? 'أدلة ومقارنات ونصائح تساعدك تختار وتشتري بثقة.' : 'Guides, comparisons and tips to choose and buy with confidence.'}
+        stats={list.length ? [{ value: formatNumber(list.length, locale), label: isRtl ? 'مقال' : 'articles' }] : []}
       />
-
-      <Section tone="canvas">
+      <section className="relative z-10 -mt-16 pb-6 sm:-mt-20">
         <Container>
-          {list.length === 0 ? (
-            <div className="py-20 text-center text-ink-muted">
+          {!lead ? (
+            <div className="rounded-[1.75rem] border border-hairline bg-surface py-20 text-center text-ink-muted">
               {isRtl ? 'لا توجد مقالات بعد.' : 'No articles yet.'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {list.map((article) => (
-                <Link key={article.id} href={`/articles/${article.slug}`} className="group block">
-                  <PremiumCard className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
-                    {article.coverUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={article.coverUrl}
-                        alt=""
-                        className="w-full h-44 object-cover"
-                      />
-                    )}
-                    <div className="flex flex-col flex-1 p-5 gap-2">
-                      <h2 className="text-base font-bold text-ink-strong group-hover:text-brand-600 transition-colors line-clamp-2">
-                        {article.title}
-                      </h2>
-                      {article.excerpt && (
-                        <p className="text-sm text-ink-muted line-clamp-3 flex-1">{article.excerpt}</p>
-                      )}
-                      <p className="text-xs text-ink-muted mt-auto">
-                        {new Date(article.createdAt).toLocaleDateString(isRtl ? 'ar-EG-u-nu-latn' : 'en-US', {
-                          year: 'numeric', month: 'long', day: 'numeric',
-                        })}
-                      </p>
-                    </div>
-                  </PremiumCard>
-                </Link>
-              ))}
-            </div>
+            <>
+              <ArticleCard article={lead} locale={locale} lead />
+              {rest.length > 0 && (
+                <div className="mt-7 grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+                  {rest.map((a) => (
+                    <ArticleCard key={a.id} article={a} locale={locale} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </Container>
-      </Section>
+      </section>
+      <ContactCta locale={locale} branding={branding} image={lead?.coverUrl ?? null} />
     </>
   );
 }

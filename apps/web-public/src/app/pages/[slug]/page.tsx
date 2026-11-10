@@ -4,9 +4,13 @@ import { getResolvedTenant } from '@/lib/tenant';
 import { getLocale } from '@/lib/locale';
 import { fetchPage } from '@/lib/cms';
 import { Container } from '@/components/ui/Container';
-import { Section } from '@/components/ui/Section';
-import { PremiumCard } from '@/components/ui/PremiumCard';
-import { PageHero } from '@/components/layout/PageHero';
+import { ListHero } from '@/components/layout/ListHero';
+import { RichText } from '@/components/content/RichText';
+import { ContactCta } from '@/components/marketing/ContactCta';
+import { fetchBranding } from '@/lib/branding';
+import { apiFetch } from '@/lib/api-server';
+import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
+import { siteT } from '@/messages/site';
 
 export const revalidate = 60;
 
@@ -41,27 +45,24 @@ export default async function CompanyPage({ params }: Props) {
   if (!res.ok) notFound();
 
   const page = res.data;
-  const paragraphs = page.body
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  const [branding, projects] = await Promise.all([
+    fetchBranding(tenant.slug),
+    apiFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=6', { revalidate: 300, tenantSlug: tenant.slug }),
+  ]);
+  const photo = projects.ok ? projects.data.data.find((p) => p.coverImage?.trim())?.coverImage ?? null : null;
+  const m = siteT(locale);
 
   return (
     <>
-      <PageHero title={page.title} compact />
-      <Section tone="canvas">
+      <ListHero homeLabel={m.unitDetail.breadHome} title={page.title} />
+      <section className="relative z-10 -mt-16 sm:-mt-20">
         <Container>
-          <PremiumCard className="mx-auto max-w-3xl p-8 sm:p-10">
-            <div data-testid="cms-page-body" dir={locale === 'ar' ? 'rtl' : 'ltr'} className="space-y-4 text-[15px] leading-loose text-ink-strong">
-              {paragraphs.map((p, i) => (
-                <p key={i} className="whitespace-pre-line">
-                  {p}
-                </p>
-              ))}
-            </div>
-          </PremiumCard>
+          <article dir={locale === 'ar' ? 'rtl' : 'ltr'} className="mx-auto max-w-4xl rounded-[1.75rem] border border-hairline bg-surface p-7 shadow-[0_30px_70px_-40px_rgba(0,0,0,0.4)] sm:p-14">
+            <RichText body={page.body} />
+          </article>
         </Container>
-      </Section>
+      </section>
+      <ContactCta locale={locale} branding={branding} image={photo} />
     </>
   );
 }
