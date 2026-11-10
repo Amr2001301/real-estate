@@ -22,7 +22,7 @@ import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
 import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
-import { PaymentPlans } from '@/components/detail/PaymentPlans';
+import { PaymentPlans, cashSaving } from '@/components/detail/PaymentPlans';
 import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
 import { DetailBookingCard } from '@/components/detail/DetailBookingCard';
 import { DetailProjectCard } from '@/components/detail/DetailProjectCard';
@@ -123,6 +123,8 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   // instalment plans. No public plan → no down payment shown.
   const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
   const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
+  // A discounted cash plan shows beside the (instalment) listed price.
+  const cash = plans.find((p) => p.isCash && cashSaving(p, Number(unit.price)) > 0) ?? null;
   const monthly = instalment[0]?.options.reduce((a, o) => (a === 0 || o.installmentAmount < a ? o.installmentAmount : a), 0) ?? 0;
   const longestMonths = Math.max(0, ...instalment.flatMap((p) => p.options.map((o) => o.durationMonths)));
   const yearsText = longestMonths >= 12 && longestMonths % 12 === 0
@@ -218,7 +220,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             {plans.length > 0 && (
               <div>
                 <DetailHead eyebrow={x.plansLabel} title={x.plansTitle} />
-                <PaymentPlans plans={plans} locale={locale} />
+                <PaymentPlans plans={plans} listPrice={Number(unit.price)} locale={locale} />
               </div>
             )}
 
@@ -249,11 +251,12 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 eyebrow={unit.code ? `${m.unitInquiry.unitCode} ${unit.code}` : undefined}
                 status={statusLabel}
                 headline={<Price value={unit.price} />}
-                headSub={unit.pricePerMeter ? <><Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}</> : undefined}
+                headSub={cash || unit.pricePerMeter ? <>{cash && `${x.listPrice} (${x.payInstalment})`}{cash && unit.pricePerMeter && ' · '}{unit.pricePerMeter && <><Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}</>}</> : undefined}
                 rows={[
                   down ? { label: `${x.downAmount} (${formatNumber(down.percent, locale)}%)`, value: <Price value={down.amount} />, testId: 'unit-down-payment' } : null,
                   monthly ? { label: x.installmentFrom, value: <><Price value={monthly} /> <span className="text-[13px] font-normal text-ink-muted">/ {x.perMonth}</span></> } : null,
                   longestMonths > 0 ? { label: x.duration, value: yearsText } : null,
+                  cash ? { label: x.cashPrice, value: <span className="text-emerald-700 dark:text-emerald-400"><Price value={cash.netPrice} /></span> } : null,
                   handover ? { label: x.handover, value: handover } : null,
                 ]}
                 visitHref={visitHref}
