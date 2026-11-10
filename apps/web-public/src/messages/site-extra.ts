@@ -275,7 +275,7 @@ const EXTRA = {
       nextTitle: 'What happens after you send?',
       next: [
         { t: 'We receive your request', d: 'It reaches the sales team right away.' },
-        { t: 'An advisor calls you', d: 'During working hours, on the number you left.' },
+        { t: 'An advisor calls you', d: 'Within office hours, on the number you left.' },
         { t: 'We arrange a visit', d: 'At a time that suits you, on site or online.' },
       ],
       kindInfo: 'Enquiry', kindVisit: 'Visit request',
