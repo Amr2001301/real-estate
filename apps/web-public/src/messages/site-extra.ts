@@ -68,7 +68,7 @@ const EXTRA = {
       { question: 'هل يمكنني مقارنة أكثر من وحدة؟', answer: 'نعم، يمكنك إضافة حتى ٣ وحدات إلى المقارنة لاستعراض المواصفات والأسعار جنبًا إلى جنب قبل اتخاذ قرارك.' },
       { question: 'كيف أتواصل مع فريق المبيعات؟', answer: 'من صفحة «تواصل معنا» أو عبر بطاقة التواصل في هذه الصفحة، وسنعاود التواصل معك في أقرب وقت.' },
     ],
-    mobilePromo: { badge: 'تطبيق ديفورا العقاري', titleA: 'حمّل تطبيق ديفورا', titleB: 'واكتشف منزلك القادم بسهولة', body: 'تصفّح المشاريع والوحدات، قارن الخيارات، واحجز زيارتك مباشرة من التطبيق — كل ما تحتاجه في مكان واحد.', scan: 'امسح الرمز لتحميل التطبيق', alt: 'واجهة تطبيق ديفورا العقاري على الهاتف' },
+    mobilePromo: { badge: 'تطبيق {app}', titleA: 'حمّل تطبيق {app}', titleB: 'واكتشف منزلك القادم بسهولة', body: 'تصفّح المشاريع والوحدات، قارن الخيارات، واحجز زيارتك مباشرة من التطبيق — كل ما تحتاجه في مكان واحد.', scan: 'امسح الرمز لتحميل التطبيق', alt: 'تطبيق {app} على الهاتف' },
     amenities: { eyebrow: 'المرافق والخدمات', title: 'ما يميّز هذا المشروع' },
     inquiry: {
       whatsappMessage: (project: string) => `مرحبًا، أنا مهتم بمشروع ${project}. أرجو تزويدي بمزيد من التفاصيل.`,
@@ -162,7 +162,7 @@ const EXTRA = {
       { question: 'Can I compare more than one unit?', answer: 'Yes, you can add up to 3 units to the comparison to see specifications and prices side by side before you decide.' },
       { question: 'How do I reach the sales team?', answer: 'From the “Contact us” page or the contact card on this page, and we will get back to you as soon as possible.' },
     ],
-    mobilePromo: { badge: 'The Devora real-estate app', titleA: 'Get the Devora app', titleB: 'and find your next home with ease', body: 'Browse projects and units, compare options and book your visit straight from the app — everything you need in one place.', scan: 'Scan the code to get the app', alt: 'The Devora real-estate app on a phone' },
+    mobilePromo: { badge: 'The {app} app', titleA: 'Get the {app} app', titleB: 'and find your next home with ease', body: 'Browse projects and units, compare options and book your visit straight from the app — everything you need in one place.', scan: 'Scan the code to get the app', alt: 'The {app} app on a phone' },
     amenities: { eyebrow: 'Amenities and services', title: 'What sets this project apart' },
     inquiry: {
       whatsappMessage: (project: string) => `Hello, I am interested in the ${project} project. Please send me more details.`,

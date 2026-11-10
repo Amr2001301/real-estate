@@ -4,7 +4,8 @@ import { Apple, Play, ArrowLeft } from 'lucide-react';
 import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { detectMobileOS, storeLinks } from '@/lib/app-links';
-import { fetchBranding } from '@/lib/branding';
+import { companyName, fetchBranding } from '@/lib/branding';
+import { SITE } from '@/lib/seo';
 import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
@@ -32,7 +33,7 @@ export default async function AppLandingPage() {
       <Container className="mx-auto max-w-2xl text-center">
         <Badge tone="gold">تجربة رقمية متكاملة</Badge>
         <h1 className="mt-5 text-3xl font-bold leading-snug text-ink-strong sm:text-4xl">
-          ابدأ رحلتك العقارية مع ديفورا
+          ابدأ رحلتك العقارية مع {companyName(branding, 'ar', SITE.name)}
         </h1>
         <p className="mt-4 text-base leading-relaxed text-ink-muted sm:text-lg">
           تصفّح المشاريع والوحدات، قارن الخيارات المناسبة، واحجز زيارتك — تجربة واضحة وسريعة من البحث حتى القرار.

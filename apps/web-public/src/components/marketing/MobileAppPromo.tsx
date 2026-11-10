@@ -4,10 +4,47 @@ import { Container } from '@/components/ui/Container';
 import { Reveal } from '@/components/motion/Reveal';
 import { QrCode } from './QrCode';
 import { extraT } from '@/messages/site-extra';
+import { CompanyMark } from '@/components/layout/CompanyMark';
+import { cn } from '@/lib/cn';
+import type { BrandingData } from '@/lib/branding';
 import type { Locale } from '@/lib/locale';
 
-export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
-  const t = extraT(locale).mobilePromo;
+/**
+ * A phone drawn in CSS with the company's own mark: the old picture was the
+ * platform's app (its logo and screens), which a company's site must not show.
+ */
+function PhoneMock({ branding, name, className }: { branding?: BrandingData; name: string; className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'relative aspect-[9/19] rounded-[2.4rem] border-[7px] border-neutral-900 bg-navy shadow-[0_28px_62px_-18px_rgba(0,0,0,0.45)]',
+        className,
+      )}
+    >
+      <span className="absolute left-1/2 top-2 h-4 w-16 -translate-x-1/2 rounded-full bg-neutral-900" />
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
+        <CompanyMark branding={branding} name={name} size={64} className="rounded-2xl" />
+        <span className="text-[15px] font-bold leading-snug text-white">{name}</span>
+        <span className="h-1.5 w-12 rounded-full bg-gold-400/80" />
+      </div>
+    </div>
+  );
+}
+
+/** The company's app promo. `appName` is its app's name (or the company's). */
+export function MobileAppPromo({
+  locale = 'ar',
+  appName,
+  branding,
+}: {
+  locale?: Locale;
+  appName: string;
+  branding?: BrandingData;
+}) {
+  const raw = extraT(locale).mobilePromo;
+  const fill = (s: string) => s.replaceAll('{app}', appName);
+  const t = { ...raw, badge: fill(raw.badge), titleA: fill(raw.titleA), alt: fill(raw.alt) };
   const appUrl = siteUrl(routes.app);
 
   return (
@@ -15,12 +52,12 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
       <Container>
         <div
           dir="rtl"
-          className="relative overflow-visible rounded-[28px] border border-[#e8ddc8] bg-[#fffaf2] shadow-[0_10px_52px_-18px_rgba(15,30,51,0.16)]"
+          className="relative overflow-visible rounded-[28px] border border-[#e8ddc8] bg-[#fffaf2] shadow-[0_10px_52px_-18px_rgba(15,30,51,0.16)] dark:border-hairline dark:bg-surface dark:shadow-none"
         >
           {/* Warm abstract background */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
+            className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px] dark:opacity-25"
           >
             <span className="absolute -left-28 bottom-[-110px] h-[300px] w-[520px] rounded-full bg-[#f3e7d2]/45 blur-sm" />
             <span className="absolute left-[7%] top-1/2 h-[260px] w-[300px] -translate-y-1/2 rounded-full bg-gold-200/30 blur-3xl" />
@@ -33,7 +70,7 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
             {/* Text content - right side */}
             <div className="relative z-30 flex w-[46%] flex-col items-end justify-center py-10 pl-8 pr-12 text-right xl:pr-14">
               <Reveal>
-                <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[13px] font-semibold text-[#9a7a35]">
+                <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[13px] font-semibold text-[#9a7a35] dark:bg-gold-400/15 dark:text-gold-300">
                   {t.badge}
                 </span>
 
@@ -57,11 +94,10 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
 
             {/* Phone hero - center */}
             <div className="relative z-20 w-[34%] overflow-visible">
-              <img
-                src="/mobile-transparent.png"
-                alt={t.alt}
-                className="absolute bottom-[-8px] left-1/2 h-[465px] w-auto -translate-x-1/2 object-contain drop-shadow-[0_28px_62px_rgba(15,30,51,0.24)] xl:h-[490px]"
-                style={{ background: 'transparent' }}
+              <PhoneMock
+                branding={branding}
+                name={appName}
+                className="absolute bottom-[-8px] left-1/2 w-[215px] -translate-x-1/2 xl:w-[232px]"
               />
             </div>
 
@@ -76,7 +112,7 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
                   />
                 </div>
 
-                <p className="mt-3 max-w-[120px] text-[13px] font-semibold leading-snug text-ink-muted">
+                <p className="mt-3 max-w-[120px] text-[13px] font-semibold leading-snug text-[#6B6256]">
                   {t.scan}
                 </p>
               </div>
@@ -86,7 +122,7 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
           {/* Mobile layout */}
           <div className="relative flex flex-col items-center px-6 pb-6 pt-8 text-center lg:hidden">
             <Reveal>
-              <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[12px] font-semibold text-[#9a7a35]">
+              <span className="inline-flex rounded-full bg-gold-100/80 px-4 py-1.5 text-[12px] font-semibold text-[#9a7a35] dark:bg-gold-400/15 dark:text-gold-300">
                 {t.badge}
               </span>
 
@@ -113,12 +149,7 @@ export function MobileAppPromo({ locale = 'ar' }: { locale?: Locale }) {
                 className="absolute bottom-2 left-1/2 h-36 w-56 -translate-x-1/2 rounded-full bg-gold-100/40 blur-2xl"
               />
 
-              <img
-                src="/mobile-transparent.png"
-                alt={t.alt}
-                className="relative z-10 w-[230px] object-contain drop-shadow-[0_20px_45px_rgba(15,30,51,0.22)] sm:w-[260px]"
-                style={{ background: 'transparent' }}
-              />
+              <PhoneMock branding={branding} name={appName} className="relative z-10 w-[200px] sm:w-[220px]" />
             </div>
           </div>
         </div>

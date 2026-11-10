@@ -14,7 +14,7 @@ export function WhyChooseUs({ locale }: { locale: Locale }) {
   return (
     <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       <div className="mx-auto max-w-2xl text-center">
-        <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">
+        <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 dark:bg-gold-400/15 dark:text-gold-300 sm:text-base">
           {m.eyebrow}
         </span>
         <h2 className="mt-4 text-3xl font-bold text-ink-strong lg:text-4xl">{m.title}</h2>
