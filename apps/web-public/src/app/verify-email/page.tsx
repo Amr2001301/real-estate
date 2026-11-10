@@ -19,6 +19,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
 
   return (
     <AuthShell
+      formHeading
       title={m.auth.verifyEmail.title}
       subtitle={m.auth.verifyEmail.subtitle}
       switchPrompt={m.auth.verifyEmail.loginPrompt}

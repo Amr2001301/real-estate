@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Phone, KeyRound, ArrowRight } from 'lucide-react';
 import { otpRequestAction, otpVerifyAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
@@ -118,8 +117,8 @@ export function OtpAuthForm({ mode, locale = 'ar' }: { mode: Mode; locale?: Loca
   }
 
   return (
-    <PremiumCard className="p-6 sm:p-8">
-      <h2 className="hidden text-2xl text-ink-strong lg:block">
+    <div className="">
+      <h2 className="font-display text-[1.9rem] font-semibold leading-tight text-ink-strong">
         {isRegister ? t.common.createAccount : t.common.signIn}
       </h2>
 
@@ -227,6 +226,6 @@ export function OtpAuthForm({ mode, locale = 'ar' }: { mode: Mode; locale?: Loca
           </div>
         </form>
       )}
-    </PremiumCard>
+    </div>
   );
 }

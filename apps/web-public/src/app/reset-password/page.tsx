@@ -19,6 +19,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
 
   return (
     <AuthShell
+      formHeading
       title={m.auth.resetPassword.title}
       subtitle={m.auth.resetPassword.subtitle}
       switchPrompt={m.auth.resetPassword.backPrompt}

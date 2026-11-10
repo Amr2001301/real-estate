@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resetPasswordAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
@@ -23,12 +22,12 @@ export function ResetPasswordCard({ token, locale = 'ar' }: { token: string; loc
 
   if (!token) {
     return (
-      <PremiumCard className="p-6 sm:p-8">
+      <div className="">
         <InlineNotice tone="error">
           {t.reset.invalidBefore}{' '}
           <a href={routes.forgotPassword} className="underline underline-offset-4">{t.reset.forgotLink}</a>.
         </InlineNotice>
-      </PremiumCard>
+      </div>
     );
   }
 
@@ -64,7 +63,7 @@ export function ResetPasswordCard({ token, locale = 'ar' }: { token: string; loc
   }
 
   return (
-    <PremiumCard className="p-6 sm:p-8">
+    <div className="">
       <form onSubmit={onSubmit} noValidate className="space-y-5">
         <Field label={t.reset.newPassword} required>
           <Input
@@ -97,6 +96,6 @@ export function ResetPasswordCard({ token, locale = 'ar' }: { token: string; loc
           {pending ? t.reset.saving : t.reset.submit}
         </Button>
       </form>
-    </PremiumCard>
+    </div>
   );
 }

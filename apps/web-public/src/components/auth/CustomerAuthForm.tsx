@@ -7,7 +7,6 @@ import { LogIn, UserPlus, MailCheck } from 'lucide-react';
 import { customerLoginAction, customerRegisterAction } from '@/lib/auth-actions';
 import { trackEvent } from '@/lib/analytics';
 import { routes } from '@/lib/routes';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
@@ -139,9 +138,9 @@ export function CustomerAuthForm({
 
   if (step === 'check-email') {
     return (
-      <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
+      <div className="flex flex-col items-center gap-4 text-center">
         <MailCheck className="h-14 w-14 text-gold-500" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">{t.register.doneTitle}</h2>
+        <h2 className="font-display text-[1.6rem] font-semibold text-ink-strong">{t.register.doneTitle}</h2>
         <p className="text-sm text-ink-muted leading-relaxed">
           {t.register.doneBefore}{' '}
           <span className="font-medium text-ink-strong" dir="ltr">{registeredEmail}</span>.
@@ -160,13 +159,13 @@ export function CustomerAuthForm({
             {t.register.resendFromProfile}
           </a>.
         </p>
-      </PremiumCard>
+      </div>
     );
   }
 
   return (
-    <PremiumCard className="p-6 sm:p-8">
-      <h2 className="hidden text-2xl text-ink-strong lg:block">
+    <div className="">
+      <h2 className="font-display text-[1.9rem] font-semibold leading-tight text-ink-strong">
         {isRegister ? t.common.createAccount : t.common.signIn}
       </h2>
 
@@ -272,6 +271,6 @@ export function CustomerAuthForm({
           </div>
         )}
       </form>
-    </PremiumCard>
+    </div>
   );
 }

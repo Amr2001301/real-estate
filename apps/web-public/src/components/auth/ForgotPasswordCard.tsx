@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { forgotPasswordAction } from '@/lib/auth-actions';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
@@ -44,16 +43,16 @@ export function ForgotPasswordCard({ locale = 'ar' }: { locale?: Locale }) {
 
   if (sent) {
     return (
-      <PremiumCard className="p-6 sm:p-8">
+      <div className="">
         <InlineNotice tone="success">
           {t.forgot.sent}
         </InlineNotice>
-      </PremiumCard>
+      </div>
     );
   }
 
   return (
-    <PremiumCard className="p-6 sm:p-8">
+    <div className="">
       <form onSubmit={onSubmit} noValidate className="space-y-5">
         <Field label={t.common.emailLabel} required>
           <Input
@@ -75,6 +74,6 @@ export function ForgotPasswordCard({ locale = 'ar' }: { locale?: Locale }) {
           {pending ? t.forgot.sending : t.forgot.submit}
         </Button>
       </form>
-    </PremiumCard>
+    </div>
   );
 }
