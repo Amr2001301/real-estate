@@ -350,3 +350,18 @@ Notification opt-outs are otherwise as designed: an admin broadcast belongs to n
 |---|---|---|---|---|---|---|---|---|
 | F-078 | High | Admin / guest / broker | Visits (multi-tenant) | 2 companies | Company A books its first direct visit; company B books its first direct visit | Each company counts its own visits (`VA-<year>-0001` in both) | `VisitRequest.requestNumber` and `VisitAppointment.visitNumber` were unique across the whole database but generated per company, so after company A's first visit every direct visit in company B answered 500 (unique constraint). Visit requests from the public site and the broker portal were saved with no number at all | **Fixed**: numbers are max+1 per company with retry, unique per company (`companyId + number`, migration `20261109190000_visit_numbers_per_company`); website and broker requests now get `VR-` numbers. Test `e2e-visit-numbers-per-company.e2e-spec.ts` (fails with 500 on the old code) |
 | F-079 | Low | Sales / customer | Reservation notifications | Reservation made from a lead (no client yet) | Manager approves; rep is assigned | The message names the customer | `customerName` came only from the reservation's client, which is empty until the reservation converts, so «الحجز … للوحدة … () مسنداً إليك» had empty brackets | **Fixed**: the name falls back to the lead's. Test `reservation-notification-name.spec.ts` (fails without the fix). Checked and not bugs: a second approval of an approved reservation sends nothing; `/contracts/me/contracts` is the real path; `PUT /settings/:key` is the documented object-only legacy route (PATCH takes any value) |
+
+### Third master cycle — result (2026-11-09 → 2026-11-10)
+
+Run from an empty database, all 21 steps of QA_PLAN.md §6a, including the two never-tried items. Two findings (F-078 High, F-079 Low), both fixed and merged (#374, #375). Everything else behaved as designed:
+
+- **Customer signs the booking himself:** link → code by SMS → sign; a wrong code is refused, a second signature is refused (409); staff see the signed state and name.
+- **Discount above the company cap:** refused with 403 without `pricing:approve-discount`, goes through with it; each discount is in the audit log (`discount-given` / `discount-approved`).
+- **Collection:** customer signs in by OTP, uploads receipts, one proof rejected with a reason and re-uploaded, approved; schedule rows turn PAID.
+- **Late fee:** 2% once after 7 days' grace, only on a contract with the clause, only from the signing day; a waived fee goes CANCELLED.
+- **Maintenance:** blocked until the unit is handed over; approve → assign → supervisor in progress/resolved → customer rating → admin close; closed cannot reopen.
+- **Broker:** firm created and activated, agent user, project grant (2%), lead approved, a rep assigned, reservation, contract signed → commission 108,000 (2% of 5,400,000); commission/payout pages only for agents with `canViewCommissions`; payout approve → process → mark paid.
+- **Cancellation:** retained 20,000, refund 80,000 paid in two parts (a third is refused), unit released after approval, the paid commission becomes a 108,000 clawback collected in two parts (an over-collection is refused).
+- **Reconciliation (SQL vs dashboard):** verified deposits 528,472.22 = total collected; refunds 80,000; net collected 448,472.22; collected towards the price 328,472.22 (signed contract only); overdue 130,416.66 = 3 × 43,472.22.
+
+Notes (not bugs): login throttling (5/min) applies to staff sign-in even with throttling disabled; the late-fee sweep has no API and runs from the daily cron.
