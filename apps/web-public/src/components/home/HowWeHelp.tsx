@@ -12,7 +12,7 @@ export function HowWeHelp({ locale }: { locale: Locale }) {
   return (
     <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       <div className="mx-auto max-w-2xl text-center">
-        <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">
+        <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 dark:bg-gold-400/15 dark:text-gold-300 sm:text-base">
           {m.eyebrow}
         </span>
         <h2 className="mt-3 text-2xl font-bold leading-tight text-ink-strong sm:text-3xl lg:text-[2.35rem]">{m.title}</h2>

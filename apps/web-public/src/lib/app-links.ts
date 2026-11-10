@@ -29,6 +29,17 @@ export function detectMobileOS(userAgent: string): MobileOS {
 }
 
 /**
+ * The company's own app, once it is in a store (MA4): its name and links. Null
+ * when it has none — a company's site must not advertise the platform's app.
+ */
+export function companyApp(
+  app?: { name?: string; playStoreUrl?: string; appStoreUrl?: string } | null,
+): { name: string | null; appStore: string | null; googlePlay: string | null } | null {
+  if (!app || !(app.playStoreUrl || app.appStoreUrl)) return null;
+  return { name: app.name?.trim() || null, appStore: app.appStoreUrl ?? null, googlePlay: app.playStoreUrl ?? null };
+}
+
+/**
  * The store links to show: the company's own app when it is published,
  * otherwise the shared app's (null until those exist).
  */

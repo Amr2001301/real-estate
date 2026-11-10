@@ -11,6 +11,7 @@ module.exports = {
         tsconfig: {
           module: 'CommonJS',
           moduleResolution: 'node',
+          jsx: 'react-jsx',
           baseUrl: '.',
           paths: { '@/*': ['src/*'] },
         },

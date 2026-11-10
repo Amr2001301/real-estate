@@ -18,6 +18,9 @@ import { HowWeHelp } from '@/components/home/HowWeHelp';
 import { HomeContact } from '@/components/home/HomeContact';
 import { LeadCtaBand } from '@/components/home/LeadCtaBand';
 import { MobileAppPromo } from '@/components/marketing/MobileAppPromo';
+import { companyApp } from '@/lib/app-links';
+import { companyName, fetchBranding } from '@/lib/branding';
+import { SITE } from '@/lib/seo';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { organizationLd } from '@/lib/jsonld';
 
@@ -41,7 +44,7 @@ export default async function HomePage() {
       </Container>
     );
   }
-  const [projects, units, cities, banners] = await Promise.all([
+  const [projects, units, cities, banners, branding] = await Promise.all([
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
@@ -62,7 +65,10 @@ export default async function HomePage() {
     }),
     // The company's own banners (dashboard → المحتوى → البانرات).
     fetchBanners(tenant.slug, locale),
+    // The company's own name and app (a company's site never promotes the platform's).
+    fetchBranding(tenant.slug),
   ]);
+  const ownApp = companyApp(branding?.mobileApp);
 
   // Use the first featured project's cover as the hero backdrop when available.
   const heroImage = projects.ok
@@ -88,7 +94,13 @@ export default async function HomePage() {
       <HomeBanner locale={locale} />
       <FeaturedUnits result={units} locale={locale} />
       <WhyChooseUs locale={locale} />
-      <MobileAppPromo locale={locale} />
+      {ownApp ? (
+        <MobileAppPromo
+          locale={locale}
+          appName={ownApp.name ?? companyName(branding, locale, SITE.name)}
+          branding={branding ?? undefined}
+        />
+      ) : null}
       <HowWeHelp locale={locale} />
       <HomeContact locale={locale} />
       <LeadCtaBand locale={locale} />

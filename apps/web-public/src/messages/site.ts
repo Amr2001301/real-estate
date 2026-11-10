@@ -144,7 +144,7 @@ const SITE_MESSAGES = {
         cta2: 'تصفح الوحدات',
       },
       why: {
-        eyebrow: 'لماذا ديفورا',
+        eyebrow: 'لماذا نحن',
         title: 'تجربة عقارية تمنحك الثقة',
         sub: 'اختيارات منتقاة، مقارنة واضحة، ومتابعة تساعدك قبل القرار.',
         values: [
@@ -534,7 +534,7 @@ const SITE_MESSAGES = {
     chat: {
       confirmClear: 'سيتم إخفاء هذه المحادثة من هذا الجهاز فقط. هل تريد المتابعة؟',
       whatsapp: 'تواصل عبر واتساب',
-      assistantName: 'مساعد ديفورا الذكي',
+      assistantName: 'المساعد الذكي',
       panelTitle: 'المساعد العقاري',
       panelSub: 'مساعد ذكي مجاني للبحث والاستفسار',
       closeChat: 'إغلاق المحادثة',
@@ -670,7 +670,7 @@ const SITE_MESSAGES = {
       },
       profile: {
         title: 'الملف الشخصي',
-        description: 'بياناتك ومعلومات حسابك في ديفورا.',
+        description: 'بياناتك ومعلومات حسابك.',
         roles: { CLIENT: 'عميل', CUSTOMER: 'عميل / مالك وحدة' },
         errorTitle: 'تعذّر تحميل بياناتك حاليًا',
         errorMsg: 'يرجى المحاولة مرة أخرى بعد لحظات.',
@@ -1104,7 +1104,7 @@ const SITE_MESSAGES = {
         cta2: 'Browse Units',
       },
       why: {
-        eyebrow: 'Why Devora',
+        eyebrow: 'Why us',
         title: 'A Real Estate Experience That Earns Your Trust',
         sub: 'Curated choices, clear comparisons, and support before you decide.',
         values: [
@@ -1485,7 +1485,7 @@ const SITE_MESSAGES = {
     chat: {
       confirmClear: 'This chat will be hidden on this device only. Continue?',
       whatsapp: 'Chat on WhatsApp',
-      assistantName: 'Devora AI assistant',
+      assistantName: 'AI assistant',
       panelTitle: 'Property assistant',
       panelSub: 'A free smart assistant for search and questions',
       closeChat: 'Close chat',
@@ -1619,7 +1619,7 @@ const SITE_MESSAGES = {
       },
       profile: {
         title: 'Profile',
-        description: 'Your data and account information in Devora.',
+        description: 'Your data and account information.',
         roles: { CLIENT: 'Client', CUSTOMER: 'Client / Unit Owner' },
         errorTitle: 'Could not load your data',
         errorMsg: 'Please try again in a moment.',

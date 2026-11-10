@@ -24,8 +24,8 @@ test.describe('public site: theme switch and chat launcher', () => {
     await context.addCookies([{ name: 'site-locale', value: 'en', url: baseURL ?? 'http://localhost:3002' }]);
     const page = await context.newPage();
     await page.goto('/contact', { waitUntil: 'networkidle' });
-    await expect(page.getByRole('button', { name: 'Devora AI assistant' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'مساعد ديفورا الذكي' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'AI assistant' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'المساعد الذكي' })).toHaveCount(0);
     await context.close();
   });
 });
