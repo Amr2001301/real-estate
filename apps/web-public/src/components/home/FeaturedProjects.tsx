@@ -15,6 +15,7 @@ import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { SectionHead } from './SectionHead';
 import { DEEP_BG } from './Hero';
+import { BuildingArt } from '@/components/ui/BuildingArt';
 
 /** A project's services in the reader's language (at most `max`). */
 function services(p: PublicProjectListItem, locale: Locale, max: number): string[] {
@@ -91,7 +92,6 @@ function LeadProject({ project, locale }: { project: PublicProjectListItem; loca
       <Link
         href={routes.project(project.id) as Route}
         className="group relative isolate block min-h-[500px] overflow-hidden rounded-[1.75rem] text-white outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 lg:h-full lg:min-h-[620px]"
-        style={hasPhoto ? undefined : { background: DEEP_BG }}
       >
         {hasPhoto ? (
           <>
@@ -99,16 +99,7 @@ function LeadProject({ project, locale }: { project: PublicProjectListItem; loca
             <span className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(0,0,0,.82)_0%,rgba(0,0,0,.45)_38%,rgba(0,0,0,0)_68%)]" aria-hidden />
           </>
         ) : (
-          // No photo yet: the company's deep colour with a fine architectural grid
-          // and a large outline mark — reads as intentional, not as an empty box.
-          <span className="absolute inset-0 -z-10" aria-hidden>
-            <span
-              className="absolute inset-0 opacity-[0.10]"
-              style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.9) 1px, transparent 1px)', backgroundSize: '48px 48px' }}
-            />
-            <span className="absolute inset-0" style={{ background: 'radial-gradient(70% 60% at 80% 10%, rgb(var(--c-gold-400) / 0.22), transparent 60%)' }} />
-            <Building2 className="absolute end-10 top-16 h-40 w-40 text-white/[0.12]" strokeWidth={0.8} />
-          </span>
+          <BuildingArt label={name} className="absolute inset-0 -z-10" />
         )}
         <div className="absolute start-5 top-5 flex flex-wrap gap-2">
           {project.featured && <span className="rounded-full bg-gold-400 px-3 py-1.5 text-xs font-semibold text-[#1B1206]">{t.featured}</span>}

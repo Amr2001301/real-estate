@@ -52,23 +52,18 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   }
 
   return (
-    <div data-testid="unit-specs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <dl data-testid="unit-specs" className="grid grid-cols-2 gap-x-8 sm:grid-cols-3">
       {specs.map(({ icon: Icon, label, value }) => (
-        <div
-          key={label}
-          className="flex items-center gap-3.5 rounded-2xl border border-hairline bg-surface px-4 py-4 shadow-soft"
-        >
-          {/* Gold gradient icon — horizontal anchor; height = content, not grid-stretch */}
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
-            <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
+        <div key={label} className="flex items-start gap-3.5 border-t border-hairline py-5">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold-400/40 text-gold-600 dark:text-gold-300">
+            <Icon className="h-[18px] w-[18px]" aria-hidden />
           </span>
-
           <div className="min-w-0">
-            <div className="text-[11px] font-medium text-ink-muted/70">{label}</div>
-            <div className="mt-0.5 truncate text-sm font-bold text-ink-strong">{value}</div>
+            <dt className="text-[13px] text-ink-muted">{label}</dt>
+            <dd className="mt-1 truncate font-display text-[1.05rem] font-semibold text-ink-strong">{value}</dd>
           </div>
         </div>
       ))}
-    </div>
+    </dl>
   );
 }

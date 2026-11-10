@@ -93,6 +93,27 @@ export interface PublicUnit {
   updatedAt: string;
 }
 
+/** A public payment plan of a unit (GET /public/units/:id/payment-plans). */
+export interface PublicPaymentPlan {
+  id: string;
+  name: string;
+  isCash: boolean;
+  totalPrice?: number;
+  discountAmount?: number;
+  netPrice: number;
+  reservationAmount: number;
+  downPaymentAmount: number;
+  downPaymentPercent: number;
+  options: { durationMonths: number; installmentsCount: number; installmentAmount: number; totalPayable: number }[];
+}
+
+/** A project's payment terms (GET /public/projects/:id/payment-plans). */
+export interface PublicProjectPlans {
+  plansCount: number;
+  minDownPaymentPercent: number | null;
+  maxMonths: number | null;
+}
+
 export interface Paginated<T> {
   data: T[];
   meta: { page: number; pageSize: number; total: number; totalPages: number };

@@ -6,6 +6,7 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { extraT } from '@/messages/site-extra';
 import type { Locale } from '@/lib/locale';
+import { DetailHead } from '@/components/detail/DetailStats';
 
 // OSM/Leaflet requires window — load client-only.
 const OsmMap = dynamic(
@@ -31,21 +32,9 @@ export function ProjectLocation({ city, lat, lng, locale = 'ar' }: ProjectLocati
 
   return (
     <div>
-      {/* Section heading */}
-      <div>
-        <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
-        <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
-          {t.eyebrow}
-        </span>
-        <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
-          {t.title}
-        </h2>
-        {city && (
-          <p className="mt-2 text-sm leading-relaxed text-ink-muted">{t.locatedIn(city)}</p>
-        )}
-      </div>
+      <DetailHead eyebrow={t.eyebrow} title={t.title} />
 
-      <PremiumCard className="mt-8 overflow-hidden">
+      <PremiumCard className="overflow-hidden">
         {coords ? (
           <OsmMap lat={lat!} lng={lng!} height="340px" className="sm:!h-[440px]" />
         ) : (
