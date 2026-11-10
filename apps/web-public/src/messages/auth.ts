@@ -33,6 +33,8 @@ const AUTH = {
         'إشعارات بأحدث العروض والإتاحات',
       ],
       privacyNote: 'بياناتك محمية ولن تُشارك مع أي جهة خارجية.',
+      pitchTitle: 'حسابك، كل اختياراتك في مكان واحد',
+      pitchSub: 'تابع طلباتك وزياراتك ووحداتك المفضّلة، وابقَ على تواصل مع مستشارك.',
     },
     login: {
       useEmail: 'الدخول بالبريد الإلكتروني وكلمة المرور',
@@ -161,6 +163,8 @@ const AUTH = {
         'Get notified about the latest offers and availability',
       ],
       privacyNote: 'Your data is protected and is never shared with third parties.',
+      pitchTitle: 'Your account, every choice in one place',
+      pitchSub: 'Follow your requests, visits and favourite units, and stay in touch with your advisor.',
     },
     login: {
       useEmail: 'Sign in with email and password',

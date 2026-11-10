@@ -1,114 +1,117 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { CalendarCheck, Heart, Headset, BellRing, ShieldCheck } from 'lucide-react';
+import { Check, ShieldCheck } from 'lucide-react';
 import { SITE } from '@/lib/seo';
+import { apiFetch } from '@/lib/api-server';
+import { getResolvedTenant } from '@/lib/tenant';
+import { companyName, fetchBranding } from '@/lib/branding';
+import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
-import { Reveal } from '@/components/motion/Reveal';
+import { DEEP_BG } from '@/components/home/Hero';
 import { authT } from '@/messages/auth';
 import type { Locale } from '@/lib/locale';
 
 interface AuthShellProps {
-  eyebrow?: string;
+  /** The pitch on the photo side (sign in / sign up), or the form's heading with `formHeading`. */
   title: string;
   subtitle: string;
   switchPrompt: string;
   switchLabel: string;
   switchHref: string;
+  /** For pages whose form has no heading of its own (forgot / reset / verify): the title goes over the form. */
+  formHeading?: boolean;
   locale?: Locale;
   children: React.ReactNode;
 }
 
-// Faint dot texture so the navy panel reads with depth, not as a flat block.
-const DOTS = {
-  backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-  backgroundSize: '22px 22px',
-} as const;
+/** A photo of one of the company's projects, else the site's own picture. */
+async function panelPhoto(slug: string): Promise<string> {
+  const res = await apiFetch<Paginated<PublicProjectListItem>>(`/public/projects?pageSize=6`, { revalidate: 300, tenantSlug: slug });
+  const cover = res.ok ? res.data.data.find((p) => p.coverImage?.trim())?.coverImage : null;
+  return cover || '/images/home/why.jpg';
+}
 
-// Generic account benefits — true for any logged-in customer, no invented claims.
-const BENEFIT_ICONS = [CalendarCheck, Heart, Headset, BellRing] as const;
-
-/** Premium split layout: a value-prop navy panel + a clean auth card. */
-export function AuthShell({
-  eyebrow,
+/**
+ * The sign-in / sign-up / password pages: one rounded panel — a photo of the
+ * company's own project on its deep colour with its name, the pitch and what
+ * an account gives (hidden on a phone), and the form on the other side.
+ */
+export async function AuthShell({
   title,
   subtitle,
   switchPrompt,
   switchLabel,
   switchHref,
+  formHeading = false,
   locale = 'ar',
   children,
 }: AuthShellProps) {
   const t = authT(locale).shell;
-  const brand = eyebrow ?? (locale === 'en' ? 'Devora' : SITE.name);
-  const benefits = t.bullets.map((text, i) => ({ icon: BENEFIT_ICONS[i]!, text }));
-  return (
-    <section className="bg-canvas pb-16 pt-28 sm:pt-32">
-      <Container>
-        <div className="grid items-stretch gap-8 lg:grid-cols-2">
-          {/* Cinematic value-prop panel */}
-          <div className="relative hidden overflow-hidden rounded-4xl shadow-card lg:block">
-            <div
-              className="absolute inset-0"
-              style={{ background: 'radial-gradient(130% 130% at 80% 0%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 55%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
-              aria-hidden
-            />
-            <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />
-            <span className="pointer-events-none absolute -left-24 top-1/4 h-80 w-80 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />
+  const tenant = await getResolvedTenant();
+  const [branding, photo] = tenant ? await Promise.all([fetchBranding(tenant.slug), panelPhoto(tenant.slug)]) : [null, '/images/home/why.jpg'];
+  const brand = companyName(branding, locale, SITE.name);
+  const pitchTitle = formHeading ? t.pitchTitle : title;
+  const pitchSub = formHeading ? t.pitchSub : subtitle;
 
-            <div className="relative flex h-full flex-col justify-between gap-12 p-10 xl:p-12">
-              {/* Brand mark */}
-              <span className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-gold-200">
-                <span className="h-2 w-2 rounded-full bg-gold-400" aria-hidden />
+  return (
+    <section className="bg-canvas pb-16 pt-24 sm:pt-28">
+      <Container>
+        <div className="flex overflow-hidden rounded-[2rem] border border-hairline bg-surface shadow-[0_30px_80px_-44px_rgba(0,0,0,0.45)] lg:min-h-[680px]">
+          {/* The company's side */}
+          <div className="relative isolate hidden flex-1 overflow-hidden text-white lg:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+            <span className="absolute inset-0 -z-10 opacity-[0.92]" style={{ background: `linear-gradient(160deg, ${DEEP_BG} 0%, color-mix(in srgb, rgb(var(--c-navy)) 40%, transparent) 100%)` }} aria-hidden />
+            <span className="absolute inset-0 -z-10" style={{ background: 'radial-gradient(70% 60% at 100% 0%, rgb(var(--c-gold-400) / 0.22), transparent 60%)' }} aria-hidden />
+
+            <div className="flex h-full flex-col justify-between p-11 xl:p-14">
+              <span className="inline-flex items-center gap-2.5 font-display text-lg font-semibold text-white">
+                <span className="h-2.5 w-2.5 rounded-full bg-gold-400" aria-hidden />
                 {brand}
               </span>
 
-              <Reveal>
-                <div>
-                  <h2 className="text-display-2 text-white">{title}</h2>
-                  <span aria-hidden className="mt-5 block h-1 w-16 rounded-full bg-gold-400" />
-                  <p className="mt-5 max-w-md leading-relaxed text-white/75">{subtitle}</p>
-
-                  <ul className="mt-8 space-y-3.5">
-                    {benefits.map(({ icon: Icon, text }) => (
-                      <li key={text} className="flex items-center gap-3 text-[15px] text-white/85">
-                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08] text-gold-200 ring-1 ring-white/10">
-                          <Icon className="h-[18px] w-[18px]" aria-hidden />
-                        </span>
-                        {text}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Reveal>
-
-              <div className="flex items-center gap-2 border-t border-white/10 pt-5 text-xs text-white/55">
-                <ShieldCheck className="h-4 w-4 text-gold-200" aria-hidden />
-                {t.privacyNote}
+              <div className="max-w-md">
+                <h2 className="font-display text-[2.4rem] font-semibold leading-[1.3] text-white xl:text-[2.75rem]">{pitchTitle}</h2>
+                <p className="mt-4 text-[17px] leading-[1.9] text-white/75">{pitchSub}</p>
+                <ul className="mt-8 space-y-3.5">
+                  {t.bullets.map((text) => (
+                    <li key={text} className="flex items-center gap-3 text-[15px] text-white/90">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-400 text-[#1B1206]">
+                        <Check className="h-4 w-4" aria-hidden />
+                      </span>
+                      {text}
+                    </li>
+                  ))}
+                </ul>
               </div>
+
+              <p className="flex items-center gap-2 text-[13px] text-white/60">
+                <ShieldCheck className="h-4 w-4 text-gold-300" aria-hidden />
+                {t.privacyNote}
+              </p>
             </div>
           </div>
 
-          {/* Form card */}
-          <div className="flex flex-col justify-center">
-            <div className="mx-auto w-full max-w-md">
-              {/* Mobile heading (panel is hidden on small screens) */}
-              <div className="mb-8 lg:hidden">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-gold-500">
-                  <span className="h-2 w-2 rounded-full bg-gold-400" aria-hidden />
-                  {eyebrow}
-                </span>
-                <h1 className="mt-3 text-display-2 text-ink-strong">{title}</h1>
-                <p className="mt-3 text-ink-muted">{subtitle}</p>
-              </div>
+          {/* The form */}
+          <div className="flex w-full flex-col justify-center px-6 py-10 sm:px-12 sm:py-14 lg:w-[min(560px,48%)] lg:shrink-0">
+            <div className="mx-auto w-full max-w-[420px]">
+              <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-gold-700 dark:text-gold-300 lg:hidden">
+                <span className="h-2 w-2 rounded-full bg-gold-400" aria-hidden />
+                {brand}
+              </span>
+              {formHeading ? (
+                <div className="mb-7 mt-3 lg:mt-0">
+                  <h1 className="font-display text-[1.9rem] font-semibold leading-tight text-ink-strong">{title}</h1>
+                  <p className="mt-2 text-[15px] leading-[1.8] text-ink-muted">{subtitle}</p>
+                </div>
+              ) : (
+                <h1 className="sr-only">{title}</h1>
+              )}
+              <div className={formHeading ? '' : 'mt-3 lg:mt-0'}>{children}</div>
 
-              {children}
-
-              <p className="mt-8 text-center text-sm text-ink-muted">
+              <p className="mt-9 border-t border-hairline pt-6 text-center text-[15px] text-ink-muted">
                 {switchPrompt}{' '}
-                <Link
-                  href={switchHref as Route}
-                  className="font-semibold text-ink-strong underline-offset-4 hover:text-gold-600 hover:underline"
-                >
+                <Link href={switchHref as Route} className="font-semibold text-navy underline-offset-4 hover:underline dark:text-gold-300">
                   {switchLabel}
                 </Link>
               </p>

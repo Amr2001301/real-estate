@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, XCircle, Loader2, RefreshCw } from 'lucide-react';
 import { verifyEmailAction, resendVerificationAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { InlineNotice } from '@/components/states/InlineNotice';
 import { authT } from '@/messages/auth';
@@ -50,46 +49,46 @@ export function VerifyEmailCard({ token, locale = 'ar' }: { token: string; local
 
   if (state === 'loading') {
     return (
-      <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
+      <div className="flex flex-col items-center gap-4 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-gold-500" aria-hidden />
         <p className="text-sm text-ink-muted">{t.verify.checking}</p>
-      </PremiumCard>
+      </div>
     );
   }
 
   if (state === 'success') {
     return (
-      <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
+      <div className="flex flex-col items-center gap-4 text-center">
         <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">{t.verify.doneTitle}</h2>
+        <h2 className="font-display text-[1.6rem] font-semibold text-ink-strong">{t.verify.doneTitle}</h2>
         <p className="text-sm text-ink-muted">{t.verify.doneBody}</p>
         <ButtonLink href={routes.account} size="lg" className="mt-2 w-full">
           {t.common.goToAccountShort}
         </ButtonLink>
-      </PremiumCard>
+      </div>
     );
   }
 
   if (state === 'already') {
     return (
-      <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
+      <div className="flex flex-col items-center gap-4 text-center">
         <CheckCircle2 className="h-12 w-12 text-success" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">{t.verify.alreadyTitle}</h2>
+        <h2 className="font-display text-[1.6rem] font-semibold text-ink-strong">{t.verify.alreadyTitle}</h2>
         <p className="text-sm text-ink-muted">{t.verify.alreadyBody}</p>
         <ButtonLink href={routes.account} size="lg" className="mt-2 w-full">
           {t.common.goToAccountShort}
         </ButtonLink>
-      </PremiumCard>
+      </div>
     );
   }
 
   // invalid or error
   const isInvalid = state === 'invalid';
   return (
-    <PremiumCard className="flex flex-col gap-5 p-6 sm:p-8">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-col items-center gap-3 text-center">
         <XCircle className="h-12 w-12 text-error" aria-hidden />
-        <h2 className="text-xl font-bold text-ink-strong">
+        <h2 className="font-display text-[1.6rem] font-semibold text-ink-strong">
           {isInvalid ? t.verify.invalidTitle : t.verify.errorTitle}
         </h2>
         <p className="text-sm text-ink-muted">
@@ -129,6 +128,6 @@ export function VerifyEmailCard({ token, locale = 'ar' }: { token: string; local
           </p>
         </>
       )}
-    </PremiumCard>
+    </div>
   );
 }

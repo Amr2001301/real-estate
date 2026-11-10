@@ -20,6 +20,7 @@ export default async function ForgotPasswordPage() {
 
   return (
     <AuthShell
+      formHeading
       title={m.auth.forgotPassword.title}
       subtitle={m.auth.forgotPassword.subtitle}
       switchPrompt={m.auth.forgotPassword.backPrompt}
