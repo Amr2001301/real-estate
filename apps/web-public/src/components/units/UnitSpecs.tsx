@@ -47,7 +47,7 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
     const value =
       due.getTime() <= Date.now()
         ? s.deliveryNow
-        : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(due);
+        : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(due);
     specs.push({ icon: CalendarCheck, label: s.delivery, value });
   }
 

@@ -18,7 +18,7 @@ export async function generateMetadata() {
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('ar-u-nu-latn', { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '—';
   }

@@ -30,10 +30,10 @@ const ACCOUNT = {
     installmentStatus: { PENDING: 'قيد الاستحقاق', PAID: 'مدفوع', OVERDUE: 'متأخر' } as Record<string, string>,
     profile: {
       hidePassword: 'إخفاء كلمة المرور', showPassword: 'إظهار كلمة المرور',
-      badType: 'صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP.', tooBig: 'حجم الصورة كبير — الحد الأقصى ٥ ميجابايت.',
+      badType: 'صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP.', tooBig: 'حجم الصورة كبير — الحد الأقصى 5 ميجابايت.',
       fullNameRequired: 'يرجى إدخال الاسم الكامل.', phoneInvalid: 'يرجى إدخال رقم جوال صحيح بصيغة دولية، مثال: +2010XXXXXXXX',
-      currentRequired: 'يرجى إدخال كلمة المرور الحالية.', newMin: 'كلمة المرور الجديدة يجب ألا تقل عن ٨ أحرف.', mismatch: 'كلمتا المرور غير متطابقتين.',
-      changePhoto: 'تغيير الصورة', uploading: 'جارٍ الرفع...', photoUpdated: 'تم تحديث الصورة', photoHint: 'PNG أو JPG أو WEBP، بحد أقصى ٥ ميجابايت.',
+      currentRequired: 'يرجى إدخال كلمة المرور الحالية.', newMin: 'كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.', mismatch: 'كلمتا المرور غير متطابقتين.',
+      changePhoto: 'تغيير الصورة', uploading: 'جارٍ الرفع...', photoUpdated: 'تم تحديث الصورة', photoHint: 'PNG أو JPG أو WEBP، بحد أقصى 5 ميجابايت.',
       fullName: 'الاسم الكامل', fullNameExample: 'مثال: محمد الأحمد', phone: 'رقم الجوال',
       codeSentBefore: 'أرسلنا رمز تحقق إلى الرقم الجديد', codeSentMiddle: 'يبقى رقمك الحالي', codeSentAfter: 'حتى تُدخل الرمز.',
       codeLabel: 'رمز التحقق', confirming: 'جارٍ التأكيد...', confirmPhone: 'تأكيد الرقم', phoneChanged: 'تم تغيير رقم الجوال بنجاح',
@@ -55,11 +55,11 @@ const ACCOUNT = {
     maintenanceForm: {
       bytes: (n: number) => `${n} بايت`, kb: (n: number) => `${n} كيلوبايت`, mb: (n: string) => `${n} ميجابايت`,
       maxFiles: (n: number) => `يمكن إرفاق ${n} ملفات كحد أقصى.`, badType: (name: string) => `نوع الملف غير مدعوم: ${name}. المسموح: PNG وJPG وWEBP وPDF.`,
-      tooBig: (name: string) => `الملف كبير جدًا: ${name}. الحد الأقصى ٥ ميجابايت.`,
-      pickUnit: 'يرجى اختيار الوحدة.', pickCategory: 'يرجى اختيار فئة الصيانة.', descMin: 'يرجى كتابة وصف للمشكلة لا يقل عن ٥ أحرف.',
+      tooBig: (name: string) => `الملف كبير جدًا: ${name}. الحد الأقصى 5 ميجابايت.`,
+      pickUnit: 'يرجى اختيار الوحدة.', pickCategory: 'يرجى اختيار فئة الصيانة.', descMin: 'يرجى كتابة وصف للمشكلة لا يقل عن 5 أحرف.',
       unit: 'الوحدة', chooseUnit: 'اختر الوحدة', category: 'فئة الصيانة', chooseCategory: 'اختر الفئة', description: 'وصف المشكلة',
       descriptionHint: 'اشرح المشكلة بالتفصيل ليتمكن فريقنا من مساعدتك...', attachments: 'المرفقات (اختياري)',
-      drop: 'اسحب الصور أو الملفات هنا أو تصفح من جهازك', support: (n: number) => `يدعم PNG, JPG, PDF حتى ٥ ميجابايت — حتى ${n} ملفات`,
+      drop: 'اسحب الصور أو الملفات هنا أو تصفح من جهازك', support: (n: number) => `يدعم PNG, JPG, PDF حتى 5 ميجابايت — حتى ${n} ملفات`,
       remove: (name: string) => `إزالة ${name}`, sending: 'جارٍ الإرسال...', submit: 'إرسال الطلب',
     },
     resolution: {

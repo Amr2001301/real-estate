@@ -1,13 +1,13 @@
 'use client';
 
-import { cn } from '@/lib/cn';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp, Paintbrush, CalendarCheck } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Input';
+import { cn } from '@/lib/cn';
+import { FieldSelect } from '@/components/ui/FieldSelect';
 import { PRICE_RANGES, AREA_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
+import { cityLabel } from '@/lib/format';
 import type { Locale } from '@/lib/locale';
 import { extraT } from '@/messages/site-extra';
 import { siteT } from '@/messages/site';
@@ -30,191 +30,294 @@ export interface UnitsFilterValues {
   sort: string;
 }
 
-/** Compact select: a leading icon (RTL start) plus the shared chevron, no stacked label. */
-function CompactSelect({
-  icon: Icon,
+type Key = keyof UnitsFilterValues;
+const MORE_KEYS: Key[] = ['finishing', 'delivery', 'area', 'bathrooms', 'status', 'city'];
+
+/** The units list URL for a set of filters (page 1). */
+export function unitsHref(v: UnitsFilterValues): string {
+  const params = new URLSearchParams();
+  if (v.projectId) params.set('projectId', v.projectId);
+  if (v.city) params.set('city', v.city);
+  if (v.usage) params.set('usage', v.usage);
+  if (v.type) params.set('type', v.type);
+  if (v.bedrooms) params.set('bedrooms', v.bedrooms);
+  if (v.bathrooms) params.set('bathrooms', v.bathrooms);
+  if (v.finishing) params.set('finishing', v.finishing);
+  if (v.delivery) params.set('delivery', v.delivery);
+  if (v.status) params.set('status', v.status);
+  const range = PRICE_RANGES.find((r) => r.value === v.price);
+  if (range?.min) params.set('priceMin', range.min);
+  if (range?.max) params.set('priceMax', range.max);
+  const arange = AREA_RANGES.find((r) => r.value === v.area);
+  if (arange?.min) params.set('areaMin', arange.min);
+  if (arange?.max) params.set('areaMax', arange.max);
+  if (v.sort) params.set('sort', v.sort);
+  const qs = params.toString();
+  return qs ? `${routes.units}?${qs}` : routes.units;
+}
+
+function Pills({
   label,
   value,
+  options,
   onChange,
-  children,
 }: {
-  icon: typeof Building2;
   label: string;
   value: string;
+  options: Array<{ value: string; label: string }>;
   onChange: (v: string) => void;
-  children: React.ReactNode;
 }) {
   return (
-    <div className="relative">
-      <Icon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
-      <Select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={label}
-        className="h-11 pr-9 pl-8 text-sm"
-      >
-        {children}
-      </Select>
-      <ChevronDown className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
-    </div>
+    <fieldset>
+      <legend className="mb-2 text-[13px] font-medium text-ink-muted">{label}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => {
+          const on = value === o.value;
+          return (
+            <button
+              key={o.value || 'any'}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(on ? '' : o.value)}
+              className={cn(
+                'rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors',
+                on ? 'border-ink-strong bg-ink-strong text-canvas' : 'border-hairline text-ink hover:border-ink-muted',
+              )}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
+/**
+ * The units filters: project, type, bedrooms and price always in view; the
+ * rest behind «فلاتر أكثر» (with a count of what is set there); the active
+ * filters as removable chips under the bar.
+ */
 export function UnitsFilterBar({
   initial,
   types,
+  projects = [],
+  cities = [],
   locale,
 }: {
   initial: UnitsFilterValues;
   /** The company's unit types; the fixed list when the API gave none. */
   types?: Array<{ value: string; label: string }>;
+  projects?: Array<{ value: string; label: string }>;
+  cities?: string[];
   locale: Locale;
 }) {
   const router = useRouter();
   const fx = extraT(locale).filters;
-  const allTypes = { value: '', label: fx.allTypes };
-  const typeOptions = types?.length ? [allTypes, ...types] : [allTypes, ...TYPES.slice(1)];
   const t = siteT(locale).unitsFilter;
+  const l = siteT(locale).listing;
   const statuses = siteT(locale).home.search.statuses;
-  const sortOptions = siteT(locale).sortOptions.unit;
   const finishingLabels = siteT(locale).unitSpecs.finishingLabels;
+  const typeOptions = types?.length ? types : TYPES.slice(1);
 
-  const [type, setType] = useState(initial.type);
-  const [bedrooms, setBedrooms] = useState(initial.bedrooms);
-  const [bathrooms, setBathrooms] = useState(initial.bathrooms);
-  const [price, setPrice] = useState(initial.price);
-  const [area, setArea] = useState(initial.area);
-  const [finishing, setFinishing] = useState(initial.finishing ?? '');
-  const [delivery, setDelivery] = useState(initial.delivery ?? '');
-  const [status, setStatus] = useState(initial.status);
-  const [sort, setSort] = useState(initial.sort);
+  const [v, setV] = useState<UnitsFilterValues>(initial);
+  const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const set = (k: Key, value: string) => setV((cur) => ({ ...cur, [k]: value }));
+  const go = (next: Partial<UnitsFilterValues>) => router.push(unitsHref({ ...v, ...next }) as never);
 
-  function pushWith(next: Partial<UnitsFilterValues>) {
-    const v = { type, bedrooms, bathrooms, price, area, finishing, delivery, status, sort, ...next };
-    const params = new URLSearchParams();
-    if (initial.projectId) params.set('projectId', initial.projectId);
-    if (initial.city) params.set('city', initial.city);
-    if (initial.usage) params.set('usage', initial.usage);
-    if (v.type) params.set('type', v.type);
-    if (v.bedrooms) params.set('bedrooms', v.bedrooms);
-    if (v.bathrooms) params.set('bathrooms', v.bathrooms);
-    if (v.finishing) params.set('finishing', v.finishing);
-    if (v.delivery) params.set('delivery', v.delivery);
-    if (v.status) params.set('status', v.status);
-    const range = PRICE_RANGES.find((r) => r.value === v.price);
-    if (range?.min) params.set('priceMin', range.min);
-    if (range?.max) params.set('priceMax', range.max);
-    const arange = AREA_RANGES.find((r) => r.value === v.area);
-    if (arange?.min) params.set('areaMin', arange.min);
-    if (arange?.max) params.set('areaMax', arange.max);
-    if (v.sort) params.set('sort', v.sort);
-    const qs = params.toString();
-    router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
-  }
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onDown = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [open]);
 
-  function reset() {
-    setType('');
-    setBedrooms('');
-    setBathrooms('');
-    setPrice('');
-    setArea('');
-    setFinishing('');
-    setDelivery('');
-    setStatus('');
-    setSort('');
-    const params = new URLSearchParams();
-    if (initial.projectId) params.set('projectId', initial.projectId);
-    if (initial.city) params.set('city', initial.city);
-    const qs = params.toString();
-    router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
-  }
+  const roomLabel = (r: string) => fx.rooms[r as keyof typeof fx.rooms] ?? r;
+  const priceLabel = (r: string) => fx.price[r as keyof typeof fx.price] ?? r;
+  const areaLabel = (r: string) => fx.area[r as keyof typeof fx.area] ?? r;
+  const finishingOptions = Object.entries(finishingLabels).map(([value, label]) => ({ value, label }));
+  const deliveryOptions = t.deliveryOptions.filter((o) => o.value);
+  const areaOptions = AREA_RANGES.filter((r) => r.value).map((r) => ({ value: r.value, label: areaLabel(r.value) }));
+  const roomOptions = ROOMS.filter((r) => r.value).map((r) => ({ value: r.value, label: roomLabel(r.value) }));
+  const statusOptions = statuses.filter((s) => s.value);
+  const moreCount = MORE_KEYS.filter((k) => initial[k]).length;
 
-  const activeCount = [type, bedrooms, bathrooms, price, area, finishing, delivery, status, sort].filter(Boolean).length;
+  // The chips: every filter in the URL, labelled the way the visitor chose it.
+  const chips: Array<{ key: Key; label: string }> = [];
+  const add = (key: Key, label: string | undefined) => initial[key] && label && chips.push({ key, label });
+  add('projectId', projects.find((p) => p.value === initial.projectId)?.label ?? t.withinProject);
+  add('type', typeOptions.find((x) => x.value === initial.type)?.label ?? initial.type);
+  add('bedrooms', `${roomLabel(initial.bedrooms)} ${t.roomSuffix}`);
+  add('price', priceLabel(initial.price));
+  add('finishing', finishingLabels[initial.finishing ?? '']);
+  add('delivery', deliveryOptions.find((o) => o.value === initial.delivery)?.label);
+  add('area', areaLabel(initial.area));
+  add('bathrooms', `${roomLabel(initial.bathrooms)} ${t.bathroomSuffix}`);
+  add('status', statusOptions.find((s) => s.value === initial.status)?.label);
+  add('city', locale === 'en' ? cityLabel(initial.city, locale) : initial.city);
+  add('usage', siteT(locale).home.search.tabs.find((x) => x.usage === initial.usage)?.label);
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        pushWith({});
-      }}
-      className="rounded-2xl border border-hairline bg-surface p-3 shadow-card sm:p-4"
-    >
-      {initial.projectId && (
-        <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-medium text-gold-600">
-          <Layers className="h-3.5 w-3.5" aria-hidden />
-          {t.withinProject}
-        </div>
-      )}
+    <div>
+      <div className="relative" ref={panelRef}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            go({});
+          }}
+          className="grid grid-cols-2 gap-2.5 rounded-[22px] border border-hairline bg-surface p-3 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.3)] sm:p-4 lg:flex lg:flex-row"
+        >
+          {projects.length > 0 && (
+            <FieldSelect label={l.project} value={v.projectId} onChange={(x) => { set('projectId', x); go({ projectId: x }); }} className="lg:flex-1">
+              <option value="">{l.allProjects}</option>
+              {projects.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </FieldSelect>
+          )}
+          <FieldSelect label={t.propertyType} value={v.type} onChange={(x) => { set('type', x); go({ type: x }); }} className="lg:flex-1">
+            <option value="">{fx.allTypes}</option>
+            {typeOptions.map((tp) => (
+              <option key={tp.value} value={tp.value}>{tp.label}</option>
+            ))}
+          </FieldSelect>
+          <FieldSelect label={t.bedrooms} value={v.bedrooms} onChange={(x) => { set('bedrooms', x); go({ bedrooms: x }); }} className="lg:flex-1">
+            <option value="">{t.allRooms}</option>
+            {roomOptions.map((r) => (
+              <option key={r.value} value={r.value}>{`${r.label} ${t.roomSuffix}`}</option>
+            ))}
+          </FieldSelect>
+          <FieldSelect label={t.priceRange} value={v.price} onChange={(x) => { set('price', x); go({ price: x }); }} className="lg:flex-1">
+            {PRICE_RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{priceLabel(r.value)}</option>
+            ))}
+          </FieldSelect>
+          <div className="col-span-2 flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="inline-flex h-[52px] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-hairline bg-surface px-4 text-[15px] font-medium text-ink-strong transition-colors hover:border-ink-muted"
+            >
+              <SlidersHorizontal className="h-[18px] w-[18px]" aria-hidden />
+              {l.moreFilters}
+              {moreCount > 0 && (
+                <span className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-navy px-1.5 text-xs text-white">{moreCount}</span>
+              )}
+            </button>
+            <button type="submit" className="inline-flex h-[52px] flex-1 items-center justify-center gap-2 rounded-2xl bg-navy px-6 text-[15px] font-semibold text-white transition-colors hover:bg-navy-700">
+              <Search className="h-[18px] w-[18px]" aria-hidden />
+              {t.search}
+            </button>
+          </div>
+        </form>
 
-      <div className={cn('grid grid-cols-2 gap-2.5 sm:grid-cols-3', locale === 'en' ? 'lg:grid-cols-5' : 'lg:grid-cols-[repeat(9,minmax(0,1fr))_auto]')}>
-        <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
-          {typeOptions.map((tp) => (
-            <option key={tp.value} value={tp.value}>{tp.label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={BedDouble} label={t.bedrooms} value={bedrooms} onChange={setBedrooms}>
-          {ROOMS.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.value ? `${fx.rooms[r.value as keyof typeof fx.rooms] ?? r.label} ${t.roomSuffix}` : t.allRooms}
-            </option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={Bath} label={t.bathrooms} value={bathrooms} onChange={setBathrooms}>
-          {ROOMS.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.value ? `${fx.rooms[r.value as keyof typeof fx.rooms] ?? r.label} ${t.bathroomSuffix}` : t.allBathrooms}
-            </option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={Wallet} label={t.priceRange} value={price} onChange={setPrice}>
-          {PRICE_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>{fx.price[r.value as keyof typeof fx.price] ?? r.label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={Ruler} label={t.area} value={area} onChange={setArea}>
-          {AREA_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>{fx.area[r.value as keyof typeof fx.area] ?? r.label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={Paintbrush} label={t.finishing} value={finishing} onChange={setFinishing}>
-          <option value="">{t.allFinishing}</option>
-          {Object.entries(finishingLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={CalendarCheck} label={t.delivery} value={delivery} onChange={setDelivery}>
-          {t.deliveryOptions.map((o) => (
-            <option key={o.value || 'any'} value={o.value}>{o.label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={Tag} label={t.unitStatus} value={status} onChange={setStatus}>
-          {statuses.map((s) => (
-            <option key={s.value || 'all'} value={s.value}>{s.label}</option>
-          ))}
-        </CompactSelect>
-        <CompactSelect icon={ArrowDownUp} label={t.sortBy} value={sort} onChange={setSort}>
-          {sortOptions.map((o) => (
-            <option key={o.value || 'default'} value={o.value}>{o.label}</option>
-          ))}
-        </CompactSelect>
-        <Button type="submit" size="md" className="col-span-2 h-11 w-full sm:col-span-3 lg:col-auto lg:w-auto lg:px-6">
-          <Search className="h-5 w-5" aria-hidden />
-          {t.search}
-        </Button>
+        {open && (
+          <div
+            role="dialog"
+            aria-label={l.moreFilters}
+            className="absolute inset-x-0 top-[calc(100%+10px)] z-30 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)] sm:inset-x-auto sm:end-0 sm:w-[560px]"
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Pills label={t.finishing} value={v.finishing ?? ''} options={finishingOptions} onChange={(x) => set('finishing', x)} />
+              <Pills label={t.delivery} value={v.delivery ?? ''} options={deliveryOptions} onChange={(x) => set('delivery', x)} />
+              <Pills label={t.area} value={v.area} options={areaOptions} onChange={(x) => set('area', x)} />
+              <Pills label={t.bathrooms} value={v.bathrooms} options={roomOptions} onChange={(x) => set('bathrooms', x)} />
+              <Pills label={t.unitStatus} value={v.status} options={statusOptions} onChange={(x) => set('status', x)} />
+              {cities.length > 0 && (
+                <FieldSelect label={siteT(locale).projectsFilter.cityLabel} value={v.city} onChange={(x) => set('city', x)} className="self-end">
+                  <option value="">{siteT(locale).projectsFilter.allCities}</option>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
+                  ))}
+                </FieldSelect>
+              )}
+            </div>
+            <div className="mt-5 flex items-center justify-between border-t border-hairline pt-4">
+              <button
+                type="button"
+                onClick={() => setV((cur) => ({ ...cur, finishing: '', delivery: '', area: '', bathrooms: '', status: '', city: '' }))}
+                className="text-sm font-medium text-ink-muted underline-offset-4 hover:text-ink-strong hover:underline"
+              >
+                {t.clearAll}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  go({});
+                }}
+                className="inline-flex h-11 items-center rounded-xl bg-navy px-5 text-sm font-semibold text-white hover:bg-navy-700"
+              >
+                {l.showResults}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {activeCount > 0 && (
-        <div className="mt-2.5 flex justify-end text-sm">
+      {chips.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {chips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => router.push(unitsHref({ ...initial, [c.key]: '' }) as never)}
+              aria-label={l.remove(c.label)}
+              className="inline-flex items-center gap-2 rounded-full bg-navy/[0.08] px-3.5 py-2 text-[13px] font-medium text-navy transition-colors hover:bg-navy/15 dark:bg-navy/30 dark:text-gold-200"
+            >
+              {c.label}
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ))}
           <button
             type="button"
-            onClick={reset}
-            className="inline-flex items-center gap-1 text-ink-muted transition-colors hover:text-ink-strong"
+            onClick={() => router.push(unitsHref({ projectId: '', city: '', type: '', usage: '', bedrooms: '', bathrooms: '', price: '', area: '', finishing: '', delivery: '', status: '', sort: initial.sort }) as never)}
+            className="ms-1 text-[13px] font-medium text-ink-muted underline underline-offset-4 hover:text-ink-strong"
           >
-            <X className="h-4 w-4" aria-hidden />
             {t.clearAll}
           </button>
         </div>
       )}
-    </form>
+    </div>
+  );
+}
+
+/** The bar above the cards: how many are shown, and the order. */
+export function UnitsToolbar({
+  values,
+  shown,
+  total,
+  locale,
+}: {
+  values: UnitsFilterValues;
+  shown: number;
+  total: number;
+  locale: Locale;
+}) {
+  const router = useRouter();
+  const s = siteT(locale);
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <p className="text-[15px] text-ink-muted">{s.units.showing(shown, total)}</p>
+      <FieldSelect
+        label={s.listing.sort}
+        value={values.sort}
+        onChange={(x) => router.push(unitsHref({ ...values, sort: x }) as never)}
+        className="h-11 w-56 rounded-xl"
+      >
+        {s.sortOptions.unit.map((o) => (
+          <option key={o.value || 'default'} value={o.value}>{o.label}</option>
+        ))}
+      </FieldSelect>
+    </div>
   );
 }

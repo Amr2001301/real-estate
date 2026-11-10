@@ -6,12 +6,13 @@ import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
-import { CtaBand } from '@/components/marketing/CtaBand';
-import { PageHero } from '@/components/layout/PageHero';
+import { ContactCta } from '@/components/marketing/ContactCta';
+import { ListHero, type ListHeroStat } from '@/components/layout/ListHero';
+import { fetchBranding } from '@/lib/branding';
+import { formatNumber } from '@/lib/format';
 import { Container } from '@/components/ui/Container';
-import { ProjectsFilterBar } from '@/components/projects/ProjectsFilterBar';
+import { ProjectsFilterBar, ProjectsToolbar } from '@/components/projects/ProjectsFilterBar';
 import { Pagination } from '@/components/projects/Pagination';
 import { ProjectCard } from '@/components/home/ProjectCard';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -48,13 +49,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   if (featured) params.set('featured', 'true');
   if (sort) params.set('sort', sort);
 
-  const [result, citiesResult, locale] = await Promise.all([
+  const [result, citiesResult, locale, branding] = await Promise.all([
     apiFetch<Paginated<PublicProjectListItem>>(
       `/public/projects?${params.toString()}`,
       { revalidate: REVALIDATE, tenantSlug: tenant.slug },
     ),
     apiFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
     getLocale(),
+    fetchBranding(tenant.slug),
   ]);
   const m = siteT(locale);
 
@@ -75,62 +77,53 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
     return qs ? `${routes.projects}?${qs}` : routes.projects;
   }
 
+  const query = { q, city, type, featured, sort };
+  const statsAll: Array<ListHeroStat | null> = [
+    meta ? { value: formatNumber(meta.total, locale), label: m.listing.projectsStat } : null,
+    cities.length > 0 ? { value: formatNumber(cities.length, locale), label: m.listing.citiesStat } : null,
+  ];
+  const stats = statsAll.filter((x): x is ListHeroStat => x !== null);
+  const photo = projects.find((p) => p.coverImage)?.coverImage ?? null;
+
   return (
     <>
-      <PageHero
-        eyebrow={m.projects.eyebrow}
-        title={m.projects.title}
-        subtitle={m.projects.subtitle}
-        overlap
-      />
+      <ListHero homeLabel={m.listing.home} title={m.projects.title} subtitle={m.projects.subtitle} stats={stats} />
 
-      {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
-      <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <ProjectsFilterBar initialQ={q} initialCity={city} initialFeatured={featured} initialSort={sort} initialType={type} cities={cities} locale={locale} />
+      {/* Filter bar overlapping the header's lower edge, like the homepage search. */}
+      <Container className="relative z-10 -mt-14 px-6 sm:px-10 lg:px-12">
+        <ProjectsFilterBar initial={query} cities={cities} locale={locale} />
       </Container>
 
-      <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
-          {!result.ok ? (
-            <ErrorState
-              title={m.projects.errorTitle}
-              message={m.projects.errorMsg}
-              className="mx-auto max-w-2xl"
-            />
-          ) : projects.length === 0 ? (
-            <EmptyState
-              title={hasFilters ? m.projects.emptyFiltered : m.projects.emptyAll}
-              message={hasFilters ? m.projects.emptyFilteredMsg : m.projects.emptyAllMsg}
-              className="mx-auto max-w-2xl"
-              action={
-                hasFilters ? (
-                  <ButtonLink href={routes.projects} variant="outline" size="md">
-                    {m.projects.clearFilters}
-                  </ButtonLink>
-                ) : undefined
-              }
-            />
-          ) : (
-            <>
-              {meta && (
-                <p className="mb-6 text-sm text-ink-muted">
-                  {m.projects.showing(projects.length, meta.total)}
-                </p>
-              )}
-              <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
-                {projects.map((project) => (
-                  <ProjectCard key={project.id} project={project} locale={locale} />
-                ))}
-              </Stagger>
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
-            </>
-          )}
-      </Section>
+      <Container className="pt-8">
+        {!result.ok ? (
+          <ErrorState title={m.projects.errorTitle} message={m.projects.errorMsg} className="mx-auto max-w-2xl" />
+        ) : projects.length === 0 ? (
+          <EmptyState
+            title={hasFilters ? m.projects.emptyFiltered : m.projects.emptyAll}
+            message={hasFilters ? m.projects.emptyFilteredMsg : m.projects.emptyAllMsg}
+            className="mx-auto max-w-2xl"
+            action={
+              hasFilters ? (
+                <ButtonLink href={routes.projects} variant="outline" size="md">
+                  {m.projects.clearFilters}
+                </ButtonLink>
+              ) : undefined
+            }
+          />
+        ) : (
+          <>
+            <ProjectsToolbar query={query} shown={projects.length} total={meta?.total ?? projects.length} locale={locale} />
+            <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
+              {projects.map((project) => (
+                <ProjectCard key={project.id} project={project} locale={locale} />
+              ))}
+            </Stagger>
+            {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
+          </>
+        )}
+      </Container>
 
-      <CtaBand eyebrow={m.projects.helpEyebrow} title={m.projects.helpTitle}>
-        <ButtonLink href={routes.contact} variant="gold" size="lg">
-          {m.projects.helpCta}
-        </ButtonLink>
-      </CtaBand>
+      <ContactCta locale={locale} branding={branding} image={photo} />
     </>
   );
 }

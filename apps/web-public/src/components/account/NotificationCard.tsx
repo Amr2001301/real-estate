@@ -51,7 +51,7 @@ export function notificationVisual(code: string, title: string): { Icon: LucideI
 
 function formatDateTime(iso: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ar-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
   } catch {
     return '—';
   }

@@ -64,13 +64,14 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     await expect(page.getByTestId('unit-specs').getByText('غرف النوم', { exact: true })).toHaveCount(0);
 
     await page.goto(`/units?finishing=FURNISHED&stamp=${stamp}`, { waitUntil: 'networkidle' });
-    await expect(page.getByRole('combobox', { name: 'التشطيب' })).toHaveValue('FURNISHED');
+    // The chosen finishing shows as a removable chip under the filters.
+    await expect(page.getByRole('button', { name: 'إزالة مفروشة' })).toBeVisible();
     await expect(page.locator(`main a[href="/units/${furnished}"]`).first()).toBeVisible();
     await expect(page.locator(`main a[href="/units/${shop}"]`)).toHaveCount(0);
 
     // Ready now: the shop has no handover date.
     await page.goto(`/units?delivery=now&finishing=FURNISHED`, { waitUntil: 'networkidle' });
-    await expect(page.getByRole('combobox', { name: 'التسليم' })).toHaveValue('now');
+    await expect(page.getByRole('button', { name: 'إزالة استلام فوري' })).toBeVisible();
     await expect(page.locator(`main a[href="/units/${furnished}"]`).first()).toBeVisible();
   } finally {
     await request.delete(`${API_BASE}/v1/units/${furnished}`, { headers });

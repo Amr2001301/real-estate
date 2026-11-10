@@ -14,10 +14,12 @@ export interface PriceRange {
 
 export const PRICE_RANGES: PriceRange[] = [
   { value: '', label: 'كل الأسعار', min: '', max: '' },
-  { value: '0-500000', label: 'حتى ٥٠٠ ألف', min: '', max: '500000' },
-  { value: '500000-1000000', label: '٥٠٠ ألف – مليون', min: '500000', max: '1000000' },
-  { value: '1000000-2000000', label: 'مليون – مليونان', min: '1000000', max: '2000000' },
-  { value: '2000000-', label: 'أكثر من مليونين', min: '2000000', max: '' },
+  { value: '0-1000000', label: 'حتى مليون', min: '', max: '1000000' },
+  { value: '1000000-2000000', label: '1 – 2 مليون', min: '1000000', max: '2000000' },
+  { value: '2000000-3000000', label: '2 – 3 مليون', min: '2000000', max: '3000000' },
+  { value: '3000000-5000000', label: '3 – 5 مليون', min: '3000000', max: '5000000' },
+  { value: '5000000-8000000', label: '5 – 8 مليون', min: '5000000', max: '8000000' },
+  { value: '8000000-', label: 'أكثر من 8 مليون', min: '8000000', max: '' },
 ];
 
 export interface AreaRange {
@@ -29,11 +31,11 @@ export interface AreaRange {
 
 export const AREA_RANGES: AreaRange[] = [
   { value: '', label: 'كل المساحات', min: '', max: '' },
-  { value: '0-100', label: 'أقل من ١٠٠ م²', min: '', max: '100' },
-  { value: '100-150', label: '١٠٠ – ١٥٠ م²', min: '100', max: '150' },
-  { value: '150-200', label: '١٥٠ – ٢٠٠ م²', min: '150', max: '200' },
-  { value: '200-300', label: '٢٠٠ – ٣٠٠ م²', min: '200', max: '300' },
-  { value: '300-', label: 'أكثر من ٣٠٠ م²', min: '300', max: '' },
+  { value: '0-100', label: 'أقل من 100 م²', min: '', max: '100' },
+  { value: '100-150', label: '100 – 150 م²', min: '100', max: '150' },
+  { value: '150-200', label: '150 – 200 م²', min: '150', max: '200' },
+  { value: '200-300', label: '200 – 300 م²', min: '200', max: '300' },
+  { value: '300-', label: 'أكثر من 300 م²', min: '300', max: '' },
 ];
 
 export const UNIT_TYPES: Array<{ value: string; label: string }> = [
@@ -50,10 +52,10 @@ export const UNIT_TYPES: Array<{ value: string; label: string }> = [
 
 export const ROOM_OPTIONS: Array<{ value: string; label: string }> = [
   { value: '', label: 'الكل' },
-  { value: '1', label: '١' },
-  { value: '2', label: '٢' },
-  { value: '3', label: '٣' },
-  { value: '4', label: '٤+' },
+  { value: '1', label: '1' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4+' },
 ];
 
 /** Map a (min,max) pair back to a range `value`. Safe fallback to ''. */

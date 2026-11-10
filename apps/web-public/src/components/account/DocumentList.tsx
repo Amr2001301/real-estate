@@ -19,7 +19,7 @@ import { routes } from '@/lib/routes';
 
 function formatDate(iso: string, locale: Locale): string {
   try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ar-u-nu-latn', { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '';
   }

@@ -20,6 +20,9 @@ export interface PublicProjectListItem {
   name: Translatable;
   description: Translatable;
   city: string;
+  /** The project's type (F10) and district, when set. */
+  type?: string | null;
+  district?: string | null;
   lat: number;
   lng: number;
   services: Translatable[];

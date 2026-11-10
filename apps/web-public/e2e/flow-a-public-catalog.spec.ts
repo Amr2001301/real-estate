@@ -53,7 +53,7 @@ test.describe('Flow A — public catalog sync (requires seeded backend)', () => 
     // We don't pin a specific unit's name (units have generic numbers in the
     // seed). Instead we assert the page rendered its hero AND that at least
     // one unit-card-shaped element is present.
-    await expect(page.getByRole('heading', { name: 'وحدات فاخرة جاهزة لاختيارك' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'الوحدات المتاحة', level: 1 })).toBeVisible();
     await expect(
       page.locator('a[href^="/units/"]').first(),
       'expected at least one unit card linking to /units/:id; is the catalog seeded?',
