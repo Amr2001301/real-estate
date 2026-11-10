@@ -88,7 +88,7 @@ export default async function ArticleDetailPage({ params }: Props) {
 
             <PremiumCard className="p-8 sm:p-10">
               <p className="text-xs text-ink-muted mb-6">
-                {new Date(article.createdAt).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US', {
+                {new Date(article.createdAt).toLocaleDateString(isRtl ? 'ar-EG-u-nu-latn' : 'en-US', {
                   year: 'numeric', month: 'long', day: 'numeric',
                 })}
               </p>

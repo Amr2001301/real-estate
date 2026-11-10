@@ -2,20 +2,20 @@ import { notFound } from 'next/navigation';
 import { pageMeta } from '@/lib/page-meta';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
-import type { Paginated, PublicUnit } from '@/lib/api-types';
+import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import { Section } from '@/components/ui/Section';
-import { CtaBand } from '@/components/marketing/CtaBand';
+import { ContactCta } from '@/components/marketing/ContactCta';
 import { ButtonLink } from '@/components/ui/Button';
-import { PageHero } from '@/components/layout/PageHero';
+import { ListHero, type ListHeroStat } from '@/components/layout/ListHero';
+import { fetchBranding } from '@/lib/branding';
 import { Container } from '@/components/ui/Container';
 import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { Pagination } from '@/components/projects/Pagination';
-import { unitTypeLabel } from '@/lib/format';
-import { UnitsFilterBar, type UnitsFilterValues } from '@/components/units/UnitsFilterBar';
+import { currencySymbol, formatCompact, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
+import { UnitsFilterBar, UnitsToolbar, type UnitsFilterValues } from '@/components/units/UnitsFilterBar';
 import { UnitsExplorer } from '@/components/units/UnitsExplorer';
 import { derivePriceValue, deriveAreaValue } from '@/lib/unit-filters';
 
@@ -94,7 +94,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (areaMax) apiParams.set('areaMax', areaMax);
   if (sort) apiParams.set('sort', sort);
 
-  const [result, locale, typesRes] = await Promise.all([
+  const [result, locale, typesRes, projectsRes, citiesRes, cheapestRes, branding] = await Promise.all([
     apiFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     getLocale(),
     // The company's own unit types (F10) for the type filter.
@@ -102,6 +102,12 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
       revalidate: REVALIDATE,
       tenantSlug: tenant.slug,
     }),
+    // The company's projects (the project filter and the header's count).
+    apiFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=50', { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    apiFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300, tenantSlug: tenant.slug }),
+    // The lowest price on the site, for «تبدأ من».
+    apiFetch<Paginated<PublicUnit>>('/public/units?pageSize=1&sort=price_asc', { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    fetchBranding(tenant.slug),
   ]);
   const typeOptions = typesRes.ok
     ? typesRes.data.map((t) => ({ value: t.code, label: unitTypeLabel(t.code, t.name) }))
@@ -138,62 +144,58 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
     return qs ? `${routes.units}?${qs}` : routes.units;
   }
 
+  const projectOptions = projectsRes.ok
+    ? projectsRes.data.data.map((p) => ({ value: p.id, label: pickAr(p.name, '', locale) })).filter((p) => p.label)
+    : [];
+  const cities = citiesRes.ok ? citiesRes.data.cities : [];
+  const cheapest = cheapestRes.ok ? cheapestRes.data.data[0]?.price : undefined;
+  const statsAll: Array<ListHeroStat | null> = [
+    cheapestRes.ok ? { value: formatNumber(cheapestRes.data.meta.total, locale), label: m.listing.unitsStat } : null,
+    projectsRes.ok ? { value: formatNumber(projectsRes.data.meta.total, locale), label: m.listing.projectsStat } : null,
+    cheapest ? { value: formatCompact(cheapest, locale), label: m.listing.fromStat(currencySymbol(branding?.currency ?? 'EGP', locale)) } : null,
+  ];
+  const stats = statsAll.filter((x): x is ListHeroStat => x !== null);
+  const photo = units.find((u) => u.coverImage)?.coverImage ?? null;
+
   return (
     <>
-      <PageHero
-        eyebrow={m.units.eyebrow}
-        title={m.units.title}
-        subtitle={m.units.subtitle}
-        overlap
-      />
+      <ListHero homeLabel={m.listing.home} title={m.units.title} subtitle={m.units.subtitle} stats={stats} />
 
-      {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
-      <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <UnitsFilterBar initial={initialFilters} types={typeOptions} locale={locale} />
+      {/* Filter bar overlapping the header's lower edge, like the homepage search. */}
+      <Container className="relative z-20 -mt-14 px-6 sm:px-10 lg:px-12">
+        <UnitsFilterBar initial={initialFilters} types={typeOptions} projects={projectOptions} cities={cities} locale={locale} />
       </Container>
 
-      <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
-          {!result.ok ? (
-            <ErrorState
-              title={m.units.errorTitle}
-              message={m.units.errorMsg}
-              className="mx-auto max-w-2xl"
-            />
-          ) : units.length === 0 ? (
-            <EmptyState
-              title={hasFilters ? m.units.emptyFiltered : m.units.emptyAll}
-              message={hasFilters ? m.units.emptyFilteredMsg : m.units.emptyAllMsg}
-              className="mx-auto max-w-2xl"
-              action={
-                hasFilters ? (
-                  <ButtonLink href={routes.units} variant="outline" size="md">
-                    {m.units.clearFilters}
-                  </ButtonLink>
-                ) : (
-                  <ButtonLink href={routes.contact} variant="outline" size="md">
-                    {m.units.advisor}
-                  </ButtonLink>
-                )
-              }
-            />
-          ) : (
-            <>
-              {meta && (
-                <p className="mb-6 text-sm text-ink-muted">
-                  {m.units.showing(units.length, meta.total)}
-                </p>
-              )}
-              <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
-              {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
-            </>
-          )}
-      </Section>
+      <Container className="pt-8">
+        {!result.ok ? (
+          <ErrorState title={m.units.errorTitle} message={m.units.errorMsg} className="mx-auto max-w-2xl" />
+        ) : units.length === 0 ? (
+          <EmptyState
+            title={hasFilters ? m.units.emptyFiltered : m.units.emptyAll}
+            message={hasFilters ? m.units.emptyFilteredMsg : m.units.emptyAllMsg}
+            className="mx-auto max-w-2xl"
+            action={
+              hasFilters ? (
+                <ButtonLink href={routes.units} variant="outline" size="md">
+                  {m.units.clearFilters}
+                </ButtonLink>
+              ) : (
+                <ButtonLink href={routes.contact} variant="outline" size="md">
+                  {m.units.advisor}
+                </ButtonLink>
+              )
+            }
+          />
+        ) : (
+          <>
+            <UnitsToolbar values={initialFilters} shown={units.length} total={meta?.total ?? units.length} locale={locale} />
+            <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
+            {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} locale={locale} />}
+          </>
+        )}
+      </Container>
 
-      <CtaBand eyebrow={m.units.helpEyebrow} title={m.units.helpTitle}>
-        <ButtonLink href={routes.contact} variant="gold" size="lg">
-          {m.units.advisor}
-        </ButtonLink>
-      </CtaBand>
+      <ContactCta locale={locale} branding={branding} image={photo} />
     </>
   );
 }

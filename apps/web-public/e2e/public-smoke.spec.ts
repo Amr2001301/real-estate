@@ -20,14 +20,14 @@ test('projects page renders its hero', async ({ page }) => {
   const res = await page.goto('/projects');
   expect(res?.status()).toBe(200);
   await assertNotFoundAbsent(page);
-  await expect(page.getByRole('heading', { name: 'اكتشف مشاريعنا الاستثنائية' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'مشاريعنا', level: 1 })).toBeVisible();
 });
 
 test('units page renders its hero', async ({ page }) => {
   const res = await page.goto('/units');
   expect(res?.status()).toBe(200);
   await assertNotFoundAbsent(page);
-  await expect(page.getByRole('heading', { name: 'وحدات فاخرة جاهزة لاختيارك' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'الوحدات المتاحة', level: 1 })).toBeVisible();
 });
 
 test('compare page shows the empty state with no ids', async ({ page }) => {

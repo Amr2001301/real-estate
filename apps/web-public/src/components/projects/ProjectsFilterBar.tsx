@@ -2,186 +2,133 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Star, X, ChevronDown, MapPin, ArrowDownUp, Building2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Input';
+import { FieldSelect } from '@/components/ui/FieldSelect';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { cityLabel } from '@/lib/format';
 
-interface ProjectsFilterBarProps {
-  initialQ: string;
-  initialCity: string;
-  initialFeatured: boolean;
-  initialSort: string;
-  /** Compound, coastal, … (F10). */
-  initialType?: string;
-  cities: string[];
-  locale: Locale;
+export interface ProjectsQuery {
+  q: string;
+  city: string;
+  type: string;
+  featured: boolean;
+  sort: string;
 }
 
+/** The projects list URL for a set of filters (page 1). */
+export function projectsHref(v: ProjectsQuery): string {
+  const params = new URLSearchParams();
+  if (v.q.trim()) params.set('q', v.q.trim());
+  if (v.city) params.set('city', v.city);
+  if (v.type) params.set('type', v.type);
+  if (v.featured) params.set('featured', 'true');
+  if (v.sort) params.set('sort', v.sort);
+  const qs = params.toString();
+  return qs ? `${routes.projects}?${qs}` : routes.projects;
+}
+
+/** Search, city and type over the page header; «بحث» applies them. */
 export function ProjectsFilterBar({
-  initialQ,
-  initialCity,
-  initialFeatured,
-  initialSort,
-  initialType = '',
+  initial,
   cities,
   locale,
-}: ProjectsFilterBarProps) {
+}: {
+  initial: ProjectsQuery;
+  cities: string[];
+  locale: Locale;
+}) {
   const router = useRouter();
   const t = siteT(locale).projectsFilter;
-  const sortOptions = siteT(locale).sortOptions.project;
-
-  const [q, setQ] = useState(initialQ);
-  const [city, setCity] = useState(initialCity);
-  const [featured, setFeatured] = useState(initialFeatured);
-  const [sort, setSort] = useState(initialSort);
-  const [type, setType] = useState(initialType);
   const projectTypes = siteT(locale).projectTypes;
+  const [q, setQ] = useState(initial.q);
+  const [city, setCity] = useState(initial.city);
+  const [type, setType] = useState(initial.type);
 
-  function apply(next: { q?: string; city?: string; featured?: boolean; sort?: string; type?: string }) {
-    const params = new URLSearchParams();
-    const nextQ = next.q ?? q;
-    const nextCity = next.city ?? city;
-    const nextFeatured = next.featured ?? featured;
-    const nextSort = next.sort ?? sort;
-    const nextType = next.type ?? type;
-    if (nextQ.trim()) params.set('q', nextQ.trim());
-    if (nextCity) params.set('city', nextCity);
-    if (nextFeatured) params.set('featured', 'true');
-    if (nextSort) params.set('sort', nextSort);
-    if (nextType) params.set('type', nextType);
-    const qs = params.toString();
-    router.push((qs ? `${routes.projects}?${qs}` : routes.projects) as never);
-  }
-
-  function reset() {
-    setQ('');
-    setCity('');
-    setFeatured(false);
-    setSort('');
-    setType('');
-    router.push(routes.projects as never);
-  }
-
-  const hasFilters = q.trim() !== '' || city !== '' || featured || sort !== '' || type !== '';
+  const go = (next: Partial<ProjectsQuery>) => router.push(projectsHref({ ...initial, q, city, type, ...next }) as never);
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        apply({});
+        go({});
       }}
-      className="rounded-3xl border border-hairline bg-surface p-5 shadow-soft sm:p-6"
+      className="grid grid-cols-2 gap-2.5 rounded-[22px] border border-hairline bg-surface p-3 shadow-[0_30px_60px_-30px_rgba(0,0,0,0.3)] sm:p-4 lg:flex lg:flex-row"
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-muted/60" aria-hidden />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t.searchPlaceholder}
-            aria-label={t.searchLabel}
-            className="pr-12"
-          />
-        </div>
-
-        {cities.length > 0 && (
-          <div className="relative min-w-[160px]">
-            <MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
-            <Select
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-                apply({ city: e.target.value });
-              }}
-              aria-label={t.cityLabel}
-              className="h-12 pr-11 pl-9"
-            >
-              <option value="">{t.allCities}</option>
-              {cities.map((c) => (
-                <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
-          </div>
-        )}
-
-        <div className="relative min-w-[160px]">
-          <Building2 className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
-          <Select
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              apply({ type: e.target.value });
-            }}
-            aria-label={t.typeLabel}
-            className="h-12 pr-11 pl-9"
-          >
-            <option value="">{t.allTypes}</option>
-            {Object.entries(projectTypes).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </Select>
-          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            const nextFeatured = !featured;
-            setFeatured(nextFeatured);
-            apply({ featured: nextFeatured });
-          }}
-          aria-pressed={featured}
-          className={cn(
-            'inline-flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-medium transition-colors duration-200',
-            featured
-              ? 'border-gold-300 bg-gold-100 text-gold-600'
-              : 'border-hairline text-ink-muted hover:border-hairline/30 hover:text-ink-strong',
-          )}
-        >
-          <Star className={cn('h-4 w-4', featured && 'fill-gold-400 text-gold-500')} aria-hidden />
-          {t.featured}
-        </button>
-
-        <div className="relative">
-          <ArrowDownUp className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
-          <Select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value);
-              apply({ sort: e.target.value });
-            }}
-            aria-label={t.sortBy}
-            className="h-12 pr-11 pl-9"
-          >
-            {sortOptions.map((o) => (
-              <option key={o.value || 'default'} value={o.value}>{o.label}</option>
-            ))}
-          </Select>
-          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" size="md">
-            {t.applyFilters}
-          </Button>
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={reset}
-              className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink-strong"
-            >
-              <X className="h-4 w-4" aria-hidden />
-              {t.clearFilters}
-            </button>
-          )}
-        </div>
-      </div>
+      <label className="relative col-span-2 flex h-[52px] min-w-0 flex-[2] items-center gap-2.5 rounded-2xl border border-hairline bg-canvas px-4 focus-within:border-navy/50 focus-within:ring-2 focus-within:ring-navy/15">
+        <Search className="h-[18px] w-[18px] shrink-0 text-ink-muted" aria-hidden />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t.searchPlaceholder}
+          aria-label={t.searchLabel}
+          className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-strong outline-none placeholder:text-ink-muted"
+        />
+      </label>
+      {cities.length > 0 && (
+        <FieldSelect label={t.cityLabel} value={city} onChange={(v) => { setCity(v); go({ city: v }); }} className="flex-1">
+          <option value="">{t.allCities}</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
+          ))}
+        </FieldSelect>
+      )}
+      <FieldSelect label={t.typeLabel} value={type} onChange={(v) => { setType(v); go({ type: v }); }} className="flex-1">
+        <option value="">{t.allTypes}</option>
+        {Object.entries(projectTypes).map(([value, label]) => (
+          <option key={value} value={value}>{label}</option>
+        ))}
+      </FieldSelect>
+      <button type="submit" className="col-span-2 inline-flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-navy px-7 text-[15px] font-semibold text-white transition-colors hover:bg-navy-700">
+        <Search className="h-[18px] w-[18px]" aria-hidden />
+        {t.searchLabel}
+      </button>
     </form>
+  );
+}
+
+/** The bar above the cards: how many are shown, all / featured, and the order. */
+export function ProjectsToolbar({
+  query,
+  shown,
+  total,
+  locale,
+}: {
+  query: ProjectsQuery;
+  shown: number;
+  total: number;
+  locale: Locale;
+}) {
+  const router = useRouter();
+  const s = siteT(locale);
+  const seg = (on: boolean) =>
+    cn('px-4 py-2 text-[13px] font-medium transition-colors', on ? 'bg-ink-strong text-canvas' : 'text-ink-muted hover:text-ink-strong');
+
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <p className="text-[15px] text-ink-muted">{s.projects.showing(shown, total)}</p>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex overflow-hidden rounded-xl border border-hairline" role="group">
+          <button type="button" aria-pressed={!query.featured} className={seg(!query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: false }) as never)}>
+            {s.listing.all}
+          </button>
+          <button type="button" aria-pressed={query.featured} className={seg(query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: true }) as never)}>
+            {s.listing.featuredOnly}
+          </button>
+        </div>
+        <FieldSelect
+          label={s.listing.sort}
+          value={query.sort}
+          onChange={(v) => router.push(projectsHref({ ...query, sort: v }) as never)}
+          className="h-11 w-44 rounded-xl"
+        >
+          {s.sortOptions.project.map((o) => (
+            <option key={o.value || 'default'} value={o.value}>{o.label}</option>
+          ))}
+        </FieldSelect>
+      </div>
+    </div>
   );
 }

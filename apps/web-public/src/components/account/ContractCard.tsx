@@ -10,7 +10,7 @@ import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadBy
 function formatDate(iso: string | null, locale: string): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ar-u-nu-latn', { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '—';
   }

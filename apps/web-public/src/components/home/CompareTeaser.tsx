@@ -20,7 +20,7 @@ export function CompareTeaser() {
             <SectionHeading
               eyebrow="أداة المقارنة"
               title="قارن بين الوحدات بثقة"
-              description="اختر حتى ٣ وحدات وقارن بينها جنبًا إلى جنب — السعر، المساحة، الغرف، والمزيد — لتتخذ قرارك بوضوح تام."
+              description="اختر حتى 3 وحدات وقارن بينها جنبًا إلى جنب — السعر، المساحة، الغرف، والمزيد — لتتخذ قرارك بوضوح تام."
             />
             <div className="mt-8">
               <ButtonLink href={routes.units} variant="primary" size="lg">
@@ -35,8 +35,8 @@ export function CompareTeaser() {
           <PremiumCard className="overflow-hidden p-7">
             <div className="grid grid-cols-3 gap-3 text-center text-xs font-medium text-ink-muted">
               <span className="text-start">المقارنة</span>
-              <span className="rounded-xl bg-surface-soft py-2 text-ink-strong">وحدة ١</span>
-              <span className="rounded-xl bg-gold-100 py-2 text-gold-600">وحدة ٢</span>
+              <span className="rounded-xl bg-surface-soft py-2 text-ink-strong">وحدة 1</span>
+              <span className="rounded-xl bg-gold-100 py-2 text-gold-600">وحدة 2</span>
             </div>
             <div className="mt-3 space-y-2">
               {ROWS.map((row) => (

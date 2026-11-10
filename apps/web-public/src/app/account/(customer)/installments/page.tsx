@@ -50,7 +50,7 @@ function firstStr(v: string | string[] | undefined): string {
 function fmtMonthYear(iso: string | null, locale: Locale): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { month: 'long', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-u-nu-latn', { month: 'long', year: 'numeric' }).format(new Date(iso));
   } catch {
     return '—';
   }

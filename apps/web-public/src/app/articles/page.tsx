@@ -72,7 +72,7 @@ export default async function ArticlesListPage() {
                         <p className="text-sm text-ink-muted line-clamp-3 flex-1">{article.excerpt}</p>
                       )}
                       <p className="text-xs text-ink-muted mt-auto">
-                        {new Date(article.createdAt).toLocaleDateString(isRtl ? 'ar-EG' : 'en-US', {
+                        {new Date(article.createdAt).toLocaleDateString(isRtl ? 'ar-EG-u-nu-latn' : 'en-US', {
                           year: 'numeric', month: 'long', day: 'numeric',
                         })}
                       </p>

@@ -25,7 +25,7 @@ export function currencySymbol(currency: string, locale: Locale = 'ar'): string 
 
 /**
  * Format a price (number or Decimal-string) as grouped digits + the company
- * currency's symbol ("٢٬٥٠٠٬٠٠٠ ج.م"). Avoids the currency style's odd
+ * currency's symbol ("2,500,000 ج.م"). Avoids the currency style's odd
  * symbol/RLM spacing while keeping Arabic-Indic digits consistent with the
  * rest of the UI. `currency` is the company's (Company.currency, from the
  * public branding) — see lib/site-currency and components/currency.
@@ -44,6 +44,14 @@ export function formatNumber(value: number | string | null | undefined, locale: 
   return numFor(locale).format(n);
 }
 
+/** A big amount in short form: «2.4 مليون» / "2.4M"; "—" when missing. */
+export function formatCompact(value: number | string | null | undefined, locale: Locale = 'ar'): string {
+  if (value === null || value === undefined || value === '') return '—';
+  const n = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(n)) return '—';
+  return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ar-EG-u-nu-latn', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+}
+
 export function formatArea(value: number | string | null | undefined, locale: Locale = 'ar'): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (n === null || n === undefined || !Number.isFinite(n)) return '—';
@@ -56,7 +64,7 @@ const UNIT_TYPE_LABELS: Record<string, string> = {
   '1br': 'شقة غرفة نوم',
   '2br': 'شقة غرفتين',
   '3br': 'شقة ثلاث غرف',
-  '4br': 'شقة ٤ غرف',
+  '4br': 'شقة 4 غرف',
   duplex: 'دوبلكس',
   penthouse: 'بنتهاوس',
   villa: 'فيلا',
@@ -152,11 +160,11 @@ export function pickAr(value: unknown, fallback = '', locale: Locale = 'ar'): st
   return fallback;
 }
 
-/** A medium date ("7 Nov 2026" / «٧ نوفمبر ٢٠٢٦»); "—" when missing or invalid. */
+/** A medium date ("7 Nov 2026" / «7 نوفمبر 2026»); "—" when missing or invalid. */
 export function formatDateShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-u-nu-latn', { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '—';
   }
@@ -166,7 +174,7 @@ export function formatDateShort(iso: string | null | undefined, locale: Locale =
 export function formatDateTimeShort(iso: string | null | undefined, locale: Locale = 'ar'): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
   } catch {
     return '—';
   }
