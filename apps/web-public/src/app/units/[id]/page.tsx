@@ -1,22 +1,19 @@
 import type { Route } from 'next';
-import type { Locale } from '@/lib/locale';
-import { getSiteCurrency } from '@/lib/site-currency';
-import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Building2, Maximize, BedDouble, Bath, Layers } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import type { Locale } from '@/lib/locale';
+import { getLocale } from '@/lib/locale';
+import { getSiteCurrency } from '@/lib/site-currency';
+import { Price } from '@/components/currency/CurrencyProvider';
 import { buildMetadata } from '@/lib/seo';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import { pickAr, formatPrice, formatArea, formatNumber, projectPlace, unitTypeLabel } from '@/lib/format';
-import { extraT } from '@/messages/site-extra';
-import { DEEP_BG } from '@/components/home/Hero';
-import { UnitGallery } from '@/components/units/UnitGallery';
-import { FloorPlanArt } from '@/components/ui/BuildingArt';
 import { routes } from '@/lib/routes';
-import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import type { PublicUnit, PublicPaymentPlan, Paginated } from '@/lib/api-types';
+import { extraT } from '@/messages/site-extra';
+import type { PublicUnit, PublicPaymentPlan, PublicProjectDetail, Paginated } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
@@ -25,7 +22,11 @@ import { Stagger } from '@/components/motion/Stagger';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
-import { UnitInquiryCard } from '@/components/units/UnitInquiryCard';
+import { DetailHero, HeroChip } from '@/components/detail/DetailHero';
+import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
+import { DetailBookingCard, HeroActions } from '@/components/detail/DetailBookingCard';
+import { DetailProjectCard } from '@/components/detail/DetailProjectCard';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
 import { CompareToggle } from '@/components/compare/CompareToggle';
 import { CompareBar } from '@/components/compare/CompareBar';
@@ -36,20 +37,14 @@ import { ShareButton } from '@/components/ui/ShareButton';
 
 const REVALIDATE = 60;
 
-type StatusMeta = { label: string; tone: 'success' | 'warning' | 'neutral' };
-
-const STATUS_TONES: Record<string, StatusMeta['tone']> = {
-  AVAILABLE: 'success',
-  RESERVED:  'warning',
-  SOLD:      'neutral',
-};
-
-const DEFAULT_STATUS_TONE: StatusMeta['tone'] = 'success';
-
 type Params = Promise<{ id: string }>;
 
 function fetchUnit(id: string, tenantSlug: string) {
   return apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
+}
+
+function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة', locale: Locale = 'ar'): string {
+  return unit.type ? unitTypeLabel(unit.type, unit.typeName, locale) : `${fallbackPrefix} ${unit.code}`;
 }
 
 /** «استلام فوري» when already due, else the month and year it is handed over. */
@@ -58,39 +53,6 @@ function handoverLabel(date: string, locale: Locale, now: string): string {
   if (Number.isNaN(due.getTime())) return '';
   if (due.getTime() <= Date.now()) return now;
   return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(due);
-}
-
-function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة', locale: Locale = 'ar'): string {
-  return unit.type ? unitTypeLabel(unit.type, unit.typeName, locale) : `${fallbackPrefix} ${unit.code}`;
-}
-
-/**
- * Section heading system — matches the project details page exactly.
- * Gold accent bar + tiny uppercase label + strong title.
- */
-function SectionHead({
-  label,
-  title,
-  description,
-}: {
-  label: string;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div>
-      <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
-      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
-        {label}
-      </span>
-      <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
-        {title}
-      </h2>
-      {description && (
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{description}</p>
-      )}
-    </div>
-  );
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
@@ -123,60 +85,71 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
     if (result.error.status === 404) notFound();
     return (
       <Section tone="canvas" className="pt-36">
-        <ErrorState
-          title={m.unitDetail.errorTitle}
-          message={m.unitDetail.errorMsg}
-          className="mx-auto max-w-2xl"
-        />
+        <ErrorState title={m.unitDetail.errorTitle} message={m.unitDetail.errorMsg} className="mx-auto max-w-2xl" />
         <div className="mt-8 text-center">
-          <ButtonLink href={routes.units} variant="outline" size="md">
-            {m.unitDetail.backToUnits}
-          </ButtonLink>
+          <ButtonLink href={routes.units} variant="outline" size="md">{m.unitDetail.backToUnits}</ButtonLink>
         </div>
       </Section>
     );
   }
 
   const unit = result.data;
+  const x = extraT(locale).unitPage;
   const title = unitTitle(unit, m.unitDetail.projectFallback, locale);
   const statusLabel = m.unitDetail.status[unit.status as keyof typeof m.unitDetail.status] ?? m.unitDetail.status.AVAILABLE;
-  const status: StatusMeta = { label: statusLabel, tone: STATUS_TONES[unit.status] ?? DEFAULT_STATUS_TONE };
   const projectName = unit.project ? pickAr(unit.project.name, '', locale) : '';
+  const place = projectPlace(projectName, null, unit.project?.city, locale);
+  const finishingLabel = unit.finishing ? m.unitSpecs.finishingLabels[unit.finishing] ?? null : null;
+  const handover = unit.deliveryDate ? handoverLabel(unit.deliveryDate, locale, x.readyNow) : '';
+  const residential = !unit.usage || unit.usage === 'RESIDENTIAL';
+
+  const media = unit.media ?? [];
+  const photos = media.filter((f) => f.type === 'IMAGE' || !f.type).map((f) => f.url);
+  if (photos.length === 0 && unit.coverImage) photos.push(unit.coverImage);
+  const floorPlans = media.filter((f) => f.type === 'FLOORPLAN').map((f) => f.url);
+
+  // Its project, its public payment plans and the project's other units —
+  // each best-effort, none blocks the page.
+  const [projectRes, plansRes, simRes] = await Promise.all([
+    unit.project ? apiFetch<PublicProjectDetail>(`/public/projects/${unit.project.id}`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }) : null,
+    apiFetch<PublicPaymentPlan[]>(`/public/units/${unit.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    unit.project ? apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${unit.project.id}&pageSize=4`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }) : null,
+  ]);
+  const project = projectRes?.ok ? projectRes.data : null;
+  const plans = plansRes.ok && Array.isArray(plansRes.data) ? plansRes.data : [];
+  const similarUnits = simRes?.ok ? simRes.data.data.filter((u) => u.id !== unit.id).slice(0, 3) : [];
+
+  // The down payment comes from the plans the company published for this
+  // unit (its own, its type's or its project's): the lowest share among the
+  // instalment plans. No public plan → no down payment shown.
+  const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
+  const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
+  const longestMonths = Math.max(0, ...instalment.flatMap((p) => p.options.map((o) => o.durationMonths)));
+  const yearsText = longestMonths >= 12 && longestMonths % 12 === 0
+    ? `${formatNumber(longestMonths / 12, locale)} ${longestMonths / 12 === 1 ? x.yearsOne : x.yearsMany}`
+    : `${formatNumber(longestMonths, locale)} ${x.monthsMany}`;
+
+  const visitHref = `${routes.contact}?type=visit&unitId=${unit.id}`;
+  const infoHref = `${routes.contact}?unitId=${unit.id}`;
+  const waMessage = m.unitInquiry.waInterest(unit.code ? m.unitInquiry.waUnitSubject(unit.code) : m.unitInquiry.waThisUnit, projectName);
   const compareItem: CompareItem = {
     id: unit.id,
-    label: [unit.type, projectName].filter(Boolean).join(' · ') || `${m.unitDetail.projectFallback} ${unit.code}`,
+    label: [title, projectName].filter(Boolean).join(' · ') || `${m.unitDetail.projectFallback} ${unit.code}`,
     price: unit.price,
     coverImage: unit.coverImage,
   };
-
   const ldName = [title, projectName].filter(Boolean).join(' · ');
 
-  let similarUnits: PublicUnit[] = [];
-  if (unit.project) {
-    const sim = await apiFetch<Paginated<PublicUnit>>(
-      `/public/units?projectId=${unit.project.id}&pageSize=4`,
-      { revalidate: REVALIDATE, tenantSlug: tenant.slug },
-    );
-    if (sim.ok) similarUnits = sim.data.data.filter((u) => u.id !== unit.id).slice(0, 3);
-  }
-
-  const x = extraT(locale).unitPage;
-  const place = projectPlace(projectName, null, unit.project?.city, locale);
-  const finishingLabel = unit.finishing ? m.unitSpecs.finishingLabels[unit.finishing] ?? null : null;
-  const handover = unit.deliveryDate ? handoverLabel(unit.deliveryDate, locale, x.readyNow) : null;
-  const floorPlans = (unit.media ?? []).filter((f) => f.type === 'FLOORPLAN').map((f) => f.url);
-  const plansRes = await apiFetch<PublicPaymentPlan[]>(`/public/units/${unit.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug });
-  const plans = plansRes.ok && Array.isArray(plansRes.data) ? plansRes.data : [];
-  // The down payment comes from the plans the company published for this unit:
-  // the lowest share among the instalment plans.
-  const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
-  const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
-  const bandCols = ['sm:grid-cols-1', 'sm:grid-cols-2', 'sm:grid-cols-3'][(down ? 1 : 0) + (handover ? 1 : 0)];
-  const facts: { icon: typeof Maximize; label: string; value: string }[] = [
-    { icon: Maximize, label: x.factArea, value: formatArea(unit.area, locale) },
-    ...(!unit.usage || unit.usage === 'RESIDENTIAL' ? [{ icon: BedDouble, label: x.factBeds, value: formatNumber(unit.bedrooms, locale) }] : []),
-    { icon: Bath, label: x.factBaths, value: formatNumber(unit.bathrooms, locale) },
-    { icon: Layers, label: x.factFloor, value: formatNumber(unit.floor, locale) },
+  const stats = [
+    {
+      label: x.price,
+      value: <Price value={unit.price} />,
+      sub: unit.pricePerMeter ? <span data-testid="unit-price-per-meter"><Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}</span> : undefined,
+    },
+    { label: x.factArea, value: formatArea(unit.area, locale) },
+    ...(residential ? [{ label: x.factBeds, value: formatNumber(unit.bedrooms, locale) }] : []),
+    { label: x.factBaths, value: formatNumber(unit.bathrooms, locale) },
+    ...(handover ? [{ label: x.handover, value: handover }] : []),
   ];
 
   return (
@@ -184,9 +157,9 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       <ViewTracker event="unit_view" params={{ unit_id: unit.id, unit_status: unit.status }} />
       <JsonLd
         data={breadcrumbLd([
-          { name: m.unitDetail.breadHome,  path: '/' },
+          { name: m.unitDetail.breadHome, path: '/' },
           { name: m.unitDetail.breadUnits, path: '/units' },
-          { name: ldName,                  path: `/units/${unit.id}` },
+          { name: ldName, path: `/units/${unit.id}` },
         ])}
       />
       <JsonLd
@@ -195,108 +168,88 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
           price: unit.price,
           currency,
           status: unit.status,
-          image: unit.coverImage ?? unit.media?.[0]?.url ?? null,
+          image: photos[0] ?? null,
           path: `/units/${unit.id}`,
         })}
       />
 
-      {/* ── Gallery ── */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
           <nav aria-label={m.unitDetail.breadNav} className="mb-5">
-            <ol className="flex items-center gap-1.5 text-sm">
-              <li>
-                <Link href={routes.units} className="text-ink-muted transition-colors hover:text-ink-strong">
-                  {m.unitDetail.breadUnits}
-                </Link>
-              </li>
+            <ol className="flex flex-wrap items-center gap-1.5 text-sm">
+              <li><Link href={routes.units} className="text-ink-muted transition-colors hover:text-ink-strong">{m.unitDetail.breadUnits}</Link></li>
+              {unit.project && projectName && (
+                <>
+                  <li className="select-none text-ink-muted/40" aria-hidden>/</li>
+                  <li><Link href={routes.project(unit.project.id) as Route} className="text-ink-muted transition-colors hover:text-ink-strong">{projectName}</Link></li>
+                </>
+              )}
               <li className="select-none text-ink-muted/40" aria-hidden>/</li>
-              <li className="max-w-[12rem] truncate font-medium text-ink-strong sm:max-w-xs" aria-current="page">{title}</li>
+              <li className="font-medium text-ink-strong" aria-current="page">{unit.code || title}</li>
             </ol>
           </nav>
-          <UnitGallery media={unit.media} alt={title} locale={locale} />
+
+          <DetailHero
+            images={photos}
+            alt={title}
+            title={title}
+            chips={
+              <>
+                <HeroChip tone={unit.status === 'AVAILABLE' ? 'success' : 'glass'}>{statusLabel}</HeroChip>
+                {finishingLabel && <HeroChip>{finishingLabel}</HeroChip>}
+                {down && <HeroChip tone="gold">{x.downFrom(formatNumber(down.percent, locale))}</HeroChip>}
+              </>
+            }
+            subtitle={
+              (projectName || place) && (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+                  {[projectName, place].filter(Boolean).join(' — ')}
+                  {unit.code && <span className="text-white/60">· {unit.code}</span>}
+                </p>
+              )
+            }
+            actions={<HeroActions visitHref={visitHref} waMessage={waMessage} />}
+            tools={<FavoriteButton kind="unit" id={unit.id} />}
+          />
+          <DetailStats items={stats} />
         </Container>
       </section>
 
-      {/* ── Body: main column + sticky booking card ── */}
-      <Section tone="canvas" className="pt-8 sm:pt-10">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
-          <div className="min-w-0 space-y-12">
-            {/* Header */}
-            <header>
-              <div className="flex flex-wrap gap-2">
-                <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${status.tone === 'success' ? 'bg-success/10 text-success' : 'bg-surface-soft text-ink'}`}>{status.label}</span>
-                {finishingLabel && <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-ink">{finishingLabel}</span>}
-                {handover && <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-ink">{x.handover}: {handover}</span>}
-              </div>
-              <h1 className="mt-4 font-display text-[2rem] font-semibold leading-[1.3] text-ink-strong sm:text-[2.6rem]">{title}</h1>
-              {(projectName || place) && (
-                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-ink-muted">
-                  <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-                  {[projectName, place, unit.code].filter(Boolean).join(' · ')}
-                </p>
-              )}
-            </header>
-
-            {/* Price band */}
-            <div className={`grid gap-px overflow-hidden rounded-[1.25rem] border border-hairline bg-hairline ${bandCols}`}>
-              <div className="bg-surface px-6 py-5">
-                <p className="text-xs font-medium text-ink-muted">{x.price}</p>
-                <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong"><Price value={unit.price} /></p>
-                {unit.pricePerMeter && (
-                  <p className="mt-0.5 text-sm text-ink-muted" data-testid="unit-price-per-meter">
-                    <Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}
-                  </p>
-                )}
-              </div>
-              {down && (
-                <div className="bg-surface px-6 py-5">
-                  <p className="text-xs font-medium text-ink-muted">{x.downAmount}</p>
-                  <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong">{formatNumber(down.percent, locale)}٪</p>
-                  {down.amount > 0 && <p className="mt-0.5 text-sm text-ink-muted"><Price value={down.amount} /></p>}
-                </div>
-              )}
-              {handover && (
-                <div className="bg-surface px-6 py-5">
-                  <p className="text-xs font-medium text-ink-muted">{x.handover}</p>
-                  <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong">{handover}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Key facts */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {facts.map((f) => (
-                <div key={f.label} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
-                  <f.icon className="h-5 w-5 text-gold-500" aria-hidden />
-                  <p className="mt-3 font-display text-[1.6rem] font-semibold leading-none text-ink-strong">{f.value}</p>
-                  <p className="mt-1.5 text-sm text-ink-muted">{f.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Specs */}
+      <Section tone="canvas" className="pt-14 sm:pt-16">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 space-y-14">
             <div>
-              <SectionHead label={m.unitDetail.specsLabel} title={m.unitDetail.specsTitle} />
-              <div className="mt-8"><UnitSpecs unit={unit} /></div>
+              <DetailHead eyebrow={m.unitDetail.specsLabel} title={m.unitDetail.specsTitle} />
+              <UnitSpecs unit={unit} />
             </div>
 
-            {/* Payment plans — only when the company published some for this unit */}
             {plans.length > 0 && (
               <div>
-                <SectionHead label={x.plansLabel} title={x.plansTitle} />
-                <div className="mt-8 grid gap-3 sm:grid-cols-2" data-testid="unit-plans">
+                <DetailHead eyebrow={x.plansLabel} title={x.plansTitle} />
+                <div className="grid gap-4 sm:grid-cols-2" data-testid="unit-plans">
                   {plans.slice(0, 4).map((p) => {
                     const longest = p.options.reduce<PublicPaymentPlan['options'][number] | null>((a, o) => (!a || o.durationMonths > a.durationMonths ? o : a), null);
                     return (
-                      <div key={p.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+                      <div key={p.id} className="rounded-[1.25rem] border border-hairline bg-surface p-6">
                         <p className="font-display text-lg font-semibold text-ink-strong">{p.name || (p.isCash ? x.planCash : x.plansLabel)}</p>
                         {p.isCash ? (
-                          <p className="mt-2 text-sm text-ink-muted"><Price value={p.netPrice} /></p>
+                          <p className="mt-4 font-display text-[1.6rem] font-semibold text-ink-strong"><Price value={p.netPrice} /></p>
                         ) : (
-                          <dl className="mt-3 space-y-1.5 text-sm">
-                            <div className="flex justify-between gap-3"><dt className="text-ink-muted">{x.downAmount}</dt><dd className="font-semibold text-ink-strong">{formatNumber(p.downPaymentPercent, locale)}٪ · <Price value={p.downPaymentAmount} /></dd></div>
-                            {longest && <div className="flex justify-between gap-3"><dt className="text-ink-muted">{x.planMonths(`${formatNumber(longest.durationMonths, locale)} ${x.monthsMany}`)}</dt><dd className="font-semibold text-ink-strong"><Price value={longest.installmentAmount} /></dd></div>}
+                          <dl className="mt-4 space-y-3 text-[15px]">
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-ink-muted">{x.downAmount} ({formatNumber(p.downPaymentPercent, locale)}%)</dt>
+                              <dd className="font-semibold text-ink-strong"><Price value={p.downPaymentAmount} /></dd>
+                            </div>
+                            {longest && (
+                              <div className="flex items-center justify-between gap-3 border-t border-hairline pt-3">
+                                <dt className="text-ink-muted">{x.installmentFrom}</dt>
+                                <dd className="font-semibold text-ink-strong"><Price value={longest.installmentAmount} /></dd>
+                              </div>
+                            )}
+                            {longest && (
+                              <p className="text-[13px] text-ink-muted">{x.planMonths(`${formatNumber(longest.durationMonths, locale)} ${x.monthsMany}`)}</p>
+                            )}
                           </dl>
                         )}
                       </div>
@@ -306,72 +259,53 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
               </div>
             )}
 
-            {/* About */}
-            <div>
-              <SectionHead label={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
-              <p className="mt-6 text-lg leading-loose text-ink-muted">{m.unitDetail.aboutDefault}</p>
-            </div>
-
-            {/* Floor plan: the company's upload, else an honest «on request». */}
-            <div>
-              <SectionHead label={x.floorLabel} title={x.floorTitle} />
-              {floorPlans.length > 0 ? (
-                <div className="mt-8 grid gap-4" data-testid="unit-floorplan">
+            {/* The floor plan the company uploaded; nothing when there is none. */}
+            {floorPlans.length > 0 && (
+              <div>
+                <DetailHead eyebrow={x.floorLabel} title={x.floorTitle} />
+                <div className="grid gap-4" data-testid="unit-floorplan">
                   {floorPlans.map((u, i) => (
-                    <a key={`${u}-${i}`} href={u} target="_blank" rel="noopener noreferrer" aria-label={x.floorOpen} className="block overflow-hidden rounded-[1.25rem] border border-hairline bg-white p-3">
+                    <a key={`${u}-${i}`} href={u} target="_blank" rel="noopener noreferrer" aria-label={x.floorOpen} className="block overflow-hidden rounded-[1.25rem] border border-hairline bg-white p-4">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={u} alt={`${title} — ${x.floorTitle}`} className="mx-auto max-h-[560px] w-auto max-w-full object-contain" />
+                      <img src={u} alt={`${title} — ${x.floorTitle}`} className="mx-auto max-h-[600px] w-auto max-w-full object-contain" />
                     </a>
                   ))}
                 </div>
-              ) : (
-                <div className="mt-8 overflow-hidden rounded-[1.25rem] border border-hairline bg-surface">
-                  <FloorPlanArt label={x.floorTitle} className="h-64 sm:h-72" />
-                  <div className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:justify-between sm:text-start">
-                    <p className="text-ink-muted">{x.floorOnRequest}</p>
-                    <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">{m.unitDetail.floorplanCta}</ButtonLink>
-                  </div>
-                </div>
-              )}
+              </div>
+            )}
+
+            <div>
+              <DetailHead eyebrow={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
+              <p className="text-[17px] leading-[2] text-ink-muted">{m.unitDetail.aboutDefault}</p>
             </div>
 
-            {/* Project */}
-            {unit.project && (
+            {project && (
               <div>
-                <SectionHead label={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
-                <div className="mt-8 flex flex-col gap-5 rounded-[1.25rem] border border-hairline bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white" style={{ background: DEEP_BG }}>
-                      <Building2 className="h-6 w-6" aria-hidden />
-                    </span>
-                    <div>
-                      <h3 className="font-display text-lg font-semibold text-ink-strong">{projectName}</h3>
-                      {place && <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-ink-muted"><MapPin className="h-3.5 w-3.5" aria-hidden />{place}</p>}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2.5">
-                    <ButtonLink href={routes.project(unit.project.id) as Route} variant="primary" size="sm">{m.unitDetail.viewProject}</ButtonLink>
-                    <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="sm">{m.unitDetail.relatedLabel}</ButtonLink>
-                  </div>
-                </div>
+                <DetailHead eyebrow={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
+                <DetailProjectCard project={project} locale={locale} />
               </div>
             )}
           </div>
 
           <aside>
             <div className="lg:sticky lg:top-28">
-              <UnitInquiryCard
-                unitId={unit.id}
-                price={unit.price}
-                unitCode={unit.code}
-                projectName={projectName}
-                statusLabel={status.label}
-                down={down}
-                locale={locale}
+              <DetailBookingCard
+                eyebrow={unit.code ? `${m.unitInquiry.unitCode} ${unit.code}` : undefined}
+                status={statusLabel}
+                headline={<Price value={unit.price} />}
+                lines={[
+                  down ? <span key="d" data-testid="unit-down-payment">{x.downAmount} {formatNumber(down.percent, locale)}% · <Price value={down.amount} /></span> : null,
+                  longestMonths > 0 ? <span key="y">{x.planMonths(yearsText)}</span> : null,
+                  handover ? <span key="h">{x.handover}: {handover}</span> : null,
+                ]}
+                visitHref={visitHref}
+                infoHref={infoHref}
+                waMessage={waMessage}
                 tools={
                   <>
+                    <FavoriteButton kind="unit" id={unit.id} variant="inline" />
                     <CompareToggle item={compareItem} />
-                    <ShareButton title={[title, projectName].filter(Boolean).join(' · ')} variant="card" />
+                    <ShareButton title={ldName} variant="card" />
                   </>
                 }
               />
@@ -380,27 +314,21 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         </div>
       </Section>
 
-      {/* ── Related units — full-width soft band ── */}
       {unit.project && similarUnits.length > 0 && (
         <Section tone="soft">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHead label={m.unitDetail.moreUnitsLabel} title={m.unitDetail.moreUnitsTitle} />
-            {/* Premium gold text-link — matches project page */}
-            <Link
-              href={`${routes.units}?projectId=${unit.project.id}` as Route}
-              className="group mb-0.5 flex shrink-0 items-center gap-2 text-sm font-medium text-gold-600 transition-colors hover:text-gold-700"
-            >
-              {m.unitDetail.viewAllUnits}
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gold-200 bg-gold-50 transition-colors group-hover:border-gold-300 group-hover:bg-gold-100">
-                <ArrowLeft className="h-3.5 w-3.5" />
-              </span>
-            </Link>
-          </div>
-          <Stagger
-            className="mt-8 grid gap-7 sm:grid-cols-2 lg:grid-cols-3"
-            childClassName="h-full"
-            step={80}
-          >
+          <DetailHead
+            eyebrow={m.unitDetail.moreUnitsLabel}
+            title={m.unitDetail.moreUnitsTitle}
+            action={
+              <Link
+                href={`${routes.units}?projectId=${unit.project.id}` as Route}
+                className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-hairline px-6 text-[15px] font-semibold text-ink-strong transition-colors hover:border-navy/40"
+              >
+                {m.unitDetail.viewAllUnits} ←
+              </Link>
+            }
+          />
+          <Stagger className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
             {similarUnits.map((u) => (
               <UnitCard key={u.id} unit={u} locale={locale} />
             ))}
@@ -409,26 +337,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       )}
 
       <CtaBand eyebrow={m.unitDetail.ctaBandTitle} title={m.unitDetail.ctaBandSub}>
-        <ButtonLink
-          href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route}
-          variant="gold"
-          size="lg"
-        >
-          {m.unitDetail.ctaVisit}
-        </ButtonLink>
-        <ButtonLink
-          href={`${routes.contact}?unitId=${unit.id}` as Route}
-          variant="outline"
-          size="lg"
-          className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
-        >
+        <ButtonLink href={visitHref as Route} variant="gold" size="lg">{x.bookVisit}</ButtonLink>
+        <ButtonLink href={infoHref as Route} variant="outline" size="lg" className="border-white/25 text-white hover:border-white/50 hover:bg-white/5">
           {m.unitDetail.ctaBandCta}
         </ButtonLink>
       </CtaBand>
 
-      {/* Spacer so the mobile sticky inquiry bar doesn't overlap the CTA band */}
       <div className="h-[72px] lg:hidden" aria-hidden />
-
       <CompareBar />
     </CompareProvider>
   );

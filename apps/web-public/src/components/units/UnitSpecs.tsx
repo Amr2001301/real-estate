@@ -52,23 +52,16 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   }
 
   return (
-    <div data-testid="unit-specs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <dl data-testid="unit-specs" className="grid overflow-hidden rounded-[1.25rem] border border-hairline bg-surface px-6 sm:grid-cols-2 sm:gap-x-10">
       {specs.map(({ icon: Icon, label, value }) => (
-        <div
-          key={label}
-          className="flex items-center gap-3.5 rounded-2xl border border-hairline bg-surface px-4 py-4 shadow-soft"
-        >
-          {/* Gold gradient icon — horizontal anchor; height = content, not grid-stretch */}
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
-            <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
-          </span>
-
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium text-ink-muted/70">{label}</div>
-            <div className="mt-0.5 truncate text-sm font-bold text-ink-strong">{value}</div>
-          </div>
+        <div key={label} className="flex items-center justify-between gap-4 border-b border-hairline py-4 last:border-b-0 sm:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
+          <dt className="flex items-center gap-2.5 text-[15px] text-ink-muted">
+            <Icon className="h-[18px] w-[18px] shrink-0 text-gold-500" aria-hidden />
+            {label}
+          </dt>
+          <dd className="truncate text-[15px] font-semibold text-ink-strong">{value}</dd>
         </div>
       ))}
-    </div>
+    </dl>
   );
 }

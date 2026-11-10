@@ -105,6 +105,13 @@ export interface PublicPaymentPlan {
   options: { durationMonths: number; installmentsCount: number; installmentAmount: number; totalPayable: number }[];
 }
 
+/** A project's payment terms (GET /public/projects/:id/payment-plans). */
+export interface PublicProjectPlans {
+  plansCount: number;
+  minDownPaymentPercent: number | null;
+  maxMonths: number | null;
+}
+
 export interface Paginated<T> {
   data: T[];
   meta: { page: number; pageSize: number; total: number; totalPages: number };

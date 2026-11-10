@@ -1,36 +1,32 @@
 import type { Route } from 'next';
-import { extraT } from '@/messages/site-extra';
-import type { Locale } from '@/lib/locale';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Home, Star } from 'lucide-react';
-import { cn } from '@/lib/cn';
+import { MapPin, Home } from 'lucide-react';
+import { extraT } from '@/messages/site-extra';
+import { siteT } from '@/messages/site';
+import { getLocale } from '@/lib/locale';
 import { buildMetadata } from '@/lib/seo';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
-import { pickAr, formatNumber, cityLabel } from '@/lib/format';
+import { pickAr, formatNumber, cityLabel, projectPlace } from '@/lib/format';
 import { routes } from '@/lib/routes';
-import { getLocale } from '@/lib/locale';
-import { siteT } from '@/messages/site';
-import type { PublicProjectDetail, Paginated, PublicUnit } from '@/lib/api-types';
+import type { PublicProjectDetail, PublicProjectPlans, Paginated, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/states/ErrorState';
 import { InlineNotice } from '@/components/states/InlineNotice';
-import { IconCircle } from '@/components/ui/IconCircle';
-import { Reveal } from '@/components/motion/Reveal';
 import { Stagger } from '@/components/motion/Stagger';
-import { ProjectGallery } from '@/components/projects/ProjectGallery';
-import { InquiryCard } from '@/components/projects/InquiryCard';
-import { ProjectFacts } from '@/components/projects/ProjectFacts';
 import { ProjectAmenities } from '@/components/projects/ProjectAmenities';
 import { ProjectLocation } from '@/components/projects/ProjectLocation';
 import { UnitCard } from '@/components/home/UnitCard';
+import { DetailHero, HeroChip } from '@/components/detail/DetailHero';
+import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
+import { DetailBookingCard, HeroActions } from '@/components/detail/DetailBookingCard';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
-import { Accordion, type AccordionItem } from '@/components/ui/Accordion';
+import { Accordion } from '@/components/ui/Accordion';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { ViewTracker } from '@/components/analytics/ViewTracker';
 import { ShareButton } from '@/components/ui/ShareButton';
@@ -39,56 +35,8 @@ const REVALIDATE = 60;
 
 type Params = Promise<{ id: string }>;
 
-function projectStatusLabel(status: string, labels: Record<string, string>): string {
-  return labels[status] ?? status;
-}
-
-/**
- * Premium section heading system for the project detail page.
- * Uses a small gold accent bar + tiny label + strong title.
- * Keeps a clear visual hierarchy — the label reads as a category tag,
- * never as a second heading.
- */
-function SectionHead({
-  label,
-  title,
-  description,
-}: {
-  label: string;
-  title: string;
-  description?: string;
-}) {
-  return (
-    <div>
-      <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
-      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
-        {label}
-      </span>
-      <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
-        {title}
-      </h2>
-      {description && (
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{description}</p>
-      )}
-    </div>
-  );
-}
-
-// Generic, process-oriented FAQ — deliberately avoids project-specific claims
-// (prices, guarantees, dates) so nothing is fabricated.
-function projectFaq(name: string, locale: Locale): AccordionItem[] {
-  return extraT(locale).projectFaq(name);
-}
-
 function fetchProject(id: string, tenantSlug: string) {
   return apiFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE, tenantSlug });
-}
-
-function fetchProjectUnits(id: string, tenantSlug: string) {
-  return apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${id}&pageSize=3`, {
-    revalidate: REVALIDATE,
-    tenantSlug,
-  });
 }
 
 export async function generateMetadata({ params }: { params: Params }) {
@@ -99,18 +47,11 @@ export async function generateMetadata({ params }: { params: Params }) {
     getLocale(),
   ]);
   const m = siteT(locale);
-  if (!result.ok) {
-    return buildMetadata({ title: m.projectDetail.errorTitle });
-  }
+  if (!result.ok) return buildMetadata({ title: m.projectDetail.errorTitle });
   const name = pickAr(result.data.name, m.projectDetail.breadProjects, locale);
   const description = pickAr(result.data.description, '', locale) || undefined;
   const image = result.data.media?.[0]?.url;
-  return buildMetadata({
-    title: name,
-    description,
-    path: `/projects/${id}`,
-    ...(image ? { image } : {}),
-  });
+  return buildMetadata({ title: name, description, path: `/projects/${id}`, ...(image ? { image } : {}) });
 }
 
 export default async function ProjectDetailPage({ params }: { params: Params }) {
@@ -120,33 +61,54 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   const [result, locale] = await Promise.all([fetchProject(id, tenant.slug), getLocale()]);
   const m = siteT(locale);
 
-  // 404 → dedicated not-found page; other failures → friendly inline error.
   if (!result.ok) {
     if (result.error.status === 404) notFound();
     return (
       <Section tone="canvas" className="pt-36">
-        <ErrorState
-          title={m.projectDetail.errorTitle}
-          message={m.projectDetail.errorMsg}
-          className="mx-auto max-w-2xl"
-        />
+        <ErrorState title={m.projectDetail.errorTitle} message={m.projectDetail.errorMsg} className="mx-auto max-w-2xl" />
         <div className="mt-8 text-center">
-          <ButtonLink href={routes.projects} variant="outline" size="md">
-            {m.projectDetail.backToProjects}
-          </ButtonLink>
+          <ButtonLink href={routes.projects} variant="outline" size="md">{m.projectDetail.backToProjects}</ButtonLink>
         </div>
       </Section>
     );
   }
 
   const project = result.data;
+  const x = extraT(locale).unitPage;
   const name = pickAr(project.name, m.projectDetail.breadProjects, locale);
   const description = pickAr(project.description, '', locale);
+  const place = projectPlace(name, project.district, project.city, locale) || cityLabel(project.city, locale);
+  const type = project.type ? m.projectTypes[project.type] ?? null : null;
   const hasCoords = project.lat !== 0 || project.lng !== 0;
+  const photos = (project.media ?? []).filter((f) => f.type === 'IMAGE' || !f.type).map((f) => f.url);
 
-  // Best-effort: a few units from this project. Never blocks the page.
-  const unitsResult = await fetchProjectUnits(project.id, tenant.slug);
+  // A few of its units and its public payment terms — best-effort.
+  const [unitsResult, plansRes] = await Promise.all([
+    apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${project.id}&pageSize=6`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    apiFetch<PublicProjectPlans>(`/public/projects/${project.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+  ]);
   const previewUnits = unitsResult.ok ? unitsResult.data.data : [];
+  const plans = plansRes.ok ? plansRes.data : null;
+  const downMin = plans?.minDownPaymentPercent ?? null;
+  const maxMonths = plans?.maxMonths ?? null;
+  const yearsText = maxMonths
+    ? maxMonths % 12 === 0
+      ? `${formatNumber(maxMonths / 12, locale)} ${maxMonths / 12 === 1 ? x.yearsOne : x.yearsMany}`
+      : `${formatNumber(maxMonths, locale)} ${x.monthsMany}`
+    : null;
+
+  const visitHref = `${routes.contact}?type=visit&projectId=${project.id}`;
+  const infoHref = `${routes.contact}?projectId=${project.id}`;
+  const waMessage = extraT(locale).inquiry.whatsappMessage(name);
+  const units = formatNumber(project.availableUnitsCount, locale);
+
+  const stats = [
+    { label: x.availableUnits, value: units },
+    ...(downMin ? [{ label: x.downMin, value: `${formatNumber(downMin, locale)}%`, sub: yearsText ? x.planMonths(yearsText) : undefined }] : []),
+    ...(project.totalArea ? [{ label: x.projectArea, value: `${formatNumber(project.totalArea, locale)} ${m.projectFacts.sqm}` }] : []),
+    ...(type ? [{ label: x.projectType, value: type }] : []),
+    { label: x.city, value: cityLabel(project.city, locale) },
+  ];
 
   return (
     <>
@@ -165,231 +127,128 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           city: project.city,
           lat: project.lat,
           lng: project.lng,
-          image: project.media?.[0]?.url ?? null,
+          image: photos[0] ?? null,
           path: `/projects/${project.id}`,
         })}
       />
 
-      {/* ── Cinematic gallery hero ── */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
-          {/* Breadcrumb */}
           <nav aria-label={m.projectDetail.breadNav} className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
-              <li>
-                <Link
-                  href={routes.projects}
-                  className="text-ink-muted transition-colors hover:text-ink-strong focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
-                >
-                  {m.projectDetail.breadProjects}
-                </Link>
-              </li>
+              <li><Link href={routes.projects} className="text-ink-muted transition-colors hover:text-ink-strong">{m.projectDetail.breadProjects}</Link></li>
               <li className="select-none text-ink-muted/40" aria-hidden>/</li>
-              <li
-                className="max-w-[10rem] truncate font-medium text-ink-strong sm:max-w-xs"
-                aria-current="page"
-              >
-                {name}
-              </li>
+              <li className="max-w-[14rem] truncate font-medium text-ink-strong sm:max-w-sm" aria-current="page">{name}</li>
             </ol>
           </nav>
 
-          {/* Gallery — metadata lives solely inside the overlay, not repeated below. */}
-          <ProjectGallery
-            media={project.media}
+          <DetailHero
+            images={photos}
             alt={name}
-            overlay={
-              <Reveal>
-                {/* Featured badge — shown alone so it doesn't compete with the title */}
-                {project.featured && (
-                  <div className="mb-3">
-                    <Badge
-                      tone="gold"
-                      className="shadow-[0_2px_10px_rgba(200,162,75,0.40)]"
-                    >
-                      <Star className="h-3 w-3" aria-hidden />
-                      {m.projectDetail.featured}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Project name — the dominant visual element */}
-                <h1
-                  className="text-display-1 text-white"
-                  style={{ textShadow: '0 2px 24px rgba(11,23,38,0.55)' }}
-                >
-                  {name}
-                </h1>
-
-                {/* Metadata chips — placed BELOW the title so they give context
-                    after the main identity, never competing with it. */}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {project.city && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
-                      <MapPin className="h-3 w-3 text-gold-300" aria-hidden />
-                      {project.district ? `${project.district}${locale === 'en' ? ', ' : '، '}${cityLabel(project.city, locale)}` : cityLabel(project.city, locale)}
-                    </span>
-                  )}
-                  {project.type && m.projectTypes[project.type] && (
-                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
-                      {m.projectTypes[project.type]}
-                    </span>
-                  )}
-                  {project.totalArea && (
-                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
-                      {m.projectFacts.totalArea}: {formatNumber(project.totalArea, locale)} {m.projectFacts.sqm}
-                    </span>
-                  )}
-                  {project.licenseNumber && (
-                    <span
-                      data-testid="project-license"
-                      className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10"
-                    >
-                      {m.projectFacts.license}: <span dir="ltr" className="ms-1">{project.licenseNumber}</span>
-                    </span>
-                  )}
-                  {project.status && m.projectDetail.status[project.status as keyof typeof m.projectDetail.status] && (
-                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
-                      {m.projectDetail.status[project.status as keyof typeof m.projectDetail.status]}
-                    </span>
-                  )}
-                </div>
-
-                {/* CTAs */}
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <ButtonLink
-                    href={`${routes.contact}?projectId=${project.id}` as Route}
-                    variant="gold"
-                    size="md"
-                  >
-                    {m.projectDetail.ctaInfo}
-                  </ButtonLink>
-                  <ButtonLink
-                    href={`${routes.contact}?type=visit&projectId=${project.id}` as Route}
-                    variant="outline"
-                    size="md"
-                    className="border-white/25 text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/10"
-                  >
-                    {m.projectDetail.ctaVisit}
-                  </ButtonLink>
-                  <ShareButton title={name} />
-                </div>
-              </Reveal>
+            title={name}
+            chips={
+              <>
+                {project.featured && <HeroChip tone="gold">{m.projectDetail.featured}</HeroChip>}
+                {type && <HeroChip>{type}</HeroChip>}
+                {downMin && <HeroChip>{x.downFrom(formatNumber(downMin, locale))}</HeroChip>}
+              </>
             }
+            subtitle={
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+                {place}
+                {project.licenseNumber && (
+                  <span className="text-white/60" data-testid="project-license">
+                    · {m.projectFacts.license}: <span dir="ltr">{project.licenseNumber}</span>
+                  </span>
+                )}
+              </p>
+            }
+            actions={<HeroActions visitHref={visitHref} waMessage={waMessage} />}
+            tools={<FavoriteButton kind="project" id={project.id} />}
           />
-          {/* No chips strip — all meta is in the hero overlay above. */}
+          <DetailStats items={stats} />
         </Container>
       </section>
 
-      {/* ── Body: main content + sticky sidebar ── */}
-      <Section tone="canvas" className="pt-10 sm:pt-12 lg:pt-14">
-        <div className="grid gap-8 lg:grid-cols-3 lg:gap-10">
-
-          {/* ── Main content column ── */}
-          <div className="space-y-14 lg:col-span-2">
-
-            {/* About */}
+      <Section tone="canvas" className="pt-14 sm:pt-16">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 space-y-14">
             <div>
-              <SectionHead label={m.projectDetail.overviewLabel} title={m.projectDetail.aboutTitle} />
-              {description ? (
-                <p className="mt-6 text-lg leading-loose text-ink-muted">{description}</p>
-              ) : (
-                <p className="mt-6 text-ink-muted">{m.projectDetail.aboutEmpty}</p>
-              )}
+              <DetailHead eyebrow={m.projectDetail.overviewLabel} title={m.projectDetail.aboutTitle} />
+              <p className="text-[17px] leading-[2] text-ink-muted">{description || m.projectDetail.aboutEmpty}</p>
             </div>
 
-            {/* Features / Amenities */}
             <ProjectAmenities services={project.services} locale={locale} />
 
-            {/* Available units — inside the main column so the sidebar stays
-                sticky and visible while the buyer browses units. */}
             <div>
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <SectionHead label={m.projectDetail.unitsLabel} title={m.projectDetail.unitsTitle} />
-
-                {/* Premium text-link style — not a plain outline button */}
-                <Link
-                  href={`${routes.units}?projectId=${project.id}` as Route}
-                  className="group mb-0.5 flex shrink-0 items-center gap-2 text-sm font-medium text-gold-600 transition-colors hover:text-gold-700"
-                >
-                  {m.projectDetail.viewAllUnits}
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gold-200 bg-gold-50 transition-colors group-hover:border-gold-300 group-hover:bg-gold-100">
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                  </span>
-                </Link>
-              </div>
-
+              <DetailHead
+                eyebrow={m.projectDetail.unitsLabel}
+                title={m.projectDetail.unitsTitle}
+                action={
+                  previewUnits.length > 0 ? (
+                    <Link
+                      href={`${routes.units}?projectId=${project.id}` as Route}
+                      className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-hairline px-6 text-[15px] font-semibold text-ink-strong transition-colors hover:border-navy/40"
+                    >
+                      {m.projectDetail.viewAllUnits} ←
+                    </Link>
+                  ) : undefined
+                }
+              />
               {!unitsResult.ok ? (
-                <div className="mt-8">
-                  <InlineNotice tone="warning">
-                    {m.projectDetail.unitsError}
-                  </InlineNotice>
-                </div>
+                <InlineNotice tone="warning">{m.projectDetail.unitsError}</InlineNotice>
               ) : previewUnits.length === 0 ? (
-                <div className="mt-8 flex flex-col items-center gap-5 rounded-3xl border border-hairline bg-surface p-6 text-center shadow-soft sm:flex-row sm:justify-between sm:text-start">
+                <div className="flex flex-col items-center gap-5 rounded-[1.25rem] border border-hairline bg-surface p-6 text-center sm:flex-row sm:justify-between sm:text-start">
                   <div className="flex items-center gap-4">
-                    <IconCircle tone="gold" className="h-12 w-12 shrink-0">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-700 dark:text-gold-300">
                       <Home className="h-6 w-6" aria-hidden />
-                    </IconCircle>
+                    </span>
                     <div>
                       <h3 className="text-base font-semibold text-ink-strong">{m.projectDetail.unitsEmpty}</h3>
                       <p className="mt-1 text-sm text-ink-muted">{m.projectDetail.unitsEmptyMsg}</p>
                     </div>
                   </div>
-                  <ButtonLink
-                    href={`${routes.contact}?projectId=${project.id}` as Route}
-                    variant="primary"
-                    size="md"
-                    className="w-full shrink-0 sm:w-auto"
-                  >
+                  <ButtonLink href={infoHref as Route} variant="primary" size="md" className="w-full shrink-0 sm:w-auto">
                     {m.projectDetail.unitsAdvisor}
                   </ButtonLink>
                 </div>
               ) : (
-                <Stagger
-                  className={cn(
-                    'mt-8 grid gap-7',
-                    previewUnits.length === 1
-                      ? 'grid-cols-1'
-                      : 'grid-cols-1 sm:grid-cols-2',
-                  )}
-                  childClassName="h-full"
-                  step={80}
-                >
-                  {previewUnits.map((unit) => (
+                <Stagger className="grid gap-6 sm:grid-cols-2" childClassName="h-full" step={80}>
+                  {previewUnits.slice(0, 4).map((unit) => (
                     <UnitCard key={unit.id} unit={unit} locale={locale} />
                   ))}
                 </Stagger>
               )}
             </div>
 
-            {/* Location */}
-            <ProjectLocation
-              city={cityLabel(project.city, locale)}
-              lat={hasCoords ? project.lat : null}
-              lng={hasCoords ? project.lng : null}
-              locale={locale}
-            />
+            <ProjectLocation city={cityLabel(project.city, locale)} lat={hasCoords ? project.lat : null} lng={hasCoords ? project.lng : null} locale={locale} />
 
-            {/* FAQ */}
             <div>
-              <SectionHead label={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
-              <div className="mt-8">
-                <Accordion items={projectFaq(name, locale)} defaultOpenFirst />
-              </div>
+              <DetailHead eyebrow={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
+              <Accordion items={extraT(locale).projectFaq(name)} defaultOpenFirst />
             </div>
           </div>
 
-          {/* ── Sticky aside: inquiry + facts ── */}
-          <aside className="lg:col-span-1">
-            <div className="space-y-4 lg:sticky lg:top-28">
-              <InquiryCard projectId={project.id} projectName={name} locale={locale} />
-              <ProjectFacts
-                city={cityLabel(project.city, locale)}
-                availableUnitsCount={project.availableUnitsCount}
-                featured={project.featured}
-                hasCoords={hasCoords}
-                locale={locale}
+          <aside>
+            <div className="lg:sticky lg:top-28">
+              <DetailBookingCard
+                eyebrow={name}
+                headline={x.unitsAvailable(units)}
+                lines={[
+                  downMin ? <span key="d">{x.downFrom(formatNumber(downMin, locale))}</span> : null,
+                  yearsText ? <span key="y">{x.planMonths(yearsText)}</span> : null,
+                  <span key="p">{place}</span>,
+                ]}
+                visitHref={visitHref}
+                infoHref={infoHref}
+                waMessage={waMessage}
+                tools={
+                  <>
+                    <FavoriteButton kind="project" id={project.id} variant="inline" />
+                    <ShareButton title={name} variant="card" />
+                  </>
+                }
               />
             </div>
           </aside>
@@ -397,20 +256,12 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       </Section>
 
       <CtaBand eyebrow={m.projectDetail.ctaBandTitle} title={m.projectDetail.ctaBandSub}>
-        <ButtonLink href={`${routes.contact}?projectId=${project.id}` as Route} variant="gold" size="lg">
-          {m.projectDetail.unitsAdvisor}
-        </ButtonLink>
-        <ButtonLink
-          href={`${routes.units}?projectId=${project.id}` as Route}
-          variant="outline"
-          size="lg"
-          className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
-        >
+        <ButtonLink href={visitHref as Route} variant="gold" size="lg">{x.bookVisit}</ButtonLink>
+        <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="lg" className="border-white/25 text-white hover:border-white/50 hover:bg-white/5">
           {m.projectDetail.ctaBandExplore}
         </ButtonLink>
       </CtaBand>
 
-      {/* Spacer so the mobile sticky inquiry bar doesn't cover the CTA band */}
       <div className="h-[72px] lg:hidden" aria-hidden />
     </>
   );
