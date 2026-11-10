@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Building2 } from 'lucide-react';
+import { BuildingArt } from './BuildingArt';
 import { cn } from '@/lib/cn';
-import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
-import { siteT } from '@/messages/site';
 
 interface CoverImageProps {
   src: string | null | undefined;
@@ -29,7 +27,6 @@ export function CoverImage({ src, alt, className, imgClassName, zoomOnHover }: C
   const normalized = typeof src === 'string' && src.trim() !== '' ? src.trim() : null;
   const [erroredSrc, setErroredSrc] = useState<string | null>(null);
   const showImage = normalized !== null && erroredSrc !== normalized;
-  const noPhotos = siteT(useSiteLocale()).listing.noPhotos;
 
   return (
     <div className={cn('relative overflow-hidden bg-surface-soft', className)}>
@@ -48,21 +45,7 @@ export function CoverImage({ src, alt, className, imgClassName, zoomOnHover }: C
           )}
         />
       ) : (
-        <div
-          className="flex h-full w-full flex-col items-center justify-center gap-2.5 text-ink-muted"
-          role="img"
-          aria-label={alt}
-          style={{
-            // Soft diagonal stripes: reads as "photo to come", not as an empty block.
-            background:
-              'repeating-linear-gradient(135deg, rgb(var(--c-surface-soft)) 0 14px, rgb(var(--c-canvas)) 14px 28px)',
-          }}
-        >
-          <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-hairline bg-surface text-navy dark:text-gold-300">
-            <Building2 className="h-7 w-7" strokeWidth={1.5} aria-hidden />
-          </span>
-          <span className="text-[13px] font-medium">{noPhotos}</span>
-        </div>
+        <BuildingArt label={alt} />
       )}
     </div>
   );

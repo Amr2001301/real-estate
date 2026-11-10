@@ -45,7 +45,7 @@ export function UnitGallery({ media, alt, locale }: { media: PublicMedia[]; alt:
         <button
           type="button"
           onClick={() => images.length && setOpen(0)}
-          className="group relative block h-[300px] w-full overflow-hidden rounded-[1.5rem] sm:h-[400px] lg:h-full"
+          className={`group relative block w-full overflow-hidden rounded-[1.5rem] ${small.length > 0 ? 'h-[300px] sm:h-[400px] lg:h-full' : 'h-[300px] sm:h-[420px] lg:h-[500px]'}`}
           aria-label={alt}
         >
           <CoverImage src={main} alt={alt} className="h-full w-full" zoomOnHover />

@@ -4,7 +4,7 @@ import { getSiteCurrency } from '@/lib/site-currency';
 import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Building2, LayoutPanelTop, Maximize, BedDouble, Bath, Layers } from 'lucide-react';
+import { MapPin, ArrowLeft, Building2, Maximize, BedDouble, Bath, Layers } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
@@ -12,6 +12,7 @@ import { pickAr, formatPrice, formatArea, formatNumber, projectPlace, unitTypeLa
 import { extraT } from '@/messages/site-extra';
 import { DEEP_BG } from '@/components/home/Hero';
 import { UnitGallery } from '@/components/units/UnitGallery';
+import { FloorPlanArt } from '@/components/ui/BuildingArt';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -170,6 +171,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   // the lowest share among the instalment plans.
   const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
   const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
+  const bandCols = ['sm:grid-cols-1', 'sm:grid-cols-2', 'sm:grid-cols-3'][(down ? 1 : 0) + (handover ? 1 : 0)];
   const facts: { icon: typeof Maximize; label: string; value: string }[] = [
     { icon: Maximize, label: x.factArea, value: formatArea(unit.area, locale) },
     ...(!unit.usage || unit.usage === 'RESIDENTIAL' ? [{ icon: BedDouble, label: x.factBeds, value: formatNumber(unit.bedrooms, locale) }] : []),
@@ -237,7 +239,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             </header>
 
             {/* Price band */}
-            <div className="grid gap-px overflow-hidden rounded-[1.25rem] border border-hairline bg-hairline sm:grid-cols-3">
+            <div className={`grid gap-px overflow-hidden rounded-[1.25rem] border border-hairline bg-hairline ${bandCols}`}>
               <div className="bg-surface px-6 py-5">
                 <p className="text-xs font-medium text-ink-muted">{x.price}</p>
                 <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong"><Price value={unit.price} /></p>
@@ -323,9 +325,12 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                   ))}
                 </div>
               ) : (
-                <div className="mt-8 flex flex-col items-center gap-4 rounded-[1.25rem] border border-dashed border-hairline bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-start">
-                  <p className="flex items-center gap-3 text-ink-muted"><LayoutPanelTop className="h-5 w-5 shrink-0 text-gold-500" aria-hidden />{x.floorOnRequest}</p>
-                  <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">{m.unitDetail.floorplanCta}</ButtonLink>
+                <div className="mt-8 overflow-hidden rounded-[1.25rem] border border-hairline bg-surface">
+                  <FloorPlanArt label={x.floorTitle} className="h-64 sm:h-72" />
+                  <div className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:justify-between sm:text-start">
+                    <p className="text-ink-muted">{x.floorOnRequest}</p>
+                    <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">{m.unitDetail.floorplanCta}</ButtonLink>
+                  </div>
                 </div>
               )}
             </div>
