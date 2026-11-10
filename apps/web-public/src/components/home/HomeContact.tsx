@@ -63,7 +63,7 @@ export function HomeContact({
                     </span>
                     <span className="flex flex-col">
                       <span className="text-xs text-ink-muted">{m.callUs}</span>
-                      <bdi dir="ltr" className="text-[17px] font-semibold text-ink-strong">{phone}</bdi>
+                      <span className="text-[17px] font-semibold text-ink-strong">{m.callNow}</span>
                     </span>
                   </a>
                 )}

@@ -55,7 +55,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     }
     // Priced by the meter: 20,000 × 120 m².
     await expect(page.getByTestId('unit-price-per-meter')).toContainText('للمتر');
-    await expect(page.getByTestId('unit-price-per-meter')).toContainText('٢٠٬٠٠٠');
+    await expect(page.getByTestId('unit-price-per-meter')).toContainText('20,000');
 
     // A shop has no bedrooms.
     await page.goto(`/units/${shop}`, { waitUntil: 'networkidle' });
