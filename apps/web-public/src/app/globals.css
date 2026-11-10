@@ -43,24 +43,27 @@
     --skeleton-highlight: rgb(255 255 255 / 0.55);
   }
 
-  /* Warm Luxe Noir (dark) — deep navy canvas keeps the brand hue; cards sit a
-     clear step ABOVE the canvas (raised), surface-soft a hair below (recessed),
-     and the hairline is intentionally bright because the navy-tinted box
-     shadows vanish on a dark page — borders carry the card definition instead.
-     Text turns warm off-white, status colors lift for AA contrast. The navy
-     and gold scales stay literal (see tailwind.config.ts). */
+  /* Warm Luxe Noir (dark) — a fixed NEUTRAL charcoal canvas for every company,
+     like the big platforms' dark modes: the company's colour lives on its
+     headers, buttons and accents, never in the page background (a green or a
+     red primary on a tinted navy looked mismatched). Cards sit a clear step
+     ABOVE the canvas (raised), surface-soft a hair below (recessed), and the
+     hairline is intentionally bright because box shadows vanish on a dark page
+     — borders carry the card definition instead. Text turns warm off-white,
+     status colors lift for AA contrast. The navy and gold scales stay literal
+     (see tailwind.config.ts) and are the only part a company's colours change. */
   .dark {
-    --c-canvas: 14 26 46; /* #0E1A2E — base */
-    --c-surface: 26 40 64; /* #1A2840 — raised cards, clearly lighter than base */
-    --c-surface-soft: 18 29 49; /* #121D31 — recessed chips / inset */
-    --c-hairline: 51 68 95; /* #33445F — visible border, defines card edges */
+    --c-canvas: 19 20 22; /* #131416 — base */
+    --c-surface: 29 31 34; /* #1D1F22 — raised cards, clearly lighter than base */
+    --c-surface-soft: 24 25 28; /* #18191C — recessed chips / inset */
+    --c-hairline: 51 54 59; /* #33363B — visible border, defines card edges */
     --c-ink: 236 230 219; /* #ECE6DB — body text */
     --c-ink-muted: 154 166 182; /* #9AA6B6 — secondary text */
     --c-ink-strong: 245 241 234; /* #F5F1EA — headings / strong text */
     --c-success: 91 173 130; /* #5BAD82 */
     --c-warning: 226 173 80; /* #E2AD50 */
     --c-error: 224 114 114; /* #E07272 */
-    /* Subtle on the dark navy surface-soft. */
+    /* Subtle on the dark surface-soft. */
     --skeleton-highlight: rgb(255 255 255 / 0.07);
   }
 
