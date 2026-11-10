@@ -179,3 +179,21 @@ export function formatDateTimeShort(iso: string | null | undefined, locale: Loca
     return '—';
   }
 }
+
+/**
+ * Where a project is, without repeating what its name already says:
+ * «لاجونا باي — الساحل الشمالي» in the ساحل الشمالي reads «الساحل الشمالي» once.
+ * District first, then city; either is dropped when the name contains it.
+ */
+export function projectPlace(
+  name: string,
+  district: string | null | undefined,
+  city: string | null | undefined,
+  locale: Locale = 'ar',
+): string {
+  const c = cityLabel(city, locale);
+  return [district, c]
+    .filter((p): p is string => Boolean(p && p.trim()) && !name.includes(p!.trim()))
+    .filter((p, i, all) => all.indexOf(p) === i)
+    .join('، ');
+}

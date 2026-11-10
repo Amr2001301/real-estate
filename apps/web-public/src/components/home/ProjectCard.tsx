@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { MapPin } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { pickAr, cityLabel, formatNumber } from '@/lib/format';
+import { pickAr, formatNumber, projectPlace } from '@/lib/format';
 import type { PublicProjectListItem } from '@/lib/api-types';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
@@ -20,7 +20,7 @@ export function ProjectCard({ project, locale = 'ar' }: { project: PublicProject
   const s = siteT(locale);
   const name = pickAr(project.name, t.defaultName, locale);
   const description = pickAr(project.description, '', locale);
-  const place = [project.district, cityLabel(project.city, locale)].filter(Boolean).join('، ');
+  const place = projectPlace(name, project.district, project.city, locale);
   const typeLabel = project.type ? s.projectTypes[project.type] : null;
   const services = (project.services ?? []).map((x) => pickAr(x, '', locale)).filter(Boolean).slice(0, 3);
   const units = project.availableUnitsCount;
