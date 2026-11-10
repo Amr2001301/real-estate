@@ -64,7 +64,7 @@ function statusIcon(status: MeInstallment['status']) {
 
 // To the piaster, as the statement of account: rounded to the pound, the
 // figures here did not match it (129,222.22 read 129,222).
-const AMT_FMT = new Intl.NumberFormat('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const AMT_FMT = new Intl.NumberFormat('ar-SA-u-nu-latn', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const AMT_FMT_EN = new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 function fmtAmt(s: string | null | undefined, locale: Locale = 'ar'): string {
   if (!s) return '—';

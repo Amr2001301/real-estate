@@ -1,147 +1,96 @@
 import Link from 'next/link';
-import { Price } from '@/components/currency/CurrencyProvider';
 import type { Route } from 'next';
-import { BedDouble, Bath, Maximize, Building2, Building, Briefcase, Store, Home, MapPin, ArrowLeft } from 'lucide-react';
+import { Price } from '@/components/currency/CurrencyProvider';
 import { routes } from '@/lib/routes';
 import { formatNumber, pickAr, unitTypeLabel, cityLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
 import { cn } from '@/lib/cn';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { extraT } from '@/messages/site-extra';
+import { siteT } from '@/messages/site';
 import type { Locale } from '@/lib/locale';
 
-const STATUS_DOT: Record<string, string> = {
-  AVAILABLE: 'bg-success',
-  RESERVED: 'bg-warning',
-  SOLD: 'bg-ink-muted',
+const STATUS_TONE: Record<string, string> = {
+  RESERVED: 'bg-warning text-white',
+  SOLD: 'bg-ink-muted text-white',
 };
 
-/** Gold type glyph for the title tile. */
-function typeIcon(type: string): typeof Home {
-  switch (type.toLowerCase()) {
-    case 'office':
-      return Briefcase;
-    case 'retail':
-      return Store;
-    case 'villa':
-      return Building;
-    case 'townhouse':
-      return Building2;
-    default:
-      return Home;
-  }
-}
-
+/**
+ * The unit card (home, units list, project page): one clear hierarchy —
+ * photo, price, title, place, then the three figures a buyer compares
+ * (area, bedrooms, bathrooms) in equal cells. Finishing and handover ride on
+ * the photo; floor, view and code live on the unit page.
+ */
 export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; action?: React.ReactNode; locale?: Locale }) {
   const t = extraT(locale).unitCard;
+  const finishingLabels = siteT(locale).unitSpecs.finishingLabels;
   const statusLabels = t.statuses as Record<string, string>;
-  const status = { label: statusLabels[unit.status] ?? t.statuses.AVAILABLE, dot: STATUS_DOT[unit.status] ?? 'bg-success' };
   const typeLabel = unitTypeLabel(unit.type, unit.typeName, locale);
-  const TypeIcon = typeIcon(unit.type);
-
   const projectName = unit.project ? pickAr(unit.project.name, '', locale) : '';
   const location = cityLabel(unit.project?.city, locale);
+  const place = [projectName, location].filter(Boolean).join(' — ');
 
-  // Compact specs with light Arabic pluralization (singular at 1).
-  const specs: Array<{ icon: typeof BedDouble; label: string; value: string }> = [];
-  if (unit.bedrooms > 0)
-    specs.push({ icon: BedDouble, label: unit.bedrooms === 1 ? t.roomOne : t.roomMany, value: formatNumber(unit.bedrooms, locale) });
-  if (unit.bathrooms > 0)
-    specs.push({ icon: Bath, label: unit.bathrooms === 1 ? t.bathOne : t.bathMany, value: formatNumber(unit.bathrooms, locale) });
-  if (unit.area > 0) specs.push({ icon: Maximize, label: locale === 'en' ? 'm²' : 'م²', value: formatNumber(unit.area, locale) });
+  const title =
+    unit.bedrooms > 0
+      ? `${typeLabel} ${formatNumber(unit.bedrooms, locale)} ${unit.bedrooms === 1 ? t.roomOne : t.roomMany}`
+      : typeLabel;
+  const finishing = unit.finishing ? finishingLabels[unit.finishing] : null;
+  const year = unit.deliveryDate ? unit.deliveryDate.slice(0, 4) : null;
+  const statusTone = STATUS_TONE[unit.status];
+
+  const cells: Array<{ value: string; label: string }> = [];
+  if (unit.area > 0) cells.push({ value: `${formatNumber(unit.area, locale)} ${locale === 'en' ? 'm²' : 'م²'}`, label: t.area });
+  if (unit.bedrooms > 0) cells.push({ value: formatNumber(unit.bedrooms, locale), label: t.bedrooms });
+  if (unit.bathrooms > 0) cells.push({ value: formatNumber(unit.bathrooms, locale), label: t.bathrooms });
 
   return (
     <div className="relative h-full">
-    <Link
-      href={routes.unit(unit.id) as Route}
-      className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-    >
-      <PremiumCard interactive className="flex h-full flex-col overflow-hidden isolate">
-        {/* Image — GPU-isolated wrapper with its OWN rounded-top clip, so the
-            zoom transform composites on a stable layer. Fixes the WebKit/Chromium
-            border-radius flicker where rounded corners reset to 0 mid-transition. */}
-        <div
-          className="relative transform-gpu overflow-hidden rounded-t-3xl isolate"
-          style={{ transform: 'translateZ(0)' }}
-        >
-          <CoverImage
-            src={unit.coverImage}
-            alt={`${typeLabel} — ${unit.code}`}
-            className="aspect-[4/3]"
-            imgClassName="will-change-transform motion-reduce:transition-none"
-            zoomOnHover
-          />
-          {/* Soft scrim keeps the pills legible over any photo */}
-          <span className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/25 to-transparent" aria-hidden />
-          {/* Status — top start (right in RTL) */}
-          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
-            <span className={cn('h-2 w-2 rounded-full', status.dot)} aria-hidden />
-            {status.label}
-          </span>
-          {/* Project — top end (left in RTL) */}
-          {projectName && (
-            <span className="absolute bottom-4 left-4 inline-flex max-w-[55%] items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
-              <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-300" aria-hidden />
-              <span className="truncate">{projectName}</span>
-            </span>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex flex-1 flex-col p-5">
-          {/* Type tile + title + code chip */}
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-400 group-hover:text-navy">
-              <TypeIcon className="h-[18px] w-[18px]" aria-hidden />
-            </span>
-            <h3 className="line-clamp-1 min-w-0 flex-1 text-base font-semibold text-ink-strong">{typeLabel}</h3>
-            <span className="shrink-0 rounded-md bg-surface-soft px-2 py-0.5 text-[11px] font-medium tracking-tight text-ink-muted">
-              {unit.code}
-            </span>
+      <Link
+        href={routes.unit(unit.id) as Route}
+        data-testid="unit-card"
+        className="group flex h-full flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface outline-none transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.28)] focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+      >
+        <div className="relative isolate transform-gpu overflow-hidden" style={{ transform: 'translateZ(0)' }}>
+          <CoverImage src={unit.coverImage} alt={`${title} — ${place || unit.code}`} className="aspect-[4/3]" zoomOnHover />
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 to-transparent" aria-hidden />
+          <div className="absolute start-4 top-4 flex gap-2">
+            <span className="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#1A1F1C]">{typeLabel}</span>
+            {statusTone && (
+              <span className={cn('rounded-full px-3 py-1.5 text-xs font-semibold', statusTone)}>{statusLabels[unit.status]}</span>
+            )}
           </div>
-
-          {/* Location · floor — one muted line */}
-          <p className="mt-2.5 flex items-center gap-1.5 text-xs text-ink-muted">
-            <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
-            <span className="line-clamp-1">
-              {location}
-              {unit.floor > 0 ? ` · ${t.floor(formatNumber(unit.floor, locale))}` : ''}
-            </span>
-          </p>
-
-          {/* Divider */}
-          <div className="my-3 border-t border-hairline" />
-
-          {/* Specs */}
-          {specs.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-ink-muted">
-              {specs.map((s, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5">
-                  <s.icon className="h-4 w-4 text-gold-500" aria-hidden />
-                  <span className="font-semibold text-ink-strong">{s.value}</span>
-                  <span className="text-xs">{s.label}</span>
-                </span>
-              ))}
+          {(finishing || year) && (
+            <div className="absolute bottom-4 start-4 flex flex-wrap gap-2">
+              {finishing && <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">{finishing}</span>}
+              {year && <span className="rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur">{t.delivery(year)}</span>}
             </div>
           )}
-
-          {/* Price + subtle clickable affordance */}
-          <div className="mt-auto flex items-center justify-between pt-4">
-            <div className="font-display text-xl font-bold text-ink-strong"><Price value={unit.price} /></div>
-            <span
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-ink-strong transition-colors group-hover:bg-gold-400 group-hover:text-navy"
-              aria-hidden
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform ltr:rotate-180 group-hover:-translate-x-0.5 ltr:group-hover:translate-x-0.5" />
-            </span>
-          </div>
         </div>
-      </PremiumCard>
-    </Link>
-      {/* Action row — favorite + optional compare, grouped so they never stack */}
-      <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
+
+        <div className="flex flex-1 flex-col px-5 pb-5 pt-5 sm:px-6">
+          <div className="font-display text-[1.75rem] font-semibold leading-tight tracking-tight text-ink-strong">
+            <Price value={unit.price} />
+          </div>
+          <h3 className="mt-1.5 line-clamp-1 text-lg font-semibold text-ink-strong">{title}</h3>
+          {place && <p className="mt-0.5 line-clamp-1 text-sm text-ink-muted">{place}</p>}
+
+          {cells.length > 0 && (
+            <div className="mt-auto pt-4">
+              <div className="flex divide-x divide-hairline border-t border-hairline rtl:divide-x-reverse">
+                {cells.map((c) => (
+                  <div key={c.label} className="min-w-0 flex-1 px-1 pt-3 text-center">
+                    <div className="text-base font-semibold text-ink-strong">{c.value}</div>
+                    <div className="text-xs text-ink-muted">{c.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Link>
+      {/* Favorite + optional compare, over the photo's top end. */}
+      <div className="absolute end-3 top-3 z-20 flex items-center gap-1.5">
         <FavoriteButton kind="unit" id={unit.id} />
         {action}
       </div>

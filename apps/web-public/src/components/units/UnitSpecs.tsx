@@ -52,7 +52,7 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div data-testid="unit-specs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {specs.map(({ icon: Icon, label, value }) => (
         <div
           key={label}

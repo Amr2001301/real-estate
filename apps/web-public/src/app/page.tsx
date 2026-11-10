@@ -11,15 +11,14 @@ import { FeaturedProjects } from '@/components/home/FeaturedProjects';
 import { FeaturedUnits } from '@/components/home/FeaturedUnits';
 import { WhyChooseUs } from '@/components/home/WhyChooseUs';
 import { InvestmentCategories } from '@/components/home/InvestmentCategories';
-import { HomeBanner } from '@/components/home/HomeBanner';
 import { HomeBanners } from '@/components/home/HomeBanners';
 import { fetchBanners } from '@/lib/cms';
 import { HowWeHelp } from '@/components/home/HowWeHelp';
 import { HomeContact } from '@/components/home/HomeContact';
-import { LeadCtaBand } from '@/components/home/LeadCtaBand';
 import { MobileAppPromo } from '@/components/marketing/MobileAppPromo';
 import { companyApp } from '@/lib/app-links';
 import { companyName, fetchBranding } from '@/lib/branding';
+import { companyContact } from '@/lib/contact';
 import { SITE } from '@/lib/seo';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { organizationLd } from '@/lib/jsonld';
@@ -68,32 +67,56 @@ export default async function HomePage() {
     // The company's own name and app (a company's site never promotes the platform's).
     fetchBranding(tenant.slug),
   ]);
+  // How many units each investment field holds (one cheap count per usage).
+  const usages = ['RESIDENTIAL', 'ADMINISTRATIVE', 'COMMERCIAL', 'MEDICAL'] as const;
+  const usageCounts = await Promise.all(
+    usages.map((u) =>
+      apiFetch<Paginated<PublicUnit>>(`/public/units?pageSize=1&usage=${u}`, {
+        revalidate: REVALIDATE,
+        tenantSlug: tenant.slug,
+      }),
+    ),
+  );
+  const counts = Object.fromEntries(
+    usages.map((u, i) => {
+      const r = usageCounts[i]!;
+      return [u, r.ok ? r.data.meta.total : null];
+    }),
+  );
+  const contact = companyContact(branding);
   const ownApp = companyApp(branding?.mobileApp);
 
-  // Use the first featured project's cover as the hero backdrop when available.
-  const heroImage = projects.ok
-    ? (projects.data.data.find((p) => p.coverImage)?.coverImage ?? null)
-    : null;
+  // The hero shows the first featured project that has a cover photo.
+  const list = projects.ok ? projects.data.data : [];
+  const heroProject = list.find((p) => p.featured && p.coverImage) ?? list.find((p) => p.coverImage) ?? list[0] ?? null;
+  // «لماذا نحن» borrows another project's photo when there is one.
+  const whyImage = list.find((p) => p.coverImage && p.id !== heroProject?.id)?.coverImage ?? null;
+  const citiesCount = cities.ok ? cities.data.cities.length : null;
   const projectsCount = projects.ok ? projects.data.meta.total : null;
   const unitsCount = units.ok ? units.data.meta.total : null;
 
   return (
     <>
       <JsonLd data={organizationLd()} />
-      <Hero image={heroImage} projectsCount={projectsCount} unitsCount={unitsCount} locale={locale} />
+      <Hero
+        featured={heroProject}
+        projectsCount={projectsCount}
+        unitsCount={unitsCount}
+        citiesCount={citiesCount}
+        locale={locale}
+      />
 
-      {/* Premium search panel overlapping the hero's lower edge. */}
-      <Container className="relative z-10 -mt-12 sm:-mt-14">
+      {/* Search panel overlapping the hero's lower edge. */}
+      <Container className="relative z-10 -mt-8 px-6 sm:-mt-16 sm:px-10 lg:px-14">
         <SearchPanel locale={locale} cities={cities.ok ? cities.data.cities : []} />
       </Container>
 
       <HomeBanners banners={banners} locale={locale} />
 
-      <InvestmentCategories locale={locale} />
+      <InvestmentCategories locale={locale} counts={counts} />
       <FeaturedProjects result={projects} locale={locale} />
-      <HomeBanner locale={locale} />
       <FeaturedUnits result={units} locale={locale} />
-      <WhyChooseUs locale={locale} />
+      <WhyChooseUs locale={locale} image={whyImage} />
       {ownApp ? (
         <MobileAppPromo
           locale={locale}
@@ -102,8 +125,7 @@ export default async function HomePage() {
         />
       ) : null}
       <HowWeHelp locale={locale} />
-      <HomeContact locale={locale} />
-      <LeadCtaBand locale={locale} />
+      <HomeContact locale={locale} phone={contact.phone} whatsapp={contact.whatsapp} />
     </>
   );
 }

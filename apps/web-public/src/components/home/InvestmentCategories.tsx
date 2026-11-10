@@ -1,65 +1,99 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Home, Briefcase, Store, Stethoscope, Hotel } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { Section } from '@/components/ui/Section';
-import { Stagger } from '@/components/motion/Stagger';
+import { cn } from '@/lib/cn';
+import { formatNumber } from '@/lib/format';
+import { Container } from '@/components/ui/Container';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { SectionHead } from './SectionHead';
 
-const ICONS = [Home, Briefcase, Store, Stethoscope, Hotel] as const;
+/** One photo per field (public/images/home); the first tile is the large one. */
+const IMAGES = ['residential', 'administrative', 'commercial', 'medical', 'hotel'] as const;
 
-const HREFS = [
-  routes.units,
-  `${routes.units}?type=office`,
-  `${routes.units}?type=retail`,
-  routes.units,
-  routes.units,
-] as const;
-
-const GLOW = { background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.16), transparent 58%)' } as const;
-
-export function InvestmentCategories({ locale }: { locale: Locale }) {
+/**
+ * «اختر مجال استثمارك» as photo tiles: residential large on its own, the
+ * other four in a 2×2 grid beside it. Each shows how many of the company's
+ * available units it holds when the count is known.
+ */
+export function InvestmentCategories({
+  locale,
+  counts = {},
+}: {
+  locale: Locale;
+  /** Available units per usage (RESIDENTIAL, …), when known. */
+  counts?: Partial<Record<string, number | null>>;
+}) {
   const m = siteT(locale).home.categories;
 
-  return (
-    <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
-      <div className="rounded-3xl border border-hairline bg-surface-soft p-6 shadow-card sm:p-8 lg:p-10">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">{m.title}</h2>
-          <p className="mt-2 text-ink-muted">{m.sub}</p>
-        </div>
+  const tiles = m.items.map((item, i) => {
+    const n = item.usage ? counts[item.usage] : null;
+    return {
+      ...item,
+      image: `/images/home/${IMAGES[i]}.jpg`,
+      href: (item.usage ? `${routes.units}?usage=${item.usage}` : routes.units) as Route,
+      count: n != null && n > 0 ? m.count(formatNumber(n, locale)) : null,
+    };
+  });
+  const [first, ...rest] = tiles;
 
-        <Stagger
-          className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5"
-          childClassName="h-full"
-          step={60}
-        >
-          {m.items.map((item, i) => {
-            const Icon = ICONS[i]!;
-            const href = HREFS[i]!;
-            return (
-              <Link
-                key={item.title}
-                href={href as Route}
-                className="group relative flex h-40 items-center justify-center overflow-hidden rounded-2xl border border-hairline bg-surface p-5 text-center shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.18),0_18px_48px_-16px_rgba(15,30,51,0.22)] sm:h-44"
-              >
-                <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
-                <div className="relative flex flex-col items-center gap-2.5">
-                  <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:scale-105 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
-                    <Icon className="h-7 w-7" aria-hidden />
-                  </span>
-                  <h3 className="text-lg font-bold leading-none text-ink-strong">{item.title}</h3>
-                  <p className="text-xs text-ink-muted">{item.sub}</p>
-                  <span className="mt-0.5 text-xs font-semibold text-ink-muted transition-colors group-hover:text-gold-600">
-                    {m.browse}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-        </Stagger>
+  return (
+    <section className="pt-20 sm:pt-24">
+      <Container>
+        <SectionHead eyebrow={m.eyebrow} title={m.title} sub={m.sub} />
+        <div className="flex flex-col gap-5 lg:flex-row">
+          {first && <Tile tile={first} big />}
+          <div className="grid flex-[1.3] grid-cols-1 gap-5 sm:grid-cols-2">
+            {rest.map((t) => (
+              <Tile key={t.title} tile={t} />
+            ))}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}
+
+function Tile({
+  tile,
+  big = false,
+}: {
+  tile: { title: string; sub: string; image: string; href: Route; count: string | null };
+  big?: boolean;
+}) {
+  return (
+    <Link
+      href={tile.href}
+      className={cn(
+        'group relative isolate block overflow-hidden rounded-3xl bg-surface-soft text-white outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+        big ? 'min-h-[320px] flex-1 lg:min-h-[520px]' : 'min-h-[220px] lg:min-h-[250px]',
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={tile.image}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 -z-10 h-full w-full object-cover transition-transform duration-700 ease-smooth group-hover:scale-[1.05]"
+      />
+      <span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/80 via-black/35 to-transparent" aria-hidden />
+      <span
+        className="absolute end-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-white/15 backdrop-blur transition-colors group-hover:bg-white/30"
+        aria-hidden
+      >
+        <ChevronLeft className="h-5 w-5 ltr:rotate-180" />
+      </span>
+      <div className="absolute inset-x-5 bottom-5 flex items-end justify-between gap-3">
+        <div>
+          <h3 className={cn('font-display font-semibold leading-tight text-white', big ? 'text-[2rem]' : 'text-2xl')}>{tile.title}</h3>
+          <p className="mt-1 text-sm text-white/85 sm:text-[15px]">{tile.sub}</p>
+        </div>
+        {tile.count && (
+          <span className="shrink-0 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#1A1F1C]">{tile.count}</span>
+        )}
       </div>
-    </Section>
+    </Link>
   );
 }

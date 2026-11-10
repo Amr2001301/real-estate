@@ -1,157 +1,113 @@
 import Link from 'next/link';
-import { MessageCircle } from 'lucide-react';
+import type { Route } from 'next';
+import { ChevronLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Container } from '@/components/ui/Container';
 import { ButtonLink } from '@/components/ui/Button';
+import { CoverImage } from '@/components/ui/CoverImage';
 import { Reveal } from '@/components/motion/Reveal';
+import { cityLabel, formatNumber, pickAr } from '@/lib/format';
+import type { PublicProjectListItem } from '@/lib/api-types';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 
 interface HeroProps {
-  image?: string | null;
+  /** The project shown on the photo side (the first featured one). */
+  featured?: PublicProjectListItem | null;
   projectsCount?: number | null;
   unitsCount?: number | null;
+  citiesCount?: number | null;
   locale: Locale;
 }
 
-export function Hero({ image, projectsCount, unitsCount, locale }: HeroProps) {
+/** The company's deep colour: its primary darkened, behind white text. */
+export const DEEP_BG = 'color-mix(in srgb, rgb(var(--c-navy)) 50%, black)';
+
+/**
+ * The homepage hero: a rounded panel in the company's deep colour — headline,
+ * two calls to action and the live counts on one side, the featured project's
+ * cover with a small card on the other.
+ */
+export function Hero({ featured, projectsCount, unitsCount, citiesCount, locale }: HeroProps) {
   const m = siteT(locale).home.hero;
-  const showProjects = projectsCount != null && projectsCount > 0;
-  const showUnits = unitsCount != null && unitsCount > 0;
-  const hasStats = showProjects || showUnits;
+  const all: Array<{ value: number | null | undefined; label: string }> = [
+    { value: projectsCount, label: m.projects },
+    { value: unitsCount, label: m.units },
+    { value: citiesCount, label: m.cities },
+  ];
+  const stats = all.filter((s): s is { value: number; label: string } => s.value != null && s.value > 0);
+  const name = featured ? pickAr(featured.name, '', locale) : '';
 
   return (
-    <section className="relative flex min-h-[480px] items-center overflow-hidden bg-navy sm:min-h-[520px] lg:min-h-[580px]">
-      {/* Background photo or radial gradient fallback */}
-      {image ? (
-        <div
-          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-75 motion-safe:animate-ken-burns"
-          style={{ backgroundImage: `url(${image})` }}
-          aria-hidden
-        />
-      ) : (
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(130% 120% at 80% 10%, rgb(var(--c-navy-600)) 0%, rgb(var(--c-navy)) 55%, color-mix(in srgb, rgb(var(--c-navy)) 70%, black) 100%)' }}
-          aria-hidden
-        />
-      )}
-      {/* Directional wash — heavy on the right behind Arabic text */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: 'linear-gradient(to left, rgb(var(--c-navy) / 0.96) 0%, rgb(var(--c-navy) / 0.85) 28%, rgb(var(--c-navy) / 0.44) 62%, rgb(var(--c-navy) / 0.08) 100%)' }}
-        aria-hidden
-      />
-      {/* Cinematic vignette */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(120% 120% at 50% 42%, transparent 54%, rgb(var(--c-navy) / 0.5) 100%)' }}
-        aria-hidden
-      />
-      {/* Top fade for nav legibility */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-navy/75 to-transparent" aria-hidden />
-      {/* Gold ambient glow */}
-      <div className="pointer-events-none absolute -right-20 top-1/3 h-96 w-96 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />
-      <div className="pointer-events-none absolute right-1/3 top-1/2 h-64 w-64 rounded-full bg-gold-400/6 blur-2xl" aria-hidden />
-      {/* Bottom fade anchors the SearchPanel */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-navy to-transparent" aria-hidden />
-
-      <Container className="relative pb-14 pt-24 sm:pb-16 lg:pb-20">
-        <div className="max-w-[660px]">
-
-          {/* Eyebrow — dot + all-caps tracking label */}
-          <Reveal>
-            <div className="flex items-center gap-2.5">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400" aria-hidden />
-              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-gold-400">
+    <section className="pt-24 sm:pt-28">
+      <Container>
+        <div className="flex flex-col overflow-hidden rounded-[2rem] lg:min-h-[620px] lg:flex-row" style={{ background: DEEP_BG }}>
+          <div className="flex flex-1 flex-col justify-center px-6 pb-24 pt-12 text-white sm:px-10 lg:px-16 lg:pb-32 lg:pt-16">
+            <Reveal>
+              <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-gold-300">
+                <span className="h-0.5 w-7 rounded-full bg-gold-400" aria-hidden />
                 {m.eyebrow}
               </span>
-            </div>
-          </Reveal>
-
-          {/* Headline — light supporting line + bold hero line with gradient word */}
-          <Reveal delay={80}>
-            <h1 className="mt-7 text-[2.5rem] leading-[1.2] sm:text-5xl lg:text-[3.75rem]">
-              <span className="block font-light tracking-tight text-white/75">
+            </Reveal>
+            <Reveal delay={80}>
+              <h1 className="mt-6 text-[2.5rem] font-semibold leading-[1.45] text-white sm:text-[3rem] lg:text-[3.75rem]">
                 {m.line1}
-              </span>
-              <span className="block font-extrabold tracking-tight text-white">
-                {m.line2}{' '}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{ backgroundImage: 'linear-gradient(to left, #b8923e, #f0d080, #d4a84b)' }}
-                >
-                  {m.highlight}
-                </span>
-              </span>
-            </h1>
-          </Reveal>
-
-          {/* Thin gold separator — visual chapter break */}
-          <div className="mt-8 h-px w-12 bg-gold-400/40" aria-hidden />
-
-          {/* Description */}
-          <Reveal delay={150}>
-            <p className="mt-5 max-w-[480px] text-[16px] leading-[1.9] text-white/55 sm:text-[17px]">
-              {m.sub}
-            </p>
-          </Reveal>
-
-          {/* Stats — large numeral + small uppercase label, separated by vertical rule */}
-          {hasStats && (
+                <br />
+                {m.line2} <span className="text-gold-300">{m.highlight}</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={150}>
+              <p className="mt-5 max-w-[500px] text-[17px] font-light leading-[1.95] text-white/80 sm:text-lg">{m.sub}</p>
+            </Reveal>
             <Reveal delay={210}>
-              <div className="mt-9 flex items-center gap-7">
-                {showProjects && (
-                  <div>
-                    <div className="font-display text-[1.9rem] font-black leading-none text-white">
-                      {projectsCount}+
-                    </div>
-                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                      {m.projects}
-                    </div>
-                  </div>
-                )}
-                {showProjects && showUnits && (
-                  <div className="h-9 w-px bg-white/15" aria-hidden />
-                )}
-                {showUnits && (
-                  <div>
-                    <div className="font-display text-[1.9rem] font-black leading-none text-white">
-                      {unitsCount}+
-                    </div>
-                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                      {m.units}
-                    </div>
-                  </div>
-                )}
+              <div className="mt-9 flex flex-wrap gap-3.5">
+                <ButtonLink href={routes.units} variant="gold" size="lg" className="gap-2 text-[#1B1206]">
+                  {m.cta1}
+                  <ChevronLeft className="h-4 w-4 ltr:rotate-180" aria-hidden />
+                </ButtonLink>
+                <Link
+                  href={routes.contact}
+                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-white/30 bg-white/[0.08] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-white/[0.14]"
+                >
+                  {m.cta2}
+                </Link>
               </div>
             </Reveal>
-          )}
+            {stats.length > 0 && (
+              <Reveal delay={270}>
+                <dl className="mt-12 flex flex-wrap gap-x-10 gap-y-5">
+                  {stats.map((s) => (
+                    <div key={s.label} className="flex flex-col-reverse border-s-2 border-gold-400 ps-4">
+                      <dt className="mt-2 text-sm text-white/70">{s.label}</dt>
+                      <dd className="font-display text-[2.5rem] font-semibold leading-none">{formatNumber(s.value, locale)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Reveal>
+            )}
+          </div>
 
-          {/* CTAs — gold primary + icon-circle text secondary */}
-          <Reveal delay={270}>
-            <div className="mt-10 flex flex-wrap items-center gap-6">
-              <ButtonLink
-                href={routes.units}
-                variant="gold"
-                size="lg"
-                className="shadow-[0_16px_40px_-12px_rgba(200,162,75,0.55)]"
-              >
-                {m.cta1}
-              </ButtonLink>
-
+          <div className="relative min-h-[320px] flex-1 sm:min-h-[420px] lg:min-h-0">
+            <CoverImage src={featured?.coverImage} alt={name} className="absolute inset-0 h-full" />
+            {featured && name && (
               <Link
-                href={routes.contact}
-                className="group inline-flex items-center gap-3 text-[15px] font-medium text-white/60 transition-colors duration-200 hover:text-white/90"
+                href={routes.project(featured.id) as Route}
+                className="absolute start-5 top-5 w-[min(340px,calc(100%-2.5rem))] rounded-[20px] bg-white/[0.97] p-5 text-[#1A1F1C] shadow-[0_24px_48px_-16px_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-0.5 sm:start-7 sm:top-7"
               >
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] backdrop-blur-sm transition-all duration-200 group-hover:border-white/40 group-hover:bg-white/[0.14]">
-                  <MessageCircle className="h-[18px] w-[18px]" aria-hidden />
-                </span>
-                {m.cta2}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-gold-400 px-3 py-1.5 text-xs font-semibold text-[#1B1206]">{m.featured}</span>
+                  <span className="line-clamp-1 text-[13px] text-[#5F625C]">{cityLabel(featured.city, locale)}</span>
+                </div>
+                <div className="mt-3 line-clamp-1 font-display text-[22px] font-semibold">{name}</div>
+                <div className="mt-1.5 flex items-center justify-between gap-2 text-sm">
+                  <span className="text-[#5F625C]">
+                    <b className="font-semibold text-[#1A1F1C]">{formatNumber(featured.availableUnitsCount, locale)}</b> {m.available}
+                  </span>
+                  <span className="font-semibold text-navy">{m.details} ←</span>
+                </div>
               </Link>
-            </div>
-          </Reveal>
-
+            )}
+          </div>
         </div>
       </Container>
     </section>

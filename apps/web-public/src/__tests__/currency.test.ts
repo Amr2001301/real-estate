@@ -8,8 +8,8 @@ import { unitProductLd } from '@/lib/jsonld';
 
 describe('company currency on the public site', () => {
   it('formats a price with the company currency symbol', () => {
-    expect(formatPrice('2500000', 'EGP')).toBe('٢٬٥٠٠٬٠٠٠ ج.م');
-    expect(formatPrice(2500000, 'SAR')).toBe('٢٬٥٠٠٬٠٠٠ ر.س');
+    expect(formatPrice('2500000', 'EGP')).toBe('2,500,000 ج.م');
+    expect(formatPrice(2500000, 'SAR')).toBe('2,500,000 ر.س');
     expect(formatPrice(null, 'EGP')).toBe('—');
   });
 

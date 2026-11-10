@@ -55,12 +55,13 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     }
     // Priced by the meter: 20,000 × 120 m².
     await expect(page.getByTestId('unit-price-per-meter')).toContainText('للمتر');
-    await expect(page.getByTestId('unit-price-per-meter')).toContainText('٢٠٬٠٠٠');
+    await expect(page.getByTestId('unit-price-per-meter')).toContainText('20,000');
 
     // A shop has no bedrooms.
     await page.goto(`/units/${shop}`, { waitUntil: 'networkidle' });
     await expect(page.locator('main').getByText('على الطوب', { exact: true }).first()).toBeVisible();
-    await expect(page.locator('main').getByText('غرف النوم', { exact: true })).toHaveCount(0);
+    // (Other units' cards further down the page do list bedrooms; only the shop's own specs count.)
+    await expect(page.getByTestId('unit-specs').getByText('غرف النوم', { exact: true })).toHaveCount(0);
 
     await page.goto(`/units?finishing=FURNISHED&stamp=${stamp}`, { waitUntil: 'networkidle' });
     await expect(page.getByRole('combobox', { name: 'التشطيب' })).toHaveValue('FURNISHED');
