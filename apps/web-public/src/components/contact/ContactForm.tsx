@@ -14,6 +14,8 @@ import { InlineNotice } from '@/components/states/InlineNotice';
 import { IconCircle } from '@/components/ui/IconCircle';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
+import { extraT } from '@/messages/site-extra';
+import { cn } from '@/lib/cn';
 
 export interface ContactContext {
   projectId?: string;
@@ -59,6 +61,7 @@ export function ContactForm({
   initialValues,
   isAuthenticatedCustomer = false,
   locale = 'ar',
+  plain = false,
 }: {
   context: ContactContext;
   /** 'visit' switches the form to a visit-request (needs a project + date). */
@@ -81,6 +84,8 @@ export function ContactForm({
    */
   isAuthenticatedCustomer?: boolean;
   locale?: Locale;
+  /** No card of its own (the page wraps it), and an enquiry / visit switch when a project is known. */
+  plain?: boolean;
 }) {
   const cf = siteT(locale).contactForm;
 
@@ -99,7 +104,8 @@ export function ContactForm({
   // A visit request requires a projectId (CreateVisitRequestDto). When the form
   // is in visit mode but no project context resolved, we safely fall back to an
   // info-request rather than POSTing a guaranteed-400 visit request.
-  const isVisit = mode === 'visit' && Boolean(context.projectId);
+  const [kind, setKind] = useState<'info' | 'visit'>(mode);
+  const isVisit = kind === 'visit' && Boolean(context.projectId);
 
   useEffect(() => {
     setMinDate(tomorrowAtNine());
@@ -214,15 +220,34 @@ export function ContactForm({
     );
   }
 
+  const Shell = plain ? 'div' : PremiumCard;
+  const k = extraT(locale).contactPage2;
+
   return (
-    <PremiumCard className="p-6 sm:p-8">
+    <Shell className={plain ? '' : 'p-6 sm:p-8'}>
+      {plain && context.projectId && (
+        <div className="mb-7 inline-flex rounded-2xl bg-surface-soft p-1" role="tablist">
+          {(['info', 'visit'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={kind === v}
+              onClick={() => setKind(v)}
+              className={kind === v ? 'h-10 rounded-xl bg-surface px-5 text-sm font-semibold text-ink-strong shadow-sm' : 'h-10 rounded-xl px-5 text-sm font-medium text-ink-muted hover:text-ink-strong'}
+            >
+              {v === 'info' ? k.kindInfo : k.kindVisit}
+            </button>
+          ))}
+        </div>
+      )}
       {eyebrow && (
         <span className="inline-block rounded-full bg-gold-100/70 px-3.5 py-1.5 text-sm font-semibold text-gold-600">
           {eyebrow}
         </span>
       )}
 
-      <h2 className={eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong'}>
+      <h2 className={cn(eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong', plain && 'font-display text-[1.75rem] font-semibold')}>
         {isVisit ? cf.visitTitle : cf.infoTitle}
       </h2>
       <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
@@ -307,7 +332,7 @@ export function ContactForm({
 
         {status === 'error' && <InlineNotice tone="error">{errorMsg}</InlineNotice>}
 
-        <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={status === 'submitting'}>
+        <Button type="submit" size="lg" className={cn("w-full sm:w-auto", plain && "sm:min-w-[220px]")} disabled={status === 'submitting'}>
           {status === 'submitting' ? (
             cf.sending
           ) : (
@@ -318,6 +343,6 @@ export function ContactForm({
           )}
         </Button>
       </form>
-    </PremiumCard>
+    </Shell>
   );
 }
