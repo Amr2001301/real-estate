@@ -4,24 +4,23 @@ import { getSiteCurrency } from '@/lib/site-currency';
 import { Price } from '@/components/currency/CurrencyProvider';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
+import { MapPin, ArrowLeft, Building2, LayoutPanelTop, Maximize, BedDouble, Bath, Layers } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
-import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
+import { pickAr, formatPrice, formatArea, formatNumber, projectPlace, unitTypeLabel } from '@/lib/format';
+import { extraT } from '@/messages/site-extra';
+import { DEEP_BG } from '@/components/home/Hero';
+import { UnitGallery } from '@/components/units/UnitGallery';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import type { PublicUnit, Paginated } from '@/lib/api-types';
+import type { PublicUnit, PublicPaymentPlan, Paginated } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ErrorState } from '@/components/states/ErrorState';
-import { Reveal } from '@/components/motion/Reveal';
 import { Stagger } from '@/components/motion/Stagger';
-import { ProjectGallery } from '@/components/projects/ProjectGallery';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
@@ -50,6 +49,14 @@ type Params = Promise<{ id: string }>;
 
 function fetchUnit(id: string, tenantSlug: string) {
   return apiFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE, tenantSlug });
+}
+
+/** «استلام فوري» when already due, else the month and year it is handed over. */
+function handoverLabel(date: string, locale: Locale, now: string): string {
+  const due = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(due.getTime())) return '';
+  if (due.getTime() <= Date.now()) return now;
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(due);
 }
 
 function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة', locale: Locale = 'ar'): string {
@@ -152,6 +159,24 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
     if (sim.ok) similarUnits = sim.data.data.filter((u) => u.id !== unit.id).slice(0, 3);
   }
 
+  const x = extraT(locale).unitPage;
+  const place = projectPlace(projectName, null, unit.project?.city, locale);
+  const finishingLabel = unit.finishing ? m.unitSpecs.finishingLabels[unit.finishing] ?? null : null;
+  const handover = unit.deliveryDate ? handoverLabel(unit.deliveryDate, locale, x.readyNow) : null;
+  const floorPlans = (unit.media ?? []).filter((f) => f.type === 'FLOORPLAN').map((f) => f.url);
+  const plansRes = await apiFetch<PublicPaymentPlan[]>(`/public/units/${unit.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug });
+  const plans = plansRes.ok && Array.isArray(plansRes.data) ? plansRes.data : [];
+  // The down payment comes from the plans the company published for this unit:
+  // the lowest share among the instalment plans.
+  const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
+  const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
+  const facts: { icon: typeof Maximize; label: string; value: string }[] = [
+    { icon: Maximize, label: x.factArea, value: formatArea(unit.area, locale) },
+    ...(!unit.usage || unit.usage === 'RESIDENTIAL' ? [{ icon: BedDouble, label: x.factBeds, value: formatNumber(unit.bedrooms, locale) }] : []),
+    { icon: Bath, label: x.factBaths, value: formatNumber(unit.bathrooms, locale) },
+    { icon: Layers, label: x.factFloor, value: formatNumber(unit.floor, locale) },
+  ];
+
   return (
     <CompareProvider>
       <ViewTracker event="unit_view" params={{ unit_id: unit.id, unit_status: unit.status }} />
@@ -173,237 +198,177 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         })}
       />
 
-      {/* ── Cinematic gallery hero ── */}
+      {/* ── Gallery ── */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
-          {/* Breadcrumb — matches project details page pattern */}
           <nav aria-label={m.unitDetail.breadNav} className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
               <li>
-                <Link
-                  href={routes.units}
-                  className="text-ink-muted transition-colors hover:text-ink-strong focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
-                >
+                <Link href={routes.units} className="text-ink-muted transition-colors hover:text-ink-strong">
                   {m.unitDetail.breadUnits}
                 </Link>
               </li>
               <li className="select-none text-ink-muted/40" aria-hidden>/</li>
-              <li
-                className="max-w-[10rem] truncate font-medium text-ink-strong sm:max-w-xs"
-                aria-current="page"
-              >
-                {title}
-              </li>
+              <li className="max-w-[12rem] truncate font-medium text-ink-strong sm:max-w-xs" aria-current="page">{title}</li>
             </ol>
           </nav>
-
-          <ProjectGallery
-            media={unit.media}
-            alt={title}
-            overlay={
-              <Reveal>
-                {/* Status badge alone at top — same logic as project featured badge */}
-                <div className="mb-3">
-                  <Badge
-                    tone={status.tone}
-                    className="shadow-[0_2px_10px_rgba(0,0,0,0.20)]"
-                  >
-                    {status.label}
-                  </Badge>
-                </div>
-
-                {/* Unit title — dominant visual element */}
-                <h1
-                  className="text-display-1 text-white"
-                  style={{ textShadow: '0 2px 24px rgba(11,23,38,0.55)' }}
-                >
-                  {title}
-                </h1>
-
-                {/* Price — the key fact, prominent gold right under the title */}
-                <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-                  <span className="font-display text-2xl font-bold text-gold-200">
-                    <Price value={unit.price} />
-                  </span>
-                  {unit.pricePerMeter && (
-                    <span className="text-sm font-medium text-white/80" data-testid="unit-price-per-meter">
-                      (<Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter})
-                    </span>
-                  )}
-                  {unit.code && (
-                    <span className="rounded-full bg-black/25 px-2.5 py-0.5 text-[11px] font-medium text-white/75 backdrop-blur-md ring-1 ring-white/10">
-                      {unit.code}
-                    </span>
-                  )}
-                </div>
-
-                {/* Metadata chips — below price, same frosted-glass style as project page */}
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {projectName && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
-                      <Building2 className="h-3 w-3 text-gold-300" aria-hidden />
-                      {projectName}
-                    </span>
-                  )}
-                  {unit.project?.city && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
-                      <MapPin className="h-3 w-3 text-gold-300" aria-hidden />
-                      {unit.project.city}
-                    </span>
-                  )}
-                </div>
-
-                {/* CTAs */}
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <ButtonLink
-                    href={`${routes.contact}?unitId=${unit.id}` as Route}
-                    variant="gold"
-                    size="md"
-                  >
-                    {m.unitDetail.ctaInfo}
-                  </ButtonLink>
-                  <ButtonLink
-                    href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route}
-                    variant="outline"
-                    size="md"
-                    className="border-white/25 text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/10"
-                  >
-                    {m.unitDetail.ctaVisit}
-                  </ButtonLink>
-                  <CompareToggle item={compareItem} />
-                  <ShareButton title={[title, projectName].filter(Boolean).join(' · ')} />
-                </div>
-              </Reveal>
-            }
-          />
+          <UnitGallery media={unit.media} alt={title} locale={locale} />
         </Container>
       </section>
 
-      {/* ── Body: main content + sticky sidebar ── */}
-      <Section tone="canvas" className="pt-10 sm:pt-12 lg:pt-14">
-        <div className="grid gap-8 lg:grid-cols-3 lg:gap-10">
+      {/* ── Body: main column + sticky booking card ── */}
+      <Section tone="canvas" className="pt-8 sm:pt-10">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
+          <div className="min-w-0 space-y-12">
+            {/* Header */}
+            <header>
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${status.tone === 'success' ? 'bg-success/10 text-success' : 'bg-surface-soft text-ink'}`}>{status.label}</span>
+                {finishingLabel && <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-ink">{finishingLabel}</span>}
+                {handover && <span className="rounded-full bg-surface-soft px-3 py-1.5 text-xs font-semibold text-ink">{x.handover}: {handover}</span>}
+              </div>
+              <h1 className="mt-4 font-display text-[2rem] font-semibold leading-[1.3] text-ink-strong sm:text-[2.6rem]">{title}</h1>
+              {(projectName || place) && (
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-ink-muted">
+                  <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+                  {[projectName, place, unit.code].filter(Boolean).join(' · ')}
+                </p>
+              )}
+            </header>
 
-          {/* ── Main content column ── */}
-          <div className="space-y-14 lg:col-span-2">
+            {/* Price band */}
+            <div className="grid gap-px overflow-hidden rounded-[1.25rem] border border-hairline bg-hairline sm:grid-cols-3">
+              <div className="bg-surface px-6 py-5">
+                <p className="text-xs font-medium text-ink-muted">{x.price}</p>
+                <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong"><Price value={unit.price} /></p>
+                {unit.pricePerMeter && (
+                  <p className="mt-0.5 text-sm text-ink-muted" data-testid="unit-price-per-meter">
+                    <Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}
+                  </p>
+                )}
+              </div>
+              {down && (
+                <div className="bg-surface px-6 py-5">
+                  <p className="text-xs font-medium text-ink-muted">{x.downAmount}</p>
+                  <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong">{formatNumber(down.percent, locale)}٪</p>
+                  {down.amount > 0 && <p className="mt-0.5 text-sm text-ink-muted"><Price value={down.amount} /></p>}
+                </div>
+              )}
+              {handover && (
+                <div className="bg-surface px-6 py-5">
+                  <p className="text-xs font-medium text-ink-muted">{x.handover}</p>
+                  <p className="mt-1 font-display text-[1.75rem] font-semibold text-ink-strong">{handover}</p>
+                </div>
+              )}
+            </div>
 
-            {/* Unit specifications */}
+            {/* Key facts */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {facts.map((f) => (
+                <div key={f.label} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+                  <f.icon className="h-5 w-5 text-gold-500" aria-hidden />
+                  <p className="mt-3 font-display text-[1.6rem] font-semibold leading-none text-ink-strong">{f.value}</p>
+                  <p className="mt-1.5 text-sm text-ink-muted">{f.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Specs */}
             <div>
               <SectionHead label={m.unitDetail.specsLabel} title={m.unitDetail.specsTitle} />
-              <div className="mt-8">
-                <UnitSpecs unit={unit} />
-              </div>
+              <div className="mt-8"><UnitSpecs unit={unit} /></div>
             </div>
 
-            {/* About the unit */}
-            <div>
-              <SectionHead label={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
-              <p className="mt-6 text-lg leading-loose text-ink-muted">
-                {m.unitDetail.aboutDefault}
-              </p>
-            </div>
-
-            {/* Project relation — premium card matching the page's design language */}
-            {unit.project && (
+            {/* Payment plans — only when the company published some for this unit */}
+            {plans.length > 0 && (
               <div>
-                <SectionHead label={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
-                <div className="mt-8 overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
-                  {/* Gold accent stripe */}
-                  <div
-                    className="h-1 w-full"
-                    style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }}
-                    aria-hidden
-                  />
-                  <div className="p-6 sm:p-7">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-4">
-                        {/* Gradient icon — same treatment as ProjectFacts / InquiryCard */}
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-50 to-white shadow-[0_2px_10px_-2px_rgba(200,162,75,0.22)] ring-1 ring-gold-200/70">
-                          <Building2 className="h-6 w-6 text-gold-600" aria-hidden />
-                        </span>
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold-500">
-                            {m.unitDetail.projectFallback}
-                          </p>
-                          <h3 className="mt-0.5 text-lg font-bold text-ink-strong">
-                            {projectName}
-                          </h3>
-                          {unit.project.city && (
-                            <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-ink-muted">
-                              <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />
-                              {unit.project.city}
-                            </p>
-                          )}
-                        </div>
+                <SectionHead label={x.plansLabel} title={x.plansTitle} />
+                <div className="mt-8 grid gap-3 sm:grid-cols-2" data-testid="unit-plans">
+                  {plans.slice(0, 4).map((p) => {
+                    const longest = p.options.reduce<PublicPaymentPlan['options'][number] | null>((a, o) => (!a || o.durationMonths > a.durationMonths ? o : a), null);
+                    return (
+                      <div key={p.id} className="rounded-2xl border border-hairline bg-surface px-5 py-5">
+                        <p className="font-display text-lg font-semibold text-ink-strong">{p.name || (p.isCash ? x.planCash : x.plansLabel)}</p>
+                        {p.isCash ? (
+                          <p className="mt-2 text-sm text-ink-muted"><Price value={p.netPrice} /></p>
+                        ) : (
+                          <dl className="mt-3 space-y-1.5 text-sm">
+                            <div className="flex justify-between gap-3"><dt className="text-ink-muted">{x.downAmount}</dt><dd className="font-semibold text-ink-strong">{formatNumber(p.downPaymentPercent, locale)}٪ · <Price value={p.downPaymentAmount} /></dd></div>
+                            {longest && <div className="flex justify-between gap-3"><dt className="text-ink-muted">{x.planMonths(`${formatNumber(longest.durationMonths, locale)} ${x.monthsMany}`)}</dt><dd className="font-semibold text-ink-strong"><Price value={longest.installmentAmount} /></dd></div>}
+                          </dl>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-2.5">
-                        <ButtonLink
-                          href={routes.project(unit.project.id) as Route}
-                          variant="primary"
-                          size="sm"
-                        >
-                          {m.unitDetail.viewProject}
-                        </ButtonLink>
-                        <ButtonLink
-                          href={`${routes.units}?projectId=${unit.project.id}` as Route}
-                          variant="outline"
-                          size="sm"
-                        >
-                          {m.unitDetail.relatedLabel}
-                        </ButtonLink>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* Floor plan */}
+            {/* About */}
             <div>
-              <SectionHead label={m.unitDetail.relatedTitle} title={m.unitDetail.floorplanTitle} />
-              <PremiumCard className="mt-8 overflow-hidden">
-                {/* Blueprint-style graphic */}
-                <div
-                  className="relative flex min-h-56 items-center justify-center border-b border-hairline"
-                  style={{
-                    backgroundColor: 'rgb(var(--c-navy))',
-                    backgroundImage:
-                      'linear-gradient(rgba(200,162,75,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(200,162,75,0.18) 1px, transparent 1px)',
-                    backgroundSize: '28px 28px',
-                  }}
-                >
-                  <div className="relative h-32 w-48 rounded-md border-2 border-gold-300/70">
-                    <div className="absolute inset-y-0 left-1/2 w-px bg-gold-300/40" />
-                    <div className="absolute inset-x-0 top-1/2 h-px bg-gold-300/40" />
-                    <span className="absolute -bottom-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full bg-gold-400 text-navy">
-                      <LayoutPanelTop className="h-3.5 w-3.5" aria-hidden />
+              <SectionHead label={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
+              <p className="mt-6 text-lg leading-loose text-ink-muted">{m.unitDetail.aboutDefault}</p>
+            </div>
+
+            {/* Floor plan: the company's upload, else an honest «on request». */}
+            <div>
+              <SectionHead label={x.floorLabel} title={x.floorTitle} />
+              {floorPlans.length > 0 ? (
+                <div className="mt-8 grid gap-4" data-testid="unit-floorplan">
+                  {floorPlans.map((u, i) => (
+                    <a key={`${u}-${i}`} href={u} target="_blank" rel="noopener noreferrer" aria-label={x.floorOpen} className="block overflow-hidden rounded-[1.25rem] border border-hairline bg-white p-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt={`${title} — ${x.floorTitle}`} className="mx-auto max-h-[560px] w-auto max-w-full object-contain" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-8 flex flex-col items-center gap-4 rounded-[1.25rem] border border-dashed border-hairline bg-surface px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-start">
+                  <p className="flex items-center gap-3 text-ink-muted"><LayoutPanelTop className="h-5 w-5 shrink-0 text-gold-500" aria-hidden />{x.floorOnRequest}</p>
+                  <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">{m.unitDetail.floorplanCta}</ButtonLink>
+                </div>
+              )}
+            </div>
+
+            {/* Project */}
+            {unit.project && (
+              <div>
+                <SectionHead label={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
+                <div className="mt-8 flex flex-col gap-5 rounded-[1.25rem] border border-hairline bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white" style={{ background: DEEP_BG }}>
+                      <Building2 className="h-6 w-6" aria-hidden />
                     </span>
+                    <div>
+                      <h3 className="font-display text-lg font-semibold text-ink-strong">{projectName}</h3>
+                      {place && <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-ink-muted"><MapPin className="h-3.5 w-3.5" aria-hidden />{place}</p>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    <ButtonLink href={routes.project(unit.project.id) as Route} variant="primary" size="sm">{m.unitDetail.viewProject}</ButtonLink>
+                    <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="sm">{m.unitDetail.relatedLabel}</ButtonLink>
                   </div>
                 </div>
-                <div className="flex flex-col items-center gap-4 p-7 text-center sm:flex-row sm:justify-between sm:text-start">
-                  <p className="text-ink-muted">
-                    {m.unitDetail.floorplanEmpty}
-                  </p>
-                  <ButtonLink
-                    href={`${routes.contact}?unitId=${unit.id}` as Route}
-                    variant="outline"
-                    size="sm"
-                  >
-                    {m.unitDetail.floorplanCta}
-                  </ButtonLink>
-                </div>
-              </PremiumCard>
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* ── Sticky aside ── */}
-          <aside className="lg:col-span-1">
+          <aside>
             <div className="lg:sticky lg:top-28">
               <UnitInquiryCard
                 unitId={unit.id}
                 price={unit.price}
                 unitCode={unit.code}
-                projectName={unit.project ? pickAr(unit.project.name, '', locale) : ''}
+                projectName={projectName}
+                statusLabel={status.label}
+                down={down}
                 locale={locale}
+                tools={
+                  <>
+                    <CompareToggle item={compareItem} />
+                    <ShareButton title={[title, projectName].filter(Boolean).join(' · ')} variant="card" />
+                  </>
+                }
               />
             </div>
           </aside>
