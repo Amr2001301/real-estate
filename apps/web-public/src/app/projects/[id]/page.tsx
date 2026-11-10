@@ -1,7 +1,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { extraT } from '@/messages/site-extra';
 import { siteT } from '@/messages/site';
 import { getLocale } from '@/lib/locale';
@@ -20,9 +20,9 @@ import { Stagger } from '@/components/motion/Stagger';
 import { ProjectAmenities } from '@/components/projects/ProjectAmenities';
 import { ProjectLocation } from '@/components/projects/ProjectLocation';
 import { UnitCard } from '@/components/home/UnitCard';
-import { DetailHero, HeroChip } from '@/components/detail/DetailHero';
+import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
 import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
-import { DetailBookingCard, HeroActions } from '@/components/detail/DetailBookingCard';
+import { DetailBookingCard } from '@/components/detail/DetailBookingCard';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
@@ -146,26 +146,14 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             images={photos}
             alt={name}
             title={name}
-            chips={
+            eyebrow={[place, type].filter(Boolean).join(' · ')}
+            status={project.featured ? <HeroChip tone="gold">{m.projectDetail.featured}</HeroChip> : undefined}
+            tools={
               <>
-                {project.featured && <HeroChip tone="gold">{m.projectDetail.featured}</HeroChip>}
-                {type && <HeroChip>{type}</HeroChip>}
-                {downMin && <HeroChip>{x.downFrom(formatNumber(downMin, locale))}</HeroChip>}
+                <FavoriteButton kind="project" id={project.id} className={heroIconClass} />
+                <ShareButton title={name} />
               </>
             }
-            subtitle={
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-                {place}
-                {project.licenseNumber && (
-                  <span className="text-white/60" data-testid="project-license">
-                    · {m.projectFacts.license}: <span dir="ltr">{project.licenseNumber}</span>
-                  </span>
-                )}
-              </p>
-            }
-            actions={<HeroActions visitHref={visitHref} waMessage={waMessage} />}
-            tools={<FavoriteButton kind="project" id={project.id} />}
           />
           <DetailStats items={stats} />
         </Container>
@@ -235,20 +223,16 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               <DetailBookingCard
                 eyebrow={name}
                 headline={x.unitsAvailable(units)}
-                lines={[
-                  downMin ? <span key="d">{x.downFrom(formatNumber(downMin, locale))}</span> : null,
-                  yearsText ? <span key="y">{x.planMonths(yearsText)}</span> : null,
-                  <span key="p">{place}</span>,
+                headSub={place}
+                rows={[
+                  downMin ? { label: x.downMin, value: `${formatNumber(downMin, locale)}%` } : null,
+                  yearsText ? { label: x.duration, value: yearsText } : null,
+                  type ? { label: x.projectType, value: type } : null,
+                  project.licenseNumber ? { label: m.projectFacts.license, value: <span dir="ltr">{project.licenseNumber}</span>, testId: 'project-license' } : null,
                 ]}
                 visitHref={visitHref}
                 infoHref={infoHref}
                 waMessage={waMessage}
-                tools={
-                  <>
-                    <FavoriteButton kind="project" id={project.id} variant="inline" />
-                    <ShareButton title={name} variant="card" />
-                  </>
-                }
               />
             </div>
           </aside>

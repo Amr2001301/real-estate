@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react';
 import type { Route } from 'next';
-import { Phone, CalendarDays } from 'lucide-react';
+import { Phone, CalendarDays, ShieldCheck } from 'lucide-react';
+import { DEEP_BG } from '@/components/home/Hero';
 import { telHref, whatsappHref } from '@/lib/contact';
 import { useCompanyContact } from '@/components/contact/CompanyContactProvider';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
@@ -18,64 +19,77 @@ export function DetailBookingCard({
   eyebrow,
   status,
   headline,
-  lines,
+  headSub,
+  rows,
   visitHref,
   infoHref,
   waMessage,
-  tools,
 }: {
   eyebrow?: string;
   status?: string;
   headline: ReactNode;
-  lines?: ReactNode[];
+  headSub?: ReactNode;
+  /** The terms under the price: down payment, instalment, handover… */
+  rows?: ({ label: string; value: ReactNode; testId?: string } | null)[];
   visitHref: string;
   infoHref: string;
   waMessage: string;
-  tools?: ReactNode;
 }) {
   const t = extraT(useSiteLocale()).unitPage;
   const { phone, whatsapp } = useCompanyContact();
   const waHref = whatsapp ? whatsappHref(whatsapp, waMessage) : null;
-  const shown = (lines ?? []).filter(Boolean);
+  const shown = (rows ?? []).filter((r): r is NonNullable<typeof r> => Boolean(r));
 
   return (
     <>
-      <div className="overflow-hidden rounded-[1.5rem] border border-hairline bg-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.35)]">
-        <div className="px-6 pb-5 pt-6">
-          <div className="flex items-center justify-between gap-3">
-            {eyebrow && <p className="text-[13px] font-medium text-ink-muted">{eyebrow}</p>}
-            {status && <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">{status}</span>}
+      <div className="overflow-hidden rounded-[1.5rem] bg-surface shadow-[0_30px_70px_-34px_rgba(0,0,0,0.45)] ring-1 ring-hairline">
+        {/* The company's deep colour carries the headline figure. */}
+        <div className="relative overflow-hidden px-7 pb-7 pt-6 text-white" style={{ background: DEEP_BG }}>
+          <span className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(80% 90% at 100% 0%, rgb(var(--c-gold-400) / 0.22), transparent 60%)' }} aria-hidden />
+          <div className="relative flex items-center justify-between gap-3">
+            {eyebrow && <p className="truncate text-[13px] font-medium text-white/70">{eyebrow}</p>}
+            {status && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-gold-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden />
+                {status}
+              </span>
+            )}
           </div>
-          <div className="mt-2 font-display text-[1.9rem] font-semibold leading-tight text-ink-strong">{headline}</div>
-          {shown.length > 0 && (
-            <ul className="mt-4 space-y-2 border-t border-hairline pt-4 text-[14px] text-ink-muted">
-              {shown.map((l, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400" aria-hidden />
-                  {l}
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="relative mt-3 font-display text-[2.1rem] font-semibold leading-tight">{headline}</div>
+          {headSub && <div className="relative mt-1 text-sm text-white/65">{headSub}</div>}
         </div>
-        <div className="flex flex-col gap-2.5 border-t border-hairline px-6 py-5">
-          <a href={visitHref} className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-gold-400 px-5 text-[15px] font-semibold text-[#1B1206] transition-colors hover:bg-gold-300">
+
+        {shown.length > 0 && (
+          <dl className="divide-y divide-hairline px-7">
+            {shown.map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-4 py-4" data-testid={r.testId}>
+                <dt className="text-[14px] text-ink-muted">{r.label}</dt>
+                <dd className="text-end text-[15px] font-semibold text-ink-strong">{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        <div className="flex flex-col gap-2.5 px-7 pb-7 pt-3">
+          <a href={visitHref} className="inline-flex h-[54px] items-center justify-center gap-2 rounded-2xl bg-gold-400 px-5 text-[15px] font-semibold text-[#1B1206] transition-colors hover:bg-gold-300">
             <CalendarDays className="h-5 w-5" aria-hidden />
             {t.bookVisit}
           </a>
           <div className="grid grid-cols-2 gap-2.5">
-            <a href={phone ? telHref(phone) : (infoHref as Route)} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-hairline text-[15px] font-semibold text-ink-strong transition-colors hover:bg-surface-soft">
+            <a href={phone ? telHref(phone) : (infoHref as Route)} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-soft text-[15px] font-semibold text-ink-strong transition-colors hover:bg-hairline/60">
               <Phone className="h-[18px] w-[18px]" aria-hidden />
               {t.callNow}
             </a>
-            <a href={waHref ?? infoHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#25D366]/40 text-[15px] font-semibold text-ink-strong transition-colors hover:bg-[#25D366]/[0.08]">
+            <a href={waHref ?? infoHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-surface-soft text-[15px] font-semibold text-ink-strong transition-colors hover:bg-hairline/60">
               <WhatsAppIcon className="h-[18px] w-[18px] text-[#25D366]" />
               {t.whatsapp}
             </a>
           </div>
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-ink-muted">
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+            {t.trust}
+          </p>
         </div>
-        {tools && <div className="flex flex-wrap items-center gap-2 border-t border-hairline px-6 py-4">{tools}</div>}
-        <p className="border-t border-hairline px-6 py-3.5 text-xs text-ink-muted">{t.trust}</p>
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-surface/95 px-4 py-3 backdrop-blur-lg lg:hidden" role="region" aria-label={t.bookVisit}>
@@ -96,26 +110,6 @@ export function DetailBookingCard({
           )}
         </div>
       </div>
-    </>
-  );
-}
-
-/** The hero's two actions: a visit request and WhatsApp. */
-export function HeroActions({ visitHref, waMessage }: { visitHref: string; waMessage: string }) {
-  const t = extraT(useSiteLocale()).unitPage;
-  const { whatsapp } = useCompanyContact();
-  return (
-    <>
-      <a href={visitHref} className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gold-400 px-6 text-[15px] font-semibold text-[#1B1206] transition-colors hover:bg-gold-300">
-        <CalendarDays className="h-5 w-5" aria-hidden />
-        {t.bookVisit}
-      </a>
-      {whatsapp && (
-        <a href={whatsappHref(whatsapp, waMessage)} className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white/[0.12] px-6 text-[15px] font-semibold text-white ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-white/20">
-          <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
-          {t.whatsapp}
-        </a>
-      )}
     </>
   );
 }

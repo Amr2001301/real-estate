@@ -9,7 +9,7 @@ import { useCompare, type CompareItem } from './CompareContext';
  * the card's link (not nested), and stops propagation, so toggling never
  * triggers navigation.
  */
-export function CompareToggle({ item }: { item: CompareItem }) {
+export function CompareToggle({ item, className }: { item: CompareItem; className?: string }) {
   const { isSelected, toggle } = useCompare();
   const selected = isSelected(item.id);
 
@@ -28,6 +28,7 @@ export function CompareToggle({ item }: { item: CompareItem }) {
         selected
           ? 'bg-gold-400 text-navy ring-gold-300'
           : 'bg-white/80 text-ink-strong ring-black/5 hover:bg-white hover:text-navy',
+        className,
       )}
     >
       {selected ? <Check className="h-4 w-4" aria-hidden /> : <Scale className="h-4 w-4" aria-hidden />}

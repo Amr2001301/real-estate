@@ -9,7 +9,11 @@ import { siteT } from '@/messages/site';
 import { extraT } from '@/messages/site-extra';
 import type { Locale } from '@/lib/locale';
 
-/** The project a unit belongs to: its photo beside its name, place, type, services and available units. */
+/**
+ * «الوحدة جزء من…»: the unit's project as a wide banner — its photo, name,
+ * place and type, a line about it, what it offers and how many units are
+ * still available — leading to the project page.
+ */
 export function DetailProjectCard({ project, locale }: { project: PublicProjectDetail; locale: Locale }) {
   const s = siteT(locale);
   const t = extraT(locale);
@@ -23,38 +27,30 @@ export function DetailProjectCard({ project, locale }: { project: PublicProjectD
   return (
     <Link
       href={routes.project(project.id) as Route}
-      className="group grid overflow-hidden rounded-[1.5rem] border border-hairline bg-surface transition-shadow hover:shadow-[0_28px_56px_-30px_rgba(0,0,0,0.35)] sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"
+      className="group relative isolate block min-h-[360px] overflow-hidden rounded-[1.75rem] text-white"
       data-testid="unit-project-card"
     >
-      <div className="relative h-56 sm:h-auto sm:min-h-[260px]">
-        <CoverImage src={cover} alt={name} className="absolute inset-0 h-full" zoomOnHover />
-        {type && <span className="absolute start-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#1A1F1C]">{type}</span>}
-      </div>
-      <div className="flex flex-col p-6 sm:p-7">
-        {place && (
-          <p className="flex items-center gap-1.5 text-sm text-ink-muted">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-            {place}
-          </p>
-        )}
-        <h3 className="mt-1.5 font-display text-[1.5rem] font-semibold leading-snug text-ink-strong">{name}</h3>
-        {description && <p className="mt-2 line-clamp-2 text-[15px] leading-[1.85] text-ink-muted">{description}</p>}
+      <CoverImage src={cover} alt={name} className="absolute inset-0 -z-10 h-full" zoomOnHover />
+      <span className="absolute inset-0 -z-10 bg-[linear-gradient(270deg,rgba(0,0,0,.82)_0%,rgba(0,0,0,.6)_45%,rgba(0,0,0,.1)_100%)] ltr:bg-[linear-gradient(90deg,rgba(0,0,0,.82)_0%,rgba(0,0,0,.6)_45%,rgba(0,0,0,.1)_100%)]" aria-hidden />
+      <div className="flex min-h-[360px] max-w-xl flex-col justify-center p-8 sm:p-11">
+        <p className="flex flex-wrap items-center gap-x-2 text-[15px] text-white/80">
+          <MapPin className="h-4 w-4" aria-hidden />
+          {[place, type].filter(Boolean).join(' · ')}
+        </p>
+        <h3 className="mt-2 font-display text-white text-[1.9rem] font-semibold leading-[1.3] sm:text-[2.4rem]">{name}</h3>
+        {description && <p className="mt-2 line-clamp-2 text-[15px] leading-[1.9] text-white/75">{description}</p>}
         {services.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {services.map((sv) => (
-              <span key={sv} className="rounded-full bg-surface-soft px-2.5 py-1 text-xs font-medium text-ink">{sv}</span>
-            ))}
-          </div>
+          <p className="mt-3 text-sm text-white/70">{services.join('  ·  ')}</p>
         )}
-        <div className="mt-auto pt-5"><div className="flex items-center justify-between gap-4 border-t border-hairline pt-4">
-          <span className="text-sm text-ink-muted">
-            <b className="font-display text-xl font-semibold text-ink-strong">{formatNumber(project.availableUnitsCount, locale)}</b> {s.home.projects.available}
+        <div className="mt-7 flex flex-wrap items-center gap-6">
+          <span className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gold-400 px-6 text-[15px] font-semibold text-[#1B1206] transition-colors group-hover:bg-gold-300">
+            {t.unitPage.explore}
+            <ArrowLeft className="h-4 w-4 ltr:rotate-180" aria-hidden />
           </span>
-          <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-navy dark:text-gold-300">
-            {s.unitDetail.viewProject}
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5 ltr:rotate-180" aria-hidden />
+          <span className="text-[15px] text-white/80">
+            <b className="font-display text-2xl font-semibold text-white">{formatNumber(project.availableUnitsCount, locale)}</b> {s.home.projects.available}
           </span>
-        </div></div>
+        </div>
       </div>
     </Link>
   );

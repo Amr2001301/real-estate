@@ -1,7 +1,6 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin } from 'lucide-react';
 import type { Locale } from '@/lib/locale';
 import { getLocale } from '@/lib/locale';
 import { getSiteCurrency } from '@/lib/site-currency';
@@ -22,9 +21,10 @@ import { Stagger } from '@/components/motion/Stagger';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
-import { DetailHero, HeroChip } from '@/components/detail/DetailHero';
+import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
+import { PaymentPlans } from '@/components/detail/PaymentPlans';
 import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
-import { DetailBookingCard, HeroActions } from '@/components/detail/DetailBookingCard';
+import { DetailBookingCard } from '@/components/detail/DetailBookingCard';
 import { DetailProjectCard } from '@/components/detail/DetailProjectCard';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
@@ -99,7 +99,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   const statusLabel = m.unitDetail.status[unit.status as keyof typeof m.unitDetail.status] ?? m.unitDetail.status.AVAILABLE;
   const projectName = unit.project ? pickAr(unit.project.name, '', locale) : '';
   const place = projectPlace(projectName, null, unit.project?.city, locale);
-  const finishingLabel = unit.finishing ? m.unitSpecs.finishingLabels[unit.finishing] ?? null : null;
   const handover = unit.deliveryDate ? handoverLabel(unit.deliveryDate, locale, x.readyNow) : '';
   const residential = !unit.usage || unit.usage === 'RESIDENTIAL';
 
@@ -124,6 +123,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   // instalment plans. No public plan → no down payment shown.
   const instalment = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
   const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
+  const monthly = instalment[0]?.options.reduce((a, o) => (a === 0 || o.installmentAmount < a ? o.installmentAmount : a), 0) ?? 0;
   const longestMonths = Math.max(0, ...instalment.flatMap((p) => p.options.map((o) => o.durationMonths)));
   const yearsText = longestMonths >= 12 && longestMonths % 12 === 0
     ? `${formatNumber(longestMonths / 12, locale)} ${longestMonths / 12 === 1 ? x.yearsOne : x.yearsMany}`
@@ -193,24 +193,15 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             images={photos}
             alt={title}
             title={title}
-            chips={
+            eyebrow={[projectName, place].filter(Boolean).join(' — ') || undefined}
+            status={<HeroChip tone={unit.status === 'AVAILABLE' ? 'success' : 'glass'}>{statusLabel}</HeroChip>}
+            tools={
               <>
-                <HeroChip tone={unit.status === 'AVAILABLE' ? 'success' : 'glass'}>{statusLabel}</HeroChip>
-                {finishingLabel && <HeroChip>{finishingLabel}</HeroChip>}
-                {down && <HeroChip tone="gold">{x.downFrom(formatNumber(down.percent, locale))}</HeroChip>}
+                <FavoriteButton kind="unit" id={unit.id} className={heroIconClass} />
+                <CompareToggle item={compareItem} className={heroIconClass} />
+                <ShareButton title={ldName} />
               </>
             }
-            subtitle={
-              (projectName || place) && (
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-                  {[projectName, place].filter(Boolean).join(' — ')}
-                  {unit.code && <span className="text-white/60">· {unit.code}</span>}
-                </p>
-              )
-            }
-            actions={<HeroActions visitHref={visitHref} waMessage={waMessage} />}
-            tools={<FavoriteButton kind="unit" id={unit.id} />}
           />
           <DetailStats items={stats} />
         </Container>
@@ -227,35 +218,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             {plans.length > 0 && (
               <div>
                 <DetailHead eyebrow={x.plansLabel} title={x.plansTitle} />
-                <div className="grid gap-4 sm:grid-cols-2" data-testid="unit-plans">
-                  {plans.slice(0, 4).map((p) => {
-                    const longest = p.options.reduce<PublicPaymentPlan['options'][number] | null>((a, o) => (!a || o.durationMonths > a.durationMonths ? o : a), null);
-                    return (
-                      <div key={p.id} className="rounded-[1.25rem] border border-hairline bg-surface p-6">
-                        <p className="font-display text-lg font-semibold text-ink-strong">{p.name || (p.isCash ? x.planCash : x.plansLabel)}</p>
-                        {p.isCash ? (
-                          <p className="mt-4 font-display text-[1.6rem] font-semibold text-ink-strong"><Price value={p.netPrice} /></p>
-                        ) : (
-                          <dl className="mt-4 space-y-3 text-[15px]">
-                            <div className="flex items-center justify-between gap-3">
-                              <dt className="text-ink-muted">{x.downAmount} ({formatNumber(p.downPaymentPercent, locale)}%)</dt>
-                              <dd className="font-semibold text-ink-strong"><Price value={p.downPaymentAmount} /></dd>
-                            </div>
-                            {longest && (
-                              <div className="flex items-center justify-between gap-3 border-t border-hairline pt-3">
-                                <dt className="text-ink-muted">{x.installmentFrom}</dt>
-                                <dd className="font-semibold text-ink-strong"><Price value={longest.installmentAmount} /></dd>
-                              </div>
-                            )}
-                            {longest && (
-                              <p className="text-[13px] text-ink-muted">{x.planMonths(`${formatNumber(longest.durationMonths, locale)} ${x.monthsMany}`)}</p>
-                            )}
-                          </dl>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <PaymentPlans plans={plans} locale={locale} />
               </div>
             )}
 
@@ -278,13 +241,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
               <DetailHead eyebrow={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
               <p className="text-[17px] leading-[2] text-ink-muted">{m.unitDetail.aboutDefault}</p>
             </div>
-
-            {project && (
-              <div>
-                <DetailHead eyebrow={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
-                <DetailProjectCard project={project} locale={locale} />
-              </div>
-            )}
           </div>
 
           <aside>
@@ -293,46 +249,51 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 eyebrow={unit.code ? `${m.unitInquiry.unitCode} ${unit.code}` : undefined}
                 status={statusLabel}
                 headline={<Price value={unit.price} />}
-                lines={[
-                  down ? <span key="d" data-testid="unit-down-payment">{x.downAmount} {formatNumber(down.percent, locale)}% · <Price value={down.amount} /></span> : null,
-                  longestMonths > 0 ? <span key="y">{x.planMonths(yearsText)}</span> : null,
-                  handover ? <span key="h">{x.handover}: {handover}</span> : null,
+                headSub={unit.pricePerMeter ? <><Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}</> : undefined}
+                rows={[
+                  down ? { label: `${x.downAmount} (${formatNumber(down.percent, locale)}%)`, value: <Price value={down.amount} />, testId: 'unit-down-payment' } : null,
+                  monthly ? { label: x.installmentFrom, value: <><Price value={monthly} /> <span className="text-[13px] font-normal text-ink-muted">/ {x.perMonth}</span></> } : null,
+                  longestMonths > 0 ? { label: x.duration, value: yearsText } : null,
+                  handover ? { label: x.handover, value: handover } : null,
                 ]}
                 visitHref={visitHref}
                 infoHref={infoHref}
                 waMessage={waMessage}
-                tools={
-                  <>
-                    <FavoriteButton kind="unit" id={unit.id} variant="inline" />
-                    <CompareToggle item={compareItem} />
-                    <ShareButton title={ldName} variant="card" />
-                  </>
-                }
               />
             </div>
           </aside>
         </div>
       </Section>
 
-      {unit.project && similarUnits.length > 0 && (
+      {(project || similarUnits.length > 0) && (
         <Section tone="soft">
-          <DetailHead
-            eyebrow={m.unitDetail.moreUnitsLabel}
-            title={m.unitDetail.moreUnitsTitle}
-            action={
-              <Link
-                href={`${routes.units}?projectId=${unit.project.id}` as Route}
-                className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-hairline px-6 text-[15px] font-semibold text-ink-strong transition-colors hover:border-navy/40"
-              >
-                {m.unitDetail.viewAllUnits} ←
-              </Link>
-            }
-          />
-          <Stagger className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
-            {similarUnits.map((u) => (
-              <UnitCard key={u.id} unit={u} locale={locale} />
-            ))}
-          </Stagger>
+          {project && (
+            <>
+              <DetailHead eyebrow={x.projectEyebrow} title={x.projectTitle} />
+              <DetailProjectCard project={project} locale={locale} />
+            </>
+          )}
+          {unit.project && similarUnits.length > 0 && (
+            <div className={project ? 'mt-16' : ''}>
+              <DetailHead
+                eyebrow={m.unitDetail.moreUnitsLabel}
+                title={x.otherUnits}
+                action={
+                  <Link
+                    href={`${routes.units}?projectId=${unit.project.id}` as Route}
+                    className="inline-flex h-12 shrink-0 items-center justify-center rounded-2xl border border-hairline px-6 text-[15px] font-semibold text-ink-strong transition-colors hover:border-navy/40"
+                  >
+                    {m.unitDetail.viewAllUnits} ←
+                  </Link>
+                }
+              />
+              <Stagger className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
+                {similarUnits.map((u) => (
+                  <UnitCard key={u.id} unit={u} locale={locale} />
+                ))}
+              </Stagger>
+            </div>
+          )}
         </Section>
       )}
 

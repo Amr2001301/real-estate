@@ -7,26 +7,26 @@ import { useSiteLocale } from '@/components/locale/SiteLocaleProvider';
 import { extraT } from '@/messages/site-extra';
 
 /**
- * The top of a unit or project page: the main photo full-width with the
- * title, place and actions over it, a few thumbnails at the far corner and
- * a full-screen viewer for every photo. No photo → the building drawing.
+ * The top of a unit or project page: the main photo full-width with only
+ * the place and the name over it, three thumbnails (the last «+N») at the
+ * far corner and a full-screen viewer. No photo → the building drawing.
  */
 export function DetailHero({
   images,
   alt,
-  chips,
+  status,
+  eyebrow,
   title,
-  subtitle,
-  actions,
   tools,
 }: {
   images: string[];
   alt: string;
-  chips?: ReactNode;
+  /** One chip at the top corner (available, featured…). */
+  status?: ReactNode;
+  /** The line above the title: project and place. */
+  eyebrow?: string;
   title: string;
-  subtitle?: ReactNode;
-  actions?: ReactNode;
-  /** Save / share, at the top corner. */
+  /** Save / compare / share, at the other top corner. */
   tools?: ReactNode;
 }) {
   const t = extraT(useSiteLocale()).unitPage;
@@ -52,46 +52,55 @@ export function DetailHero({
   }, [open, count]);
 
   const thumbs = images.slice(1, 4);
+  const more = count - 1 - thumbs.length;
   const num = new Intl.NumberFormat('en-US').format(count);
 
   return (
-    <div className="relative isolate overflow-hidden rounded-[1.75rem] text-white" style={{ height: 'clamp(500px, 54vw, 660px)' }}>
-      <CoverImage src={images[0]} alt={alt} className="absolute inset-0 -z-10 h-full" />
-      <span className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(0,0,0,.86)_0%,rgba(0,0,0,.5)_34%,rgba(0,0,0,.08)_62%,rgba(0,0,0,.25)_100%)]" aria-hidden />
+    <div className="relative isolate overflow-hidden rounded-[1.75rem] text-white" style={{ height: 'clamp(460px, 48vw, 600px)' }}>
+      <button type="button" onClick={() => count && setOpen(0)} className="absolute inset-0 -z-10 block h-full w-full cursor-zoom-in" aria-label={alt} tabIndex={count ? 0 : -1}>
+        <CoverImage src={images[0]} alt={alt} className="h-full" />
+      </button>
+      <span className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(0,0,0,.78)_0%,rgba(0,0,0,.35)_30%,rgba(0,0,0,0)_55%)]" aria-hidden />
+      <span className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-32 bg-[linear-gradient(180deg,rgba(0,0,0,.35),transparent)]" aria-hidden />
 
-      {tools && <div className="absolute end-4 top-4 flex items-center gap-2 sm:end-6 sm:top-6">{tools}</div>}
+      {status && <div className="absolute start-5 top-5 sm:start-7 sm:top-7">{status}</div>}
+      {tools && <div className="absolute end-5 top-5 flex items-center gap-2 sm:end-7 sm:top-7">{tools}</div>}
 
-      <div className="absolute inset-x-5 bottom-[4.5rem] sm:inset-x-9 sm:bottom-[5.25rem] lg:end-[22rem]">
-        {chips && <div className="flex flex-wrap gap-2">{chips}</div>}
-        <h1 className="mt-4 font-display text-[2rem] font-semibold leading-[1.3] text-white sm:text-[2.9rem]">{title}</h1>
-        {subtitle && <div className="mt-2 text-[15px] text-white/85 sm:text-base">{subtitle}</div>}
-        {actions && <div className="mt-6 flex flex-wrap items-center gap-3">{actions}</div>}
+      <div className="pointer-events-none absolute inset-x-6 bottom-[4.25rem] sm:inset-x-10 sm:bottom-[5rem] lg:end-[24rem]">
+        {eyebrow && <p className="text-[15px] font-medium text-white/80">{eyebrow}</p>}
+        <h1 className="mt-1.5 font-display text-[2.1rem] font-semibold leading-[1.25] text-white sm:text-[3.1rem]">{title}</h1>
       </div>
 
       {count > 1 && (
-        <div className="absolute bottom-[5.25rem] end-9 hidden items-end gap-2.5 lg:flex">
-          {thumbs.map((u, i) => (
-            <button
-              key={`${u}-${i}`}
-              type="button"
-              onClick={() => setOpen(i + 1)}
-              aria-label={`${alt} — ${i + 2}`}
-              className="h-20 w-28 overflow-hidden rounded-xl ring-2 ring-white/70 transition-transform hover:-translate-y-0.5"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={u} alt="" className="h-full w-full object-cover" />
-            </button>
-          ))}
+        <div className="absolute bottom-[5rem] end-10 hidden gap-2 lg:flex">
+          {thumbs.map((u, i) => {
+            const last = i === thumbs.length - 1;
+            return (
+              <button
+                key={`${u}-${i}`}
+                type="button"
+                onClick={() => setOpen(last && more > 0 ? 0 : i + 1)}
+                aria-label={last && more > 0 ? t.photos(num) : `${alt} — ${i + 2}`}
+                className="relative h-[72px] w-24 overflow-hidden rounded-xl ring-1 ring-white/40 transition-transform hover:-translate-y-0.5"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={u} alt="" className="h-full w-full object-cover" />
+                {last && more > 0 && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/55 font-display text-lg font-semibold text-white" dir="ltr">+{more}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
       {count > 1 && (
         <button
           type="button"
           onClick={() => setOpen(0)}
-          className="absolute end-4 top-[4.25rem] inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-[#1A1F1C] shadow-lg backdrop-blur hover:bg-white sm:end-6 sm:top-20 lg:bottom-[11rem] lg:end-9 lg:top-auto"
+          className="absolute bottom-[5rem] end-6 inline-flex h-10 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-medium text-white ring-1 ring-white/25 backdrop-blur lg:hidden"
         >
           <Images className="h-4 w-4" aria-hidden />
-          {t.photos(num)}
+          {num}
         </button>
       )}
 
@@ -139,3 +148,7 @@ export function HeroChip({ children, tone = 'glass' }: { children: ReactNode; to
         : 'bg-white/[0.16] text-white ring-1 ring-white/25 backdrop-blur';
   return <span className={`rounded-full px-3.5 py-1.5 text-xs font-semibold ${cls}`}>{children}</span>;
 }
+
+/** A round frosted button on the hero photo (save, compare, share). */
+export const heroIconClass =
+  'inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/25 backdrop-blur transition-colors hover:bg-black/55';

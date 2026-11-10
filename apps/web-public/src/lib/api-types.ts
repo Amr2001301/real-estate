@@ -98,6 +98,8 @@ export interface PublicPaymentPlan {
   id: string;
   name: string;
   isCash: boolean;
+  totalPrice?: number;
+  discountAmount?: number;
   netPrice: number;
   reservationAmount: number;
   downPaymentAmount: number;
