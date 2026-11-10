@@ -157,22 +157,24 @@ function SideProject({ project, locale }: { project: PublicProjectListItem; loca
     <div className="relative flex flex-1">
       <Link
         href={routes.project(project.id) as Route}
-        className="group flex flex-1 flex-col overflow-hidden rounded-3xl border border-hairline bg-surface outline-none transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-[0_28px_56px_-28px_rgba(0,0,0,0.32)] focus-visible:ring-2 focus-visible:ring-gold-400/50 sm:flex-row"
+        className="group flex flex-1 flex-col overflow-hidden rounded-3xl border border-hairline bg-surface outline-none transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-[0_28px_56px_-28px_rgba(0,0,0,0.32)] focus-visible:ring-2 focus-visible:ring-gold-400/50"
       >
-        <CoverImage src={project.coverImage} alt={name} className="h-52 shrink-0 sm:h-auto sm:min-h-[240px] sm:w-[44%]" zoomOnHover />
-        <div className="flex flex-1 flex-col px-5 py-5 sm:px-6 sm:py-6">
+        <div className="relative min-h-[200px] flex-1">
+          <CoverImage src={project.coverImage} alt={name} className="absolute inset-0 h-full" zoomOnHover />
           {type && (
-            <span className="self-start rounded-full bg-navy/[0.08] px-3 py-1 text-xs font-semibold text-navy dark:bg-gold-400/15 dark:text-gold-300">{type}</span>
+            <span className="absolute start-3.5 top-3.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-[#1A1F1C]">{type}</span>
           )}
-          <h3 className="mt-3 line-clamp-2 font-display text-[1.375rem] font-semibold leading-snug text-ink-strong">{name}</h3>
+        </div>
+        <div className="flex flex-col px-5 pb-4 pt-4 sm:px-6">
+          <h3 className="line-clamp-1 font-display text-[1.375rem] font-semibold leading-snug text-ink-strong">{name}</h3>
           {place && (
             <p className="mt-1.5 flex items-center gap-1.5 text-sm text-ink-muted">
               <MapPin className="h-4 w-4 shrink-0" aria-hidden />
               <span className="line-clamp-1">{place}</span>
             </p>
           )}
-          {list.length > 0 && <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-ink-muted">{list.join(' · ')}</p>}
-          <div className="mt-auto flex items-center justify-between pt-5">
+          {list.length > 0 && <p className="mt-1.5 line-clamp-1 text-[13px] text-ink-muted">{list.join(' · ')}</p>}
+          <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3">
             <span className="text-sm text-ink-muted">
               <b className="font-display text-xl font-semibold text-ink-strong">{formatNumber(project.availableUnitsCount, locale)}</b> {m.available}
             </span>
