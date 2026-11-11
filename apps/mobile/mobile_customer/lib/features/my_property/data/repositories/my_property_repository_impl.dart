@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 
 import '../../domain/entities/property.dart';
+import '../../domain/entities/unit_value.dart';
 import '../../domain/repositories/my_property_repository.dart';
 import '../datasources/my_property_remote_data_source.dart';
 import '../mappers/property_mapper.dart';
@@ -16,4 +17,7 @@ class MyPropertyRepositoryImpl implements MyPropertyRepository {
       return rows.map((r) => r.toEntity()).toList();
     });
   }
+
+  @override
+  Future<Result<List<UnitValue>>> getUnitValues() => guardApiCall(_remote.unitValues);
 }

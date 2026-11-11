@@ -8,6 +8,7 @@ import '../../notifications/presentation/widgets/customer_notification_button.da
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
 import 'widgets/owned_projects_progress.dart';
+import 'widgets/unit_value_card.dart';
 
 Color get _navyDeep => AppPalette.navyDeep;
 
@@ -101,6 +102,8 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
                             ]),
                             // Construction progress of the projects these units are in.
                             OwnedProjectsProgress(projectIds: projectIds),
+                            // What the owned units are worth today (when the company shows it).
+                            UnitValueCard(reloadKey: properties.map((p) => p.contractId).join(',')),
                           ]);
                         }
                         final property = properties[i - 1];

@@ -6,10 +6,11 @@ import { UnitModelsService } from './unit-models.service';
 import { DeliveryDelaysService } from './delivery-delays.service';
 import { UnitValueService } from './unit-value.service';
 import { MeUnitValuesController, ProjectPriceRatesController } from './unit-value.controller';
+import { UnitValueRiseCron } from './unit-value-rise.cron';
 
 @Module({
   controllers: [UnitsController, ProjectPriceRatesController, MeUnitValuesController],
-  providers: [UnitsService, UnitTypesService, UnitModelsService, DeliveryDelaysService, UnitValueService],
+  providers: [UnitsService, UnitTypesService, UnitModelsService, DeliveryDelaysService, UnitValueService, UnitValueRiseCron],
   exports: [UnitsService, UnitTypesService, UnitModelsService, DeliveryDelaysService, UnitValueService],
 })
 export class UnitsModule {}

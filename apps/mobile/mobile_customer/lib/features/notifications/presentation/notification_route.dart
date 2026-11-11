@@ -31,6 +31,11 @@ String? customerNotificationRoute(String code, Map<String, dynamic> data) {
   }
   // Installment notices (overdue, due soon, schedule ready) are filed under
   // their contract but belong on the installments screen.
+  // «قيمة وحدتك» rose: the card sits in «عقاري» (the payload's contractId
+  // only dedups the notice; it must not open the contract).
+  if (code == 'unit_value_rise_customer' || entityType == 'unit_value') {
+    return '/account/property';
+  }
   if (code.startsWith('installment_') ||
       code.startsWith('payment_proof_') ||
       code == 'booking_payment_proof_submitted') {

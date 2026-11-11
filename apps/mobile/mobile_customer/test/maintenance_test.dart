@@ -1,3 +1,4 @@
+import 'package:mobile_customer/features/my_property/domain/entities/unit_value.dart';
 import 'dart:typed_data';
 
 import 'package:core/core.dart';
@@ -123,6 +124,8 @@ class _FakePropertyRepo implements MyPropertyRepository {
   final Result<List<Property>> _result;
   @override
   Future<Result<List<Property>>> getMyProperties() async => _result;
+  @override
+  Future<Result<List<UnitValue>>> getUnitValues() async => const Ok(<UnitValue>[]);
 }
 
 Property _property(String unitId, {bool handedOver = true}) => Property(

@@ -9615,4 +9615,40 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get myPropertyProgressViewStages => 'تفاصيل المراحل';
+
+  @override
+  String get unitValueTitle => 'قيمة وحدتك';
+
+  @override
+  String get unitValueSub =>
+      'كم تساوي وحدتك اليوم بأسعار الشركة الحالية، مقارنة بما دفعته.';
+
+  @override
+  String get unitValuePaid => 'سعر الشراء';
+
+  @override
+  String get unitValueNow => 'القيمة الحالية';
+
+  @override
+  String get unitValueGain => 'المكسب';
+
+  @override
+  String get unitValueChange => 'التغيّر';
+
+  @override
+  String unitValuePerMeter(String value) {
+    return '$value للمتر';
+  }
+
+  @override
+  String unitValueSince(String date) {
+    return 'منذ الشراء في $date';
+  }
+
+  @override
+  String get unitValueChart => 'سعر المتر من الشراء حتى اليوم';
+
+  @override
+  String get unitValueNote =>
+      'قيمة تقديرية حسب أسعار الشركة الحالية لوحدات مماثلة في نفس المشروع، وليست عرض شراء أو تقييمًا رسميًا.';
 }
