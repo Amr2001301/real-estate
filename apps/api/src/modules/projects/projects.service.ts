@@ -8,6 +8,14 @@ import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { codeTaken } from '../../common/utils/entity-code';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import {
+  amenitiesFromServices,
+  asArray,
+  servicesFromAmenities,
+  stagesChanged,
+  type ProgressStage,
+  type ProjectAmenity,
+} from './project-details';
+import {
   serializePublicProjectDetail,
   serializePublicProjectListItem,
   serializeStaffProjectListItem,
@@ -33,7 +41,7 @@ export class ProjectsService {
         lng: dto.lng,
         status: dto.status ?? ProjectStatus.DRAFT,
         featured: dto.featured ?? false,
-        services: (dto.services ?? []) as unknown as Prisma.InputJsonValue,
+        ...detailsData(dto, [], []),
         type: dto.type ?? null,
         district: dto.district?.trim() || null,
         totalArea: dto.totalArea ?? null,
@@ -210,8 +218,14 @@ export class ProjectsService {
   }
 
   async update(id: string, dto: UpdateProjectDto) {
-    await this.assertExists(id);
-    const data: Prisma.ProjectUpdateInput = {};
+    const current = await this.prisma.project.findUnique({
+      where: { id },
+      select: { id: true, amenities: true, progressStages: true },
+    });
+    if (!current) throw new NotFoundException('Project not found');
+    const data: Prisma.ProjectUpdateInput = {
+      ...detailsData(dto, asArray<ProjectAmenity>(current.amenities), asArray<ProgressStage>(current.progressStages)),
+    };
     if (dto.code !== undefined) data.code = dto.code;
     if (dto.name) data.name = dto.name as unknown as Prisma.InputJsonValue;
     if (dto.description) data.description = dto.description as unknown as Prisma.InputJsonValue;
@@ -220,7 +234,6 @@ export class ProjectsService {
     if (dto.lng !== undefined) data.lng = dto.lng;
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.featured !== undefined) data.featured = dto.featured;
-    if (dto.services) data.services = dto.services as unknown as Prisma.InputJsonValue;
     if (dto.type !== undefined) data.type = dto.type;
     if (dto.district !== undefined) data.district = dto.district?.trim() || null;
     if (dto.totalArea !== undefined) data.totalArea = dto.totalArea;
@@ -306,4 +319,43 @@ export class ProjectsService {
     const exists = await this.prisma.project.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw new NotFoundException('Project not found');
   }
+}
+
+type DetailsData = {
+  sections?: Prisma.InputJsonValue;
+  faqs?: Prisma.InputJsonValue;
+  amenities?: Prisma.InputJsonValue;
+  services?: Prisma.InputJsonValue;
+  progressStages?: Prisma.InputJsonValue;
+  progressUpdatedAt?: Date;
+};
+
+/**
+ * The page-content columns a create/update writes. `amenities` and the old
+ * names-only `services` move together: amenities sent → services follow;
+ * only services sent (an older client) → amenities rebuilt from them, each
+ * keeping the icon and group it had. A change to the progress stages stamps
+ * `progressUpdatedAt`.
+ */
+function detailsData(
+  dto: Pick<CreateProjectDto, 'services' | 'sections' | 'faqs' | 'amenities' | 'progressStages'>,
+  currentAmenities: ProjectAmenity[],
+  currentStages: ProgressStage[],
+): DetailsData {
+  const json = (v: unknown) => v as Prisma.InputJsonValue;
+  const out: DetailsData = {};
+  if (dto.sections) out.sections = json(dto.sections);
+  if (dto.faqs) out.faqs = json(dto.faqs);
+  if (dto.amenities) {
+    out.amenities = json(dto.amenities);
+    out.services = json(servicesFromAmenities(dto.amenities));
+  } else if (dto.services) {
+    out.services = json(dto.services);
+    out.amenities = json(amenitiesFromServices(dto.services, currentAmenities));
+  }
+  if (dto.progressStages) {
+    out.progressStages = json(dto.progressStages);
+    if (stagesChanged(currentStages, dto.progressStages)) out.progressUpdatedAt = new Date();
+  }
+  return out;
 }

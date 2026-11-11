@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -18,6 +19,13 @@ import { Transform, Type } from 'class-transformer';
 import { ProjectStatus, ProjectType, UnitUsage } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../../common/utils/entity-code';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
+import {
+  PROJECT_DETAIL_LIMITS,
+  ProgressStageDto,
+  ProjectAmenityDto,
+  ProjectFaqDto,
+  ProjectSectionDto,
+} from '../project-details';
 
 export class TranslatableDto {
   @IsString()
@@ -74,6 +82,21 @@ export class CreateProjectDto {
   /** Land area of the whole project, m². */
   @IsOptional() @IsNumber() @IsPositive() totalArea?: number | null;
   @IsOptional() @IsString() @MaxLength(100) licenseNumber?: string | null;
+
+  // The page content beyond the description (sections, FAQ, amenities,
+  // construction progress). A list sent replaces the stored one whole.
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.sections) @ValidateNested({ each: true }) @Type(() => ProjectSectionDto)
+  sections?: ProjectSectionDto[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.faqs) @ValidateNested({ each: true }) @Type(() => ProjectFaqDto)
+  faqs?: ProjectFaqDto[];
+
+  /** Replaces `services` (kept in step for clients that still read it). */
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.amenities) @ValidateNested({ each: true }) @Type(() => ProjectAmenityDto)
+  amenities?: ProjectAmenityDto[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.stages) @ValidateNested({ each: true }) @Type(() => ProgressStageDto)
+  progressStages?: ProgressStageDto[];
 }
 
 export class UpdateProjectDto {
@@ -129,6 +152,21 @@ export class UpdateProjectDto {
   /** Land area of the whole project, m². */
   @IsOptional() @IsNumber() @IsPositive() totalArea?: number | null;
   @IsOptional() @IsString() @MaxLength(100) licenseNumber?: string | null;
+
+  // The page content beyond the description (sections, FAQ, amenities,
+  // construction progress). A list sent replaces the stored one whole.
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.sections) @ValidateNested({ each: true }) @Type(() => ProjectSectionDto)
+  sections?: ProjectSectionDto[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.faqs) @ValidateNested({ each: true }) @Type(() => ProjectFaqDto)
+  faqs?: ProjectFaqDto[];
+
+  /** Replaces `services` (kept in step for clients that still read it). */
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.amenities) @ValidateNested({ each: true }) @Type(() => ProjectAmenityDto)
+  amenities?: ProjectAmenityDto[];
+
+  @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.stages) @ValidateNested({ each: true }) @Type(() => ProgressStageDto)
+  progressStages?: ProgressStageDto[];
 }
 
 /**
