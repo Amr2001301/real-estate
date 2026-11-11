@@ -27,3 +27,18 @@ export async function saveProjectContentAction(projectId: string, patch: Project
     return { ok: false, error: e instanceof Error ? e.message : undefined };
   }
 }
+
+export interface ContentSuggestion {
+  sections: Array<{ title: Text; body: Text }>;
+  faqs: Array<{ question: Text; answer: Text }>;
+  amenities: Array<{ name: Text; icon: string; group: 'INSIDE' | 'AROUND' }>;
+}
+
+/** «املأ من بيانات المشروع»: the content the project's records suggest (nothing is saved). */
+export async function suggestProjectContentAction(projectId: string): Promise<ContentSuggestion | null> {
+  try {
+    return await api.get<ContentSuggestion>(`/projects/${projectId}/content-suggestion`);
+  } catch {
+    return null;
+  }
+}

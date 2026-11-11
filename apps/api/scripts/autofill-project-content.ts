@@ -12,24 +12,16 @@
  *   npx tsx scripts/autofill-project-content.ts --execute  (writes)
  *   … --company=<id>   only one company's projects
  */
-import { Prisma, UnitStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 import { runAsPlatform, runInCompany } from '../src/common/tenant/tenant-context';
 import { PlanTemplatesService } from '../src/modules/installments/installments.module';
-import { asArray, servicesFromAmenities, type ProjectAmenity, type ProjectFaq, type ProjectSection } from '../src/modules/projects/project-details';
-import { autofillAmenityIcons, autofillFaqs, autofillSections, type AutofillInput } from '../src/modules/projects/project-autofill';
+import { servicesFromAmenities } from '../src/modules/projects/project-details';
+import { loadAutofill, suggestContent } from '../src/modules/projects/project-autofill-input';
 
 const EXECUTE = process.argv.includes('--execute');
 const ONLY_COMPANY = process.argv.find((a) => a.startsWith('--company='))?.split('=')[1];
 
-type Text = { ar: string; en: string };
-const text = (v: unknown): Text => {
-  if (v && typeof v === 'object') {
-    const o = v as Partial<Text>;
-    return { ar: String(o.ar ?? ''), en: String(o.en ?? '') };
-  }
-  return { ar: String(v ?? ''), en: String(v ?? '') };
-};
 
 async function main() {
   console.log(EXECUTE ? '⚠️  EXECUTE — project content will be written.' : 'ℹ️  DRY-RUN — nothing is written. Pass --execute to apply.');
@@ -42,16 +34,9 @@ async function main() {
   const loadProjects = () =>
     runAsPlatform(() =>
       prisma.project.findMany({
-      where: { companyId: ONLY_COMPANY ? ONLY_COMPANY : { not: null } },
-      orderBy: { createdAt: 'asc' },
-      select: {
-        id: true, companyId: true, name: true, city: true, district: true, type: true, totalArea: true, licenseNumber: true,
-        sections: true, faqs: true, amenities: true,
-        phases: {
-          orderBy: { createdAt: 'asc' },
-          select: { name: true, deliveryDate: true, buildings: { select: { units: { select: { type: true, area: true, status: true } } } } },
-        },
-      },
+        where: { companyId: ONLY_COMPANY ? ONLY_COMPANY : { not: null } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, companyId: true },
       }),
     );
   type ProjectRow = Awaited<ReturnType<typeof loadProjects>>[number];
@@ -68,64 +53,28 @@ async function main() {
   }
 
   async function fillOne(p: ProjectRow, companyId: string): Promise<boolean> {
-      const sections = asArray<ProjectSection>(p.sections);
-      const faqs = asArray<ProjectFaq>(p.faqs);
-      const amenities = asArray<ProjectAmenity>(p.amenities);
-      const units = p.phases.flatMap((ph) => ph.buildings.flatMap((b) => b.units));
-      const typeNames = new Map(
-        (await prisma.unitType.findMany({ where: { companyId }, select: { code: true, name: true } })).map((t) => [t.code.toLowerCase(), text(t.name)]),
-      );
-      const summary = await plans.customerPlansForProject(p.id).catch(() => null);
-      const offers = summary?.offers ?? [];
-      const input: AutofillInput = {
-        name: text(p.name),
-        city: p.city,
-        district: p.district,
-        type: p.type,
-        totalArea: p.totalArea,
-        licenseNumber: p.licenseNumber,
-        units: units.map((u) => ({
-          type: u.type,
-          typeName: typeNames.get(u.type.toLowerCase()) ?? { ar: u.type, en: u.type },
-          area: Number(u.area),
-          available: u.status === UnitStatus.AVAILABLE,
-        })),
-        phases: p.phases.map((ph) => ({ name: text(ph.name), deliveryDate: ph.deliveryDate })),
-        plans: {
-          minDownPaymentPercent: summary?.minDownPaymentPercent ?? null,
-          maxMonths: summary?.maxMonths ?? null,
-          hasCash: offers.some((o) => o.isCash),
-        },
-        amenities,
-      };
-
-      const data: Prisma.ProjectUpdateInput = {};
-      const report: string[] = [];
-      if (sections.length === 0) {
-        const s = autofillSections(input);
-        if (s.length) {
-          data.sections = s as unknown as Prisma.InputJsonValue;
-          report.push(`sections: ${s.map((x) => x.title.ar).join(' / ')}`);
-        }
-      }
-      if (faqs.length === 0) {
-        const f = autofillFaqs(input);
-        if (f.length) {
-          data.faqs = f as unknown as Prisma.InputJsonValue;
-          report.push(`faq: ${f.length} answered`);
-        }
-      }
-      const iconed = autofillAmenityIcons(amenities);
-      const newIcons = iconed.filter((a, i) => a.icon !== amenities[i]!.icon);
-      if (newIcons.length) {
-        data.amenities = iconed as unknown as Prisma.InputJsonValue;
-        data.services = servicesFromAmenities(iconed) as unknown as Prisma.InputJsonValue;
-        report.push(`icons: ${newIcons.map((a) => `${a.name.ar}→${a.icon}`).join(', ')}`);
-      }
-      if (report.length === 0) return false;
-      console.log(`\n• ${text(p.name).ar} (${p.id})\n  ${report.join('\n  ')}`);
-      if (EXECUTE) await prisma.project.update({ where: { id: p.id }, data });
-      return true;
+    const { name, input, current } = await loadAutofill(prisma, p.id, companyId, (id) => plans.customerPlansForProject(id));
+    const suggested = suggestContent(input);
+    const data: Prisma.ProjectUpdateInput = {};
+    const report: string[] = [];
+    if (current.sections.length === 0 && suggested.sections.length) {
+      data.sections = suggested.sections as unknown as Prisma.InputJsonValue;
+      report.push(`sections: ${suggested.sections.map((x) => x.title.ar).join(' / ')}`);
+    }
+    if (current.faqs.length === 0 && suggested.faqs.length) {
+      data.faqs = suggested.faqs as unknown as Prisma.InputJsonValue;
+      report.push(`faq: ${suggested.faqs.length} answered`);
+    }
+    const newIcons = suggested.amenities.filter((a, i) => a.icon !== current.amenities[i]!.icon);
+    if (newIcons.length) {
+      data.amenities = suggested.amenities as unknown as Prisma.InputJsonValue;
+      data.services = servicesFromAmenities(suggested.amenities) as unknown as Prisma.InputJsonValue;
+      report.push(`icons: ${newIcons.map((a) => `${a.name.ar}→${a.icon}`).join(', ')}`);
+    }
+    if (report.length === 0) return false;
+    console.log(`\n• ${name.ar} (${p.id})\n  ${report.join('\n  ')}`);
+    if (EXECUTE) await prisma.project.update({ where: { id: p.id }, data });
+    return true;
   }
 }
 
