@@ -209,6 +209,7 @@ const SITE_MESSAGES = {
         callNow: 'كلّمنا الآن',
         whatsapp: 'واتساب',
         whatsappNow: 'راسلنا الآن',
+        hours: (t: string) => `مواعيد العمل: ${t}`,
       },
       cta: {
         eyebrow: 'ابدأ الآن',
@@ -1229,6 +1230,7 @@ const SITE_MESSAGES = {
         callNow: 'Call now',
         whatsapp: 'WhatsApp',
         whatsappNow: 'Message us now',
+        hours: (t: string) => `Office hours: ${t}`,
       },
       cta: {
         eyebrow: 'Get Started',

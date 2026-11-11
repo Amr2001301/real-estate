@@ -6,7 +6,7 @@ import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { getContactPhone, getContactEmail, telHref, whatsappHref } from '@/lib/contact';
 import { companyApp } from '@/lib/app-links';
-import { companyName, type BrandingData } from '@/lib/branding';
+import { brandingText, companyName, type BrandingData } from '@/lib/branding';
 import type { PublicPageLink } from '@/lib/cms';
 import { Container } from '@/components/ui/Container';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
@@ -18,12 +18,6 @@ import { SocialIcon, SOCIAL_ORDER } from './SocialIcon';
 
 const YEAR = new Date().getFullYear();
 
-/** A translatable branding text: the API may send it already flattened to the visitor's language. */
-function pickText(v: unknown, locale: Locale): string | undefined {
-  if (typeof v === 'string') return v.trim() || undefined;
-  if (v && typeof v === 'object') return ((v as Record<string, string | undefined>)[locale] ?? '').trim() || undefined;
-  return undefined;
-}
 
 function FooterLink({ href, label, external = false }: { href: string; label: React.ReactNode; external?: boolean }) {
   const cls = 'inline-flex w-fit items-center text-[15px] text-white/70 transition-colors hover:text-white';
@@ -73,9 +67,9 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
   const phone = branding?.contactPhone ?? getContactPhone();
   const email = branding?.contactEmail ?? getContactEmail();
   const whatsapp = branding?.contactWhatsApp;
-  const address = pickText(branding?.contactAddress, locale);
-  const hours = pickText(branding?.officeHours, locale);
-  const tagline = pickText(branding?.tagline, locale) || m.footer.taglineDefault;
+  const address = brandingText(branding?.contactAddress, locale);
+  const hours = brandingText(branding?.officeHours, locale);
+  const tagline = brandingText(branding?.tagline, locale) || m.footer.taglineDefault;
   const socials = SOCIAL_ORDER.flatMap((k) => (branding?.socialLinks?.[k] ? [{ key: k, url: branding.socialLinks[k]! }] : []));
   const app = companyApp(branding?.mobileApp);
   const aboutPages = pages.filter((p) => !isLegalPage(p, m));
