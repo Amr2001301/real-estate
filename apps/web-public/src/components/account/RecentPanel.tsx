@@ -28,7 +28,7 @@ export async function RecentPanel({ icon: Icon, title, href, linkLabel, classNam
     <PremiumCard className={cn('flex flex-col p-5', className)}>
       <div className="mb-4 flex h-8 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold-400/15 text-gold-700">
             <Icon className="h-[18px] w-[18px]" aria-hidden />
           </span>
           <h2 className="truncate text-base font-bold text-ink-strong">{title}</h2>

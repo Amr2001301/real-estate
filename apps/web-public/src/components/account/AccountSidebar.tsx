@@ -96,12 +96,12 @@ export function AccountSidebar({
         className={cn(
           'inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm transition-all duration-200 ease-smooth lg:w-full',
           active
-            ? 'bg-gradient-to-br from-gold-300 to-gold-500 font-semibold text-navy shadow-[0_6px_18px_-8px_rgba(200,162,75,0.5)]'
+            ? 'bg-gold-400 font-semibold text-[#1B1206]'
             : 'font-medium text-white/70 hover:bg-white/[0.08] hover:text-white',
         )}
       >
         <Icon
-          className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-navy' : 'text-gold-300/90')}
+          className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-[#1B1206]' : 'text-gold-300/90')}
           aria-hidden
         />
         {label}
@@ -110,7 +110,7 @@ export function AccountSidebar({
             aria-label={`${badgeCount} ${locale === 'ar' ? 'إشعار غير مقروء' : 'unread notifications'}`}
             className={cn(
               'ms-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none',
-              active ? 'bg-navy text-gold-200' : 'bg-gold-400 text-navy',
+              active ? 'bg-[#1B1206] text-gold-300' : 'bg-gold-400 text-[#1B1206]',
             )}
           >
             {badgeCount > 99 ? '99+' : badgeCount}
@@ -140,7 +140,7 @@ export function AccountSidebar({
               aria-label={fullName || m.account.yourAccount}
             />
           ) : (
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-500 font-display text-base font-black text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)]">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-400 font-display text-base font-semibold text-[#1B1206]">
               {getInitials(fullName)}
             </span>
           )}

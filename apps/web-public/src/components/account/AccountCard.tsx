@@ -18,10 +18,6 @@ const RAIL: Record<AccountCardAccent, string> = {
   muted: 'from-hairline to-ink-muted/40',
 };
 
-const GLOW = {
-  background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.12), transparent 58%)',
-} as const;
-
 interface AccountCardProps {
   accent?: AccountCardAccent;
   /** Adds a hover lift + gold ring — use when the whole card is a link. */
@@ -44,7 +40,6 @@ export function AccountCard({ accent = 'gold', interactive = false, className, c
         className={cn('pointer-events-none absolute inset-y-0 start-0 w-1 bg-gradient-to-b', RAIL[accent])}
         aria-hidden
       />
-      <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
       <div className="relative">{children}</div>
     </div>
   );
@@ -63,7 +58,7 @@ export function AccountCardIcon({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70',
+        'inline-flex shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-700',
         size === 'md' ? 'h-11 w-11' : 'h-9 w-9',
         className,
       )}

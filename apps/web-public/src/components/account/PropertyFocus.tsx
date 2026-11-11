@@ -62,7 +62,7 @@ export async function PropertyFocus({
         <div>
           {/* Asset header */}
           <div className="mb-4 flex items-center gap-3">
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-400/15 text-gold-700">
               <Home className="h-6 w-6" aria-hidden />
             </span>
             <div className="min-w-0">

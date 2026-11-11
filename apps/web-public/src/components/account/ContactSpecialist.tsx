@@ -53,7 +53,7 @@ export async function ContactSpecialist({
       <div className="p-5 sm:p-6 flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/60">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-700">
             <User2 className="h-5 w-5" aria-hidden />
           </span>
           <div>
