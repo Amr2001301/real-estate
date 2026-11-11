@@ -15,6 +15,7 @@ import type { MeDocument } from '@/lib/api-types';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { cn } from '@/lib/cn';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { routes } from '@/lib/routes';
 
 function formatDate(iso: string, locale: Locale): string {
@@ -141,37 +142,7 @@ export function DocumentList({
   return (
     <div className="space-y-5">
       {/* Filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((tab) => {
-          const count = counts[tab.key] ?? 0;
-          const active = activeFilter === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter(tab.key)}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                active
-                  ? 'border-gold-400 bg-gold-100 text-gold-700'
-                  : 'border-hairline bg-surface text-ink-strong hover:border-gold-200 hover:bg-gold-50/50',
-              )}
-            >
-              {tab.label}
-              {count > 0 && (
-                <span
-                  className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                    active ? 'bg-gold-200 text-gold-800' : 'bg-surface-soft text-ink-muted',
-                  )}
-                >
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <SegmentedFilter active={activeFilter} items={TABS.map((tab) => ({ key: tab.key, label: tab.label, count: counts[tab.key] ?? 0, onClick: () => setFilter(tab.key) }))} />
 
       {/* Document list */}
       {documents.length === 0 ? (

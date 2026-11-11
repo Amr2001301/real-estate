@@ -15,10 +15,6 @@ import { accountT } from '@/messages/account';
  * it couldn't be loaded. `valueText` (e.g. a currency total) wins over `value`.
  */
 
-const GLOW = {
-  background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.14), transparent 62%)',
-} as const;
-
 export async function SummaryTile({
   icon: Icon,
   label,
@@ -40,10 +36,9 @@ export async function SummaryTile({
       href={href as Route}
       className="group relative flex h-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-hairline bg-surface px-5 py-7 text-center shadow-[0_8px_30px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.16),0_24px_50px_-18px_rgba(15,30,51,0.28)]"
     >
-      <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
 
       {/* Gold icon chip — center-aligned at the top of the tile */}
-      <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+      <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gold-400/15 text-gold-700 transition-colors duration-300 group-hover:bg-gold-400 group-hover:text-[#1B1206]">
         <Icon className="h-6 w-6" aria-hidden />
       </span>
 

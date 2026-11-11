@@ -1,11 +1,7 @@
 import { pageMeta } from '@/lib/page-meta';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import { Section } from '@/components/ui/Section';
-import { Container } from '@/components/ui/Container';
-import { PremiumCard } from '@/components/ui/PremiumCard';
-import { PageHero } from '@/components/layout/PageHero';
-import { InlineNotice } from '@/components/states/InlineNotice';
+import { LegalPage } from '@/components/content/LegalPage';
 
 export async function generateMetadata() {
   return pageMeta('terms', { robots: { index: false, follow: false } });
@@ -15,36 +11,17 @@ export default async function TermsPage() {
   const locale = await getLocale();
   const m = siteT(locale);
 
+  const [first, ...rest] = m.terms.sections;
   return (
-    <>
-      <PageHero
-        eyebrow={m.terms.eyebrow}
-        title={m.terms.title}
-        subtitle={m.terms.subtitle}
-      />
-
-      <Section tone="canvas">
-        <Container>
-          <div className="mx-auto max-w-3xl">
-            <InlineNotice tone="info">
-              {m.terms.notice}
-            </InlineNotice>
-
-            <PremiumCard className="mt-6 space-y-5 p-8 leading-relaxed text-ink-muted sm:p-10">
-              {m.terms.sections.map((section, i) => (
-                i === 0 ? (
-                  <p key={i}>{section.body}</p>
-                ) : (
-                  <div key={i}>
-                    <h2 className="text-lg font-semibold text-ink-strong">{section.title}</h2>
-                    <p className="mt-2">{section.body}</p>
-                  </div>
-                )
-              ))}
-            </PremiumCard>
-          </div>
-        </Container>
-      </Section>
-    </>
+    <LegalPage
+      homeLabel={m.unitDetail.breadHome}
+      title={m.terms.title}
+      subtitle={m.terms.subtitle}
+      notice={m.terms.notice}
+      intro={first?.body}
+      sections={rest}
+      tocLabel={locale === 'en' ? 'Contents' : 'المحتويات'}
+      locale={locale}
+    />
   );
 }

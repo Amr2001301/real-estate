@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
 
 const FIELD_BASE =
-  'w-full rounded-2xl border border-hairline bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted/60 shadow-sm transition-colors duration-200 focus:border-gold-300 focus:ring-2 focus:ring-gold-400/40 disabled:opacity-60';
+  'w-full rounded-2xl border border-hairline bg-surface px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted/60 shadow-sm transition-colors duration-200 focus:border-navy/50 focus:ring-2 focus:ring-navy/15 disabled:opacity-60';
 
 export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(
   ({ className, invalid, ...rest }, ref) => (

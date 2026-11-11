@@ -20,6 +20,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { cn } from '@/lib/cn';
 import { accountT } from '@/messages/account';
 import type { Locale } from '@/lib/locale';
@@ -171,7 +172,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
           {summary && <SummaryStrip summary={summary} m={m} symbol={currencySymbol(currency, locale)} locale={locale} />}
 
           {/* Filter row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             {contracts.length > 1 && (
               <UnitFilter
                 options={unitOptions}
@@ -179,39 +180,24 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
                 activeStatus={activeStatus}
               />
             )}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:ms-auto">
-              {FILTERS.map((f) => {
-                const count =
+            <SegmentedFilter
+              className="sm:ms-auto"
+              active={activeFilterKey}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: buildHref({ status: f.status }),
+                alert: f.key === 'OVERDUE',
+                count:
                   f.key === 'all'
                     ? summary?.counts.total
                     : f.key === 'PAID'
                       ? summary?.counts.paid
                       : f.key === 'PENDING'
                         ? summary?.counts.pending
-                        : summary?.counts.overdue;
-                const active = activeFilterKey === f.key;
-                return (
-                  <Link
-                    key={f.key}
-                    href={buildHref({ status: f.status })}
-                    aria-current={active ? 'true' : undefined}
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
-                      active
-                        ? 'bg-navy text-white shadow-sm'
-                        : 'border border-hairline bg-surface text-ink-muted hover:border-navy/20 hover:text-ink-strong',
-                    )}
-                  >
-                    {f.label}
-                    {typeof count === 'number' && (
-                      <span className={cn('tabular-nums text-[11px]', active ? 'opacity-70' : 'opacity-50')}>
-                        {count}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                        : summary?.counts.overdue,
+              }))}
+            />
           </div>
 
           {installments.length === 0 ? (

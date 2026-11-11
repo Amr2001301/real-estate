@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, ProjectStatus } from '@prisma/client';
+import { Prisma, ProjectStatus, UnitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from './dto/project.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -68,6 +68,10 @@ export class ProjectsService {
       // The public catalogue is PUBLISHED only; a ?status= filter is staff-only.
       ...(query.status && !publicOnly ? { status: query.status } : {}),
       ...(query.type ? { type: query.type } : {}),
+      // A mixed-use project counts for each usage it still has a unit of.
+      ...(query.usage
+        ? { phases: { some: { buildings: { some: { units: { some: { usage: query.usage, status: UnitStatus.AVAILABLE } } } } } } }
+        : {}),
       ...(query.featured !== undefined ? { featured: query.featured } : {}),
       ...(query.q
         ? {

@@ -108,7 +108,7 @@ export default async function HomePage() {
 
       {/* Search panel overlapping the hero's lower edge. */}
       <Container className="relative z-10 -mt-8 px-6 sm:-mt-16 sm:px-10 lg:px-14">
-        <SearchPanel locale={locale} cities={cities.ok ? cities.data.cities : []} />
+        <SearchPanel locale={locale} cities={cities.ok ? cities.data.cities : []} counts={counts} />
       </Container>
 
       <HomeBanners banners={banners} locale={locale} />

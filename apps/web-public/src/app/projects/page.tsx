@@ -26,7 +26,7 @@ export async function generateMetadata() {
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
 
-type SearchParams = Promise<{ q?: string; city?: string; featured?: string; sort?: string; page?: string; type?: string }>;
+type SearchParams = Promise<{ q?: string; city?: string; featured?: string; sort?: string; page?: string; type?: string; usage?: string }>;
 
 function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
@@ -38,6 +38,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   const q = firstStr(sp.q).trim();
   const city = firstStr(sp.city).trim();
   const type = firstStr(sp.type).trim();
+  const usage = firstStr(sp.usage).trim();
   const featured = firstStr(sp.featured) === 'true';
   const sort = firstStr(sp.sort);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
@@ -46,6 +47,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   if (q) params.set('q', q);
   if (city) params.set('city', city);
   if (type) params.set('type', type);
+  if (usage) params.set('usage', usage);
   if (featured) params.set('featured', 'true');
   if (sort) params.set('sort', sort);
 
@@ -63,13 +65,14 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   const projects = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
   const cities = citiesResult.ok ? citiesResult.data.cities : [];
-  const hasFilters = q !== '' || city !== '' || featured || type !== '';
+  const hasFilters = q !== '' || city !== '' || featured || type !== '' || usage !== '';
 
   function buildHref(nextPage: number): string {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (city) p.set('city', city);
     if (type) p.set('type', type);
+    if (usage) p.set('usage', usage);
     if (featured) p.set('featured', 'true');
     if (sort) p.set('sort', sort);
     if (nextPage > 1) p.set('page', String(nextPage));
@@ -77,7 +80,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
     return qs ? `${routes.projects}?${qs}` : routes.projects;
   }
 
-  const query = { q, city, type, featured, sort };
+  const query = { q, city, type, usage, featured, sort };
   const statsAll: Array<ListHeroStat | null> = [
     meta ? { value: formatNumber(meta.total, locale), label: m.listing.projectsStat } : null,
     cities.length > 0 ? { value: formatNumber(cities.length, locale), label: m.listing.citiesStat } : null,

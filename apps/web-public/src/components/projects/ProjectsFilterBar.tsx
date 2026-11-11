@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { cn } from '@/lib/cn';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { FieldSelect } from '@/components/ui/FieldSelect';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -14,6 +14,8 @@ export interface ProjectsQuery {
   q: string;
   city: string;
   type: string;
+  /** RESIDENTIAL, ADMINISTRATIVE, … — projects with an available unit of it. */
+  usage: string;
   featured: boolean;
   sort: string;
 }
@@ -24,13 +26,14 @@ export function projectsHref(v: ProjectsQuery): string {
   if (v.q.trim()) params.set('q', v.q.trim());
   if (v.city) params.set('city', v.city);
   if (v.type) params.set('type', v.type);
+  if (v.usage) params.set('usage', v.usage);
   if (v.featured) params.set('featured', 'true');
   if (v.sort) params.set('sort', v.sort);
   const qs = params.toString();
   return qs ? `${routes.projects}?${qs}` : routes.projects;
 }
 
-/** Search, city and type over the page header; «بحث» applies them. */
+/** Search, city, type and field over the page header; «بحث» applies them. */
 export function ProjectsFilterBar({
   initial,
   cities,
@@ -46,8 +49,10 @@ export function ProjectsFilterBar({
   const [q, setQ] = useState(initial.q);
   const [city, setCity] = useState(initial.city);
   const [type, setType] = useState(initial.type);
+  const [usage, setUsage] = useState(initial.usage);
+  const usages = siteT(locale).home.categories.items;
 
-  const go = (next: Partial<ProjectsQuery>) => router.push(projectsHref({ ...initial, q, city, type, ...next }) as never);
+  const go = (next: Partial<ProjectsQuery>) => router.push(projectsHref({ ...initial, q, city, type, usage, ...next }) as never);
 
   return (
     <form
@@ -81,6 +86,12 @@ export function ProjectsFilterBar({
           <option key={value} value={value}>{label}</option>
         ))}
       </FieldSelect>
+      <FieldSelect label={t.usageLabel} value={usage} onChange={(v) => { setUsage(v); go({ usage: v }); }} className="col-span-2 flex-1 lg:col-span-1">
+        <option value="">{t.allUsages}</option>
+        {usages.map((u) => (
+          <option key={u.usage} value={u.usage}>{u.title}</option>
+        ))}
+      </FieldSelect>
       <button type="submit" className="col-span-2 inline-flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-navy px-7 text-[15px] font-semibold text-white transition-colors hover:bg-navy-700">
         <Search className="h-[18px] w-[18px]" aria-hidden />
         {t.searchLabel}
@@ -103,21 +114,17 @@ export function ProjectsToolbar({
 }) {
   const router = useRouter();
   const s = siteT(locale);
-  const seg = (on: boolean) =>
-    cn('px-4 py-2 text-[13px] font-medium transition-colors', on ? 'bg-ink-strong text-canvas' : 'text-ink-muted hover:text-ink-strong');
-
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-[15px] text-ink-muted">{s.projects.showing(shown, total)}</p>
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex overflow-hidden rounded-xl border border-hairline" role="group">
-          <button type="button" aria-pressed={!query.featured} className={seg(!query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: false }) as never)}>
-            {s.listing.all}
-          </button>
-          <button type="button" aria-pressed={query.featured} className={seg(query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: true }) as never)}>
-            {s.listing.featuredOnly}
-          </button>
-        </div>
+        <SegmentedFilter
+          active={query.featured ? 'featured' : 'all'}
+          items={[
+            { key: 'all', label: s.listing.all, onClick: () => router.push(projectsHref({ ...query, featured: false }) as never) },
+            { key: 'featured', label: s.listing.featuredOnly, onClick: () => router.push(projectsHref({ ...query, featured: true }) as never) },
+          ]}
+        />
         <FieldSelect
           label={s.listing.sort}
           value={query.sort}
