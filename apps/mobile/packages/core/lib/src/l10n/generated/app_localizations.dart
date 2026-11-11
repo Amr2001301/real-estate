@@ -16975,6 +16975,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stage details'**
   String get myPropertyProgressViewStages;
+
+  /// No description provided for @unitValueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your unit\'s value'**
+  String get unitValueTitle;
+
+  /// No description provided for @unitValueSub.
+  ///
+  /// In en, this message translates to:
+  /// **'What your unit is worth today at the company\'s current prices, against what you paid.'**
+  String get unitValueSub;
+
+  /// No description provided for @unitValuePaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Price paid'**
+  String get unitValuePaid;
+
+  /// No description provided for @unitValueNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Value today'**
+  String get unitValueNow;
+
+  /// No description provided for @unitValueGain.
+  ///
+  /// In en, this message translates to:
+  /// **'Gain'**
+  String get unitValueGain;
+
+  /// No description provided for @unitValueChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get unitValueChange;
+
+  /// No description provided for @unitValuePerMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} per m²'**
+  String unitValuePerMeter(String value);
+
+  /// No description provided for @unitValueSince.
+  ///
+  /// In en, this message translates to:
+  /// **'since you bought on {date}'**
+  String unitValueSince(String date);
+
+  /// No description provided for @unitValueChart.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per m² from purchase to today'**
+  String get unitValueChart;
+
+  /// No description provided for @unitValueNote.
+  ///
+  /// In en, this message translates to:
+  /// **'An estimate from the company\'s current prices for similar units in the same project — not an offer or an official valuation.'**
+  String get unitValueNote;
 }
 
 class _AppLocalizationsDelegate

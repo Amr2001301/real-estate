@@ -17,10 +17,15 @@ import { BadRequestException } from '@nestjs/common';
 export const UNIT_VALUE_KEYS = {
   enabled: 'unitValue.enabled',
   showDecrease: 'unitValue.showDecrease',
+  notifyRise: 'unitValue.notifyRise',
 } as const;
 
-/** Off until the company turns it on; only a rise is shown unless it asks for both. */
-export const UNIT_VALUE_DEFAULTS = { enabled: false, showDecrease: false };
+/**
+ * Off until the company turns it on; only a rise is shown unless it asks for
+ * both. While it is on, owners are told when their unit's value rises,
+ * unless the company turns that off.
+ */
+export const UNIT_VALUE_DEFAULTS = { enabled: false, showDecrease: false, notifyRise: true };
 
 const bool = (k: string, v: unknown) => {
   if (typeof v !== 'boolean') throw new BadRequestException(`${k}: must be a boolean`);
@@ -28,6 +33,7 @@ const bool = (k: string, v: unknown) => {
 export const UNIT_VALUE_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
   [UNIT_VALUE_KEYS.enabled]: bool,
   [UNIT_VALUE_KEYS.showDecrease]: bool,
+  [UNIT_VALUE_KEYS.notifyRise]: bool,
 };
 
 export function resolveUnitValueSettings(rows: Array<{ key: string; value: unknown }>) {
@@ -38,6 +44,7 @@ export function resolveUnitValueSettings(rows: Array<{ key: string; value: unkno
   return {
     enabled: get(UNIT_VALUE_KEYS.enabled, UNIT_VALUE_DEFAULTS.enabled),
     showDecrease: get(UNIT_VALUE_KEYS.showDecrease, UNIT_VALUE_DEFAULTS.showDecrease),
+    notifyRise: get(UNIT_VALUE_KEYS.notifyRise, UNIT_VALUE_DEFAULTS.notifyRise),
   };
 }
 
@@ -148,4 +155,27 @@ export function valueHistory(
     ...[...byMonth.values()].map((r) => ({ date: r.recordedAt.toISOString(), pricePerMeter: round2(r.pricePerMeter) })),
     { date: today.at.toISOString(), pricePerMeter: round2(today.pricePerMeter) },
   ];
+}
+
+// ── «ارتفعت قيمة وحدتك» ──────────────────────────────────────────────────────
+
+/** A unit is told about a rise at most this often. */
+export const RISE_NOTICE_EVERY_MS = 30 * 24 * 60 * 60_000;
+/** The smallest rise worth a notice: 1% over the price paid, or over the value last told. */
+export const RISE_NOTICE_MIN = 0.01;
+
+/**
+ * Whether an owner is told their unit's value rose: it is above what they
+ * paid, at least 1% above the value in the last such notice (or the price
+ * paid, before any), and the last notice is at least 30 days old.
+ */
+export function shouldNotifyRise(
+  v: { purchasePrice: number; currentValue: number },
+  last: { value: number; at: Date } | null,
+  now: Date,
+): boolean {
+  if (!(v.currentValue > v.purchasePrice)) return false;
+  if (last && now.getTime() - last.at.getTime() < RISE_NOTICE_EVERY_MS) return false;
+  const base = last && last.value > 0 ? last.value : v.purchasePrice;
+  return v.currentValue >= base * (1 + RISE_NOTICE_MIN);
 }

@@ -27,6 +27,7 @@ const ACCOUNT = {
       contract_signed_customer: 'تم توقيع عقدك', contract_document_available: 'عقدك جاهز للتحميل',
       deposit_verified: 'تم اعتماد دفعتك', installment_due_soon: 'تذكير بقسط مستحق قريباً',
       project_progress_customer: 'تحديث نسبة إنجاز مشروعك',
+      unit_value_rise_customer: 'ارتفعت قيمة وحدتك',
     } as Record<string, string>,
     installmentStatus: { PENDING: 'قيد الاستحقاق', PAID: 'مدفوع', OVERDUE: 'متأخر' } as Record<string, string>,
     profile: {
@@ -138,6 +139,7 @@ const ACCOUNT = {
       contract_signed_customer: 'Your contract was signed', contract_document_available: 'Your contract is ready to download',
       deposit_verified: 'Your payment was verified', installment_due_soon: 'Reminder: an instalment is due soon',
       project_progress_customer: 'Construction progress update on your project',
+      unit_value_rise_customer: "Your unit's value went up",
     } as Record<string, string>,
     installmentStatus: { PENDING: 'Due', PAID: 'Paid', OVERDUE: 'Overdue' } as Record<string, string>,
     profile: {

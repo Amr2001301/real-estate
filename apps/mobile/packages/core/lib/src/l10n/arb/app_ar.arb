@@ -3162,5 +3162,17 @@
   "detailTabProgress": "الإنشاءات",
   "detailTabFaq": "الأسئلة",
   "myPropertyProgressTitle": "تقدم إنشاءات مشاريعك",
-  "myPropertyProgressViewStages": "تفاصيل المراحل"
+  "myPropertyProgressViewStages": "تفاصيل المراحل",
+  "unitValueTitle": "قيمة وحدتك",
+  "unitValueSub": "كم تساوي وحدتك اليوم بأسعار الشركة الحالية، مقارنة بما دفعته.",
+  "unitValuePaid": "سعر الشراء",
+  "unitValueNow": "القيمة الحالية",
+  "unitValueGain": "المكسب",
+  "unitValueChange": "التغيّر",
+  "unitValuePerMeter": "{value} للمتر",
+  "@unitValuePerMeter": { "placeholders": { "value": { "type": "String" } } },
+  "unitValueSince": "منذ الشراء في {date}",
+  "@unitValueSince": { "placeholders": { "date": { "type": "String" } } },
+  "unitValueChart": "سعر المتر من الشراء حتى اليوم",
+  "unitValueNote": "قيمة تقديرية حسب أسعار الشركة الحالية لوحدات مماثلة في نفس المشروع، وليست عرض شراء أو تقييمًا رسميًا."
 }

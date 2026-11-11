@@ -49,6 +49,9 @@ export function notificationHref(payload: Record<string, unknown> | null | undef
       return routes.accountVisits;
     case 'info_request':
       return routes.accountRequests;
+    case 'unit_value':
+      // «قيمة وحدتك» rose: the card is on the property page.
+      return routes.accountProperty;
     case 'project':
       // A construction-progress update opens the project's stages.
       return entityId ? `${routes.project(entityId)}#progress` : routes.accountProperty;

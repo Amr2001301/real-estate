@@ -9573,4 +9573,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myPropertyProgressViewStages => 'Stage details';
+
+  @override
+  String get unitValueTitle => 'Your unit\'s value';
+
+  @override
+  String get unitValueSub =>
+      'What your unit is worth today at the company\'s current prices, against what you paid.';
+
+  @override
+  String get unitValuePaid => 'Price paid';
+
+  @override
+  String get unitValueNow => 'Value today';
+
+  @override
+  String get unitValueGain => 'Gain';
+
+  @override
+  String get unitValueChange => 'Change';
+
+  @override
+  String unitValuePerMeter(String value) {
+    return '$value per m²';
+  }
+
+  @override
+  String unitValueSince(String date) {
+    return 'since you bought on $date';
+  }
+
+  @override
+  String get unitValueChart => 'Price per m² from purchase to today';
+
+  @override
+  String get unitValueNote =>
+      'An estimate from the company\'s current prices for similar units in the same project — not an offer or an official valuation.';
 }

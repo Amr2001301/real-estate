@@ -3170,5 +3170,17 @@
   "detailTabProgress": "Progress",
   "detailTabFaq": "FAQ",
   "myPropertyProgressTitle": "Construction progress on your projects",
-  "myPropertyProgressViewStages": "Stage details"
+  "myPropertyProgressViewStages": "Stage details",
+  "unitValueTitle": "Your unit's value",
+  "unitValueSub": "What your unit is worth today at the company's current prices, against what you paid.",
+  "unitValuePaid": "Price paid",
+  "unitValueNow": "Value today",
+  "unitValueGain": "Gain",
+  "unitValueChange": "Change",
+  "unitValuePerMeter": "{value} per m²",
+  "@unitValuePerMeter": { "placeholders": { "value": { "type": "String" } } },
+  "unitValueSince": "since you bought on {date}",
+  "@unitValueSince": { "placeholders": { "date": { "type": "String" } } },
+  "unitValueChart": "Price per m² from purchase to today",
+  "unitValueNote": "An estimate from the company's current prices for similar units in the same project — not an offer or an official valuation."
 }

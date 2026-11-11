@@ -1,10 +1,15 @@
 import 'package:dio/dio.dart';
 
+import '../../domain/entities/unit_value.dart';
 import '../dtos/property_row_dto.dart';
+import '../dtos/unit_value_dto.dart';
 
 /// Reads the customer's contracts (authenticated) to derive their properties.
 abstract interface class MyPropertyRemoteDataSource {
   Future<List<PropertyRowDto>> listContracts();
+
+  /// «قيمة وحدتك»: the signed units valued today (empty when the company has it off).
+  Future<List<UnitValue>> unitValues();
 }
 
 class MyPropertyRemoteDataSourceImpl implements MyPropertyRemoteDataSource {
@@ -25,5 +30,11 @@ class MyPropertyRemoteDataSourceImpl implements MyPropertyRemoteDataSource {
         .whereType<Map<String, dynamic>>()
         .map(PropertyRowDto.fromJson)
         .toList();
+  }
+
+  @override
+  Future<List<UnitValue>> unitValues() async {
+    final res = await _dio.get<Map<String, dynamic>>('/me/unit-values');
+    return parseUnitValues(res.data);
   }
 }

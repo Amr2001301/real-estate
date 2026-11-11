@@ -35,6 +35,11 @@ describe('notificationHref', () => {
     expect(notificationTitle('project_progress_customer')).toBe('تحديث نسبة إنجاز مشروعك');
   });
 
+  it('a unit-value rise opens the property page, not the contract', () => {
+    expect(notificationHref({ entityType: 'unit_value', contractId: 'c1' })).toBe(routes.accountProperty);
+    expect(notificationTitle('unit_value_rise_customer')).toBe('ارتفعت قيمة وحدتك');
+  });
+
   it('has no link for an unknown payload', () => {
     expect(notificationHref(null)).toBeNull();
     expect(notificationHref({ foo: 'bar' })).toBeNull();

@@ -923,6 +923,17 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     en_body: '{{projectName}} is now {{overall}}% complete. Follow the construction stages from your account.',
   },
   {
+    // «قيمة وحدتك» rose since the purchase (or since the last such notice);
+    // sent by UnitValueRiseCron while the company shows unit values.
+    code: 'unit_value_rise_customer',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: false,
+    ar_subject: 'ارتفعت قيمة وحدتك',
+    en_subject: "Your unit's value went up",
+    ar_body: 'أصبحت قيمة وحدتك {{unitCode}} في {{projectName}} حوالي {{amount}}، بزيادة {{gainPct}}% عن سعر الشراء. التفاصيل في «عقاري».',
+    en_body: 'Your unit {{unitCode}} in {{projectName}} is now worth about {{amount}}, {{gainPct}}% above the price you paid. See the details under My property.',
+  },
+  {
     code: 'contract_number_assigned',
     channel: NotificationChannel.IN_APP,
     ar_subject: 'تم إصدار رقم عقدك',

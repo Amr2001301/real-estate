@@ -22,6 +22,7 @@ describe('UV1 — unit value (e2e)', () => {
   let forSaleId: string;
   let ownedId: string;
   let contractId: string;
+  let customerId: string;
   let fixtures: E2EFixtures;
   const stamp = Date.now().toString().slice(-7);
   const TYPE = `UV${stamp}`;
@@ -41,7 +42,7 @@ describe('UV1 — unit value (e2e)', () => {
       loginAs(testApp.app, fixtures.users.CUSTOMER_2.email, fixtures.users.CUSTOMER_2.password, 'customer'),
     ]);
     companyId = (await testApp.rawPrisma.user.findUniqueOrThrow({ where: { id: fixtures.userIds.adminId } })).companyId!;
-    const customerId = (await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id: fixtures.flowE.customer1ContractId } })).customerId;
+    customerId = (await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id: fixtures.flowE.customer1ContractId } })).customerId;
     // A project of its own: one unit owned by customer1 (bought at 30,000/m²)
     // and one of the same type for sale.
     const p = await testApp.rawPrisma.project.create({
@@ -67,7 +68,8 @@ describe('UV1 — unit value (e2e)', () => {
   });
 
   afterAll(async () => {
-    await testApp.rawPrisma.setting.deleteMany({ where: { companyId, key: { in: ['unitValue.enabled', 'unitValue.showDecrease'] } } });
+    await testApp.rawPrisma.setting.deleteMany({ where: { companyId, key: { in: ['unitValue.enabled', 'unitValue.showDecrease', 'unitValue.notifyRise'] } } });
+    await testApp.rawPrisma.notification.deleteMany({ where: { userId: customerId, templateCode: 'unit_value_rise_customer' } });
     await testApp.rawPrisma.contract.deleteMany({ where: { id: contractId } });
     await testApp.rawPrisma.project.deleteMany({ where: { id: projectId } });
   });
@@ -115,5 +117,41 @@ describe('UV1 — unit value (e2e)', () => {
       .set('Authorization', bearer(customerToken))
       .send({ pricePerMeter: 1 })
       .expect(403);
+  });
+
+  it('UV1-6: the owner is told the value rose — once in 30 days, again only for a further rise, never when the company turns it off', async () => {
+    const notices = () =>
+      testApp.rawPrisma.notification.findMany({
+        where: { userId: customerId, templateCode: 'unit_value_rise_customer', payload: { path: ['contractId'], equals: contractId } },
+        orderBy: { createdAt: 'asc' },
+      });
+    await testApp.rawPrisma.notification.deleteMany({ where: { userId: customerId, templateCode: 'unit_value_rise_customer' } });
+
+    // Off by the company → nothing.
+    await setting('unitValue.notifyRise', false);
+    await testApp.runCronJob('unit-value-rise');
+    expect(await notices()).toHaveLength(0);
+
+    // On (the default): 4,000,000 today against 3,000,000 paid.
+    await testApp.rawPrisma.setting.deleteMany({ where: { companyId, key: 'unitValue.notifyRise' } });
+    await testApp.runCronJob('unit-value-rise');
+    const [first] = await notices();
+    expect(first).toBeDefined();
+    expect(first!.payload).toMatchObject({ entityType: 'unit_value', contractId, amount: '4000000.00', gainPct: '33.3' });
+    expect(first!.companyId).toBe(companyId);
+
+    // Again the same day → no second notice.
+    await testApp.runCronJob('unit-value-rise');
+    expect(await notices()).toHaveLength(1);
+
+    // 31 days later with no further rise → none; after a 2.5% rise → one more.
+    await testApp.rawPrisma.notification.update({ where: { id: first!.id }, data: { createdAt: new Date(Date.now() - 31 * 24 * 60 * 60_000) } });
+    await testApp.runCronJob('unit-value-rise');
+    expect(await notices()).toHaveLength(1);
+    await asAdmin(http().put(`/v1/projects/${projectId}/price-rates`)).send({ unitType: TYPE, pricePerMeter: 41_000 }).expect(200);
+    await testApp.runCronJob('unit-value-rise');
+    const all = await notices();
+    expect(all).toHaveLength(2);
+    expect(all[1]!.payload).toMatchObject({ amount: '4100000.00' });
   });
 });

@@ -1,3 +1,4 @@
+import 'package:mobile_customer/features/my_property/domain/entities/unit_value.dart';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +21,9 @@ class _FakeDataSource implements MyPropertyRemoteDataSource {
     if (error != null) throw error!;
     return rows;
   }
+
+  @override
+  Future<List<UnitValue>> unitValues() async => const [];
 }
 
 class _FakeRepo implements MyPropertyRepository {
@@ -27,6 +31,8 @@ class _FakeRepo implements MyPropertyRepository {
   final Result<List<Property>> _result;
   @override
   Future<Result<List<Property>>> getMyProperties() async => _result;
+  @override
+  Future<Result<List<UnitValue>>> getUnitValues() async => const Ok(<UnitValue>[]);
 }
 
 Map<String, dynamic> _contractJson({String? signedAt}) => {

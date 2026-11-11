@@ -52,6 +52,7 @@ export const KNOWN_SETTINGS: KnownSetting[] = [
   { key: 'cheque.bounced.penaltyAmount', type: 'number', placeholder: '0' },
   { key: 'unitValue.enabled', type: 'boolean' },
   { key: 'unitValue.showDecrease', type: 'boolean' },
+  { key: 'unitValue.notifyRise', type: 'boolean' },
 ];
 
 export const KNOWN_SETTING_KEYS = new Set(KNOWN_SETTINGS.map((s) => s.key));

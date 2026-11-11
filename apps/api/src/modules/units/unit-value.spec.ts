@@ -9,12 +9,15 @@ const u = (price: number, area: number, type = '2BR', usage = 'RESIDENTIAL', mod
 });
 
 describe('«قيمة وحدتك»', () => {
-  it('is off, and shows only a rise, until the company says otherwise', () => {
-    expect(resolveUnitValueSettings([])).toEqual({ enabled: false, showDecrease: false });
-    expect(resolveUnitValueSettings([{ key: 'unitValue.enabled', value: true }, { key: 'unitValue.showDecrease', value: 'yes' }])).toEqual({
-      enabled: true,
-      showDecrease: false,
-    });
+  it('is off, and shows only a rise, until the company says otherwise; a rise is told unless turned off', () => {
+    expect(resolveUnitValueSettings([])).toEqual({ enabled: false, showDecrease: false, notifyRise: true });
+    expect(
+      resolveUnitValueSettings([
+        { key: 'unitValue.enabled', value: true },
+        { key: 'unitValue.showDecrease', value: 'yes' },
+        { key: 'unitValue.notifyRise', value: false },
+      ]),
+    ).toEqual({ enabled: true, showDecrease: false, notifyRise: false });
   });
 
   it('averages the price per meter of units with an area', () => {
