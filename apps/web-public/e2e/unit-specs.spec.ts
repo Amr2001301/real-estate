@@ -51,7 +51,7 @@ test('a unit page shows its specs and the list filters by finishing', async ({ p
     await page.goto(`/units/${furnished}`, { waitUntil: 'networkidle' });
     const main = page.locator('main');
     for (const text of ['المساحة الصافية', 'التراس', 'مفروشة', 'بحر', 'قبلي شرقي', 'النموذج', `نموذج ${stamp}`, 'استلام فوري']) {
-      await expect(main.getByText(text, { exact: true }).first()).toBeVisible();
+      await expect(main.getByText(text, { exact: true }).filter({ visible: true }).first()).toBeVisible();
     }
     // Priced by the meter: 20,000 × 120 m².
     await expect(page.getByTestId('unit-price-per-meter')).toContainText('للمتر');

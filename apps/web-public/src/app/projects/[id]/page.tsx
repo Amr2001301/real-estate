@@ -30,7 +30,6 @@ import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
 import { Accordion } from '@/components/ui/Accordion';
-import { CtaBand } from '@/components/marketing/CtaBand';
 import { ViewTracker } from '@/components/analytics/ViewTracker';
 import { ShareButton } from '@/components/ui/ShareButton';
 
@@ -171,7 +170,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         })}
       />
 
-      <section className="bg-canvas pt-24 sm:pt-28">
+      <section className="bg-canvas pt-20 sm:pt-24">
         <Container>
           <nav aria-label={m.projectDetail.breadNav} className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
@@ -198,9 +197,9 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </Container>
       </section>
 
-      <Section tone="canvas" className="pt-14 sm:pt-16">
+      <Section tone="canvas" className="pt-8 sm:pt-10">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="min-w-0 space-y-14">
+          <div className="min-w-0 space-y-10">
             <div>
               <DetailHead eyebrow={m.projectDetail.overviewLabel} title={m.projectDetail.aboutTitle} />
               <p className="whitespace-pre-line text-[17px] leading-[2] text-ink-muted">{description || m.projectDetail.aboutEmpty}</p>
@@ -244,9 +243,9 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   </ButtonLink>
                 </div>
               ) : (
-                <Stagger className="grid gap-6 sm:grid-cols-2" childClassName="h-full" step={80}>
+                <Stagger className="grid gap-4 sm:grid-cols-2" childClassName="h-full" step={80}>
                   {previewUnits.slice(0, 4).map((unit) => (
-                    <UnitCard key={unit.id} unit={unit} locale={locale} />
+                    <UnitCard key={unit.id} unit={unit} locale={locale} compact />
                   ))}
                 </Stagger>
               )}
@@ -289,12 +288,6 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </div>
       </Section>
 
-      <CtaBand eyebrow={m.projectDetail.ctaBandTitle} title={m.projectDetail.ctaBandSub}>
-        <ButtonLink href={visitHref as Route} variant="gold" size="lg">{x.bookVisit}</ButtonLink>
-        <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="lg" className="border-white/25 text-white hover:border-white/50 hover:bg-white/5">
-          {m.projectDetail.ctaBandExplore}
-        </ButtonLink>
-      </CtaBand>
 
       <div className="h-[72px] lg:hidden" aria-hidden />
     </>

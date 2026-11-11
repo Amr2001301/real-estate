@@ -6,7 +6,7 @@ import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { getLocale } from '@/lib/locale';
 import { brandThemeVars, fetchBranding } from '@/lib/branding';
-import { fetchPageLinks } from '@/lib/cms';
+import { fetchPageLinks, fetchArticles } from '@/lib/cms';
 import { DEFAULT_CURRENCY } from '@/lib/site-currency';
 import { CurrencyProvider } from '@/components/currency/CurrencyProvider';
 import { Navbar } from '@/components/layout/Navbar';
@@ -42,7 +42,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [locale, slug] = await Promise.all([getLocale(), getResolvedSlug()]);
-  const [branding, pages] = slug ? await Promise.all([fetchBranding(slug), fetchPageLinks(slug, locale)]) : [null, []];
+  const [branding, pages, articles] = slug
+    ? await Promise.all([fetchBranding(slug), fetchPageLinks(slug, locale), fetchArticles(slug, locale)])
+    : [null, [], []];
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
 
   // Build inline CSS only when the tenant supplies at least one colour.
@@ -87,7 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <CompanyContactProvider contact={companyContact(branding)}>
             <Navbar locale={locale} branding={branding ?? undefined} />
             <main className="min-h-screen">{children}</main>
-            <Footer locale={locale} branding={branding ?? undefined} pages={pages} />
+            <Footer locale={locale} branding={branding ?? undefined} pages={pages} hasArticles={articles.length > 0} />
             <ChatWidget locale={locale} />
           </CompanyContactProvider>
           </FavoritesProvider>

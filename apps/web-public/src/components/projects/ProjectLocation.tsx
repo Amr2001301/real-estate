@@ -11,7 +11,7 @@ import { DetailHead } from '@/components/detail/DetailStats';
 // OSM/Leaflet requires window — load client-only.
 const OsmMap = dynamic(
   () => import('../maps/OsmMap').then((m) => ({ default: m.OsmMap })),
-  { ssr: false, loading: () => <div className="h-[340px] w-full animate-pulse bg-slate-100 sm:h-[440px]" /> },
+  { ssr: false, loading: () => <div className="h-[240px] w-full animate-pulse bg-slate-100 sm:h-[300px]" /> },
 );
 
 interface ProjectLocationProps {
@@ -36,7 +36,7 @@ export function ProjectLocation({ city, lat, lng, locale = 'ar' }: ProjectLocati
 
       <PremiumCard className="overflow-hidden">
         {coords ? (
-          <OsmMap lat={lat!} lng={lng!} height="340px" className="sm:!h-[440px]" />
+          <OsmMap lat={lat!} lng={lng!} height="240px" className="sm:!h-[300px]" />
         ) : (
           <div
             className="relative flex min-h-56 items-center justify-center"
