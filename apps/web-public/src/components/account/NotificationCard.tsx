@@ -6,6 +6,7 @@ import {
   CalendarClock,
   BookmarkCheck,
   type LucideIcon,
+  HardHat,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeNotification } from '@/lib/api-types';
@@ -39,6 +40,9 @@ export function notificationVisual(code: string, title: string): { Icon: LucideI
     title.includes('قسط')
   ) {
     return { Icon: Wallet, chip: 'bg-success/10 text-success ring-1 ring-success/20' };
+  }
+  if (c.includes('project_progress')) {
+    return { Icon: HardHat, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };
   }
   if (c.includes('visit') || title.includes('زيار') || title.includes('جدولة')) {
     return { Icon: CalendarClock, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };

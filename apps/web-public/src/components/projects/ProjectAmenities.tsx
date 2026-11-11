@@ -1,36 +1,35 @@
-import { Check } from 'lucide-react';
 import { pickAr } from '@/lib/format';
-import type { Translatable } from '@/lib/api-types';
-import { Stagger } from '@/components/motion/Stagger';
+import type { PublicProjectDetail, Translatable } from '@/lib/api-types';
 import { extraT } from '@/messages/site-extra';
 import type { Locale } from '@/lib/locale';
 import { DetailHead } from '@/components/detail/DetailStats';
+import { AmenityTiles, type AmenityTile } from './AmenityTiles';
 
-/** Renders services/amenities as premium vertical feature tiles. Returns null when empty. */
-export function ProjectAmenities({ services, locale = 'ar' }: { services: Translatable[]; locale?: Locale }) {
-  const t = extraT(locale).amenities;
-  const items = (services ?? []).map((s) => pickAr(s, '', locale)).filter(Boolean);
-  if (items.length === 0) return null;
+/**
+ * «ما يميّز هذا المشروع»: the amenities as icon tiles, split into «داخل
+ * المشروع» / «حول المشروع» tabs when the project has both. A project saved
+ * before amenities had icons shows its names with a tick. Null when empty.
+ */
+export function ProjectAmenities({
+  amenities,
+  services,
+  locale = 'ar',
+}: {
+  amenities?: PublicProjectDetail['amenities'];
+  services: Translatable[];
+  locale?: Locale;
+}) {
+  const t = extraT(locale);
+  const tiles: AmenityTile[] = (amenities?.length
+    ? amenities.map((a) => ({ name: pickAr(a.name, '', locale), icon: a.icon, group: a.group }))
+    : (services ?? []).map((s) => ({ name: pickAr(s, '', locale), icon: 'check', group: 'INSIDE' as const }))
+  ).filter((a) => a.name);
+  if (tiles.length === 0) return null;
 
   return (
     <div>
-      <DetailHead eyebrow={t.eyebrow} title={t.title} />
-
-      {/* Feature tiles — horizontal: icon anchored, text flows beside it.
-          Height is content-driven, never stretched by the grid row. */}
-      <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" step={60}>
-        {items.map((item, i) => (
-          <div
-            key={`${item}-${i}`}
-            className="flex items-center gap-3.5 rounded-2xl border border-hairline bg-surface px-5 py-4"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-400/15">
-              <Check className="h-4 w-4 stroke-[2.5] text-gold-600" aria-hidden />
-            </span>
-            <span className="text-[15px] font-medium leading-snug text-ink-strong">{item}</span>
-          </div>
-        ))}
-      </Stagger>
+      <DetailHead eyebrow={t.amenities.eyebrow} title={t.amenities.title} />
+      <AmenityTiles tiles={tiles} groups={t.projectContent.groups} />
     </div>
   );
 }

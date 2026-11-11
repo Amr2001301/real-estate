@@ -12,6 +12,10 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { PropertyCard } from '@/components/account/PropertyCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import { OwnedProjectsProgress } from '@/components/account/OwnedProjectsProgress';
+import { apiFetch } from '@/lib/api-server';
+import { getResolvedTenant } from '@/lib/tenant';
+import type { PublicProjectDetail } from '@/lib/api-types';
 
 export async function generateMetadata() {
   return pageMeta('property', { robots: { index: false, follow: false } });
@@ -63,6 +67,18 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
   const contracts = result.data;
   const meta = result.meta;
 
+  // The construction progress of the projects these units are in, from each
+  // project's public page data (a project that is not published is skipped).
+  const projectIds = [...new Set(contracts.map((c) => c.unit?.building?.phase?.project?.id).filter((id): id is string => !!id))];
+  const tenant = projectIds.length > 0 ? await getResolvedTenant() : null;
+  const ownedProjects = tenant
+    ? (
+        await Promise.all(
+          projectIds.map((id) => apiFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: 60, tenantSlug: tenant.slug })),
+        )
+      ).flatMap((r) => (r.ok ? [r.data] : []))
+    : [];
+
   const buildHref = (nextPage: number): string =>
     nextPage > 1 ? `${routes.accountProperty}?page=${nextPage}` : routes.accountProperty;
 
@@ -83,6 +99,7 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
         />
       ) : (
         <>
+          <OwnedProjectsProgress projects={ownedProjects} locale={locale} />
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {contracts.map((contract) => (
               <PropertyCard key={contract.id} contract={contract} />

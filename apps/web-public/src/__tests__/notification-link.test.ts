@@ -30,6 +30,11 @@ describe('notificationHref', () => {
     );
   });
 
+  it('opens a project progress update on the project stages', () => {
+    expect(notificationHref({ entityType: 'project', entityId: 'p1' })).toBe('/projects/p1#progress');
+    expect(notificationTitle('project_progress_customer')).toBe('تحديث نسبة إنجاز مشروعك');
+  });
+
   it('has no link for an unknown payload', () => {
     expect(notificationHref(null)).toBeNull();
     expect(notificationHref({ foo: 'bar' })).toBeNull();
