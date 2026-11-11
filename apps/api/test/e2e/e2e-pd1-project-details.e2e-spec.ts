@@ -160,4 +160,19 @@ describe('PD1 — project page details (e2e)', () => {
       await testApp.rawPrisma.notification.deleteMany({ where: { userId: contract.customerId, templateCode: 'project_progress_customer' } });
     }
   });
+
+  it('PD1-6: «املأ من بيانات المشروع» suggests content from the record without saving it; staff only', async () => {
+    const before = await stored();
+    const res = await asAdmin(http().get(`/v1/projects/${projectId}/content-suggestion`)).set('X-Raw-Translatable', '1').expect(200);
+    expect(res.body.sections[0]).toEqual({
+      title: { ar: 'الموقع', en: 'Location' },
+      body: { ar: 'يقع مشروع O7 في دمياط الجديدة.', en: 'O7 is in دمياط الجديدة.' },
+    });
+    expect(res.body.faqs[0].question.ar).toBe('أين يقع مشروع O7؟');
+    // Nothing invented: no units, plans or dates → no such answers.
+    expect(res.body.faqs.map((f: { question: { en: string } }) => f.question.en)).not.toContain('What payment plans does O7 offer?');
+    expect(await stored()).toEqual(before);
+    const customer = await loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer');
+    await http().get(`/v1/projects/${projectId}/content-suggestion`).set('Authorization', bearer(customer)).expect(403);
+  });
 });

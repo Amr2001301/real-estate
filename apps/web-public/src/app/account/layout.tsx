@@ -49,7 +49,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
         compact
       />
       <Container className="relative z-10 -mt-14 pb-20 sm:-mt-16">
-        <div className="grid gap-6 lg:grid-cols-[284px_minmax(0,1fr)] lg:gap-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[284px_minmax(0,1fr)] lg:gap-8">
           <AccountSidebar
             fullName={session.fullName}
             roleLabel={roleLabel}

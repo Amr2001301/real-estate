@@ -10,6 +10,8 @@ import { codeTaken } from '../../common/utils/entity-code';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { NotificationsService } from '../notifications/notifications.module';
+import { PlanTemplatesService } from '../installments/installments.module';
+import { loadAutofill, suggestContent } from './project-autofill-input';
 import {
   amenitiesFromServices,
   asArray,
@@ -36,6 +38,25 @@ export class ProjectsService {
     // DeliveryDelaysService).
     @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
+
+  /**
+   * «املأ من بيانات المشروع»: the project's page content as its records
+   * would fill it — sections, the ready FAQ answered, amenity icons. Not
+   * saved: the dashboard merges it into the empty places for review.
+   */
+  async contentSuggestion(id: string) {
+    const companyId = getRequiredCompanyId();
+    let plans: PlanTemplatesService | null = null;
+    try {
+      plans = this.moduleRef?.get(PlanTemplatesService, { strict: false }) ?? null;
+    } catch {
+      plans = null;
+    }
+    const { input } = await loadAutofill(this.prisma, id, companyId, (projectId) =>
+      plans ? plans.customerPlansForProject(projectId) : Promise.resolve(null),
+    );
+    return suggestContent(input);
+  }
 
   private notifications(): NotificationsService | null {
     try {

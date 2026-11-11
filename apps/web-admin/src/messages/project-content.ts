@@ -70,6 +70,13 @@ const ar = {
     { q: `When is the handover in ${name}?`, a: '' },
     { q: `What makes ${name} stand out?`, a: '' },
   ],
+  autofill: {
+    button: 'املأ من بيانات المشروع',
+    hint: 'بيكتب من بيانات المشروع المسجلة (الموقع، الوحدات، أنظمة السداد، مواعيد الاستلام، المرافق) في الأماكن الفاضية بس. راجع وعدّل قبل الحفظ.',
+    filled: (n: number) => `اتملأ ${n} — راجع وبعدين اضغط حفظ`,
+    nothing: 'مفيش بيانات جديدة تتملي هنا من بيانات المشروع.',
+    failed: 'تعذّر قراءة بيانات المشروع.',
+  },
   errors: { save: 'تعذّر الحفظ، راجع البيانات وحاول تاني.' },
 };
 
@@ -130,6 +137,13 @@ const en: typeof ar = {
   },
   faqTemplate: ar.faqTemplate,
   faqTemplateEn: ar.faqTemplateEn,
+  autofill: {
+    button: 'Fill from project data',
+    hint: "Writes from the project's records (location, units, payment plans, handover dates, amenities) into empty places only. Review and edit before saving.",
+    filled: (n: number) => `Filled ${n} — review, then save`,
+    nothing: 'Nothing new to fill here from the project data.',
+    failed: 'Could not read the project data.',
+  },
   errors: { save: 'Could not save — check the data and try again.' },
 };
 

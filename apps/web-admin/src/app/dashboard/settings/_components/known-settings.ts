@@ -50,6 +50,8 @@ export const KNOWN_SETTINGS: KnownSetting[] = [
     options: ['REOPEN_AS_OVERDUE', 'REOPEN_AS_PENDING'],
   },
   { key: 'cheque.bounced.penaltyAmount', type: 'number', placeholder: '0' },
+  { key: 'unitValue.enabled', type: 'boolean' },
+  { key: 'unitValue.showDecrease', type: 'boolean' },
 ];
 
 export const KNOWN_SETTING_KEYS = new Set(KNOWN_SETTINGS.map((s) => s.key));

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, type ReactNode } from 'react';
-import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import type { AmenityGroup, AmenityIcon } from '@rep/shared-types';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { AMENITY_ICON_COMPONENTS, AmenityIconView } from '@/components/projects/amenity-icons';
 import type { Locale } from '@/lib/locale';
 import { pcT } from '@/messages/project-content';
-import { saveProjectContentAction, type ProjectContentPatch } from './actions';
+import { saveProjectContentAction, suggestProjectContentAction, type ProjectContentPatch } from './actions';
 
 type Text = { ar: string; en: string };
 export interface ProjectContent {
@@ -83,6 +83,59 @@ export function ProjectContentEditor({
 
   const trimmed = (x: Text): Text => ({ ar: x.ar.trim(), en: x.en.trim() });
 
+  // «املأ من بيانات المشروع»: the project's records fill the empty places of
+  // this tab only (new sections, unanswered or missing questions, plain-tick
+  // icons); nothing is saved until the admin reviews and saves.
+  const [filling, startFill] = useTransition();
+  const fill = (which: 'sections' | 'faqs' | 'amenities') =>
+    startFill(async () => {
+      const s = await suggestProjectContentAction(projectId);
+      if (!s) {
+        toast.show({ tone: 'danger', title: t.autofill.failed });
+        return;
+      }
+      const key = (x: Text) => x.ar.trim();
+      let n = 0;
+      if (which === 'sections') {
+        const have = new Set(sections.map((x) => key(x.title)));
+        const add = s.sections.filter((x) => !have.has(key(x.title)));
+        n = add.length;
+        if (n) setSections([...sections, ...add]);
+      } else if (which === 'faqs') {
+        const byQ = new Map(s.faqs.map((f) => [key(f.question), f]));
+        const next = faqs.map((f) => {
+          const hit = byQ.get(key(f.question));
+          if (hit && !f.answer.ar.trim() && !f.answer.en.trim()) {
+            n += 1;
+            return { ...f, answer: hit.answer };
+          }
+          return f;
+        });
+        const have = new Set(faqs.map((f) => key(f.question)));
+        const add = s.faqs.filter((f) => !have.has(key(f.question)));
+        n += add.length;
+        if (n) setFaqs([...next, ...add]);
+      } else {
+        const iconBy = new Map(s.amenities.map((a) => [key(a.name), a.icon as AmenityIcon]));
+        const next = amenities.map((a) => {
+          const icon = iconBy.get(key(a.name));
+          if (a.icon === 'check' && icon && icon !== 'check') {
+            n += 1;
+            return { ...a, icon };
+          }
+          return a;
+        });
+        if (n) setAmenities(next);
+      }
+      toast.show(n ? { tone: 'success', title: t.autofill.filled(n) } : { tone: 'info', title: t.autofill.nothing });
+    });
+  const fillButton = (which: 'sections' | 'faqs' | 'amenities') => (
+    <Button type="button" variant="subtle" size="sm" onClick={() => fill(which)} disabled={filling} title={t.autofill.hint} data-testid="content-autofill">
+      <Wand2 className="h-4 w-4" aria-hidden />
+      {t.autofill.button}
+    </Button>
+  );
+
   if (tab === 'sections') {
     return (
       <ListPanel
@@ -91,6 +144,7 @@ export function ProjectContentEditor({
         count={sections.length}
         addLabel={t.sections.add}
         onAdd={() => setSections([...sections, { title: blank(), body: blank() }])}
+        extra={fillButton('sections')}
         saveLabel={pending ? t.saving : t.save}
         saving={pending}
         onSave={() =>
@@ -128,10 +182,13 @@ export function ProjectContentEditor({
         addLabel={t.faqs.add}
         onAdd={() => setFaqs([...faqs, { question: blank(), answer: blank() }])}
         extra={
-          <Button type="button" variant="subtle" size="sm" onClick={useTemplate} title={t.faqs.templateHint}>
-            <Sparkles className="h-4 w-4" aria-hidden />
-            {t.faqs.template}
-          </Button>
+          <>
+            {fillButton('faqs')}
+            <Button type="button" variant="subtle" size="sm" onClick={useTemplate} title={t.faqs.templateHint}>
+              <Sparkles className="h-4 w-4" aria-hidden />
+              {t.faqs.template}
+            </Button>
+          </>
         }
         saveLabel={pending ? t.saving : t.save}
         saving={pending}
@@ -157,6 +214,7 @@ export function ProjectContentEditor({
         count={amenities.length}
         addLabel={t.amenities.add}
         onAdd={() => setAmenities([...amenities, { name: blank(), icon: 'check', group: 'INSIDE' }])}
+        extra={amenities.length ? fillButton('amenities') : undefined}
         saveLabel={pending ? t.saving : t.save}
         saving={pending}
         onSave={() => save({ amenities: amenities.filter((a) => a.name.ar.trim() || a.name.en.trim()).map((a) => ({ ...a, name: trimmed(a.name) })) })}

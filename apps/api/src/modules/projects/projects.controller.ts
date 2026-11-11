@@ -67,6 +67,13 @@ export class ProjectsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('projects:update')
+  @Get('projects/:id/content-suggestion')
+  contentSuggestion(@Param('id', ParseUUIDPipe) id: string) {
+    return this.projects.contentSuggestion(id);
+  }
+
+  @Roles(UserRole.ADMIN)
   @Permissions('projects:create')
   @GrantedBy('projects:create')
   @Post('projects')

@@ -23,6 +23,7 @@ import { TRANSFER_FEE_VALIDATORS } from '../contracts/transfer-fee';
 import { FEE_SETTING_VALIDATORS } from '../installments/fee-settings';
 import { COMPANY_TIMEZONE_VALIDATORS } from '../../common/time/company-timezone';
 import { DISCOUNT_SETTING_VALIDATORS } from '../installments/discount-policy';
+import { UNIT_VALUE_VALIDATORS } from '../units/unit-value';
 
 /**
  * Setting keys whose value should be masked on the wire. Matching is
@@ -154,6 +155,8 @@ const SETTING_VALIDATORS: Record<string, (key: string, v: unknown) => void> = {
   ...FEE_SETTING_VALIDATORS,
   ...COMPANY_TIMEZONE_VALIDATORS,
   ...DISCOUNT_SETTING_VALIDATORS,
+  // «قيمة وحدتك»: off by default; a fall is shown only when asked for.
+  ...UNIT_VALUE_VALIDATORS,
 };
 
 /**

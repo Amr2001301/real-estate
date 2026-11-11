@@ -13,6 +13,8 @@ import { Pagination } from '@/components/projects/Pagination';
 import { PropertyCard } from '@/components/account/PropertyCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { OwnedProjectsProgress } from '@/components/account/OwnedProjectsProgress';
+import { UnitValueCard, type UnitValueItem } from '@/components/account/UnitValueCard';
+import { getSiteCurrency } from '@/lib/site-currency';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
 import type { PublicProjectDetail } from '@/lib/api-types';
@@ -70,6 +72,11 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
   // The construction progress of the projects these units are in, from each
   // project's public page data (a project that is not published is skipped).
   const projectIds = [...new Set(contracts.map((c) => c.unit?.building?.phase?.project?.id).filter((id): id is string => !!id))];
+  // «قيمة وحدتك» — only what the company chose to show (off by default).
+  const [unitValues, currency] = await Promise.all([
+    authFetch<{ enabled: boolean; items: UnitValueItem[] }>('/me/unit-values').catch(() => ({ enabled: false, items: [] })),
+    getSiteCurrency(),
+  ]);
   const tenant = projectIds.length > 0 ? await getResolvedTenant() : null;
   const ownedProjects = tenant
     ? (
@@ -99,6 +106,7 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
         />
       ) : (
         <>
+          <UnitValueCard items={unitValues.items} currency={currency} locale={locale} />
           <OwnedProjectsProgress projects={ownedProjects} locale={locale} />
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             {contracts.map((contract) => (
