@@ -54,13 +54,13 @@ export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
   return (
     <dl data-testid="unit-specs" className="grid grid-cols-2 gap-x-8 sm:grid-cols-3">
       {specs.map(({ icon: Icon, label, value }) => (
-        <div key={label} className="flex items-start gap-3.5 border-t border-hairline py-5">
-          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold-400/40 text-gold-600 dark:text-gold-300">
-            <Icon className="h-[18px] w-[18px]" aria-hidden />
+        <div key={label} className="flex items-center gap-3 border-t border-hairline py-3.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-700 dark:text-gold-300">
+            <Icon className="h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0">
             <dt className="text-[13px] text-ink-muted">{label}</dt>
-            <dd className="mt-1 truncate font-display text-[1.05rem] font-semibold text-ink-strong">{value}</dd>
+            <dd className="mt-0.5 truncate font-display text-[1.2rem] font-semibold text-ink-strong">{value}</dd>
           </div>
         </div>
       ))}

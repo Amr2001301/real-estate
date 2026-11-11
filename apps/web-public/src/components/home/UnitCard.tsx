@@ -19,7 +19,7 @@ import type { Locale } from '@/lib/locale';
  * the bedrooms (a company's type name often carries them already) and the
  * place never repeats a city the project's name already says.
  */
-export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; action?: React.ReactNode; locale?: Locale }) {
+export function UnitCard({ unit, action, locale = 'ar', compact = false }: { unit: PublicUnit; action?: React.ReactNode; locale?: Locale; compact?: boolean }) {
   const t = extraT(locale).unitCard;
   const finishingLabels = siteT(locale).unitSpecs.finishingLabels;
   const statusLabels = t.statuses as Record<string, string>;
@@ -47,7 +47,7 @@ export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; ac
         data-testid="unit-card"
         className="group flex h-full flex-col overflow-hidden rounded-3xl border border-hairline bg-surface outline-none transition-all duration-300 ease-smooth hover:-translate-y-1 hover:shadow-[0_28px_56px_-28px_rgba(0,0,0,0.32)] focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
       >
-        <div className="relative isolate transform-gpu overflow-hidden" style={{ height: 250, transform: 'translateZ(0)' }}>
+        <div className="relative isolate transform-gpu overflow-hidden" style={{ height: compact ? 150 : 250, transform: 'translateZ(0)' }}>
           <CoverImage
             src={unit.coverImage}
             alt={[typeLabel, projectName].filter(Boolean).join(' — ') || unit.code}
@@ -72,16 +72,16 @@ export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; ac
           )}
         </div>
 
-        <div className="flex flex-1 flex-col px-5 pb-[18px] pt-5">
+        <div className={`flex flex-1 flex-col px-5 ${compact ? "pb-4 pt-4" : "pb-[18px] pt-5"}`}>
           <div className="flex items-baseline justify-between gap-3">
-            <span className="font-display text-[1.7rem] font-semibold leading-tight tracking-tight text-ink-strong">
+            <span className={`font-display font-semibold leading-tight tracking-tight text-ink-strong ${compact ? "text-[1.4rem]" : "text-[1.7rem]"}`}>
               <Price value={unit.price} />
             </span>
             {ppm > 0 && <span className="shrink-0 text-xs text-ink-muted">{t.perMeter(formatNumber(ppm, locale))}</span>}
           </div>
 
           {specs.length > 0 && (
-            <div className="mt-4 flex items-center gap-3.5 rounded-2xl bg-surface-soft px-3.5 py-3 text-[13px] text-ink-muted">
+            <div className={`flex items-center gap-3.5 rounded-2xl bg-surface-soft px-3.5 text-[13px] text-ink-muted ${compact ? "mt-3 py-2.5" : "mt-4 py-3"}`}>
               {specs.map((s, i) => (
                 <span key={s.unit} className="flex items-center gap-3.5">
                   {i > 0 && <span className="h-[18px] w-px bg-hairline" aria-hidden />}
@@ -95,7 +95,7 @@ export function UnitCard({ unit, action, locale = 'ar' }: { unit: PublicUnit; ac
             </div>
           )}
 
-          <div className="mt-auto flex items-center gap-3.5 pt-4 text-[13px] font-medium text-ink-muted">
+          <div className={`mt-auto flex items-center gap-3.5 text-[13px] font-medium text-ink-muted ${compact ? "pt-3" : "pt-4"}`}>
             {finishing && (
               <span className="flex items-center gap-1.5">
                 <Paintbrush className="h-4 w-4" strokeWidth={1.6} aria-hidden />

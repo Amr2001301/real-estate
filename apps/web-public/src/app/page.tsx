@@ -12,7 +12,8 @@ import { FeaturedUnits } from '@/components/home/FeaturedUnits';
 import { WhyChooseUs } from '@/components/home/WhyChooseUs';
 import { InvestmentCategories } from '@/components/home/InvestmentCategories';
 import { HomeBanners } from '@/components/home/HomeBanners';
-import { fetchBanners } from '@/lib/cms';
+import { fetchArticles, fetchBanners } from '@/lib/cms';
+import { HomeArticles } from '@/components/home/HomeArticles';
 import { HowWeHelp } from '@/components/home/HowWeHelp';
 import { HomeContact } from '@/components/home/HomeContact';
 import { MobileAppPromo } from '@/components/marketing/MobileAppPromo';
@@ -43,7 +44,7 @@ export default async function HomePage() {
       </Container>
     );
   }
-  const [projects, units, cities, banners, branding] = await Promise.all([
+  const [projects, units, cities, banners, branding, articles] = await Promise.all([
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
@@ -66,6 +67,8 @@ export default async function HomePage() {
     fetchBanners(tenant.slug, locale),
     // The company's own name and app (a company's site never promotes the platform's).
     fetchBranding(tenant.slug),
+    // «أحدث المقالات» (dashboard → المحتوى → المقالات); none → no section.
+    fetchArticles(tenant.slug, locale),
   ]);
   // How many units each investment field holds (one cheap count per usage).
   const usages = ['RESIDENTIAL', 'ADMINISTRATIVE', 'COMMERCIAL', 'MEDICAL'] as const;
@@ -128,6 +131,7 @@ export default async function HomePage() {
         />
       ) : null}
       <HowWeHelp locale={locale} />
+      <HomeArticles articles={articles} locale={locale} />
       <HomeContact
         locale={locale}
         phone={contact.phone}

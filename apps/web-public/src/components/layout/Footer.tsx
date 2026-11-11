@@ -56,7 +56,7 @@ function LegalRow({ company, registration, m }: { company: string; registration?
   );
 }
 
-export function Footer({ locale, branding, pages = [] }: { locale: Locale; branding?: BrandingData; pages?: PublicPageLink[] }) {
+export function Footer({ locale, branding, pages = [], hasArticles = false }: { locale: Locale; branding?: BrandingData; pages?: PublicPageLink[]; hasArticles?: boolean }) {
   const m = siteT(locale);
   const company = companyName(branding, locale, SITE.name);
 
@@ -144,6 +144,7 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
             {PRIMARY_NAV.map((item) => (
               <FooterLink key={item.href} href={item.href} label={locale === 'ar' ? item.label : item.labelEn} />
             ))}
+            {hasArticles && <FooterLink href={routes.articles} label={locale === 'ar' ? 'المقالات' : 'Articles'} />}
           </nav>
 
           {/* The company's own published pages, minus the policies the legal row links. */}

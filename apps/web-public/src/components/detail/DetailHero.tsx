@@ -56,7 +56,7 @@ export function DetailHero({
   const num = new Intl.NumberFormat('en-US').format(count);
 
   return (
-    <div className="relative isolate overflow-hidden rounded-[1.75rem] text-white" style={{ height: 'clamp(460px, 48vw, 600px)' }}>
+    <div className="relative isolate overflow-hidden rounded-[1.75rem] text-white" style={{ height: 'clamp(280px, 32vw, 440px)' }}>
       <button type="button" onClick={() => count && setOpen(0)} className="absolute inset-0 -z-10 block h-full w-full cursor-zoom-in" aria-label={alt} tabIndex={count ? 0 : -1}>
         <CoverImage src={images[0]} alt={alt} className="h-full" />
       </button>
@@ -66,13 +66,13 @@ export function DetailHero({
       {status && <div className="absolute start-5 top-5 sm:start-7 sm:top-7">{status}</div>}
       {tools && <div className="absolute end-5 top-5 flex items-center gap-2 sm:end-7 sm:top-7">{tools}</div>}
 
-      <div className="pointer-events-none absolute inset-x-6 bottom-[4.25rem] sm:inset-x-10 sm:bottom-[5rem] lg:end-[24rem]">
+      <div className="pointer-events-none absolute inset-x-6 bottom-6 sm:inset-x-10 sm:bottom-8 lg:end-[24rem]">
         {eyebrow && <p className="text-[15px] font-medium text-white/80">{eyebrow}</p>}
-        <h1 className="mt-1.5 font-display text-[2.1rem] font-semibold leading-[1.25] text-white sm:text-[3.1rem]">{title}</h1>
+        <h1 className="mt-1.5 font-display text-[1.75rem] font-semibold leading-[1.25] text-white sm:text-[2.6rem]">{title}</h1>
       </div>
 
       {count > 1 && (
-        <div className="absolute bottom-[5rem] end-10 hidden gap-2 lg:flex">
+        <div className="absolute bottom-8 end-10 hidden gap-2 lg:flex">
           {thumbs.map((u, i) => {
             const last = i === thumbs.length - 1;
             return (
@@ -97,7 +97,7 @@ export function DetailHero({
         <button
           type="button"
           onClick={() => setOpen(0)}
-          className="absolute bottom-[5rem] end-6 inline-flex h-10 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-medium text-white ring-1 ring-white/25 backdrop-blur lg:hidden"
+          className="absolute bottom-6 end-6 inline-flex h-10 items-center gap-2 rounded-full bg-black/45 px-4 text-sm font-medium text-white ring-1 ring-white/25 backdrop-blur lg:hidden"
         >
           <Images className="h-4 w-4" aria-hidden />
           {num}

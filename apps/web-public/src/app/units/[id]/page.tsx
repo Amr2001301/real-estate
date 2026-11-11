@@ -18,7 +18,6 @@ import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Stagger } from '@/components/motion/Stagger';
-import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
 import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
@@ -187,7 +186,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         })}
       />
 
-      <section className="bg-canvas pt-24 sm:pt-28">
+      <section className="bg-canvas pt-20 sm:pt-24">
         <Container>
           <nav aria-label={m.unitDetail.breadNav} className="mb-5">
             <ol className="flex flex-wrap items-center gap-1.5 text-sm">
@@ -221,13 +220,30 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         </Container>
       </section>
 
-      <Section tone="canvas" className="pt-14 sm:pt-16">
+      <Section tone="canvas" className="pt-8 sm:pt-10">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="min-w-0 space-y-14">
+          <div className="min-w-0 space-y-10">
             <div>
               <DetailHead eyebrow={m.unitDetail.specsLabel} title={m.unitDetail.specsTitle} />
               <UnitSpecs unit={unit} />
             </div>
+
+            {/* «خطوات الشراء» beside the specs (the side card keeps only the price and booking). */}
+            <BuyingSteps
+              eyebrow={bs.eyebrow}
+              title={bs.title}
+              locale={locale}
+              row
+              steps={[
+                { title: bs.visit, sub: bs.visitSub, href: visitHref },
+                { title: bs.plan, sub: planSub },
+                {
+                  title: bs.reserve,
+                  sub: reservation > 0 ? <><span className="font-semibold text-ink-strong"><Price value={reservation} /></span> — {bs.reserveSub}</> : bs.reserveSub,
+                },
+                { title: bs.sign, sub: bs.signSub },
+              ]}
+            />
 
             {plans.length > 0 && (
               <div>
@@ -251,10 +267,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
               </div>
             )}
 
-            <div>
-              <DetailHead eyebrow={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
-              <p className="text-[17px] leading-[2] text-ink-muted">{m.unitDetail.aboutDefault}</p>
-            </div>
           </div>
 
           <aside>
@@ -275,22 +287,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 infoHref={infoHref}
                 waMessage={waMessage}
               />
-              <div className="mt-5 hidden lg:block">
-                <BuyingSteps
-                  eyebrow={bs.eyebrow}
-                  title={bs.title}
-                  locale={locale}
-                  steps={[
-                    { title: bs.visit, sub: bs.visitSub, href: visitHref },
-                    { title: bs.plan, sub: planSub },
-                    {
-                      title: bs.reserve,
-                      sub: reservation > 0 ? <><span className="font-semibold text-ink-strong"><Price value={reservation} /></span> — {bs.reserveSub}</> : bs.reserveSub,
-                    },
-                    { title: bs.sign, sub: bs.signSub },
-                  ]}
-                />
-              </div>
             </StickyAside>
           </aside>
         </div>
@@ -305,7 +301,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             </>
           )}
           {unit.project && similarUnits.length > 0 && (
-            <div className={project ? 'mt-16' : ''}>
+            <div className={project ? 'mt-10' : ''}>
               <DetailHead
                 eyebrow={m.unitDetail.moreUnitsLabel}
                 title={x.otherUnits}
@@ -318,9 +314,9 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                   </Link>
                 }
               />
-              <Stagger className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
+              <Stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
                 {similarUnits.map((u) => (
-                  <UnitCard key={u.id} unit={u} locale={locale} />
+                  <UnitCard key={u.id} unit={u} locale={locale} compact />
                 ))}
               </Stagger>
             </div>
@@ -328,12 +324,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         </Section>
       )}
 
-      <CtaBand eyebrow={m.unitDetail.ctaBandTitle} title={m.unitDetail.ctaBandSub}>
-        <ButtonLink href={visitHref as Route} variant="gold" size="lg">{x.bookVisit}</ButtonLink>
-        <ButtonLink href={infoHref as Route} variant="outline" size="lg" className="border-white/25 text-white hover:border-white/50 hover:bg-white/5">
-          {m.unitDetail.ctaBandCta}
-        </ButtonLink>
-      </CtaBand>
 
       <div className="h-[72px] lg:hidden" aria-hidden />
       <CompareBar />

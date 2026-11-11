@@ -9,6 +9,7 @@ export const routes = {
   units: '/units',
   unit: (id: string) => `/units/${id}`,
   compare: '/compare',
+  articles: '/articles',
   contact: '/contact',
   app: '/app',
   account: '/account',

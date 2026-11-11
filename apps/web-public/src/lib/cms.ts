@@ -1,3 +1,4 @@
+import type { ArticleSummary } from '@/components/content/ArticleCard';
 import { safeFetch } from '@/lib/api';
 import type { Locale } from '@/lib/locale';
 
@@ -46,4 +47,10 @@ export async function fetchBanners(tenantSlug: string, locale: Locale): Promise<
 /** A banner link is a site path or a web address (the API refuses anything else). */
 export function isExternalLink(link: string): boolean {
   return /^https?:\/\//i.test(link);
+}
+
+/** The company's published articles, newest first (none on any failure). */
+export async function fetchArticles(tenantSlug: string, locale: Locale): Promise<ArticleSummary[]> {
+  const res = await safeFetch<ArticleSummary[]>('/public/articles', opts(tenantSlug, locale));
+  return res.ok && Array.isArray(res.data) ? res.data : [];
 }

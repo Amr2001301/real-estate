@@ -15,22 +15,25 @@ export function BuyingSteps({
   title,
   steps,
   locale,
+  row = false,
 }: {
   eyebrow: string;
   title: string;
   steps: { title: string; sub: ReactNode; href?: string }[];
   locale: Locale;
+  /** The steps side by side (wide column) instead of one under another. */
+  row?: boolean;
 }) {
   return (
-    <div className="overflow-hidden rounded-[1.5rem] bg-surface p-7 shadow-[0_30px_70px_-34px_rgba(0,0,0,0.45)] ring-1 ring-hairline" data-testid="buying-steps">
+    <div className={cn('overflow-hidden rounded-[1.5rem] bg-surface ring-1 ring-hairline', row ? 'p-6' : 'p-7 shadow-[0_30px_70px_-34px_rgba(0,0,0,0.45)]')} data-testid="buying-steps">
       <p className="text-[13px] font-semibold text-gold-700 dark:text-gold-300">{eyebrow}</p>
       <h3 className="mt-1 font-display text-[1.25rem] font-semibold text-ink-strong">{title}</h3>
-      <ol className="mt-5">
+      <ol className={cn('mt-5', row && 'grid gap-5 sm:grid-cols-2 lg:grid-cols-4')}>
         {steps.map((s, i) => {
           const last = i === steps.length - 1;
           return (
-            <li key={s.title} className={cn('relative flex gap-3.5', !last && 'pb-5')}>
-              {!last && <span className="absolute bottom-0 start-[15px] top-8 w-0.5 bg-hairline" aria-hidden />}
+            <li key={s.title} className={cn('relative flex gap-3.5', !last && !row && 'pb-5')}>
+              {!last && !row && <span className="absolute bottom-0 start-[15px] top-8 w-0.5 bg-hairline" aria-hidden />}
               <span
                 className={cn(
                   'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
