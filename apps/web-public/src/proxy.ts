@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ACCESS_COOKIE, REFRESH_COOKIE, USER_COOKIE } from '@/lib/cookie-names';
 
 /**
  * Request proxy for the public website (Next 16 renamed the `middleware`
@@ -84,7 +85,7 @@ interface RefreshSuccess {
 }
 
 async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSuccess> {
-  const raw = req.cookies.get('refresh_token')?.value;
+  const raw = req.cookies.get(REFRESH_COOKIE)?.value;
   if (!raw) return { success: false };
   try {
     const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
@@ -112,14 +113,14 @@ async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSucc
 
 function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: NextRequest) {
   const secure = req.nextUrl.protocol === 'https:';
-  response.cookies.set('access_token', r.accessToken, {
+  response.cookies.set(ACCESS_COOKIE, r.accessToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure,
     path: '/',
     maxAge: r.expiresIn,
   });
-  response.cookies.set('refresh_token', r.refreshToken, {
+  response.cookies.set(REFRESH_COOKIE, r.refreshToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure,
@@ -127,7 +128,7 @@ function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: Nex
     maxAge: THIRTY_DAYS,
   });
   response.cookies.set(
-    'user',
+    USER_COOKIE,
     JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }),
     {
       httpOnly: false,
@@ -163,7 +164,7 @@ export async function proxy(req: NextRequest) {
     headers.delete('x-resolved-tenant-slug');
     headers.delete('x-resolved-tenant-website-enabled');
 
-    const token = req.cookies.get('access_token')?.value;
+    const token = req.cookies.get(ACCESS_COOKIE)?.value;
     if (token) headers.set('Authorization', `Bearer ${token}`);
 
     // Always overwrite the X-Tenant-Slug header. NEVER forward the
@@ -191,7 +192,7 @@ export async function proxy(req: NextRequest) {
   forwardHeaders.set('x-resolved-tenant-slug', tenant?.slug ?? '');
   forwardHeaders.set('x-resolved-tenant-website-enabled', String(tenant?.websiteEnabled ?? false));
 
-  const hasToken = Boolean(req.cookies.get('access_token')?.value);
+  const hasToken = Boolean(req.cookies.get(ACCESS_COOKIE)?.value);
 
   // ── 3a. Authenticated user hitting /login or /register → go to /account ─────
   if (pathname === '/login' || pathname === '/register') {

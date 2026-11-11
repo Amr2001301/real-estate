@@ -26,6 +26,7 @@
  */
 import { cookies, headers } from 'next/headers';
 import { setSessionCookies, clearSessionCookies, type AuthSession } from '@/lib/auth-cookies';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/cookie-names';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
@@ -55,7 +56,7 @@ export class ForbiddenError extends Error {
  */
 export async function refreshSession(): Promise<boolean> {
   const c = await cookies();
-  const refreshToken = c.get('refresh_token')?.value;
+  const refreshToken = c.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) {
     await safeClear();
     return false;
@@ -122,7 +123,7 @@ export async function authFetch<T>(path: string, init?: RequestInit): Promise<T>
 
 async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   const [c, h] = await Promise.all([cookies(), headers()]);
-  const token = c.get('access_token')?.value;
+  const token = c.get(ACCESS_COOKIE)?.value;
   const tenantSlug = h.get('x-resolved-tenant-slug');
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
   const res = await fetch(`${API_BASE}/v1${path}`, {

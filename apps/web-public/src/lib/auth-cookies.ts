@@ -11,6 +11,7 @@
  * must guard accordingly (see lib/api-auth.ts).
  */
 import { cookies } from 'next/headers';
+import { ACCESS_COOKIE, REFRESH_COOKIE, USER_COOKIE } from '@/lib/cookie-names';
 
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
@@ -22,14 +23,14 @@ export interface AuthSession {
 /** Persist the session in cookies. Access cookie expires with the JWT. */
 export async function setSessionCookies(result: AuthSession): Promise<void> {
   const c = await cookies();
-  c.set('access_token', result.tokens.accessToken, {
+  c.set(ACCESS_COOKIE, result.tokens.accessToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: result.tokens.expiresIn,
   });
-  c.set('refresh_token', result.tokens.refreshToken, {
+  c.set(REFRESH_COOKIE, result.tokens.refreshToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -37,7 +38,7 @@ export async function setSessionCookies(result: AuthSession): Promise<void> {
     maxAge: THIRTY_DAYS,
   });
   c.set(
-    'user',
+    USER_COOKIE,
     JSON.stringify({
       id: result.user.id,
       role: result.user.role,
@@ -55,7 +56,7 @@ export async function setSessionCookies(result: AuthSession): Promise<void> {
 /** Remove all three session cookies. */
 export async function clearSessionCookies(): Promise<void> {
   const c = await cookies();
-  c.delete('access_token');
-  c.delete('refresh_token');
-  c.delete('user');
+  c.delete(ACCESS_COOKIE);
+  c.delete(REFRESH_COOKIE);
+  c.delete(USER_COOKIE);
 }
