@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { ACCESS_COOKIE, USER_COOKIE } from '@/lib/cookie-names';
 
 /**
  * Server-side session helper for the public website's authenticated area.
@@ -39,8 +40,8 @@ export interface SessionUser {
  */
 export async function getSession(): Promise<SessionUser | null> {
   const c = await cookies();
-  const token = c.get('access_token')?.value;
-  const userJson = c.get('user')?.value;
+  const token = c.get(ACCESS_COOKIE)?.value;
+  const userJson = c.get(USER_COOKIE)?.value;
   if (!token || !userJson) return null;
   try {
     const parsed = JSON.parse(userJson) as Partial<SessionUser>;

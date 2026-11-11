@@ -30,6 +30,8 @@ const PII_KEYS = new Set([
   'jwt',
   'access_token',
   'refresh_token',
+  'site_access_token',
+  'site_refresh_token',
 ]);
 
 declare global {

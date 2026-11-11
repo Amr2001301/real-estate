@@ -26,6 +26,7 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { setSessionCookies, clearSessionCookies, type AuthSession } from '@/lib/auth-cookies';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/cookie-names';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
@@ -300,7 +301,7 @@ export async function verifyEmailAction(
 /** Resend the email-verification link. Requires a valid session cookie. */
 export async function resendVerificationAction(): Promise<{ ok: boolean; status: number }> {
   const c = await cookies();
-  const accessToken = c.get('access_token')?.value;
+  const accessToken = c.get(ACCESS_COOKIE)?.value;
   if (!accessToken) return { ok: false, status: 401 };
 
   let res: Response;
@@ -323,7 +324,7 @@ export async function resendVerificationAction(): Promise<{ ok: boolean; status:
  */
 export async function logoutAction(): Promise<void> {
   const c = await cookies();
-  const refreshToken = c.get('refresh_token')?.value;
+  const refreshToken = c.get(REFRESH_COOKIE)?.value;
   if (refreshToken) {
     try {
       await fetch(`${API_BASE}/v1/auth/logout`, {

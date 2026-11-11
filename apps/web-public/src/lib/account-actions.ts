@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import { authFetch, AuthError, ForbiddenError, refreshSession } from '@/lib/api-auth';
 import { getLocale } from '@/lib/locale';
 import { actionT } from '@/messages/account-actions';
+import { ACCESS_COOKIE } from '@/lib/cookie-names';
 
 const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -102,7 +103,7 @@ export async function changePasswordAction(input: {
 
   async function post(): Promise<Response> {
     const c = await cookies();
-    const token = c.get('access_token')?.value;
+    const token = c.get(ACCESS_COOKIE)?.value;
     return fetch(`${API_BASE}/v1/auth/change-password`, {
       method: 'POST',
       headers: {

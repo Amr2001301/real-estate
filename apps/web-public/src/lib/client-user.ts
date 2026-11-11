@@ -1,3 +1,4 @@
+import { USER_COOKIE } from '@/lib/cookie-names';
 /**
  * Lightweight, browser-only reader for the non-httpOnly `user` cookie.
  *
@@ -16,10 +17,10 @@ export function readClientUser(): ClientUser | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie
     .split('; ')
-    .find((row) => row.startsWith('user='));
+    .find((row) => row.startsWith(`${USER_COOKIE}=`));
   if (!match) return null;
   try {
-    const raw = decodeURIComponent(match.slice('user='.length));
+    const raw = decodeURIComponent(match.slice(USER_COOKIE.length + 1));
     const parsed = JSON.parse(raw) as Partial<ClientUser>;
     if (!parsed || typeof parsed.id !== 'string' || typeof parsed.role !== 'string') {
       return null;
