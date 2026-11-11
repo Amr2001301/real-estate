@@ -160,12 +160,12 @@ model Company {
   refunds                     Refund[]
 
   // Module flags — controls which dashboard sections are visible for this company
-  modules        Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
-  campaigns      Campaign[]
-  campaignSpend  CampaignSpend[]
-  leadIntakeKeys LeadIntakeKey[]
-  migrationRuns    MigrationRun[]
-  migrationRecords MigrationRecord[]
+  modules           Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
+  campaigns         Campaign[]
+  campaignSpend     CampaignSpend[]
+  leadIntakeKeys    LeadIntakeKey[]
+  migrationRuns     MigrationRun[]
+  migrationRecords  MigrationRecord[]
   migrationMappings MigrationMapping[]
 
   @@index([slug])
@@ -574,9 +574,9 @@ model User {
   /// The last time step a code was accepted at: a code is good once.
   totpLastStep         Int?
   /// One-use recovery codes, as SHA-256 hashes.
-  totpRecoveryHashes   String[]           @default([])
+  totpRecoveryHashes   String[]  @default([])
   /// Wrong codes in a row; five lock the second step for 15 minutes.
-  totpFailures         Int                @default(0)
+  totpFailures         Int       @default(0)
   totpLockedUntil      DateTime?
 
   refreshTokens           RefreshToken[]
@@ -674,10 +674,10 @@ model User {
 }
 
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String    @unique
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String       @unique
   deviceId  String?
   userAgent String?
   ipAddress String?
@@ -686,7 +686,7 @@ model RefreshToken {
   session   AuthSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime     @default(now())
 
   @@index([userId])
   @@index([sessionId])
@@ -903,24 +903,32 @@ enum MediaType {
 }
 
 model Project {
-  id            String        @id @default(uuid()) @db.Uuid
-  code          String?
-  name          Json // Translatable { ar, en }
-  description   Json
-  city          String
+  id                String        @id @default(uuid()) @db.Uuid
+  code              String?
+  name              Json // Translatable { ar, en }
+  description       Json
+  city              String
   /// The project's data (F10): all optional.
-  type          ProjectType?
-  district      String?
+  type              ProjectType?
+  district          String?
   /// Land area of the whole project, m².
-  totalArea     Float?
-  licenseNumber String?
-  lat           Float
-  lng           Float
-  status        ProjectStatus @default(DRAFT)
-  featured      Boolean       @default(false)
-  services      Json          @default("[]") // Translatable[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  totalArea         Float?
+  licenseNumber     String?
+  lat               Float
+  lng               Float
+  status            ProjectStatus @default(DRAFT)
+  featured          Boolean       @default(false)
+  services          Json          @default("[]") // Translatable[] — the names of `amenities`, kept in step for older clients
+  /// The page content beyond the description (see modules/projects/project-details.ts):
+  /// titled sections, its own FAQ, amenities with an icon and a group (INSIDE / AROUND),
+  /// and the construction progress by stage (0–100 each; the overall is their average).
+  sections          Json          @default("[]") // { title, body }[] (Translatable)
+  faqs              Json          @default("[]") // { question, answer }[] (Translatable)
+  amenities         Json          @default("[]") // { name, icon, group }[]
+  progressStages    Json          @default("[]") // { name, percent }[]
+  progressUpdatedAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   media             ProjectMedia[]
   phases            Phase[]
@@ -1148,9 +1156,9 @@ model Lead {
 
   // ── Follow-up: the next thing to do with this lead, and when ───────────
   // Set from the activity composer; overdue/today/upcoming lists read it.
-  nextActionAt   DateTime?
-  nextActionType LeadFollowUpType?
-  nextActionNote String?
+  nextActionAt        DateTime?
+  nextActionType      LeadFollowUpType?
+  nextActionNote      String?
   /// The follow-up time a reminder / an overdue alert was last sent for
   /// (FU2): a new time differs from it, so it is reminded again.
   followUpRemindedFor DateTime?
@@ -1551,6 +1559,7 @@ model VisitRequest {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, requestNumber])
   @@index([status])
   @@index([requestStatus])
   @@index([projectId])
@@ -1558,7 +1567,6 @@ model VisitRequest {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
-  @@unique([companyId, requestNumber])
 }
 
 model VisitAppointment {
@@ -1624,6 +1632,7 @@ model VisitAppointment {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@unique([companyId, visitNumber])
   @@index([status])
   @@index([scheduledAt])
   @@index([visitRequestId])
@@ -1633,7 +1642,6 @@ model VisitAppointment {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
-  @@unique([companyId, visitNumber])
 }
 
 model VisitActivity {

@@ -6,3 +6,4 @@ export * from './project';
 export * from './unit';
 export * from './lead';
 export * from './reservation';
+export * from './project-details';

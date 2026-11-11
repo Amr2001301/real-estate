@@ -45,7 +45,9 @@ function buildProjectPayload(formData: FormData) {
     lng: Number(formData.get('lng') ?? 0),
     status: String(formData.get('status') ?? 'DRAFT') as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED',
     featured: formData.get('featured') === 'on',
-    services: parseTranslatableJson(String(formData.get('services') ?? '')),
+    // Amenities are edited on «محتوى صفحة المشروع» now; the form sends them
+    // only if a field still carries them, so a save never wipes them.
+    ...(formData.has('services') ? { services: parseTranslatableJson(String(formData.get('services') ?? '')) } : {}),
   };
 }
 

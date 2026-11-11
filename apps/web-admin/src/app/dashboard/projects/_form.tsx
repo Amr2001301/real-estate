@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
-import { ServiceTilePicker } from '@/components/projects/service-tile-picker';
+import { pcT } from '@/messages/project-content';
 import { ProjectMap } from '@/components/maps/project-map';
 import type { Project } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
@@ -42,6 +42,7 @@ function isValidLng(n: number | null): boolean {
 
 export default function ProjectForm({ project, locale = 'ar' }: Props) {
   const m = uiT(locale).pages.projectsForm;
+  const pc = pcT(locale);
 
   const action = project
     ? updateProjectAction.bind(null, project.id)
@@ -335,10 +336,22 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
               description={m.p3Desc}
             />
             <div className="px-7 sm:px-8 py-7">
-              <ServiceTilePicker
-                name="services"
-                defaultValue={project?.services ?? []}
-              />
+              {/* Amenities now live with the page's other content (icons, inside /
+                  around), on «محتوى صفحة المشروع»; a new project gets them there once saved. */}
+              {project ? (
+                <Link
+                  href={`/dashboard/projects/${project.id}/content?tab=amenities` as never}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-hairline px-5 py-4 transition-colors hover:border-brand-300 hover:bg-brand-50/40"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-navy">{pc.open}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">{pc.openSub}</span>
+                  </span>
+                  <span className="text-sm font-semibold text-brand-700" aria-hidden>←</span>
+                </Link>
+              ) : (
+                <p className="text-sm text-slate-500">{pc.afterCreate}</p>
+              )}
             </div>
           </section>
 

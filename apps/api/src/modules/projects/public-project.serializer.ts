@@ -1,4 +1,5 @@
 import type { Project, ProjectMedia } from '@prisma/client';
+import { asArray, serializeProgress } from './project-details';
 
 /**
  * Public-safe project shapes for the marketing website. These deliberately
@@ -42,7 +43,7 @@ interface ProjectListInput extends Pick<
   code?: string | null;
 }
 
-interface ProjectDetailInput extends ProjectListInput {
+interface ProjectDetailInput extends ProjectListInput, Pick<Project, 'sections' | 'faqs' | 'amenities' | 'progressStages' | 'progressUpdatedAt'> {
   media?: MediaLike[];
 }
 
@@ -121,6 +122,10 @@ export function serializePublicProjectDetail(
     lat: project.lat,
     lng: project.lng,
     services: project.services,
+    sections: asArray(project.sections),
+    faqs: asArray(project.faqs),
+    amenities: asArray(project.amenities),
+    progress: serializeProgress(project.progressStages, project.progressUpdatedAt),
     featured: project.featured,
     status: project.status,
     media: serializeMedia(project.media),
