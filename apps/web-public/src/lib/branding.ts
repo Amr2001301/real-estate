@@ -138,3 +138,14 @@ export function companyName(branding: BrandingData | null | undefined, locale: '
   if (locale === 'en' && branding?.displayNameEn?.trim()) return branding.displayNameEn.trim();
   return branding?.displayName ?? branding?.name ?? fallback;
 }
+
+/**
+ * A translatable branding text (tagline, address, office hours) in the
+ * visitor's language: the API may send it as { ar, en } or already
+ * flattened to one string by its locale interceptor.
+ */
+export function brandingText(v: unknown, locale: 'ar' | 'en'): string | undefined {
+  if (typeof v === 'string') return v.trim() || undefined;
+  if (v && typeof v === 'object') return ((v as Record<string, string | undefined>)[locale] ?? '').trim() || undefined;
+  return undefined;
+}

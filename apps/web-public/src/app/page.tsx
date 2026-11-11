@@ -17,7 +17,7 @@ import { HowWeHelp } from '@/components/home/HowWeHelp';
 import { HomeContact } from '@/components/home/HomeContact';
 import { MobileAppPromo } from '@/components/marketing/MobileAppPromo';
 import { companyApp } from '@/lib/app-links';
-import { companyName, fetchBranding } from '@/lib/branding';
+import { brandingText, companyName, fetchBranding } from '@/lib/branding';
 import { companyContact } from '@/lib/contact';
 import { SITE } from '@/lib/seo';
 import { JsonLd } from '@/components/seo/JsonLd';
@@ -91,6 +91,9 @@ export default async function HomePage() {
   const heroProject = list.find((p) => p.featured && p.coverImage) ?? list.find((p) => p.coverImage) ?? list[0] ?? null;
   // «لماذا نحن» borrows another project's photo when there is one.
   const whyImage = list.find((p) => p.coverImage && p.id !== heroProject?.id)?.coverImage ?? null;
+  // The consultation panel's photo: a third project's, else one already shown.
+  const contactImage =
+    list.find((p) => p.coverImage && p.id !== heroProject?.id && p.coverImage !== whyImage)?.coverImage ?? whyImage ?? heroProject?.coverImage ?? null;
   const citiesCount = cities.ok ? cities.data.cities.length : null;
   const projectsCount = projects.ok ? projects.data.meta.total : null;
   const unitsCount = units.ok ? units.data.meta.total : null;
@@ -125,7 +128,13 @@ export default async function HomePage() {
         />
       ) : null}
       <HowWeHelp locale={locale} />
-      <HomeContact locale={locale} phone={contact.phone} whatsapp={contact.whatsapp} />
+      <HomeContact
+        locale={locale}
+        phone={contact.phone}
+        whatsapp={contact.whatsapp}
+        image={contactImage}
+        hours={brandingText(branding?.officeHours, locale)}
+      />
     </>
   );
 }

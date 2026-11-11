@@ -31,6 +31,15 @@ const SITE_MESSAGES = {
       pages: 'عن الشركة',
       login: 'تسجيل الدخول',
       register: 'إنشاء حساب',
+      taglineDefault: 'نختار لك مشاريع ووحدات بعناية لتجربة عقارية راقية وموثوقة.',
+      siteNav: 'الموقع',
+      phone: 'التليفون',
+      email: 'البريد الإلكتروني',
+      addressLabel: 'العنوان',
+      hours: 'مواعيد العمل',
+      follow: 'تابعنا',
+      ourApp: 'حمّل تطبيقنا',
+      registration: (n: string) => `سجل تجاري ${n}`,
     },
 
     // ── Account shell (layout + sidebar) ────────────────────────────────────────
@@ -195,6 +204,7 @@ const SITE_MESSAGES = {
         callNow: 'كلّمنا الآن',
         whatsapp: 'واتساب',
         whatsappNow: 'راسلنا الآن',
+        hours: (t: string) => `مواعيد العمل: ${t}`,
       },
       cta: {
         eyebrow: 'ابدأ الآن',
@@ -1039,6 +1049,15 @@ const SITE_MESSAGES = {
       pages: 'About',
       login: 'Log in',
       register: 'Create Account',
+      taglineDefault: 'Carefully chosen projects and units for a premium, trusted real estate experience.',
+      siteNav: 'Site',
+      phone: 'Phone',
+      email: 'Email',
+      addressLabel: 'Address',
+      hours: 'Office hours',
+      follow: 'Follow us',
+      ourApp: 'Get our app',
+      registration: (n: string) => `Commercial reg. ${n}`,
     },
 
     account: {
@@ -1201,6 +1220,7 @@ const SITE_MESSAGES = {
         callNow: 'Call now',
         whatsapp: 'WhatsApp',
         whatsappNow: 'Message us now',
+        hours: (t: string) => `Office hours: ${t}`,
       },
       cta: {
         eyebrow: 'Get Started',
