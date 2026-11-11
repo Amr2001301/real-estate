@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  LayoutList,
   Pencil,
   Send,
   Archive,
@@ -34,6 +35,7 @@ import { ProjectMediaPanel } from './media-panel';
 import { BuildingCreateForm, PhaseCreateForm, PhaseDeliveryForm } from './structure-forms';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { pcT } from '@/messages/project-content';
 
 export default async function ProjectDetailPage({
   params,
@@ -176,6 +178,11 @@ export default async function ProjectDetailPage({
                 {may('projects:update') && <Link href={`/dashboard/projects/${id}/edit` as never}>
                   <Button variant="outline" size="sm" leftIcon={<Pencil className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
                     {m.btnEditProject}
+                  </Button>
+                </Link>}
+                {may('projects:update') && <Link href={`/dashboard/projects/${id}/content` as never}>
+                  <Button variant="outline" size="sm" leftIcon={<LayoutList className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
+                    {pcT(locale).open}
                   </Button>
                 </Link>}
                 {may('units:create', 'units:update') && <Link href={`/dashboard/projects/${id}/models` as never}>

@@ -92,6 +92,12 @@ export interface Project {
   status: ProjectStatus;
   featured: boolean;
   services: Translatable[];
+  /** The page content beyond the description (sections, FAQ, amenities, construction progress). */
+  sections?: Array<{ title: Translatable; body: Translatable }>;
+  faqs?: Array<{ question: Translatable; answer: Translatable }>;
+  amenities?: Array<{ name: Translatable; icon: import('@rep/shared-types').AmenityIcon; group: import('@rep/shared-types').AmenityGroup }>;
+  progressStages?: Array<{ name: Translatable; percent: number }>;
+  progressUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   media?: Media[];
