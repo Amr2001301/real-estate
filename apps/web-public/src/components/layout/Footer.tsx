@@ -1,16 +1,14 @@
 import { CompanyMark } from './CompanyMark';
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Phone, Mail, MapPin, Clock, CalendarDays } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
-import { getContactPhone, getContactEmail, telHref, whatsappHref } from '@/lib/contact';
+import { getContactPhone, getContactEmail, telHref } from '@/lib/contact';
 import { companyApp } from '@/lib/app-links';
 import { brandingText, companyName, type BrandingData } from '@/lib/branding';
 import type { PublicPageLink } from '@/lib/cms';
 import { Container } from '@/components/ui/Container';
-import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
-import { DEEP_BG } from '@/components/home/Hero';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { FooterSwitch } from './FooterSwitch';
@@ -66,7 +64,6 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
   // rest show only when the company filled them in.
   const phone = branding?.contactPhone ?? getContactPhone();
   const email = branding?.contactEmail ?? getContactEmail();
-  const whatsapp = branding?.contactWhatsApp;
   const address = brandingText(branding?.contactAddress, locale);
   const hours = brandingText(branding?.officeHours, locale);
   const tagline = brandingText(branding?.tagline, locale) || m.footer.taglineDefault;
@@ -92,46 +89,9 @@ export function Footer({ locale, branding, pages = [] }: { locale: Locale; brand
   const full = (
     <footer className="relative overflow-hidden bg-navy text-white/80">
       <span aria-hidden className="pointer-events-none absolute -end-32 -top-32 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl" />
+      <div className="h-px w-full bg-gradient-to-l from-transparent via-gold-400/40 to-transparent" aria-hidden />
 
       <Container className="relative">
-        {/* The ask: talk to an advisor, on the company's deep colour. */}
-        <div className="relative -mb-px flex flex-col gap-6 overflow-hidden rounded-b-[1.75rem] px-7 py-8 sm:px-10 lg:flex-row lg:items-center lg:justify-between" style={{ background: DEEP_BG }}>
-          <span aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 120% at 100% 0%, rgb(var(--c-gold-400) / 0.18), transparent 60%)' }} />
-          <div className="relative">
-            <p className="font-display text-[1.6rem] font-semibold leading-tight text-white">{m.footer.ctaTitle}</p>
-            <p className="mt-2 text-[15px] text-white/70">{m.footer.ctaSub}</p>
-          </div>
-          <div className="relative flex flex-wrap gap-2.5">
-            <Link
-              href={`${routes.contact}?type=visit` as Route}
-              className="inline-flex h-12 items-center gap-2 rounded-2xl bg-gold-400 px-6 text-[15px] font-semibold text-[#1B1206] transition-colors hover:bg-gold-300"
-            >
-              <CalendarDays className="h-[18px] w-[18px]" aria-hidden />
-              {m.footer.ctaVisit}
-            </Link>
-            {whatsapp && (
-              <a
-                href={whatsappHref(whatsapp)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-2xl border border-white/20 px-5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-              >
-                <WhatsAppIcon className="h-[18px] w-[18px] text-[#25D366]" />
-                {m.footer.whatsapp}
-              </a>
-            )}
-            {phone && (
-              <a
-                href={telHref(phone)}
-                className="inline-flex h-12 items-center gap-2 rounded-2xl border border-white/20 px-5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-              >
-                <Phone className="h-[18px] w-[18px]" aria-hidden />
-                {m.footer.call}
-              </a>
-            )}
-          </div>
-        </div>
-
         <div className="grid grid-cols-2 gap-x-10 gap-y-10 py-14 lg:grid-cols-12">
           {/* The company */}
           <div className="col-span-2 lg:col-span-4">
