@@ -226,14 +226,14 @@ export function ProfileForm({
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
         <div className="relative shrink-0">
           <div
-            className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-navy-600 to-navy shadow-[inset_0_2px_14px_rgba(15,30,51,0.35)] ring-2 ring-gold-300 ring-offset-4 ring-offset-surface"
+            className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gold-400/15 ring-1 ring-hairline"
             style={
               shownImage
                 ? { backgroundImage: `url(${shownImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
                 : undefined
             }
           >
-            {!shownImage && <span className="font-display text-2xl font-bold text-gold-200">{initials}</span>}
+            {!shownImage && <span className="font-display text-2xl font-semibold text-gold-700 dark:text-gold-300">{initials}</span>}
             {avatarStatus === 'uploading' && (
               <span className="absolute inset-0 flex items-center justify-center rounded-full bg-navy/55 backdrop-blur-[1px]">
                 <Loader2 className="h-6 w-6 animate-spin text-gold-200" aria-hidden />
@@ -245,7 +245,7 @@ export function ProfileForm({
             onClick={() => fileRef.current?.click()}
             disabled={avatarStatus === 'uploading'}
             aria-label={t.changePhoto}
-            className="absolute -bottom-1 -left-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-gold-300 to-gold-500 text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)] ring-2 ring-surface transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-8px_rgba(200,162,75,0.7)] disabled:opacity-60"
+            className="absolute -bottom-1 -left-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-gold-400 text-[#1B1206] ring-2 ring-surface transition-colors hover:bg-gold-300 disabled:opacity-60"
           >
             <Camera className="h-4 w-4" aria-hidden />
           </button>
@@ -313,7 +313,7 @@ export function ProfileForm({
         </div>
 
         {codeSent && (
-          <div className="space-y-3 rounded-2xl border border-gold-300 bg-gold-50/60 p-4">
+          <div className="space-y-3 rounded-2xl border border-hairline bg-surface-soft/60 p-4">
             <p className="text-sm text-ink-strong">
               {t.codeSentBefore} <span dir="ltr">{phone.trim()}</span>. {t.codeSentMiddle}{' '}
               <span dir="ltr">{savedPhone || '—'}</span> {t.codeSentAfter}
@@ -354,7 +354,7 @@ export function ProfileForm({
             aria-expanded={showPassword}
             className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-start transition-colors hover:bg-surface-soft/70"
           >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-700 dark:text-gold-300">
               <KeyRound className="h-4 w-4" aria-hidden />
             </span>
             <span className="min-w-0 flex-1">

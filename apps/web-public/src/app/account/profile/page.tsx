@@ -5,7 +5,6 @@ import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { MeProfile } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ErrorState } from '@/components/states/ErrorState';
 import { ProfileForm } from '@/components/account/ProfileForm';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
@@ -36,7 +35,7 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-center gap-3 py-3.5">
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold-400/15 text-gold-700 dark:text-gold-300">
         {icon}
       </span>
       <div className="min-w-0">
@@ -78,10 +77,20 @@ export default async function AccountProfilePage() {
     <div className="space-y-8">
       <AccountPageHeader title={m.title} description={m.description} />
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:items-start">
+        {/* Editable fields */}
+        <section className="rounded-[1.5rem] border border-hairline bg-surface p-6 sm:p-8">
+          <h2 className="font-display text-[1.25rem] font-semibold text-ink-strong">{m.editTitle}</h2>
+          <p className="mb-6 mt-1 text-sm text-ink-muted">{m.editSub}</p>
+          <ProfileForm
+            initialFullName={profile.fullName}
+            initialPhone={profile.phone ?? ''}
+            initialAvatarUrl={profile.avatarUrl ?? null}
+          />
+        </section>
         {/* Read-only account info */}
-        <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-ink-strong">{m.sectionTitle}</h2>
+        <section className="rounded-[1.5rem] border border-hairline bg-surface p-6 sm:p-7">
+          <h2 className="font-display text-[1.25rem] font-semibold text-ink-strong">{m.sectionTitle}</h2>
           <p className="mt-1 text-sm text-ink-muted">{m.sectionNote}</p>
           <div className="mt-4 divide-y divide-hairline">
             <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label={m.emailLabel} value={profile.email ?? '—'} />
@@ -105,18 +114,8 @@ export default async function AccountProfilePage() {
             <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label={m.joinedLabel} value={formatDate(profile.createdAt)} />
             <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label={m.lastLoginLabel} value={formatDate(profile.lastLoginAt)} />
           </div>
-        </PremiumCard>
+        </section>
 
-        {/* Editable fields */}
-        <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-ink-strong">{m.editTitle}</h2>
-          <p className="mb-6 mt-1 text-sm text-ink-muted">{m.editSub}</p>
-          <ProfileForm
-            initialFullName={profile.fullName}
-            initialPhone={profile.phone ?? ''}
-            initialAvatarUrl={profile.avatarUrl ?? null}
-          />
-        </PremiumCard>
       </div>
     </div>
   );

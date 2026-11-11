@@ -171,7 +171,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
           {summary && <SummaryStrip summary={summary} m={m} symbol={currencySymbol(currency, locale)} locale={locale} />}
 
           {/* Filter row */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
             {contracts.length > 1 && (
               <UnitFilter
                 options={unitOptions}
@@ -179,7 +179,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
                 activeStatus={activeStatus}
               />
             )}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:ms-auto">
+            <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-surface-soft p-1 sm:w-auto" role="tablist">
               {FILTERS.map((f) => {
                 const count =
                   f.key === 'all'
@@ -195,16 +195,23 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
                     key={f.key}
                     href={buildHref({ status: f.status })}
                     aria-current={active ? 'true' : undefined}
+                    role="tab"
+                    aria-selected={active}
                     className={cn(
-                      'inline-flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
+                      'inline-flex h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold transition-colors sm:flex-none',
                       active
-                        ? 'bg-navy text-white shadow-sm'
-                        : 'border border-hairline bg-surface text-ink-muted hover:border-navy/20 hover:text-ink-strong',
+                        ? 'bg-surface text-ink-strong shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]'
+                        : 'text-ink-muted hover:text-ink-strong',
                     )}
                   >
                     {f.label}
                     {typeof count === 'number' && (
-                      <span className={cn('tabular-nums text-[11px]', active ? 'opacity-70' : 'opacity-50')}>
+                      <span
+                        className={cn(
+                          'inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
+                          active ? (f.key === 'OVERDUE' && count > 0 ? 'bg-red-500 text-white' : 'bg-navy text-white') : f.key === 'OVERDUE' && count > 0 ? 'bg-red-500/15 text-red-600' : 'bg-hairline/70 text-ink-muted',
+                        )}
+                      >
                         {count}
                       </span>
                     )}

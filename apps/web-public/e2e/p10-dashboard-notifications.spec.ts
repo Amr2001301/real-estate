@@ -35,13 +35,12 @@ test.describe('P10 — customer account dashboard renders with paginated notific
     await expect(page.getByText(/items\.filter is not a function/i)).toHaveCount(0);
     await expect(page.getByText(/TypeError/i)).toHaveCount(0);
 
-    // The "إجراءات سريعة" (quick-actions) section is gated to CUSTOMER role
-    // and renders after all notifications data is processed. Its presence
-    // proves the extractPaginatedData() / .slice() calls completed without
-    // throwing — the original P10 regression path.
-    await expect(page.getByText('إجراءات سريعة')).toBeVisible({ timeout: 10_000 });
+    // «آخر التحديثات» renders after the notifications were processed: its
+    // presence proves the extractPaginatedData() / .slice() calls completed
+    // without throwing — the original P10 regression path.
+    await expect(page.getByRole('heading', { name: 'آخر التحديثات' })).toBeVisible({ timeout: 10_000 });
 
-    // Customer-specific KPI tile — proves the CUSTOMER data branch rendered.
-    await expect(page.getByText('إجمالي المدفوعات')).toBeVisible();
+    // The customer's property card — proves the CUSTOMER data branch rendered.
+    await expect(page.getByTestId('dash-property')).toBeVisible();
   });
 });
