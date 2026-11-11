@@ -1,4 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { Prisma, ProjectStatus, UnitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from './dto/project.dto';
@@ -7,10 +8,13 @@ import { OPTIONS_LIMIT, optionsResult } from '../../common/utils/options';
 import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { codeTaken } from '../../common/utils/entity-code';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
+import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
+import { NotificationsService } from '../notifications/notifications.module';
 import {
   amenitiesFromServices,
   asArray,
   servicesFromAmenities,
+  overallProgress,
   stagesChanged,
   type ProgressStage,
   type ProjectAmenity,
@@ -27,7 +31,50 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly planLimits: PlanLimitService,
+    // Looked up when a notice is sent, not injected: importing its module
+    // here would pull the auth stack into the projects module (same as
+    // DeliveryDelaysService).
+    @Optional() private readonly moduleRef?: ModuleRef,
   ) {}
+
+  private notifications(): NotificationsService | null {
+    try {
+      return this.moduleRef?.get(NotificationsService, { strict: false }) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * «إشعار الملاك»: one notice per customer who owns a unit in the project
+   * (a live signed contract), with the new overall progress. Returns how many
+   * were sent.
+   */
+  private async notifyProgress(projectId: string, projectName: unknown, stages: ProgressStage[]): Promise<number> {
+    const overall = overallProgress(stages);
+    if (overall === null) return 0;
+    const owners = await this.prisma.contract.findMany({
+      where: {
+        ...LIVE_CONTRACT_WHERE,
+        companyId: getRequiredCompanyId(),
+        signedAt: { not: null },
+        unit: { building: { phase: { projectId } } },
+      },
+      select: { customerId: true },
+      distinct: ['customerId'],
+    });
+    const name = projectName as { ar?: string; en?: string } | null;
+    for (const o of owners) {
+      await this.notifications()?.sendToUser(o.customerId, 'project_progress_customer', {
+        projectName: name?.ar || name?.en || '',
+        overall: String(overall),
+        // Opens the project in the customer app.
+        entityType: 'project',
+        entityId: projectId,
+      });
+    }
+    return owners.length;
+  }
 
   async create(dto: CreateProjectDto) {
     await this.planLimits.checkProjectLimit();
@@ -220,7 +267,7 @@ export class ProjectsService {
   async update(id: string, dto: UpdateProjectDto) {
     const current = await this.prisma.project.findUnique({
       where: { id },
-      select: { id: true, amenities: true, progressStages: true },
+      select: { id: true, name: true, amenities: true, progressStages: true },
     });
     if (!current) throw new NotFoundException('Project not found');
     const data: Prisma.ProjectUpdateInput = {
@@ -239,11 +286,18 @@ export class ProjectsService {
     if (dto.totalArea !== undefined) data.totalArea = dto.totalArea;
     if (dto.licenseNumber !== undefined) data.licenseNumber = dto.licenseNumber?.trim() || null;
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id },
       data,
       include: { media: true },
     }).catch(codeTaken('لمشروع آخر في الشركة'));
+
+    const progressChanged = data.progressUpdatedAt !== undefined;
+    const notifiedOwners =
+      dto.notifyOwners && progressChanged && dto.progressStages
+        ? await this.notifyProgress(id, updated.name ?? current.name, dto.progressStages)
+        : 0;
+    return { ...updated, notifiedOwners };
   }
 
   async remove(id: string) {

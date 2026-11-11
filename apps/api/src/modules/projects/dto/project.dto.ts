@@ -167,6 +167,12 @@ export class UpdateProjectDto {
 
   @IsOptional() @IsArray() @ArrayMaxSize(PROJECT_DETAIL_LIMITS.stages) @ValidateNested({ each: true }) @Type(() => ProgressStageDto)
   progressStages?: ProgressStageDto[];
+
+  /**
+   * With changed progress stages: tell each customer who owns a unit in the
+   * project (a live signed contract) — the dashboard's «إشعار الملاك».
+   */
+  @IsOptional() @IsBoolean() notifyOwners?: boolean;
 }
 
 /**

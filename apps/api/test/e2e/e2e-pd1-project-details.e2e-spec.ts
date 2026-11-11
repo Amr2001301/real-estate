@@ -17,6 +17,7 @@ describe('PD1 — project page details (e2e)', () => {
   let adminToken: string;
   let companyId: string;
   let projectId: string;
+  let fixtures: E2EFixtures;
   const stamp = Date.now().toString().slice(-7);
 
   const http = () => request(testApp.app.getHttpServer());
@@ -31,7 +32,7 @@ describe('PD1 — project page details (e2e)', () => {
   beforeAll(async () => {
     testApp = await createE2ETestApp();
     adminToken = await loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!');
-    const fixtures: E2EFixtures = await loadE2EFixtures(testApp.rawPrisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
     companyId = (await testApp.rawPrisma.user.findUniqueOrThrow({ where: { id: fixtures.userIds.adminId } })).companyId!;
     // Made directly (the demo company is at its plan's project limit); the
     // page content is written through the API.
@@ -117,5 +118,46 @@ describe('PD1 — project page details (e2e)', () => {
     await patch({ amenities: [{ name: t('x'), icon: 'rocket', group: 'INSIDE' }] }).expect(400);
     await patch({ amenities: [{ name: t('x'), icon: 'pool', group: 'NEARBY' }] }).expect(400);
     await patch({ progressStages: [{ name: t('x'), percent: 120 }] }).expect(400);
+  });
+
+  it('PD1-5: «إشعار الملاك» tells each customer with a signed contract in the project, only when the stages change', async () => {
+    // Customer1's signed contract sits in a seeded project.
+    const contract = await testApp.rawPrisma.contract.findUniqueOrThrow({
+      where: { id: fixtures.flowE.customer1ContractId },
+      select: { customerId: true, unit: { select: { building: { select: { phase: { select: { projectId: true } } } } } } },
+    });
+    const seededProjectId = contract.unit.building.phase.projectId;
+    const before = await testApp.rawPrisma.project.findUniqueOrThrow({
+      where: { id: seededProjectId },
+      select: { progressStages: true, progressUpdatedAt: true },
+    });
+    const notices = () =>
+      testApp.rawPrisma.notification.count({ where: { userId: contract.customerId, templateCode: 'project_progress_customer' } });
+    const start = await notices();
+
+    try {
+      const res = await asAdmin(http().patch(`/v1/projects/${seededProjectId}`))
+        .send({ progressStages: [{ name: t('الحفر', 'Excavation'), percent: 100 }, { name: t('الخرسانات', 'Concrete'), percent: 30 }], notifyOwners: true })
+        .expect(200);
+      expect(res.body.notifiedOwners).toBeGreaterThanOrEqual(1);
+      expect(await notices()).toBe(start + 1);
+
+      // The same stages again: nothing changed, nobody is told twice.
+      const again = await asAdmin(http().patch(`/v1/projects/${seededProjectId}`))
+        .send({ progressStages: [{ name: t('الحفر', 'Excavation'), percent: 100 }, { name: t('الخرسانات', 'Concrete'), percent: 30 }], notifyOwners: true })
+        .expect(200);
+      expect(again.body.notifiedOwners).toBe(0);
+      // A change without the tick sends nothing either.
+      await asAdmin(http().patch(`/v1/projects/${seededProjectId}`))
+        .send({ progressStages: [{ name: t('الحفر', 'Excavation'), percent: 100 }, { name: t('الخرسانات', 'Concrete'), percent: 60 }] })
+        .expect(200);
+      expect(await notices()).toBe(start + 1);
+    } finally {
+      await testApp.rawPrisma.project.update({
+        where: { id: seededProjectId },
+        data: { progressStages: before.progressStages ?? [], progressUpdatedAt: before.progressUpdatedAt },
+      });
+      await testApp.rawPrisma.notification.deleteMany({ where: { userId: contract.customerId, templateCode: 'project_progress_customer' } });
+    }
   });
 });

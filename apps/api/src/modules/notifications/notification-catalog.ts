@@ -912,6 +912,17 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
       'The expected handover date for unit {{unitCode}} is now {{expectedDate}}, after the date in your contract ({{contractDate}}). Contact us with any questions.',
   },
   {
+    // Sent by the dashboard when it updates a project's construction progress
+    // and ticks «إشعار الملاك» (ProjectsService.update, notifyOwners).
+    code: 'project_progress_customer',
+    channel: NotificationChannel.PUSH,
+    emailEnabled: false,
+    ar_subject: 'تحديث إنشاءات مشروعك',
+    en_subject: 'Construction update on your project',
+    ar_body: 'وصلت نسبة إنجاز {{projectName}} إلى {{overall}}%. تابع مراحل الإنشاء من حسابك.',
+    en_body: '{{projectName}} is now {{overall}}% complete. Follow the construction stages from your account.',
+  },
+  {
     code: 'contract_number_assigned',
     channel: NotificationChannel.IN_APP,
     ar_subject: 'تم إصدار رقم عقدك',
