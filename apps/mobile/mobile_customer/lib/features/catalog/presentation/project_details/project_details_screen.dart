@@ -12,7 +12,7 @@ import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
-import '../widgets/amenity_chips.dart';
+import '../widgets/project_content.dart';
 import '../widgets/contact_buttons.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
@@ -24,7 +24,11 @@ Color get _navyDeep => AppPalette.navyDeep;
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ProjectDetailsScreen extends StatelessWidget {
-  const ProjectDetailsScreen({super.key});
+  const ProjectDetailsScreen({super.key, this.initialSection});
+
+  /// A section to scroll to once the page shows ('progress' from a
+  /// construction-progress notification).
+  final String? initialSection;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +48,7 @@ class ProjectDetailsScreen extends StatelessWidget {
               ),
             );
           case DataStatus.success:
-            return _DetailPage(state: state);
+            return _DetailPage(state: state, initialSection: initialSection);
         }
       },
     );
@@ -80,8 +84,9 @@ class _LoadingScaffold extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DetailPage extends StatefulWidget {
-  const _DetailPage({required this.state});
+  const _DetailPage({required this.state, this.initialSection});
   final ProjectDetailsState state;
+  final String? initialSection;
 
   @override
   State<_DetailPage> createState() => _DetailPageState();
@@ -93,6 +98,8 @@ class _DetailPageState extends State<_DetailPage> {
   final _amenitiesKey = GlobalKey();
   final _paymentKey = GlobalKey();
   final _locationKey = GlobalKey();
+  final _progressKey = GlobalKey();
+  final _faqKey = GlobalKey();
   ProjectPlanSummary _plans = const ProjectPlanSummary();
   String? _startingPrice;
 
@@ -100,6 +107,12 @@ class _DetailPageState extends State<_DetailPage> {
   void initState() {
     super.initState();
     _load();
+    if (widget.initialSection == 'progress' && widget.state.project!.progress != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _progressKey.currentContext;
+        if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400), alignment: 0.1);
+      });
+    }
   }
 
   // Both best-effort: the page shows without them.
@@ -125,6 +138,16 @@ class _DetailPageState extends State<_DetailPage> {
     final lang = Localizations.localeOf(context).languageCode;
     final whatsapp = EnvConfig.current.whatsappNumber;
     final offerLine = projectOfferLine(l10n, _plans);
+    final amenities = project.amenityTiles;
+    final progress = project.progress;
+    // Dashboard sections and the project's own FAQ; a pair missing either
+    // side (a question not answered yet) is left out.
+    List<(String, String)> pairs(Iterable<(Translatable, Translatable)> xs) => [
+          for (final (a, b) in xs)
+            if (a.resolve(lang).isNotEmpty && b.resolve(lang).isNotEmpty) (a.resolve(lang), b.resolve(lang)),
+        ];
+    final sections = pairs(project.sections.map((x) => (x.title, x.body)));
+    final faqs = pairs(project.faqs.map((x) => (x.question, x.answer)));
     Widget section(String title, Widget child, {Key? key}) => AppDetailPage.box(
           Padding(
             key: key,
@@ -148,7 +171,7 @@ class _DetailPageState extends State<_DetailPage> {
         facts: [
           AppPriceFact(l10n.detailAvailableUnits, '${project.availableUnitsCount}'),
           AppPriceFact(l10n.labelCity, project.city),
-          if (project.services.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${project.services.length}'),
+          if (amenities.isNotEmpty) AppPriceFact(l10n.labelAmenities, '${amenities.length}'),
         ],
         actionLabel: l10n.requestInfo,
         actionIcon: Icons.info_outline_rounded,
@@ -182,16 +205,24 @@ class _DetailPageState extends State<_DetailPage> {
           tabs: [
             AppSectionTab(l10n.detailTabOverview, _aboutKey),
             if (state.previewUnits.isNotEmpty) AppSectionTab(l10n.detailTabUnits, _unitsKey),
-            if (project.services.isNotEmpty) AppSectionTab(l10n.detailTabAmenities, _amenitiesKey),
+            if (amenities.isNotEmpty) AppSectionTab(l10n.detailTabAmenities, _amenitiesKey),
+            if (progress != null) AppSectionTab(l10n.detailTabProgress, _progressKey),
             if (!_plans.isEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
             if (project.hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
+            if (faqs.isNotEmpty) AppSectionTab(l10n.detailTabFaq, _faqKey),
           ],
         ),
         section(
           l10n.projectAbout,
-          project.description.isEmpty
-              ? _AboutBlock(text: l10n.unitAboutGeneric)
-              : _AboutBlock(text: project.description.resolve(lang)),
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            project.description.isEmpty
+                ? _AboutBlock(text: l10n.unitAboutGeneric)
+                : _AboutBlock(text: project.description.resolve(lang)),
+            if (sections.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              ProjectExpandableList(items: sections),
+            ],
+          ]),
           key: _aboutKey,
         ),
         if (state.previewUnits.isNotEmpty)
@@ -202,12 +233,16 @@ class _DetailPageState extends State<_DetailPage> {
               child: _UnitsPreview(state: state),
             ),
           ),
-        if (project.services.isNotEmpty)
-          section(l10n.projectAmenities, AmenityChips(services: project.services), key: _amenitiesKey),
+        if (amenities.isNotEmpty)
+          section(l10n.projectAmenities, AmenityGrid(amenities: amenities), key: _amenitiesKey),
+        if (progress != null)
+          section(l10n.projectProgressTitle, ProjectProgressCard(progress: progress), key: _progressKey),
         if (!_plans.isEmpty)
           section(l10n.detailPaymentPlans, AppPlanOfferCards(plans: _plans), key: _paymentKey),
         if (project.hasLocation)
           section(l10n.projectLocation, _LocationTile(project: project, lang: lang, l10n: l10n), key: _locationKey),
+        if (faqs.isNotEmpty)
+          section(l10n.projectFaqTitle, ProjectExpandableList(items: faqs), key: _faqKey),
       ],
     );
   }

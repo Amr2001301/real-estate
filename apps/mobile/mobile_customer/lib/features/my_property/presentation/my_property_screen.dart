@@ -7,6 +7,7 @@ import '../../../common/plan_banner.dart';
 import '../../notifications/presentation/widgets/customer_notification_button.dart';
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
+import 'widgets/owned_projects_progress.dart';
 
 Color get _navyDeep => AppPalette.navyDeep;
 
@@ -91,10 +92,15 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
                       itemBuilder: (context, i) {
                         if (i == 0) {
                           final withPlan = properties.where((p) => p.hasInstallmentPlan).length;
-                          return HomeBand(figures: [
-                            HomeFigure(id: 'units', value: '${properties.length}', label: l10n.myPropertyUnitsLabel, hint: l10n.accountMyProperty),
-                            HomeFigure(id: 'owned', value: '$ownedCount', label: l10n.myPropertyOwnedLabel, hint: l10n.myPropertyOwnedHint),
-                            HomeFigure(id: 'plans', value: '$withPlan', label: l10n.installmentsTitle, hint: l10n.myPropertyWithPlanHint),
+                          final projectIds = {for (final p in properties) if (p.projectId != null) p.projectId!}.toList();
+                          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                            HomeBand(figures: [
+                              HomeFigure(id: 'units', value: '${properties.length}', label: l10n.myPropertyUnitsLabel, hint: l10n.accountMyProperty),
+                              HomeFigure(id: 'owned', value: '$ownedCount', label: l10n.myPropertyOwnedLabel, hint: l10n.myPropertyOwnedHint),
+                              HomeFigure(id: 'plans', value: '$withPlan', label: l10n.installmentsTitle, hint: l10n.myPropertyWithPlanHint),
+                            ]),
+                            // Construction progress of the projects these units are in.
+                            OwnedProjectsProgress(projectIds: projectIds),
                           ]);
                         }
                         final property = properties[i - 1];

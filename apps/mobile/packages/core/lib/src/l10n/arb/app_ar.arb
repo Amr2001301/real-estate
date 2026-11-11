@@ -3145,5 +3145,22 @@
   "myPropertyUnitsLabel": "وحداتي",
   "myPropertyOwnedLabel": "مملوكة",
   "myPropertyOwnedHint": "عقد موقّع",
-  "myPropertyWithPlanHint": "بخطة سداد"
+  "myPropertyWithPlanHint": "بخطة سداد",
+  "projectDetailsTitle": "تفاصيل المشروع",
+  "projectFaqTitle": "الأسئلة الشائعة",
+  "amenityGroupInside": "داخل المشروع",
+  "amenityGroupAround": "حول المشروع",
+  "projectProgressTitle": "تقدم الإنشاءات",
+  "projectProgressOverall": "معدل الإنجاز الكلي",
+  "projectProgressBuilding": "تحت الإنشاء",
+  "projectProgressDone": "اكتمل الإنشاء",
+  "projectProgressUpdatedAt": "آخر تحديث {date}",
+  "@projectProgressUpdatedAt": { "placeholders": { "date": { "type": "String" } } },
+  "projectStageDone": "مكتملة",
+  "projectStageActive": "جارية",
+  "projectStageNext": "لم تبدأ",
+  "detailTabProgress": "الإنشاءات",
+  "detailTabFaq": "الأسئلة",
+  "myPropertyProgressTitle": "تقدم إنشاءات مشاريعك",
+  "myPropertyProgressViewStages": "تفاصيل المراحل"
 }

@@ -55,6 +55,14 @@ void main() {
           '/account/requests');
     });
 
+    test('a construction-progress update opens the project at its stages', () {
+      expect(
+        customerNotificationRoute('project_progress_customer', {'entityType': 'project', 'entityId': 'p-1'}),
+        '/projects/p-1?section=progress',
+      );
+      expect(customerNotificationRoute('project_progress_customer', const {}), '/account/property');
+    });
+
     test('unknown notices have no route', () {
       expect(customerNotificationRoute('user_account_created', const {}), isNull);
     });
