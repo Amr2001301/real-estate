@@ -87,7 +87,7 @@ describe('UV1 — unit value (e2e)', () => {
   });
 
   it('UV1-3: a reprice moves the value, is recorded for the chart, and shows the rise', async () => {
-    await asAdmin(http().post('/v1/units/reprice')).send({ projectId, type: TYPE, pricePerMeter: 36_000 }).expect(201);
+    await asAdmin(http().post('/v1/units/reprice')).send({ projectId, type: TYPE, pricePerMeter: 36_000 }).expect(200);
     const [item] = await mine();
     expect(item).toMatchObject({ currentPricePerMeter: '36000.00', currentValue: '3600000.00', gain: '600000.00', gainPct: 20 });
     expect(item.history[0]).toEqual({ date: '2025-06-01T00:00:00.000Z', pricePerMeter: 30_000 });
