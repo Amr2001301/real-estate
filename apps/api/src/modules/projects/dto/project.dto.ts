@@ -15,7 +15,7 @@ import {
   IsPositive,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { ProjectStatus, ProjectType } from '@prisma/client';
+import { ProjectStatus, ProjectType, UnitUsage } from '@prisma/client';
 import { ENTITY_CODE_PATTERN, normalizeEntityCode } from '../../../common/utils/entity-code';
 import { MAX_PAGE_SIZE } from '../../../common/utils/pagination';
 
@@ -164,6 +164,11 @@ export class ProjectQueryDto {
   @IsOptional()
   @IsEnum(ProjectType)
   type?: ProjectType;
+
+  /** Projects with an available unit of this usage (residential, offices, shops, clinics…). */
+  @IsOptional()
+  @IsEnum(UnitUsage)
+  usage?: UnitUsage;
 
   @IsOptional()
   @IsBoolean()

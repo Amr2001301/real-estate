@@ -178,7 +178,7 @@ export function SubmitPaymentProofForm({
         <select
           value={paymentMethod}
           onChange={(e) => setPaymentMethod(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15"
           disabled={busy}
         >
           {PAYMENT_METHOD_VALUES.map((value) => ({ value, label: t.methods[value] ?? value })).map((o) => (
@@ -193,7 +193,7 @@ export function SubmitPaymentProofForm({
           type="date"
           value={paidAt}
           onChange={(e) => setPaidAt(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15"
           disabled={busy}
           required
         />
@@ -227,7 +227,7 @@ export function SubmitPaymentProofForm({
           maxLength={500}
           rows={2}
           placeholder={t.noteHint}
-          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15"
           disabled={busy}
         />
       </div>

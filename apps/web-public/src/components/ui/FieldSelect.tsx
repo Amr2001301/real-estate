@@ -31,6 +31,7 @@ export function FieldSelect({
       <select
         value={value}
         aria-label={label}
+        data-bare
         onChange={(e) => onChange(e.target.value)}
         className="w-full cursor-pointer appearance-none truncate bg-transparent text-[15px] text-ink-strong outline-none"
       >

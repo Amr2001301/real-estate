@@ -369,7 +369,7 @@ export function SignFlow({ token, view, locale }: { token: string; view: SignVie
                     autoComplete="one-time-code"
                     dir="ltr"
                     data-testid="sign-code"
-                    className="h-12 rounded-2xl border border-hairline bg-canvas px-4 text-center font-mono text-xl tracking-[0.5em] text-ink-strong outline-none focus:border-gold-400"
+                    className="h-12 rounded-2xl border border-hairline bg-canvas px-4 text-center font-mono text-xl tracking-[0.5em] text-ink-strong outline-none focus:border-navy/50 focus:ring-2 focus:ring-navy/15"
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
@@ -379,7 +379,7 @@ export function SignFlow({ token, view, locale }: { token: string; view: SignVie
                     onChange={(e) => setName(e.target.value)}
                     maxLength={120}
                     data-testid="sign-name"
-                    className="h-12 rounded-2xl border border-hairline bg-canvas px-4 text-[15px] text-ink-strong outline-none focus:border-gold-400"
+                    className="h-12 rounded-2xl border border-hairline bg-canvas px-4 text-[15px] text-ink-strong outline-none focus:border-navy/50 focus:ring-2 focus:ring-navy/15"
                   />
                 </label>
                 <div>

@@ -14,11 +14,21 @@ import { cityLabel } from '@/lib/format';
 const SELECT_CLS =
   'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15';
 
-export function SearchPanel({ locale, cities }: { locale: Locale; cities: string[] }) {
+export function SearchPanel({
+  locale,
+  cities,
+  counts = {},
+}: {
+  locale: Locale;
+  cities: string[];
+  /** Available units per usage; a field with none gets no tab (it could only find nothing). */
+  counts?: Partial<Record<string, number | null>>;
+}) {
   const router = useRouter();
   const m = siteT(locale).home.search;
+  const tabs = m.tabs.filter((t) => counts[t.usage] !== 0);
 
-  const [tab, setTab] = useState<string>(m.tabs[0]!.key);
+  const [tab, setTab] = useState<string>(tabs[0]?.key ?? '');
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
   const [price, setPrice] = useState('');
@@ -31,7 +41,7 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
     }
     const params = new URLSearchParams();
     // Each tab is a usage (residential, administrative, …), not one type.
-    const usage = m.tabs.find((t) => t.key === tab)?.usage ?? '';
+    const usage = tabs.find((t) => t.key === tab)?.usage ?? '';
     if (usage) params.set('usage', usage);
     if (city) params.set('city', city);
     if (status) params.set('status', status);
@@ -44,25 +54,27 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
 
   return (
     <div className="rounded-3xl border border-hairline bg-surface/95 shadow-[0_24px_64px_-24px_rgba(15,30,51,0.38)] backdrop-blur-md">
-      {/* Property-type tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-hairline px-5 py-4">
-        {m.tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            aria-pressed={tab === t.key}
-            className={cn(
-              'rounded-xl px-5 py-2 text-sm font-semibold transition-all duration-200',
-              tab === t.key
-                ? 'bg-navy text-white shadow-soft'
-                : 'text-ink-muted hover:bg-surface-soft hover:text-ink-strong',
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Property-type tabs — only with more than one field to choose from. */}
+      {tabs.length > 1 && (
+        <div className="flex flex-wrap gap-2 border-b border-hairline px-5 py-4">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              aria-pressed={tab === t.key}
+              className={cn(
+                'rounded-xl px-5 py-2 text-sm font-semibold transition-all duration-200',
+                tab === t.key
+                  ? 'bg-navy text-white shadow-soft'
+                  : 'text-ink-muted hover:bg-surface-soft hover:text-ink-strong',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filter row */}
       <form
@@ -74,7 +86,10 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
       >
         {/* Search input */}
         <div className="relative lg:col-span-1">
-          <Search className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+          <Search
+            className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60"
+            aria-hidden
+          />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -94,7 +109,9 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
           >
             <option value="">{m.allCities}</option>
             {cities.map((c) => (
-              <option key={c} value={c}>{locale === 'en' ? cityLabel(c, locale) : c}</option>
+              <option key={c} value={c}>
+                {locale === 'en' ? cityLabel(c, locale) : c}
+              </option>
             ))}
           </select>
         )}
@@ -107,7 +124,9 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
           className={SELECT_CLS}
         >
           {m.priceRanges.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
           ))}
         </select>
 
@@ -119,7 +138,9 @@ export function SearchPanel({ locale, cities }: { locale: Locale; cities: string
           className={SELECT_CLS}
         >
           {m.statuses.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
           ))}
         </select>
 

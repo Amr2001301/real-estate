@@ -85,7 +85,6 @@ const SITE_MESSAGES = {
           { key: 'admin', label: 'إداري',  usage: 'ADMINISTRATIVE' },
           { key: 'comm',  label: 'تجاري',  usage: 'COMMERCIAL' },
           { key: 'med',   label: 'طبي',    usage: 'MEDICAL' },
-          { key: 'hotel', label: 'فندقي',  usage: '' },
         ],
         allCities: 'المدينة',
         statuses: [
@@ -117,7 +116,6 @@ const SITE_MESSAGES = {
           { title: 'إداري',  sub: 'مكاتب ومقرات شركات', usage: 'ADMINISTRATIVE' },
           { title: 'تجاري',  sub: 'محلات ومعارض',   usage: 'COMMERCIAL' },
           { title: 'طبي',    sub: 'عيادات ومراكز طبية', usage: 'MEDICAL' },
-          { title: 'فندقي',  sub: 'ضيافة وتشغيل فندقي', usage: '' },
         ],
       },
       projects: {
@@ -464,6 +462,8 @@ const SITE_MESSAGES = {
     projectsFilter: {
       typeLabel: 'نوع المشروع',
       allTypes: 'كل الأنواع',
+      usageLabel: 'المجال',
+      allUsages: 'كل المجالات',
       searchPlaceholder: 'ابحث عن اسم المشروع...',
       searchLabel: 'بحث',
       cityLabel: 'المدينة',
@@ -1091,7 +1091,6 @@ const SITE_MESSAGES = {
           { key: 'admin', label: 'Office',       usage: 'ADMINISTRATIVE' },
           { key: 'comm',  label: 'Commercial',   usage: 'COMMERCIAL' },
           { key: 'med',   label: 'Medical',      usage: 'MEDICAL' },
-          { key: 'hotel', label: 'Hotel',        usage: '' },
         ],
         allCities: 'City',
         statuses: [
@@ -1123,7 +1122,6 @@ const SITE_MESSAGES = {
           { title: 'Office',      sub: 'Offices & headquarters',     usage: 'ADMINISTRATIVE' },
           { title: 'Commercial',  sub: 'Shops & Showrooms',          usage: 'COMMERCIAL' },
           { title: 'Medical',     sub: 'Clinics & medical centers',  usage: 'MEDICAL' },
-          { title: 'Hotel',       sub: 'Hospitality & Operations',   usage: '' },
         ],
       },
       projects: {
@@ -1464,6 +1462,8 @@ const SITE_MESSAGES = {
     projectsFilter: {
       typeLabel: 'Project type',
       allTypes: 'All types',
+      usageLabel: 'Field',
+      allUsages: 'All fields',
       searchPlaceholder: 'Search for a project name...',
       searchLabel: 'Search',
       cityLabel: 'City',

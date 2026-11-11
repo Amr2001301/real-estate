@@ -213,7 +213,7 @@ export function MaintenanceResolution({ request }: { request: MeMaintenanceReque
             maxLength={1000}
             rows={2}
             placeholder={t.note}
-            className="mt-3 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm"
+            className="mt-3 w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15"
             disabled={working}
           />
           <button

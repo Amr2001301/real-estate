@@ -14,6 +14,8 @@ export interface ProjectsQuery {
   q: string;
   city: string;
   type: string;
+  /** RESIDENTIAL, ADMINISTRATIVE, … — projects with an available unit of it. */
+  usage: string;
   featured: boolean;
   sort: string;
 }
@@ -24,13 +26,14 @@ export function projectsHref(v: ProjectsQuery): string {
   if (v.q.trim()) params.set('q', v.q.trim());
   if (v.city) params.set('city', v.city);
   if (v.type) params.set('type', v.type);
+  if (v.usage) params.set('usage', v.usage);
   if (v.featured) params.set('featured', 'true');
   if (v.sort) params.set('sort', v.sort);
   const qs = params.toString();
   return qs ? `${routes.projects}?${qs}` : routes.projects;
 }
 
-/** Search, city and type over the page header; «بحث» applies them. */
+/** Search, city, type and field over the page header; «بحث» applies them. */
 export function ProjectsFilterBar({
   initial,
   cities,
@@ -46,8 +49,10 @@ export function ProjectsFilterBar({
   const [q, setQ] = useState(initial.q);
   const [city, setCity] = useState(initial.city);
   const [type, setType] = useState(initial.type);
+  const [usage, setUsage] = useState(initial.usage);
+  const usages = siteT(locale).home.categories.items;
 
-  const go = (next: Partial<ProjectsQuery>) => router.push(projectsHref({ ...initial, q, city, type, ...next }) as never);
+  const go = (next: Partial<ProjectsQuery>) => router.push(projectsHref({ ...initial, q, city, type, usage, ...next }) as never);
 
   return (
     <form
@@ -79,6 +84,12 @@ export function ProjectsFilterBar({
         <option value="">{t.allTypes}</option>
         {Object.entries(projectTypes).map(([value, label]) => (
           <option key={value} value={value}>{label}</option>
+        ))}
+      </FieldSelect>
+      <FieldSelect label={t.usageLabel} value={usage} onChange={(v) => { setUsage(v); go({ usage: v }); }} className="col-span-2 flex-1 lg:col-span-1">
+        <option value="">{t.allUsages}</option>
+        {usages.map((u) => (
+          <option key={u.usage} value={u.usage}>{u.title}</option>
         ))}
       </FieldSelect>
       <button type="submit" className="col-span-2 inline-flex h-[52px] items-center justify-center gap-2 rounded-2xl bg-navy px-7 text-[15px] font-semibold text-white transition-colors hover:bg-navy-700">
