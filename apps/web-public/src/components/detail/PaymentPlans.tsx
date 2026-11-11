@@ -3,7 +3,7 @@ import { formatNumber } from '@/lib/format';
 import type { PublicPaymentPlan } from '@/lib/api-types';
 import type { Locale } from '@/lib/locale';
 import { extraT } from '@/messages/site-extra';
-import { DEEP_BG } from '@/components/home/Hero';
+import { InstalmentPlanCard } from './InstalmentPlanCard';
 
 export function planYears(months: number, locale: Locale): string {
   const x = extraT(locale).unitPage;
@@ -69,36 +69,7 @@ export function PaymentPlans({ plans, listPrice, locale }: { plans: PublicPaymen
               </article>
             );
           }
-          const longest = p.options.reduce<PublicPaymentPlan['options'][number] | null>((a, o) => (!a || o.durationMonths > a.durationMonths ? o : a), null);
-          return (
-            <article key={p.id} className="relative flex flex-col overflow-hidden rounded-[1.5rem] p-7 text-white" style={{ background: DEEP_BG }}>
-              <span className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(70% 80% at 100% 0%, rgb(var(--c-gold-400) / 0.22), transparent 60%)' }} aria-hidden />
-              <span className="relative text-[13px] font-semibold text-gold-300">{x.payInstalment}</span>
-              <p className="relative mt-1 font-display text-lg font-semibold">{p.name}</p>
-              <p className="relative mt-6 flex items-baseline gap-2 font-display text-[2.3rem] font-semibold leading-none">
-                {longest ? <Price value={longest.installmentAmount} /> : <>{formatNumber(p.downPaymentPercent, locale)}%</>}
-                {longest && <span className="text-base font-normal text-white/65">/ {x.perMonth}</span>}
-              </p>
-              <p className="relative mt-2 text-sm text-white/70">
-                {longest ? x.downLine(formatNumber(p.downPaymentPercent, locale), planYears(longest.durationMonths, locale)) : x.downAmount}
-              </p>
-              <span className="min-h-6 flex-1" aria-hidden />
-              <dl className="relative divide-y divide-white/15 border-t border-white/15 pt-1 text-[15px]">
-                <div className="flex items-center justify-between gap-3 py-3">
-                  <dt className="text-white/65">{x.total}</dt>
-                  <dd className="font-semibold"><Price value={longest?.totalPayable || p.netPrice} /></dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 py-3">
-                  <dt className="text-white/65">{x.downAmount} ({formatNumber(p.downPaymentPercent, locale)}%)</dt>
-                  <dd className="font-semibold"><Price value={p.downPaymentAmount} /></dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 py-3">
-                  <dt className="text-white/65">{x.duration}</dt>
-                  <dd className="font-semibold">{longest ? planYears(longest.durationMonths, locale) : '—'}</dd>
-                </div>
-              </dl>
-            </article>
-          );
+          return <InstalmentPlanCard key={p.id} plan={p} />;
         })}
       </div>
     </div>
