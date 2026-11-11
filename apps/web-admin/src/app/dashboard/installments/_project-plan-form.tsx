@@ -525,7 +525,12 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                               {!r.options[0]
                                 ? '—'
                                 : r.options[0].balloon && r.options[0].balloonEveryMonths
-                                  ? m.monthlyPlusBalloon(money(r.options[0].monthly), money(r.options[0].balloon), r.options[0].balloonEveryMonths)
+                                  ? (
+                                      <>
+                                        <span className="block whitespace-nowrap">{money(r.options[0].monthly)} {m.perMonth}</span>
+                                        <span className="block whitespace-nowrap text-xs font-semibold text-brand-700">+ {money(r.options[0].balloon)} {m.everyMonthsLong(r.options[0].balloonEveryMonths)}</span>
+                                      </>
+                                    )
                                   : money(r.options[0].monthly)}
                             </td>
                           ) : null}
