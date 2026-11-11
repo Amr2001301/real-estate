@@ -8,9 +8,9 @@ import { getLocale } from '@/lib/locale';
 import { buildMetadata } from '@/lib/seo';
 import { apiFetch } from '@/lib/api-server';
 import { getResolvedTenant } from '@/lib/tenant';
-import { pickAr, formatNumber, cityLabel, projectPlace } from '@/lib/format';
+import { pickAr, formatNumber, cityLabel, projectPlace, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
-import type { PublicProjectDetail, PublicProjectPlans, Paginated, PublicUnit } from '@/lib/api-types';
+import type { PublicProjectDetail, PublicProjectPlans, Paginated, PublicUnit, PublicPaymentPlan } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
@@ -23,6 +23,9 @@ import { UnitCard } from '@/components/home/UnitCard';
 import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
 import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
 import { DetailBookingCard } from '@/components/detail/DetailBookingCard';
+import { ProjectPriceCard, type UnitMixRow } from '@/components/detail/ProjectPriceCard';
+import { InstallmentEstimator, type TypeEstimate } from '@/components/detail/InstallmentEstimator';
+import { StickyAside } from '@/components/detail/StickyAside';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
@@ -82,12 +85,60 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   const hasCoords = project.lat !== 0 || project.lng !== 0;
   const photos = (project.media ?? []).filter((f) => f.type === 'IMAGE' || !f.type).map((f) => f.url);
 
-  // A few of its units and its public payment terms — best-effort.
-  const [unitsResult, plansRes] = await Promise.all([
-    apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${project.id}&pageSize=6`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+  // Its available units (a few shown, all of them for the prices and the
+  // mix by type), the company's names for its types, and its public payment
+  // terms — best-effort.
+  const [unitsResult, plansRes, typesRes] = await Promise.all([
+    apiFetch<Paginated<PublicUnit>>(`/public/units?projectId=${project.id}&pageSize=200`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
     apiFetch<PublicProjectPlans>(`/public/projects/${project.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
+    apiFetch<Array<{ code: string; name: string | { ar?: string; en?: string } }>>('/public/unit-types', { revalidate: REVALIDATE, tenantSlug: tenant.slug }),
   ]);
-  const previewUnits = unitsResult.ok ? unitsResult.data.data : [];
+  const allUnits = unitsResult.ok ? unitsResult.data.data : [];
+  const previewUnits = allUnits.slice(0, 6);
+  const prices = allUnits.map((u) => Number(u.price)).filter((n) => Number.isFinite(n) && n > 0);
+  const priceMin = prices.length ? Math.min(...prices) : null;
+  const priceMax = prices.length ? Math.max(...prices) : null;
+  const typeNames = new Map((typesRes.ok ? typesRes.data : []).map((t) => [t.code, t.name]));
+  const mixCounts = new Map<string, number>();
+  for (const u of allUnits) mixCounts.set(u.type, (mixCounts.get(u.type) ?? 0) + 1);
+  const mix: UnitMixRow[] = [...mixCounts.entries()]
+    .map(([code, count]) => ({
+      label: unitTypeLabel(code, typeNames.get(code), locale),
+      count,
+      href: `${routes.units}?projectId=${project.id}&type=${encodeURIComponent(code)}`,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // «احسب قسطك»: per type, the lowest-priced available unit that has a
+  // published instalment plan, with that plan's own figures (its markup and
+  // instalment as the plan sets them — nothing worked out here). A type
+  // without one is left out; with none at all the card is not shown.
+  const estimates = (
+    await Promise.all(
+      [...mixCounts.keys()].map(async (code): Promise<TypeEstimate | null> => {
+        const candidates = allUnits.filter((u) => u.type === code).sort((a, b) => Number(a.price) - Number(b.price)).slice(0, 6);
+        for (const u of candidates) {
+          const res = await apiFetch<PublicPaymentPlan[]>(`/public/units/${u.id}/payment-plans`, { revalidate: REVALIDATE, tenantSlug: tenant.slug });
+          const plan = (res.ok && Array.isArray(res.data) ? res.data : [])
+            .filter((p) => !p.isCash && p.options.length > 0)
+            .sort((a, b) => a.downPaymentPercent - b.downPaymentPercent)[0];
+          if (!plan) continue;
+          return {
+            label: unitTypeLabel(code, typeNames.get(code), locale),
+            unitId: u.id,
+            unitCode: u.code,
+            price: Number(plan.netPrice),
+            downAmount: plan.downPaymentAmount,
+            downPercent: plan.downPaymentPercent,
+            options: [...plan.options]
+              .sort((a, b) => a.durationMonths - b.durationMonths)
+              .map((o) => ({ months: o.durationMonths, amount: o.installmentAmount, frequency: o.frequency ?? 'MONTHLY' })),
+          };
+        }
+        return null;
+      }),
+    )
+  ).filter((e): e is TypeEstimate => e !== null);
   const plans = plansRes.ok ? plansRes.data : null;
   const downMin = plans?.minDownPaymentPercent ?? null;
   const maxMonths = plans?.maxMonths ?? null;
@@ -219,7 +270,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           </div>
 
           <aside>
-            <div className="lg:sticky lg:top-28">
+            <StickyAside>
               <DetailBookingCard
                 eyebrow={name}
                 headline={x.unitsAvailable(units)}
@@ -234,7 +285,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                 infoHref={infoHref}
                 waMessage={waMessage}
               />
-            </div>
+              {priceMin != null && priceMax != null && (
+                <div className="mt-5 hidden space-y-5 lg:block">
+                  <ProjectPriceCard min={priceMin} max={priceMax} mix={mix} locale={locale} />
+                  {estimates.length > 0 && <InstallmentEstimator estimates={estimates} />}
+                </div>
+              )}
+            </StickyAside>
           </aside>
         </div>
       </Section>
