@@ -18,6 +18,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { InlineNotice } from '@/components/states/InlineNotice';
 import { Stagger } from '@/components/motion/Stagger';
 import { ProjectAmenities } from '@/components/projects/ProjectAmenities';
+import { ProjectProgress } from '@/components/projects/ProjectProgress';
 import { ProjectLocation } from '@/components/projects/ProjectLocation';
 import { UnitCard } from '@/components/home/UnitCard';
 import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
@@ -117,6 +118,15 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       : `${formatNumber(maxMonths, locale)} ${x.monthsMany}`
     : null;
 
+  // The page content from the dashboard (sections and the project's own FAQ);
+  // a question without an answer yet is left out.
+  const sections = (project.sections ?? [])
+    .map((x) => ({ question: pickAr(x.title, '', locale), answer: pickAr(x.body, '', locale) }))
+    .filter((x) => x.question && x.answer);
+  const faqs = (project.faqs ?? [])
+    .map((x) => ({ question: pickAr(x.question, '', locale), answer: pickAr(x.answer, '', locale) }))
+    .filter((x) => x.question && x.answer);
+
   const visitHref = `${routes.contact}?type=visit&projectId=${project.id}`;
   const infoHref = `${routes.contact}?projectId=${project.id}`;
   const waMessage = extraT(locale).inquiry.whatsappMessage(name);
@@ -140,6 +150,15 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           { name, path: `/projects/${project.id}` },
         ])}
       />
+      {faqs.length > 0 && (
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.question, acceptedAnswer: { '@type': 'Answer', text: f.answer } })),
+          }}
+        />
+      )}
       <JsonLd
         data={projectResidenceLd({
           name,
@@ -184,10 +203,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           <div className="min-w-0 space-y-14">
             <div>
               <DetailHead eyebrow={m.projectDetail.overviewLabel} title={m.projectDetail.aboutTitle} />
-              <p className="text-[17px] leading-[2] text-ink-muted">{description || m.projectDetail.aboutEmpty}</p>
+              <p className="whitespace-pre-line text-[17px] leading-[2] text-ink-muted">{description || m.projectDetail.aboutEmpty}</p>
+              {sections.length > 0 && <Accordion className="mt-8" items={sections} defaultOpenFirst />}
             </div>
 
-            <ProjectAmenities services={project.services} locale={locale} />
+            <ProjectAmenities amenities={project.amenities} services={project.services} locale={locale} />
+
+            <ProjectProgress progress={project.progress} locale={locale} />
 
             <div>
               <DetailHead
@@ -232,10 +254,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
 
             <ProjectLocation city={cityLabel(project.city, locale)} lat={hasCoords ? project.lat : null} lng={hasCoords ? project.lng : null} locale={locale} />
 
-            <div>
-              <DetailHead eyebrow={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
-              <Accordion items={extraT(locale).projectFaq(name)} defaultOpenFirst />
-            </div>
+            {/* The project's own FAQ (dashboard); none → no section. */}
+            {faqs.length > 0 && (
+              <div>
+                <DetailHead eyebrow={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
+                <Accordion items={faqs} defaultOpenFirst />
+              </div>
+            )}
           </div>
 
           <aside>

@@ -38,7 +38,7 @@ export function Accordion({ items, defaultOpenFirst = false, className }: Accord
               <ChevronDown className="h-4 w-4" aria-hidden />
             </span>
           </summary>
-          <div className="px-6 pb-6 pt-1 text-sm leading-relaxed text-ink-muted">{item.answer}</div>
+          <div className="whitespace-pre-line px-6 pb-6 pt-1 text-sm leading-relaxed text-ink-muted">{item.answer}</div>
         </details>
       ))}
     </div>

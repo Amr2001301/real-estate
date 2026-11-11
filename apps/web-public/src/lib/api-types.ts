@@ -46,6 +46,12 @@ export interface PublicProjectDetail {
   lat: number;
   lng: number;
   services: Translatable[];
+  /** The page content beyond the description (dashboard → محتوى صفحة المشروع). Texts arrive in the reader's language. */
+  sections?: Array<{ title: Translatable; body: Translatable }>;
+  faqs?: Array<{ question: Translatable; answer: Translatable }>;
+  amenities?: Array<{ name: Translatable; icon: string; group: 'INSIDE' | 'AROUND' }>;
+  /** Construction progress by stage; null when the project lists none. */
+  progress?: { overall: number; stages: Array<{ name: Translatable; percent: number }>; updatedAt: string | null } | null;
   featured: boolean;
   status: string;
   media: PublicMedia[];
