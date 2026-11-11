@@ -22,9 +22,11 @@ import { CtaBand } from '@/components/marketing/CtaBand';
 import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
 import { DetailHero, HeroChip, heroIconClass } from '@/components/detail/DetailHero';
-import { PaymentPlans, cashSaving } from '@/components/detail/PaymentPlans';
+import { PaymentPlans, cashSaving, planYears } from '@/components/detail/PaymentPlans';
 import { DetailStats, DetailHead } from '@/components/detail/DetailStats';
 import { DetailBookingCard } from '@/components/detail/DetailBookingCard';
+import { BuyingSteps } from '@/components/detail/BuyingSteps';
+import { StickyAside } from '@/components/detail/StickyAside';
 import { DetailProjectCard } from '@/components/detail/DetailProjectCard';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
@@ -132,6 +134,16 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
     : `${formatNumber(longestMonths, locale)} ${x.monthsMany}`;
 
   const visitHref = `${routes.contact}?type=visit&unitId=${unit.id}`;
+
+  // «خطوات الشراء»: this unit's own terms where its published plans give
+  // them — the instalment durations, the lowest down payment, the
+  // reservation in the plan shown — and plain words where they don't.
+  const bs = extraT(locale).buySteps;
+  const spans = [...new Set(instalment.flatMap((p) => p.options.map((o) => o.durationMonths)))].sort((a, b) => a - b);
+  const planSub = down && spans.length > 0
+    ? bs.planSub(spans.map((mo) => planYears(mo, locale)).join(bs.or), formatNumber(down.percent, locale)) + (cash ? bs.orCash : '')
+    : bs.planNone;
+  const reservation = (instalment[0] ?? plans[0])?.reservationAmount ?? 0;
   const infoHref = `${routes.contact}?unitId=${unit.id}`;
   const waMessage = m.unitInquiry.waInterest(unit.code ? m.unitInquiry.waUnitSubject(unit.code) : m.unitInquiry.waThisUnit, projectName);
   const compareItem: CompareItem = {
@@ -246,7 +258,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
           </div>
 
           <aside>
-            <div className="lg:sticky lg:top-28">
+            <StickyAside>
               <DetailBookingCard
                 eyebrow={unit.code ? `${m.unitInquiry.unitCode} ${unit.code}` : undefined}
                 status={statusLabel}
@@ -263,7 +275,23 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 infoHref={infoHref}
                 waMessage={waMessage}
               />
-            </div>
+              <div className="mt-5 hidden lg:block">
+                <BuyingSteps
+                  eyebrow={bs.eyebrow}
+                  title={bs.title}
+                  locale={locale}
+                  steps={[
+                    { title: bs.visit, sub: bs.visitSub, href: visitHref },
+                    { title: bs.plan, sub: planSub },
+                    {
+                      title: bs.reserve,
+                      sub: reservation > 0 ? <><span className="font-semibold text-ink-strong"><Price value={reservation} /></span> — {bs.reserveSub}</> : bs.reserveSub,
+                    },
+                    { title: bs.sign, sub: bs.signSub },
+                  ]}
+                />
+              </div>
+            </StickyAside>
           </aside>
         </div>
       </Section>
