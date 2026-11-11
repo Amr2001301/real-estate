@@ -178,6 +178,9 @@ const EXTRA = {
       status: { building: 'تحت الإنشاء', done: 'اكتمل الإنشاء' },
       stage: { done: 'مكتملة', active: 'جارية', next: 'لم تبدأ' },
       updatedAt: (d: string) => `آخر تحديث ${d}`,
+      accountTitle: 'تقدم إنشاءات مشاريعك',
+      accountSub: 'نسبة الإنجاز في المشاريع التي تملك فيها وحدات، كما تحدّثها الشركة.',
+      viewStages: 'تفاصيل المراحل',
     },
     inquiry: {
       whatsappMessage: (project: string) => `مرحبًا، أنا مهتم بمشروع ${project}. أرجو تزويدي بمزيد من التفاصيل.`,
@@ -383,6 +386,9 @@ const EXTRA = {
       status: { building: 'Under construction', done: 'Construction complete' },
       stage: { done: 'Done', active: 'In progress', next: 'Not started' },
       updatedAt: (d: string) => `Updated ${d}`,
+      accountTitle: 'Construction progress on your projects',
+      accountSub: 'How far along the projects you own units in are, as the company updates it.',
+      viewStages: 'Stage details',
     },
     inquiry: {
       whatsappMessage: (project: string) => `Hello, I am interested in the ${project} project. Please send me more details.`,

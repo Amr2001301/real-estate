@@ -18,7 +18,7 @@ export function ProjectProgress({ progress, locale = 'ar', compact = false }: { 
   const done = progress.overall >= 100;
 
   return (
-    <div data-testid="project-progress">
+    <div id="progress" className="scroll-mt-28" data-testid="project-progress">
       {!compact && <DetailHead eyebrow={t.progressEyebrow} title={t.progressTitle} />}
       <div className="overflow-hidden rounded-[1.5rem] border border-hairline bg-surface">
         <div className="border-b border-hairline bg-surface-soft/60 px-6 py-6 sm:px-8">
