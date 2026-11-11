@@ -1,6 +1,6 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Apple, Play, ArrowLeft, Check } from 'lucide-react';
+import { Apple, Play, Check } from 'lucide-react';
 import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { detectMobileOS, storeLinks } from '@/lib/app-links';
@@ -110,12 +110,6 @@ export default async function AppLandingPage() {
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <a href={routes.home} className="inline-flex items-center gap-2 text-[15px] font-semibold text-ink-muted hover:text-ink-strong">
-            <ArrowLeft className="h-4 w-4 rotate-180" aria-hidden />
-            العودة للرئيسية
-          </a>
-        </div>
       </Container>
     </section>
   );
