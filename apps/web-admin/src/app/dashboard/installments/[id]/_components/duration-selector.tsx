@@ -7,6 +7,7 @@ import { computeDurationOption } from '@/lib/installment-calc';
 import type { DurationOptionCalculated, InstallmentPlanDurationOption } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { projectPlansT } from '@/messages/project-plans';
 
 interface Props {
   options:           InstallmentPlanDurationOption[];
@@ -28,6 +29,10 @@ export function DurationSelector({
   locale = 'ar',
 }: Props) {
   const m = uiT(locale).pages.installments.detail.durationSelector;
+  const pm = projectPlansT(locale);
+  /** Balloon plan: "+ 120,000 every 3 months" under the monthly amount. */
+  const balloonLine = (c: DurationOptionCalculated) =>
+    c.balloonAmount && c.balloonEveryMonths ? `+ ${fmt(c.balloonAmount)} — ${pm.colBalloon(c.balloonEveryMonths)}` : null;
 
   function fmt(n: number): string {
     return formatCurrency(n.toFixed(2), currency, locale);
@@ -143,6 +148,11 @@ export function DurationSelector({
               <p className="text-[20px] font-black tabular-nums leading-none text-brand-700">
                 {fmt(selected.calculated.monthlyInstallment)}
               </p>
+              {balloonLine(selected.calculated) && (
+                <p className="mt-1.5 text-[13px] font-bold tabular-nums text-brand-700" data-testid="balloon-line">
+                  {balloonLine(selected.calculated)}
+                </p>
+              )}
             </div>
             <div className="text-end">
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">
@@ -201,6 +211,9 @@ export function DurationSelector({
                     </td>
                     <td className="px-4 py-3 text-end text-[13px] font-bold tabular-nums text-brand-700">
                       {fmt(o.calculated.monthlyInstallment)}
+                      {balloonLine(o.calculated) && (
+                        <span className="block text-[11px] font-semibold text-slate-500">{balloonLine(o.calculated)}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-end text-[12px] tabular-nums text-slate-600">
                       {fmt(o.calculated.financedAmount)}

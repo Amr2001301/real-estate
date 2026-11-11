@@ -85,6 +85,11 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
   const [down, setDown] = useState(String(Number(d?.downPaymentValue ?? 10)));
   const [startRule, setStartRule] = useState(d?.startDateRule ?? 'AFTER_RESERVATION');
   const [manualStart, setManualStart] = useState(dateOnly(d?.manualStartDate));
+  // Balloon plan: a big payment every few months beside a small monthly one.
+  const [shape, setShape] = useState<'EQUAL' | 'BALLOON'>(d?.balloonEveryMonths ? 'BALLOON' : 'EQUAL');
+  const [balloonShare, setBalloonShare] = useState(String(d?.balloonSharePct != null ? Number(d.balloonSharePct) : 60));
+  const [balloonEvery, setBalloonEvery] = useState<number>(d?.balloonEveryMonths ?? 3);
+  const balloon = !isCash && shape === 'BALLOON' ? { sharePct: Number(balloonShare || 0), everyMonths: balloonEvery } : null;
   const [rows, setRows] = useState<DurationRow[]>(
     d?.durationOptions?.length
       ? d.durationOptions.map((o) => ({ key: key(), months: String(o.durationMonths), pct: String(Number(o.increasePercentage)) }))
@@ -144,6 +149,7 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
         reservationAmountType: bookingType,
         reservationAmountValue: Number(booking || 0),
         ...(isCash ? {} : { downPaymentType: 'PERCENTAGE', downPaymentValue: Number(down || 0), durationOptions }),
+        ...(balloon ? { balloonSharePct: balloon.sharePct, balloonEveryMonths: balloon.everyMonths } : {}),
       });
       if (n === seq.current) {
         setPreview(res);
@@ -152,7 +158,7 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
     }, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, JSON.stringify(activeTypes), isCash, discount, bookingType, booking, down, JSON.stringify(durationOptions)]);
+  }, [projectId, JSON.stringify(activeTypes), isCash, discount, bookingType, booking, down, JSON.stringify(durationOptions), JSON.stringify(balloon)]);
 
   const symbol = currencySymbol(currency, locale);
   const money = (v: number) => formatCurrency(v, currency, locale);
@@ -358,6 +364,37 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
         {!isCash && (
           <PremiumFormPanel id="section-durations" number="03" title={m.s3Title} description={m.s3Sub}>
             <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-slate-700">{m.shapeTitle}</p>
+                <div className="flex flex-wrap gap-3">
+                  <RadioCard name={termsLocked ? undefined : 'paymentShape'} value="EQUAL" checked={shape === 'EQUAL'} disabled={termsLocked} onChange={() => setShape('EQUAL')}>{m.shapeEqual}</RadioCard>
+                  <RadioCard name={termsLocked ? undefined : 'paymentShape'} value="BALLOON" checked={shape === 'BALLOON'} disabled={termsLocked} onChange={() => setShape('BALLOON')}>{m.shapeBalloon}</RadioCard>
+                </div>
+                {termsLocked && <input type="hidden" name="paymentShape" value={shape} />}
+                {shape === 'BALLOON' && (
+                  <div className="flex flex-col gap-3 rounded-2xl border border-hairline bg-canvas/40 p-4" data-testid="balloon-terms">
+                    <div className="flex flex-wrap gap-4">
+                      <Field label={m.balloonShare} name="balloonSharePct" required>
+                        <Input id="balloonSharePct" name="balloonSharePct" type="number" min={1} max={100} step="0.01" required value={balloonShare} onChange={(e) => setBalloonShare(e.target.value)} className="max-w-40" disabled={termsLocked} />
+                      </Field>
+                      <Field label={m.balloonEvery} name="balloonEveryMonths" required>
+                        <Select id="balloonEveryMonths" name="balloonEveryMonths" value={String(balloonEvery)} onChange={(e) => setBalloonEvery(Number(e.target.value))} disabled={termsLocked}>
+                          {[3, 6, 12].map((n) => (
+                            <option key={n} value={n}>{m.everyMonths(n)}</option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
+                    {termsLocked && (
+                      <>
+                        <input type="hidden" name="balloonSharePct" value={balloonShare} />
+                        <input type="hidden" name="balloonEveryMonths" value={balloonEvery} />
+                      </>
+                    )}
+                    <p className="text-xs text-slate-500">{m.balloonHint(Number(balloonShare || 0), balloonEvery)}</p>
+                  </div>
+                )}
+              </div>
               <div className="rounded-2xl border border-hairline overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-canvas/40 border-b border-hairline">
@@ -366,6 +403,7 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                       <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">{m.increase}</th>
                       <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colFinanced}</th>
                       <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colMonthlyShort}</th>
+                      {balloon && <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colBalloon(balloon.everyMonths)}</th>}
                       <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colTotal}</th>
                       <th className="px-3 py-2.5" />
                     </tr>
@@ -380,8 +418,10 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                             downPaymentAmount: sample.downPaymentAmount,
                             durationMonths: months,
                             increasePercentage: Number(r.pct || 0),
+                            balloon,
                           })
                         : null;
+                      const notMultiple = !!balloon && months > 0 && months % balloon.everyMonths !== 0;
                       return (
                         <tr key={r.key} className="hover:bg-canvas/40 transition-colors">
                           <td className="px-3 py-2">
@@ -394,6 +434,11 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                           </td>
                           <td className="px-3 py-2 text-end tabular-nums text-slate-700">{calc ? money(calc.financedAmount) : '—'}</td>
                           <td className="px-3 py-2 text-end tabular-nums font-medium">{calc ? money(calc.monthlyInstallment) : '—'}</td>
+                          {balloon && (
+                            <td className="px-3 py-2 text-end tabular-nums font-medium">
+                              {notMultiple ? <span className="text-xs font-normal text-danger-600">{m.durationNotMultiple(balloon.everyMonths)}</span> : calc ? money(calc.balloonAmount) : '—'}
+                            </td>
+                          )}
                           <td className="px-3 py-2 text-end tabular-nums text-slate-700">{calc ? money(calc.totalPayable) : '—'}</td>
                           <td className="px-3 py-2 text-end">
                             {!termsLocked && rows.length > 1 && (
@@ -475,7 +520,15 @@ export default function ProjectPlanForm({ projects, initialData: d, mode, curren
                           <td className="px-3 py-2">{money(r.netPrice)}</td>
                           <td className="px-3 py-2">{money(r.reservationAmount)}</td>
                           {!isCash && <td className="px-3 py-2">{money(r.downPaymentAmount)}</td>}
-                          {!isCash && monthsShown ? <td className="px-3 py-2">{r.options[0] ? money(r.options[0].monthly) : '—'}</td> : null}
+                          {!isCash && monthsShown ? (
+                            <td className="px-3 py-2">
+                              {!r.options[0]
+                                ? '—'
+                                : r.options[0].balloon && r.options[0].balloonEveryMonths
+                                  ? m.monthlyPlusBalloon(money(r.options[0].monthly), money(r.options[0].balloon), r.options[0].balloonEveryMonths)
+                                  : money(r.options[0].monthly)}
+                            </td>
+                          ) : null}
                         </>
                       )}
                     </tr>

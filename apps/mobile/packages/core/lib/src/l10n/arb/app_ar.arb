@@ -3174,5 +3174,9 @@
   "unitValueSince": "منذ الشراء في {date}",
   "@unitValueSince": { "placeholders": { "date": { "type": "String" } } },
   "unitValueChart": "سعر المتر من الشراء حتى اليوم",
-  "unitValueNote": "قيمة تقديرية حسب أسعار الشركة الحالية لوحدات مماثلة في نفس المشروع، وليست عرض شراء أو تقييمًا رسميًا."
+  "unitValueNote": "قيمة تقديرية حسب أسعار الشركة الحالية لوحدات مماثلة في نفس المشروع، وليست عرض شراء أو تقييمًا رسميًا.",
+  "planBalloonEvery": "كل {n} شهور",
+  "@planBalloonEvery": { "placeholders": { "n": { "type": "int" } } },
+  "planBalloonRow": "دفعة كل {n} شهور ({count})",
+  "@planBalloonRow": { "placeholders": { "n": { "type": "int" }, "count": { "type": "int" } } }
 }

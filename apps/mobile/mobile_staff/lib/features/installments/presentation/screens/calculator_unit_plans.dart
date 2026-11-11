@@ -499,7 +499,9 @@ class _Durations extends StatelessWidget {
                             ],
                             const Spacer(),
                             Text(
-                              l10n.calculatorPerMonth(money(o.amount)),
+                              o.hasBalloon
+                                  ? '${l10n.calculatorPerMonth(money(o.amount))} + ${money(o.balloonAmount)} ${l10n.planBalloonEvery(o.balloonEveryMonths)}'
+                                  : l10n.calculatorPerMonth(money(o.amount)),
                               style: TextStyle(
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w800,

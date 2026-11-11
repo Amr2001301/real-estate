@@ -201,6 +201,11 @@ export default async function InstallmentPlanDetailPage({
                     ))}
                   </tbody>
                 </table>
+                {plan.balloonEveryMonths ? (
+                  <p className="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-xs text-brand-700" data-testid="plan-balloon">
+                    <span className="font-semibold">{pp.shapeBalloon}:</span> {pp.balloonHint(Number(plan.balloonSharePct ?? 0), plan.balloonEveryMonths)}
+                  </p>
+                ) : null}
               </PremiumSectionCard>
             ) : isPct ? null : hasDurationOptions ? (
               <PremiumSectionCard title={m.durationOptionsSectionTitle(durationOptions.length)}>

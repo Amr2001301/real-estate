@@ -19,12 +19,21 @@ class InstallmentOfferOption {
     required this.amount,
     required this.totalPayable,
     this.increasePercentage = 0,
+    this.balloonAmount = 0,
+    this.balloonEveryMonths = 0,
   });
   final int durationMonths;
   final InstallmentPeriod period;
   final int count;
   final double amount;
   final double totalPayable;
+
+  /// Balloon plan: a big payment every [balloonEveryMonths] months beside the
+  /// (small) monthly [amount]; 0 when the plan has none.
+  final double balloonAmount;
+  final int balloonEveryMonths;
+
+  bool get hasBalloon => balloonAmount > 0 && balloonEveryMonths > 0;
 
   /// The markup this duration adds to the financed amount, in percent.
   final double increasePercentage;
@@ -108,6 +117,8 @@ InstallmentOffer installmentOfferFromPublicJson(Map<String, dynamic> json) => In
             count: _num(o['installmentsCount']).toInt(),
             amount: _num(o['installmentAmount']),
             totalPayable: _num(o['totalPayable']),
+            balloonAmount: _num(o['balloonAmount']),
+            balloonEveryMonths: _num(o['balloonEveryMonths']).toInt(),
           ),
       ],
     );
@@ -175,6 +186,8 @@ InstallmentOffer installmentOfferFromTemplateJson(Map<String, dynamic> raw) {
   final down = _num(json['downPaymentAmount']);
   final last = _num(json['finalPaymentAmount']);
   final isCash = json['isCash'] == true;
+  final sharePct = _num(json['balloonSharePct']);
+  final everyMonths = _num(json['balloonEveryMonths']).toInt();
   int cents(double v) => (v * 100).round();
   final rest = cents(net) - cents(booking) - cents(down) - cents(last);
   final remaining = rest < 0 ? 0 : rest;
@@ -186,13 +199,20 @@ InstallmentOffer installmentOfferFromTemplateJson(Map<String, dynamic> raw) {
       final months = _num(d['durationMonths']).toInt();
       if (months <= 0) continue;
       final financed = (remaining * (1 + _num(d['increasePercentage']) / 100)).round();
+      // Balloon plan: the same split as the API — equal big payments (whole
+      // cents) every few months, the rest monthly.
+      final fits = sharePct > 0 && everyMonths > 0 && months % everyMonths == 0;
+      final balloonCount = fits ? months ~/ everyMonths : 0;
+      final balloon = fits ? (financed * sharePct / 100).round() ~/ balloonCount : 0;
       options.add(InstallmentOfferOption(
         durationMonths: months,
         period: InstallmentPeriod.monthly,
         count: months,
-        amount: (financed ~/ months) / 100,
+        amount: ((financed - balloon * balloonCount) ~/ months) / 100,
         totalPayable: (cents(booking) + cents(down) + financed + cents(last)) / 100,
         increasePercentage: _num(d['increasePercentage']),
+        balloonAmount: balloon / 100,
+        balloonEveryMonths: fits ? everyMonths : 0,
       ));
     }
   } else if (!isCash) {

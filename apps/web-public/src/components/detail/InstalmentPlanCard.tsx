@@ -58,6 +58,13 @@ export function InstalmentPlanCard({ plan }: { plan: PublicPaymentPlan }) {
         {opt ? <Price value={opt.installmentAmount} /> : <>{formatNumber(plan.downPaymentPercent, locale)}%</>}
         {opt && <span className="text-base font-normal text-white/65">/ {x.perFreqShort[freq]}</span>}
       </p>
+      {/* Balloon plan: the big payment beside the monthly one. */}
+      {opt?.balloonAmount && opt.balloonEveryMonths ? (
+        <p className="relative mt-2 flex items-baseline gap-2 font-display text-[1.35rem] font-semibold leading-none text-gold-300" data-testid="plan-balloon">
+          + <Price value={opt.balloonAmount} />
+          <span className="text-sm font-normal text-white/65">/ {x.balloonEvery(opt.balloonEveryMonths)}</span>
+        </p>
+      ) : null}
       <p className="relative mt-2 text-sm text-white/70">
         {opt ? x.downLine(formatNumber(plan.downPaymentPercent, locale), planYears(opt.durationMonths, locale)) : x.downAmount}
       </p>
@@ -71,6 +78,12 @@ export function InstalmentPlanCard({ plan }: { plan: PublicPaymentPlan }) {
           <dt className="text-white/65">{x.downAmount} ({formatNumber(plan.downPaymentPercent, locale)}%)</dt>
           <dd className="font-semibold"><Price value={plan.downPaymentAmount} /></dd>
         </div>
+        {opt?.balloonAmount && opt.balloonEveryMonths ? (
+          <div className="flex items-center justify-between gap-3 py-3">
+            <dt className="text-white/65">{x.balloonRow(opt.balloonEveryMonths)}</dt>
+            <dd className="font-semibold"><Price value={opt.balloonAmount} /></dd>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-3 py-3">
           <dt className="text-white/65">{x.duration}</dt>
           <dd className="font-semibold">{opt ? planYears(opt.durationMonths, locale) : '—'}</dd>

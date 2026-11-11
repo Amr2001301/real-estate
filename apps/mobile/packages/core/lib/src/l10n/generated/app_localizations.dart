@@ -17035,6 +17035,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An estimate from the company\'s current prices for similar units in the same project — not an offer or an official valuation.'**
   String get unitValueNote;
+
+  /// No description provided for @planBalloonEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'every {n} months'**
+  String planBalloonEvery(int n);
+
+  /// No description provided for @planBalloonRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment every {n} months ({count})'**
+  String planBalloonRow(int n, int count);
 }
 
 class _AppLocalizationsDelegate

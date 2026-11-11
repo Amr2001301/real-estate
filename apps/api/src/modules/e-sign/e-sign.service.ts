@@ -101,6 +101,8 @@ export class ESignService {
         snapshotFinancedAmount: true,
         snapshotMonthlyInstallment: true,
         snapshotTotalPayable: true,
+        snapshotBalloonAmount: true,
+        snapshotBalloonEveryMonths: true,
         client: { select: { fullName: true, phone: true, nationalId: true } },
         lead: { select: { fullName: true, phone: true } },
       },
@@ -118,6 +120,10 @@ export class ESignService {
         financed: r.snapshotFinancedAmount?.toString() ?? null,
         installment: r.snapshotMonthlyInstallment?.toString() ?? null,
         total: r.snapshotTotalPayable?.toString() ?? null,
+        // Only on balloon plans, so the fingerprint of every other booking is unchanged.
+        ...(r.snapshotBalloonAmount != null
+          ? { balloon: r.snapshotBalloonAmount.toString(), balloonEvery: r.snapshotBalloonEveryMonths }
+          : {}),
       }),
     );
     return { reservation: r, phone: r.client?.phone ?? r.lead?.phone ?? null, fingerprint };

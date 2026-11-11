@@ -531,6 +531,9 @@ export interface ContractInstallmentPlan {
   monthlyAmount: string | number;
   startsAt: string;
   frequency: InstallmentFrequency;
+  /** Balloon plan: the big payment beside the monthly one, and its spacing. */
+  balloonAmount?: string | number | null;
+  balloonEveryMonths?: number | null;
   installments?: ContractInstallment[];
 }
 
@@ -976,6 +979,9 @@ export interface Reservation {
   snapshotTotalPayable: string | number | null;
   snapshotFinalPaymentAmount: string | number | null;
   snapshotFrequency?: InstallmentFrequency | null;
+  /** Balloon plan: each big payment and the months between them. */
+  snapshotBalloonAmount?: string | number | null;
+  snapshotBalloonEveryMonths?: number | null;
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
   contract?: { id: string; contractNumber: string | null } | null;
@@ -1222,6 +1228,9 @@ export interface InstallmentPlanTemplate {
   startDateRule: StartDateRule;
   manualStartDate: string | null;
   finalPaymentAmount: string | number | null;
+  /** Balloon plan: share (%) of the financed amount in big payments, and their spacing in months. */
+  balloonSharePct?: string | number | null;
+  balloonEveryMonths?: number | null;
   visibility: string;
   status: PlanTemplateStatus;
   createdBy?: { id: string; fullName: string };
@@ -1236,6 +1245,10 @@ export interface DurationOptionCalculated {
   financedAmount: number;
   monthlyInstallment: number;
   totalPayable: number;
+  /** Balloon plan: each big payment, how many, how far apart (0 when none). */
+  balloonAmount?: number;
+  balloonCount?: number;
+  balloonEveryMonths?: number;
 }
 
 export interface InstallmentPlanDurationOption {
@@ -1933,6 +1946,9 @@ export interface PortalReservation {
   snapshotTotalPayable: string | number | null;
   snapshotFinalPaymentAmount: string | number | null;
   snapshotFrequency?: InstallmentFrequency | null;
+  /** Balloon plan: each big payment and the months between them. */
+  snapshotBalloonAmount?: string | number | null;
+  snapshotBalloonEveryMonths?: number | null;
   installmentPlanTemplateId: string | null;
   selectedDurationOptionId: string | null;
   unit?: {
@@ -2546,7 +2562,7 @@ export interface PlanPreviewRow {
   netPrice: number;
   reservationAmount: number;
   downPaymentAmount: number;
-  options: { durationMonths: number; monthly: number; total: number }[];
+  options: { durationMonths: number; monthly: number; total: number; balloon?: number; balloonEveryMonths?: number }[];
 }
 
 export interface PlanPreview {

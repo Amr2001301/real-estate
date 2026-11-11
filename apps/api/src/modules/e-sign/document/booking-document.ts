@@ -95,6 +95,7 @@ const M = {
       financed: 'المبلغ المموَّل',
       duration: 'مدة السداد',
       monthly: 'القسط الشهري',
+      balloon: (n: number) => `دفعة كل ${n.toLocaleString('ar-EG-u-nu-latn')} أشهر`,
       total: 'إجمالي المبلغ المستحق',
     },
   },
@@ -129,6 +130,7 @@ const M = {
       financed: 'Financed amount',
       duration: 'Payment term',
       monthly: 'Monthly installment',
+      balloon: (n: number) => `Payment every ${n} months`,
       total: 'Total payable',
     },
   },
@@ -625,6 +627,11 @@ export function reservationSnapshot(
         {
           label: m.amounts.monthly,
           value: r.snapshotMonthlyInstallment != null ? money(r.snapshotMonthlyInstallment) : null,
+        },
+        // Balloon plan: the big payment beside the monthly one.
+        {
+          label: m.amounts.balloon(Number(r.snapshotBalloonEveryMonths ?? 0)),
+          value: r.snapshotBalloonAmount != null && r.snapshotBalloonEveryMonths ? money(r.snapshotBalloonAmount) : null,
         },
         {
           label: m.amounts.total,

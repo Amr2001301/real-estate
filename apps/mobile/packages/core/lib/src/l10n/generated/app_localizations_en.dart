@@ -9609,4 +9609,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get unitValueNote =>
       'An estimate from the company\'s current prices for similar units in the same project — not an offer or an official valuation.';
+
+  @override
+  String planBalloonEvery(int n) {
+    return 'every $n months';
+  }
+
+  @override
+  String planBalloonRow(int n, int count) {
+    return 'Payment every $n months ($count)';
+  }
 }

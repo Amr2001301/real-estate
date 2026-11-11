@@ -16,8 +16,8 @@ import type { Locale } from '@/lib/locale';
 import { formatCurrency } from '@/lib/format';
 import { uiT } from '@/messages/ui';
 import { computeDurationOption } from '@/lib/installment-calc';
-import { createReservationAction, getApplicablePlansAction, type ReservationFormState } from '../actions';
 import { projectPlansT } from '@/messages/project-plans';
+import { createReservationAction, getApplicablePlansAction, type ReservationFormState } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Unit {
@@ -44,6 +44,9 @@ interface PlanOption {
   downPaymentAmount?: string | number;
   durationOptions: DurationOption[];
   scope?: 'UNIT' | 'TYPE' | 'PROJECT';
+  /** Balloon plan: share (%) in big payments and their spacing in months. */
+  balloonSharePct?: string | number | null;
+  balloonEveryMonths?: number | null;
 }
 
 interface Lead {
@@ -187,6 +190,9 @@ export default function NewReservationForm({
       downPaymentAmount: Number(selectedPlan.downPaymentAmount ?? 0),
       durationMonths: selectedDuration.durationMonths,
       increasePercentage: Number(selectedDuration.increasePercentage),
+      balloon: selectedPlan.balloonEveryMonths
+        ? { sharePct: Number(selectedPlan.balloonSharePct ?? 0), everyMonths: selectedPlan.balloonEveryMonths }
+        : null,
     });
   }, [selectedPlan, selectedDuration]);
 
@@ -635,6 +641,14 @@ export default function NewReservationForm({
                           {previewSnapshot.monthlyInstallment.toFixed(2)}
                         </dd>
                       </div>
+                      {previewSnapshot.balloonCount > 0 && (
+                        <div className="flex items-center justify-between sm:col-span-2" data-testid="snapshot-balloon">
+                          <dt className="text-slate-700 font-medium">{projectPlansT(locale).colBalloon(previewSnapshot.balloonEveryMonths)}</dt>
+                          <dd className="font-bold tabular-nums text-brand-700 text-base">
+                            {previewSnapshot.balloonAmount.toFixed(2)}
+                          </dd>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between sm:col-span-2">
                         <dt className="text-slate-700 font-medium">{m.snapshotTotal}</dt>
                         <dd className="font-bold tabular-nums">

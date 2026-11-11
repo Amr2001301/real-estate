@@ -21,7 +21,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
-import { computeDurationOption } from '../installments/duration-calc';
+import { balloonOf, computeDurationOption } from '../installments/duration-calc';
 // We import the existing service (ReservationsModule re-exports it) to reuse
 // `nextReservationNumber()` and `validateBookingPlan()` — both made public to
 // avoid duplicating logic. Behavior is otherwise untouched.
@@ -336,6 +336,8 @@ export class BrokerPortalReservationsService {
       durationMonths: number | null;
       increasePercentage: Prisma.Decimal | null;
       frequency: InstallmentFrequency | null;
+      balloonAmount: Prisma.Decimal | null;
+      balloonEveryMonths: number | null;
     } = {
       downPaymentAmount: null,
       remainingAmount: null,
@@ -346,6 +348,8 @@ export class BrokerPortalReservationsService {
       durationMonths: null,
       increasePercentage: null,
       frequency: null,
+      balloonAmount: null,
+      balloonEveryMonths: null,
     };
 
     // A broker reservation MUST carry a booking amount derived from an
@@ -411,7 +415,12 @@ export class BrokerPortalReservationsService {
           durationMonths: option.durationMonths,
           increasePercentage: Number(option.increasePercentage),
           finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
+          balloon: balloonOf(plan),
         });
+        if (calc.balloonCount > 0) {
+          snapshot.balloonAmount = new Prisma.Decimal(calc.balloonAmount);
+          snapshot.balloonEveryMonths = calc.balloonEveryMonths;
+        }
         snapshot.remainingAmount = new Prisma.Decimal(calc.remainingAmount);
         snapshot.financedAmount = new Prisma.Decimal(calc.financedAmount);
         snapshot.monthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
@@ -486,6 +495,8 @@ export class BrokerPortalReservationsService {
           snapshotTotalPayable: snapshot.totalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount: snapshot.finalPaymentAmount,
           snapshotFrequency: snapshot.frequency,
+          snapshotBalloonAmount: snapshot.balloonAmount,
+          snapshotBalloonEveryMonths: snapshot.balloonEveryMonths,
         },
         include: PORTAL_RESERVATION_INCLUDE,
       });

@@ -64,6 +64,7 @@ import {
   PremiumEmptyNote,
 } from '@/components/premium';
 import { initials as sharedInitials } from '@/lib/initials';
+import { projectPlansT } from '@/messages/project-plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -508,7 +509,11 @@ export default async function ContractDetailPage({
               />
               <PlanStat
                 label={m.fieldMonthlyAmount}
-                value={formatCurrency(plan.monthlyAmount, currency, locale)}
+                value={
+                  plan.balloonAmount != null && plan.balloonEveryMonths
+                    ? `${formatCurrency(plan.monthlyAmount, currency, locale)} + ${formatCurrency(plan.balloonAmount, currency, locale)} / ${projectPlansT(locale).everyMonths(plan.balloonEveryMonths)}`
+                    : formatCurrency(plan.monthlyAmount, currency, locale)
+                }
                 gold
               />
               <PlanStat label={m.fieldStartsAt} value={formatDate(plan.startsAt, locale)} />

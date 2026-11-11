@@ -53,6 +53,7 @@ import {
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
 import { initials as sharedInitials } from '@/lib/initials';
+import { projectPlansT } from '@/messages/project-plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -422,6 +423,14 @@ export default async function ReservationDetailPage({
                         gold
                       />
                     )}
+                    {reservation.snapshotBalloonAmount != null && reservation.snapshotBalloonEveryMonths ? (
+                      <PlanTile
+                        label={projectPlansT(locale).colBalloon(reservation.snapshotBalloonEveryMonths)}
+                        value={nf(reservation.snapshotBalloonAmount, 2)}
+                        symbol={symbol}
+                        gold
+                      />
+                    ) : null}
                   </div>
 
                   {upfront != null && (
