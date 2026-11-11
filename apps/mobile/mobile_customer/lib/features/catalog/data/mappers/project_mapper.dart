@@ -35,5 +35,9 @@ extension ProjectDetailDtoMapper on ProjectDetailDto {
         featured: featured,
         media: media.map((m) => m.toEntity()).toList(),
         availableUnitsCount: availableUnitsCount,
+        sections: sections,
+        faqs: faqs,
+        amenities: amenities,
+        progress: progress,
       );
 }

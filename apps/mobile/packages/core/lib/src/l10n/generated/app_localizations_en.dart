@@ -9522,4 +9522,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myPropertyWithPlanHint => 'On a plan';
+
+  @override
+  String get projectDetailsTitle => 'Project details';
+
+  @override
+  String get projectFaqTitle => 'Frequently asked questions';
+
+  @override
+  String get amenityGroupInside => 'Inside the project';
+
+  @override
+  String get amenityGroupAround => 'Around the project';
+
+  @override
+  String get projectProgressTitle => 'Construction progress';
+
+  @override
+  String get projectProgressOverall => 'Overall completion';
+
+  @override
+  String get projectProgressBuilding => 'Under construction';
+
+  @override
+  String get projectProgressDone => 'Construction complete';
+
+  @override
+  String projectProgressUpdatedAt(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String get projectStageDone => 'Done';
+
+  @override
+  String get projectStageActive => 'In progress';
+
+  @override
+  String get projectStageNext => 'Not started';
+
+  @override
+  String get detailTabProgress => 'Progress';
+
+  @override
+  String get detailTabFaq => 'FAQ';
+
+  @override
+  String get myPropertyProgressTitle =>
+      'Construction progress on your projects';
+
+  @override
+  String get myPropertyProgressViewStages => 'Stage details';
 }

@@ -52,6 +52,11 @@ String? customerNotificationRoute(String code, Map<String, dynamic> data) {
       entityType == 'info_request') {
     return '/account/requests';
   }
+  // A construction-progress update opens the project at its stages.
+  if (code == 'project_progress_customer' || entityType == 'project') {
+    final id = idOf('project', 'projectId');
+    return id != null ? '/projects/$id?section=progress' : '/account/property';
+  }
   if (code.startsWith('reservation_') || entityType == 'reservation') {
     return '/account/finance';
   }

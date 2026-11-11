@@ -681,7 +681,7 @@ GoRouter createCustomerRouter(
               state.pathParameters['id']!,
             );
           },
-          child: const ProjectDetailsScreen(),
+          child: ProjectDetailsScreen(initialSection: state.uri.queryParameters['section']),
         ),
       ),
       GoRoute(

@@ -1,6 +1,9 @@
 import 'package:core/core_domain.dart';
 
 import 'media_item.dart';
+import 'project_content.dart';
+
+export 'project_content.dart';
 
 /// A project as shown in listings/cards. Domain entity (pure Dart) — represents
 /// business meaning, not the API payload shape.
@@ -46,6 +49,10 @@ class ProjectDetail extends Equatable {
     required this.availableUnitsCount,
     this.lat,
     this.lng,
+    this.sections = const [],
+    this.faqs = const [],
+    this.amenities = const [],
+    this.progress,
   });
 
   final String id;
@@ -58,11 +65,22 @@ class ProjectDetail extends Equatable {
   final bool featured;
   final List<MediaItem> media;
   final int availableUnitsCount;
+  final List<ProjectSection> sections;
+  final List<ProjectFaq> faqs;
+
+  /// Amenities with an icon and a group; an older API sends only `services`,
+  /// read as plain ticks inside the project.
+  final List<ProjectAmenity> amenities;
+  final ProjectProgress? progress;
+
+  List<ProjectAmenity> get amenityTiles => amenities.isNotEmpty
+      ? amenities
+      : [for (final s in services) ProjectAmenity(name: s, icon: 'check', group: AmenityGroup.inside)];
 
   String? get coverImage => media.isNotEmpty ? media.first.url : null;
   List<String> get galleryImages => imageUrls(media);
   bool get hasLocation => lat != null && lng != null;
 
   @override
-  List<Object?> get props => [id, name, city, media, availableUnitsCount];
+  List<Object?> get props => [id, name, city, media, availableUnitsCount, sections, faqs, amenities, progress];
 }

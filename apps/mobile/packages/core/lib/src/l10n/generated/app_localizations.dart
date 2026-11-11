@@ -16879,6 +16879,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On a plan'**
   String get myPropertyWithPlanHint;
+
+  /// No description provided for @projectDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Project details'**
+  String get projectDetailsTitle;
+
+  /// No description provided for @projectFaqTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently asked questions'**
+  String get projectFaqTitle;
+
+  /// No description provided for @amenityGroupInside.
+  ///
+  /// In en, this message translates to:
+  /// **'Inside the project'**
+  String get amenityGroupInside;
+
+  /// No description provided for @amenityGroupAround.
+  ///
+  /// In en, this message translates to:
+  /// **'Around the project'**
+  String get amenityGroupAround;
+
+  /// No description provided for @projectProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Construction progress'**
+  String get projectProgressTitle;
+
+  /// No description provided for @projectProgressOverall.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall completion'**
+  String get projectProgressOverall;
+
+  /// No description provided for @projectProgressBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Under construction'**
+  String get projectProgressBuilding;
+
+  /// No description provided for @projectProgressDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Construction complete'**
+  String get projectProgressDone;
+
+  /// No description provided for @projectProgressUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {date}'**
+  String projectProgressUpdatedAt(String date);
+
+  /// No description provided for @projectStageDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get projectStageDone;
+
+  /// No description provided for @projectStageActive.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get projectStageActive;
+
+  /// No description provided for @projectStageNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get projectStageNext;
+
+  /// No description provided for @detailTabProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get detailTabProgress;
+
+  /// No description provided for @detailTabFaq.
+  ///
+  /// In en, this message translates to:
+  /// **'FAQ'**
+  String get detailTabFaq;
+
+  /// No description provided for @myPropertyProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Construction progress on your projects'**
+  String get myPropertyProgressTitle;
+
+  /// No description provided for @myPropertyProgressViewStages.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage details'**
+  String get myPropertyProgressViewStages;
 }
 
 class _AppLocalizationsDelegate

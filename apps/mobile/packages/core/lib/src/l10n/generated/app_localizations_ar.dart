@@ -9565,4 +9565,54 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get myPropertyWithPlanHint => 'بخطة سداد';
+
+  @override
+  String get projectDetailsTitle => 'تفاصيل المشروع';
+
+  @override
+  String get projectFaqTitle => 'الأسئلة الشائعة';
+
+  @override
+  String get amenityGroupInside => 'داخل المشروع';
+
+  @override
+  String get amenityGroupAround => 'حول المشروع';
+
+  @override
+  String get projectProgressTitle => 'تقدم الإنشاءات';
+
+  @override
+  String get projectProgressOverall => 'معدل الإنجاز الكلي';
+
+  @override
+  String get projectProgressBuilding => 'تحت الإنشاء';
+
+  @override
+  String get projectProgressDone => 'اكتمل الإنشاء';
+
+  @override
+  String projectProgressUpdatedAt(String date) {
+    return 'آخر تحديث $date';
+  }
+
+  @override
+  String get projectStageDone => 'مكتملة';
+
+  @override
+  String get projectStageActive => 'جارية';
+
+  @override
+  String get projectStageNext => 'لم تبدأ';
+
+  @override
+  String get detailTabProgress => 'الإنشاءات';
+
+  @override
+  String get detailTabFaq => 'الأسئلة';
+
+  @override
+  String get myPropertyProgressTitle => 'تقدم إنشاءات مشاريعك';
+
+  @override
+  String get myPropertyProgressViewStages => 'تفاصيل المراحل';
 }

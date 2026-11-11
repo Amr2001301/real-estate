@@ -3153,5 +3153,22 @@
   "myPropertyUnitsLabel": "My units",
   "myPropertyOwnedLabel": "Owned",
   "myPropertyOwnedHint": "Signed contract",
-  "myPropertyWithPlanHint": "On a plan"
+  "myPropertyWithPlanHint": "On a plan",
+  "projectDetailsTitle": "Project details",
+  "projectFaqTitle": "Frequently asked questions",
+  "amenityGroupInside": "Inside the project",
+  "amenityGroupAround": "Around the project",
+  "projectProgressTitle": "Construction progress",
+  "projectProgressOverall": "Overall completion",
+  "projectProgressBuilding": "Under construction",
+  "projectProgressDone": "Construction complete",
+  "projectProgressUpdatedAt": "Updated {date}",
+  "@projectProgressUpdatedAt": { "placeholders": { "date": { "type": "String" } } },
+  "projectStageDone": "Done",
+  "projectStageActive": "In progress",
+  "projectStageNext": "Not started",
+  "detailTabProgress": "Progress",
+  "detailTabFaq": "FAQ",
+  "myPropertyProgressTitle": "Construction progress on your projects",
+  "myPropertyProgressViewStages": "Stage details"
 }

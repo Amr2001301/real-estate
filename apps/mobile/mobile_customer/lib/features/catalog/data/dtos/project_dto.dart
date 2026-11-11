@@ -1,6 +1,7 @@
 import 'package:core/core_domain.dart';
 
 import 'dto_support.dart';
+import '../../domain/entities/project_content.dart';
 import 'media_dto.dart';
 
 /// Wire shape of `GET /public/projects` list items. Data layer only.
@@ -60,6 +61,10 @@ class ProjectDetailDto {
     required this.availableUnitsCount,
     this.lat,
     this.lng,
+    this.sections = const [],
+    this.faqs = const [],
+    this.amenities = const [],
+    this.progress,
   });
 
   final String id;
@@ -72,6 +77,10 @@ class ProjectDetailDto {
   final bool featured;
   final List<MediaDto> media;
   final int availableUnitsCount;
+  final List<ProjectSection> sections;
+  final List<ProjectFaq> faqs;
+  final List<ProjectAmenity> amenities;
+  final ProjectProgress? progress;
 
   factory ProjectDetailDto.fromJson(Map<String, dynamic> json) {
     return ProjectDetailDto(
@@ -90,6 +99,41 @@ class ProjectDetailDto {
           .map(MediaDto.fromJson)
           .toList(),
       availableUnitsCount: (json['availableUnitsCount'] as num?)?.toInt() ?? 0,
+      sections: _maps(json['sections'])
+          .map((m) => ProjectSection(title: translatableFromJson(m['title']), body: translatableFromJson(m['body'])))
+          .toList(),
+      faqs: _maps(json['faqs'])
+          .map((m) => ProjectFaq(question: translatableFromJson(m['question']), answer: translatableFromJson(m['answer'])))
+          .toList(),
+      amenities: _maps(json['amenities'])
+          .map((m) => ProjectAmenity(
+                name: translatableFromJson(m['name']),
+                icon: m['icon'] as String? ?? 'check',
+                group: m['group'] == 'AROUND' ? AmenityGroup.around : AmenityGroup.inside,
+              ))
+          .toList(),
+      progress: _progress(json['progress']),
     );
   }
+}
+
+/// The map items of a JSON list (anything else → none). An older API without
+/// the keys reads as empty, so the page shows what it showed before.
+List<Map<String, dynamic>> _maps(Object? v) => (v as List? ?? const []).whereType<Map<String, dynamic>>().toList();
+
+ProjectProgress? _progress(Object? v) {
+  if (v is! Map<String, dynamic>) return null;
+  final stages = _maps(v['stages'])
+      .map((m) => ProgressStage(
+            name: translatableFromJson(m['name']),
+            percent: ((m['percent'] as num?)?.toInt() ?? 0).clamp(0, 100),
+          ))
+      .toList();
+  if (stages.isEmpty) return null;
+  final at = v['updatedAt'];
+  return ProjectProgress(
+    overall: ((v['overall'] as num?)?.toInt() ?? 0).clamp(0, 100),
+    stages: stages,
+    updatedAt: at is String ? DateTime.tryParse(at) : null,
+  );
 }
