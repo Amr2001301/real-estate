@@ -20,6 +20,15 @@ import { bearer, loginAs } from '../helpers/login';
 const HOUR = 60 * 60 * 1000;
 const cairoToday = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+/** The instant today began in Cairo (the company's day the report counts). */
+const cairoDayStart = (day: string) => {
+  const offset = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Cairo', timeZoneName: 'shortOffset' })
+    .formatToParts(new Date())
+    .find((p) => p.type === 'timeZoneName')!.value; // e.g. "GMT+2"
+  const m = /GMT([+-])(\d+)/.exec(offset);
+  const hours = m ? (m[1] === '-' ? -1 : 1) * Number(m[2]) : 0;
+  return Date.parse(`${day}T00:00:00.000Z`) - hours * HOUR;
+};
 
 describe('MC3 — campaign reports (e2e)', () => {
   let testApp: TestApp;
@@ -68,9 +77,14 @@ describe('MC3 — campaign reports (e2e)', () => {
       clientIds.push(c.id);
       return c.id;
     };
+    // A few hours ago — but never before today began in Cairo: run just after
+    // midnight, "3 hours ago" was yesterday and the report of today missed it.
+    // Seconds after the day's start keep the order (more hours ago = earlier).
+    const dayStart = cairoDayStart(today);
+    const leadAt = (agoHours: number) => new Date(Math.max(Date.now() - agoHours * HOUR, dayStart + (10 - agoHours) * 1000));
     const lead = async (clientId: string, campaignId: string, agoHours: number) => {
       const l = await raw.lead.create({
-        data: { companyId, clientId, fullName: 'MC3', phone: `+2014${leadIds.length}${stamp}`, campaignId, createdAt: new Date(Date.now() - agoHours * HOUR) },
+        data: { companyId, clientId, fullName: 'MC3', phone: `+2014${leadIds.length}${stamp}`, campaignId, createdAt: leadAt(agoHours) },
       });
       leadIds.push(l.id);
     };
