@@ -104,7 +104,13 @@ export interface PublicPaymentPlan {
   reservationAmount: number;
   downPaymentAmount: number;
   downPaymentPercent: number;
-  options: { durationMonths: number; installmentsCount: number; installmentAmount: number; totalPayable: number }[];
+  options: {
+    durationMonths: number;
+    installmentsCount: number;
+    installmentAmount: number;
+    totalPayable: number;
+    frequency?: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
+  }[];
 }
 
 /** A project's payment terms (GET /public/projects/:id/payment-plans). */
