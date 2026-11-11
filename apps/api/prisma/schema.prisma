@@ -110,6 +110,7 @@ model Company {
   lostReasons                 LostReason[]
   unitTypes                   UnitType[]
   unitModels                  UnitModel[]
+  unitPriceRates              UnitPriceRate[]
   leads                       Lead[]
   leadNotes                   LeadNote[]
   leadActivities              LeadActivity[]
@@ -790,6 +791,33 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+/// Where a price per meter came from: the average of the units for sale
+/// (MARKET, recorded when prices change) or the company's own figure for a
+/// project whose units of that type are sold out (MANUAL).
+enum PriceRateSource {
+  MARKET
+  MANUAL
+}
+
+/// «قيمة وحدتك»: a project's price per meter (gross m²) over time, for one
+/// unit type or (unitType null) the whole project. Read to value an owner's
+/// unit today and to draw how the price moved since they bought.
+model UnitPriceRate {
+  id            String          @id @default(uuid()) @db.Uuid
+  companyId     String          @db.Uuid
+  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  projectId     String          @db.Uuid
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// A UnitType code of the company; null = every type in the project.
+  unitType      String?
+  pricePerMeter Decimal         @db.Decimal(14, 2)
+  source        PriceRateSource
+  recordedAt    DateTime        @default(now())
+  createdById   String?         @db.Uuid
+
+  @@index([companyId, projectId, unitType, recordedAt])
+}
+
 /// What a unit is for.
 enum UnitUsage {
   RESIDENTIAL
@@ -933,6 +961,7 @@ model Project {
   media             ProjectMedia[]
   phases            Phase[]
   unitModels        UnitModel[]
+  priceRates        UnitPriceRate[]
   leads             Lead[]
   visitRequests     VisitRequest[]
   infoRequests      InfoRequest[]

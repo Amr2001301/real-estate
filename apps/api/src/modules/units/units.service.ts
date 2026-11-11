@@ -25,6 +25,7 @@ import { serializePublicUnit } from './public-unit.serializer';
 import { UnitTypesService } from './unit-types.service';
 import { UnitModelsService } from './unit-models.service';
 import { DeliveryDelaysService } from './delivery-delays.service';
+import { UnitValueService } from './unit-value.service';
 import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
@@ -110,6 +111,8 @@ export class UnitsService {
     @Optional() unitTypes?: UnitTypesService,
     @Optional() unitModels?: UnitModelsService,
     @Optional() private readonly deliveryDelays?: DeliveryDelaysService,
+    // «قيمة وحدتك»: records the price per meter when prices change.
+    @Optional() private readonly unitValue?: UnitValueService,
   ) {
     this.unitTypes = unitTypes ?? new UnitTypesService(prisma);
     this.unitModels = unitModels ?? new UnitModelsService(prisma, this.unitTypes);
@@ -211,7 +214,15 @@ export class UnitsService {
         ...specData(dto),
       },
     });
+    await this.recordRates(created.id);
     return created;
+  }
+
+  /** Records the unit's project's price per meter after a price change («قيمة وحدتك»). */
+  private async recordRates(unitId: string) {
+    if (!this.unitValue) return;
+    const projectId = await this.unitValue.projectOfUnit(unitId);
+    if (projectId) await this.unitValue.recordMarketRates([projectId]);
   }
 
   /** Live reservations and contracts on the unit. */
@@ -479,6 +490,7 @@ export class UnitsService {
     const promised = dto.deliveryDate !== undefined ? await this.deliveryDelays?.snapshot({ id }) : undefined;
     const saved = await this.prisma.unit.update({ where: { id }, data });
     if (promised) await this.deliveryDelays?.notifySlips({ id }, promised);
+    if (data.price !== undefined || data.area !== undefined || data.type !== undefined) await this.recordRates(id);
     return saved;
   }
 
@@ -543,6 +555,7 @@ export class UnitsService {
         }),
       ),
     );
+    await this.recordRates(units[0]!.id);
     return summary;
   }
 

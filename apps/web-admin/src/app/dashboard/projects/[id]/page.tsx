@@ -12,6 +12,7 @@ import {
   Star,
   Shapes,
   CalendarDays,
+  TrendingUp,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -35,6 +36,7 @@ import { ProjectMediaPanel } from './media-panel';
 import { BuildingCreateForm, PhaseCreateForm, PhaseDeliveryForm } from './structure-forms';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { prT } from '@/messages/price-rates';
 import { pcT } from '@/messages/project-content';
 
 export default async function ProjectDetailPage({
@@ -183,6 +185,11 @@ export default async function ProjectDetailPage({
                 {may('projects:update') && <Link href={`/dashboard/projects/${id}/content` as never}>
                   <Button variant="outline" size="sm" leftIcon={<LayoutList className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
                     {pcT(locale).open}
+                  </Button>
+                </Link>}
+                {may('units:update') && <Link href={`/dashboard/projects/${id}/prices` as never}>
+                  <Button variant="outline" size="sm" leftIcon={<TrendingUp className="h-4 w-4" />} className={cn(cover && 'border-white/30 bg-black/20 text-white backdrop-blur hover:bg-black/30')}>
+                    {prT(locale).open}
                   </Button>
                 </Link>}
                 {may('units:create', 'units:update') && <Link href={`/dashboard/projects/${id}/models` as never}>
