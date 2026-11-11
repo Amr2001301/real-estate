@@ -20,6 +20,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { cn } from '@/lib/cn';
 import { accountT } from '@/messages/account';
 import type { Locale } from '@/lib/locale';
@@ -179,46 +180,24 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
                 activeStatus={activeStatus}
               />
             )}
-            <div className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-surface-soft p-1 sm:w-auto" role="tablist">
-              {FILTERS.map((f) => {
-                const count =
+            <SegmentedFilter
+              className="sm:ms-auto"
+              active={activeFilterKey}
+              items={FILTERS.map((f) => ({
+                key: f.key,
+                label: f.label,
+                href: buildHref({ status: f.status }),
+                alert: f.key === 'OVERDUE',
+                count:
                   f.key === 'all'
                     ? summary?.counts.total
                     : f.key === 'PAID'
                       ? summary?.counts.paid
                       : f.key === 'PENDING'
                         ? summary?.counts.pending
-                        : summary?.counts.overdue;
-                const active = activeFilterKey === f.key;
-                return (
-                  <Link
-                    key={f.key}
-                    href={buildHref({ status: f.status })}
-                    aria-current={active ? 'true' : undefined}
-                    role="tab"
-                    aria-selected={active}
-                    className={cn(
-                      'inline-flex h-10 flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-semibold transition-colors sm:flex-none',
-                      active
-                        ? 'bg-surface text-ink-strong shadow-[0_2px_10px_-4px_rgba(0,0,0,0.2)]'
-                        : 'text-ink-muted hover:text-ink-strong',
-                    )}
-                  >
-                    {f.label}
-                    {typeof count === 'number' && (
-                      <span
-                        className={cn(
-                          'inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
-                          active ? (f.key === 'OVERDUE' && count > 0 ? 'bg-red-500 text-white' : 'bg-navy text-white') : f.key === 'OVERDUE' && count > 0 ? 'bg-red-500/15 text-red-600' : 'bg-hairline/70 text-ink-muted',
-                        )}
-                      >
-                        {count}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
+                        : summary?.counts.overdue,
+              }))}
+            />
           </div>
 
           {installments.length === 0 ? (

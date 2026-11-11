@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { cn } from '@/lib/cn';
+import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { FieldSelect } from '@/components/ui/FieldSelect';
 import type { Locale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
@@ -103,21 +103,17 @@ export function ProjectsToolbar({
 }) {
   const router = useRouter();
   const s = siteT(locale);
-  const seg = (on: boolean) =>
-    cn('px-4 py-2 text-[13px] font-medium transition-colors', on ? 'bg-ink-strong text-canvas' : 'text-ink-muted hover:text-ink-strong');
-
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <p className="text-[15px] text-ink-muted">{s.projects.showing(shown, total)}</p>
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex overflow-hidden rounded-xl border border-hairline" role="group">
-          <button type="button" aria-pressed={!query.featured} className={seg(!query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: false }) as never)}>
-            {s.listing.all}
-          </button>
-          <button type="button" aria-pressed={query.featured} className={seg(query.featured)} onClick={() => router.push(projectsHref({ ...query, featured: true }) as never)}>
-            {s.listing.featuredOnly}
-          </button>
-        </div>
+        <SegmentedFilter
+          active={query.featured ? 'featured' : 'all'}
+          items={[
+            { key: 'all', label: s.listing.all, onClick: () => router.push(projectsHref({ ...query, featured: false }) as never) },
+            { key: 'featured', label: s.listing.featuredOnly, onClick: () => router.push(projectsHref({ ...query, featured: true }) as never) },
+          ]}
+        />
         <FieldSelect
           label={s.listing.sort}
           value={query.sort}
