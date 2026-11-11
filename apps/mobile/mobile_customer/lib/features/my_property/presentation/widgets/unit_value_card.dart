@@ -107,6 +107,7 @@ class _UnitValueRow extends StatelessWidget {
     String money(String raw) => PriceFormatter.formatString(raw, languageCode: lang);
     String date(DateTime d) => DateFormatter.mediumDate(d.toLocal(), languageCode: lang);
 
+    final textDir = Directionality.of(context);
     final up = item.isUp;
     final tone = up ? colors.success : colors.error;
     final gain = double.tryParse(item.gain)?.abs() ?? 0;
@@ -139,14 +140,11 @@ class _UnitValueRow extends StatelessWidget {
           Icon(up ? Icons.trending_up_rounded : Icons.trending_down_rounded, size: 20, color: tone),
           const SizedBox(width: 8),
           Expanded(child: Text(up ? l10n.unitValueGain : l10n.unitValueChange, style: theme.textTheme.bodyMedium?.copyWith(color: tone, fontWeight: FontWeight.w600))),
-          // Signed figures read left to right in both languages.
-          Directionality(
-            textDirection: TextDirection.ltr,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('$sign${money(gain.toStringAsFixed(2))}', style: theme.textTheme.titleMedium?.copyWith(color: tone, fontWeight: FontWeight.w800)),
-              Text('$sign$pctText%', style: theme.textTheme.bodySmall?.copyWith(color: tone, fontWeight: FontWeight.w700)),
-            ]),
-          ),
+          // The sign stays with the number; the currency sits as in the boxes above.
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(money(gain.toStringAsFixed(2)).replaceFirstMapped(RegExp(r'[\d,.]+'), (m) => '\u2066$sign${m[0]}\u2069'), style: theme.textTheme.titleMedium?.copyWith(color: tone, fontWeight: FontWeight.w800)),
+            Text('$sign$pctText%', textDirection: TextDirection.ltr, style: theme.textTheme.bodySmall?.copyWith(color: tone, fontWeight: FontWeight.w700)),
+          ]),
         ]),
       ),
       if (item.history.length > 1) ...[
@@ -160,8 +158,9 @@ class _UnitValueRow extends StatelessWidget {
             SizedBox(height: 64, child: CustomPaint(painter: _SparklinePainter(item.history.map((p) => p.pricePerMeter).toList(), tone))),
             const SizedBox(height: 4),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text(date(item.history.first.date), style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted, fontSize: 11)),
-              Text(date(item.history.last.date), style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted, fontSize: 11)),
+              // Each date reads in the language's own direction.
+              Text(date(item.history.first.date), textDirection: textDir, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted, fontSize: 11)),
+              Text(date(item.history.last.date), textDirection: textDir, style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted, fontSize: 11)),
             ]),
           ]),
         ),
