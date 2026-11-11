@@ -9,9 +9,9 @@ import { BadRequestException } from '@nestjs/common';
  *   1. units for sale of the same model,
  *   2. units for sale of the same type,
  *   3. the company's own figure for the type (set when the type sold out),
- *   4. units for sale of the same usage (residential, commercial…),
- *   5. the company's own figure for the whole project.
- * None → no value is shown (decided: never a guess).
+ *   4. the company's own figure for the whole project.
+ * None → no value is shown (decided: never a guess — a sold-out type is
+ * not measured against other types, even of the same usage).
  */
 
 export const UNIT_VALUE_KEYS = {
@@ -41,7 +41,7 @@ export function resolveUnitValueSettings(rows: Array<{ key: string; value: unkno
   };
 }
 
-export type RateBasis = 'MODEL' | 'TYPE' | 'USAGE' | 'PROJECT';
+export type RateBasis = 'MODEL' | 'TYPE' | 'PROJECT';
 export type RateSource = 'MARKET' | 'MANUAL';
 
 export interface PricedUnit {
@@ -89,10 +89,6 @@ export function currentRate(
     () => {
       const r = manualFor(manual, owned.type);
       return r === undefined ? null : { pricePerMeter: r, basis: 'TYPE', source: 'MANUAL' };
-    },
-    () => {
-      const r = averagePerMeter(forSale.filter((u) => u.usage === owned.usage));
-      return r === null ? null : { pricePerMeter: r, basis: 'USAGE', source: 'MARKET' };
     },
     () => {
       const r = manual.get(null);

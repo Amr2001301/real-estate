@@ -24,8 +24,7 @@ const ar = {
     'متوسط الوحدات المتاحة من نفس النموذج',
     'ولو مفيش: متوسط المتاح من نفس النوع',
     'ولو مفيش: سعرك أنت لنفس النوع',
-    'ولو مفيش: متوسط المتاح بنفس الاستخدام (سكني / تجاري…)',
-    'ولو مفيش: سعرك أنت لكل المشروع — ولو مفيش خالص، الكارت مش بيظهر',
+    'ولو مفيش: سعرك أنت لكل المشروع — ولو مفيش خالص، الكارت مش بيظهر (لا نقيس نوعًا على نوع آخر)',
   ],
   perMeter: 'ج.م/م²',
 };
@@ -53,8 +52,7 @@ const en: typeof ar = {
     'Average of units for sale of the same model',
     'Else: average for sale of the same type',
     'Else: your figure for the type',
-    'Else: average for sale of the same usage (residential / commercial…)',
-    'Else: your figure for the project — and with none at all, the card is not shown',
+    'Else: your figure for the project — and with none at all, the card is not shown (one type is never measured against another)',
   ],
   perMeter: 'EGP/m²',
 };

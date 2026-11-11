@@ -32,10 +32,10 @@ describe('«قيمة وحدتك»', () => {
       expect(currentRate({ ...owned, modelId: null }, forSale, none)).toEqual({ pricePerMeter: 35_000, basis: 'TYPE', source: 'MARKET' });
     });
 
-    it('uses the company’s figure for a sold-out type before other types of the same usage', () => {
+    it('values a sold-out type by the company’s figure, never by other types (even of the same usage)', () => {
       const forSale = [u(5_000_000, 100, '3BR')];
       expect(currentRate(owned, forSale, new Map([['2br', 38_000]]))).toEqual({ pricePerMeter: 38_000, basis: 'TYPE', source: 'MANUAL' });
-      expect(currentRate(owned, forSale, none)).toEqual({ pricePerMeter: 50_000, basis: 'USAGE', source: 'MARKET' });
+      expect(currentRate(owned, forSale, none)).toBeNull();
     });
 
     it('falls back to the project’s figure, and to nothing — never a guess', () => {

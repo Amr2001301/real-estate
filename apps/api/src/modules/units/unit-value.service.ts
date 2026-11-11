@@ -240,7 +240,7 @@ export class UnitValueService {
         where: {
           companyId,
           projectId: project.id,
-          unitType: rate.basis === 'PROJECT' || rate.basis === 'USAGE' ? null : c.unit.type,
+          unitType: rate.basis === 'PROJECT' ? null : c.unit.type,
           recordedAt: { gt: c.signedAt },
         },
         orderBy: { recordedAt: 'asc' },
