@@ -40,7 +40,7 @@ export function UnitFilter({ options, activeContractId, activeStatus }: Props) {
         id="unit-filter"
         value={activeContractId ?? ''}
         onChange={handleChange}
-        className="h-9 w-full rounded-xl border border-hairline bg-surface px-3 text-sm font-semibold text-ink-strong shadow-sm transition-colors hover:border-gold-300/80 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-200/50 lg:w-[340px]"
+        className="h-9 w-full rounded-xl border border-hairline bg-surface px-3 text-sm font-semibold text-ink-strong shadow-sm transition-colors hover:border-navy/30 focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15 lg:w-[340px]"
         aria-label={t.aria}
       >
         <option value="">{t.all}</option>

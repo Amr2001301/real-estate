@@ -12,7 +12,7 @@ import { siteT } from '@/messages/site';
 import { cityLabel } from '@/lib/format';
 
 const SELECT_CLS =
-  'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40';
+  'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-navy/50 focus:outline-none focus:ring-2 focus:ring-navy/15';
 
 export function SearchPanel({ locale, cities }: { locale: Locale; cities: string[] }) {
   const router = useRouter();

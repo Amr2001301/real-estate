@@ -87,8 +87,19 @@
     @apply bg-gold-200/50 text-navy;
   }
 
-  *:focus-visible {
+  /* Text fields and dropdowns show focus on their own box (Input, FieldSelect,
+     the filter bars' focus-within ring), so the global ring would draw a second,
+     inner box inside them. */
+  *:focus-visible:not(input):not(select):not(textarea),
+  input[type='checkbox']:focus-visible,
+  input[type='radio']:focus-visible {
     @apply outline-none ring-2 ring-gold-400/50 ring-offset-2 ring-offset-canvas;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none;
   }
 
   h1,
