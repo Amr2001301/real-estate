@@ -7,6 +7,10 @@
  * edit by hand from here.
  */
 export const AR_ERROR_MESSAGES: ReadonlyArray<readonly [string, string]> = [
+  ["Facebook connection is not configured", "ربط فيسبوك غير مُفعّل على المنصة بعد، تواصل مع الدعم"],
+  ["Facebook page not found", "صفحة فيسبوك غير موجودة"],
+  ["Invalid signature", "توقيع الطلب غير صالح"],
+  ["Verification failed", "فشل التحقق"],
   ["Add at least one active paid pricing package before issuing a quotation", "أضف باقة أسعار مدفوعة نشطة واحدة على الأقل قبل إصدار عرض السعر"],
   ["\"${dto.contentType}\" is not allowed for branding ${dto.brandingAsset}. Accepted: ${[...policy.allowedMimes].join(', ')}", "نوع الملف «{1}» غير مسموح به لأصل الهوية {2}. الأنواع المسموحة: {3}"],
   ["${UNITS_SHEET.fields[f]} must be greater than 0", "{1} يجب أن يكون أكبر من 0"],

@@ -23,6 +23,16 @@ const EnvSchema = z.object({
   // TFA1 — seals two-step sign-in secrets; unset, derived from JWT_REFRESH_SECRET.
   TOTP_ENCRYPTION_KEY: z.string().optional(),
 
+  // Facebook / Instagram lead ads linked straight to a company's Page. All optional: the feature is
+  // off until META_APP_ID, META_APP_SECRET and META_WEBHOOK_VERIFY_TOKEN are all set.
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().optional(),
+  META_GRAPH_VERSION: z.string().optional(),
+  // Seals the stored Page tokens; unset, derived from JWT_REFRESH_SECRET.
+  META_TOKEN_ENCRYPTION_KEY: z.string().optional(),
+  WEB_ADMIN_URL: z.string().url().optional(),
+
   OTP_PROVIDER: z.enum(['console', 'twilio']).default('console'),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

@@ -10,20 +10,23 @@ import { intakeT } from '@/components/campaigns/intake-messages';
 import { campaignT } from '@/components/campaigns/messages';
 import { RoutingCard } from './_components/routing-card';
 import { IntakeSources } from './_components/intake-sources';
+import { MetaConnectCard, type MetaStatus } from './_components/meta-connect-card';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 /** «استقبال العملاء تلقائيًا» — intake sources and how new leads are handed out. */
-export default async function IntakePage() {
+export default async function IntakePage({ searchParams }: { searchParams?: Promise<{ meta?: string }> }) {
+  const metaResult = (await searchParams)?.meta ?? null;
   const [locale, session] = await Promise.all([getLocale(), getSession()]);
   const m = intakeT(locale);
   const canManage = session?.role === 'ADMIN' || (await can('campaigns:manage'));
-  const [settingsRes, keysRes, campaignsRes, projectsRes] = await Promise.all([
+  const [settingsRes, keysRes, campaignsRes, projectsRes, metaRes] = await Promise.all([
     safe(api.get<LeadRoutingSettings>('/lead-intake/settings')),
     canManage ? safe(api.get<IntakeKey[]>('/lead-intake/keys')) : Promise.resolve({ data: [] as IntakeKey[], error: null }),
     safe(api.get<Array<{ id: string; name: string; channel: CampaignChannel }>>('/campaigns/options')),
     safe(projectOptions()),
+    canManage ? safe(api.get<MetaStatus>('/meta/status')) : Promise.resolve({ data: null, error: null }),
   ]);
   const settings = settingsRes.data ?? { autoAssign: 'ROUND_ROBIN' as const, firstCallMinutes: 60, companySlug: null };
   // The address lead sources post to: the API as the outside world reaches it.
@@ -55,6 +58,17 @@ export default async function IntakePage() {
       </ol>
 
       <RoutingCard initial={settings} canManage={canManage} m={m.routing} />
+
+      {canManage && metaRes.data && (
+        <MetaConnectCard
+          locale={locale}
+          status={metaRes.data}
+          campaigns={campaignsRes.data ?? []}
+          projects={projectsRes.data?.data ?? []}
+          result={metaResult}
+          m={m.meta}
+        />
+      )}
 
       {canManage && (
         <IntakeSources
