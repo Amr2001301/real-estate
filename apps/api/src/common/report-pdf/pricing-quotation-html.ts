@@ -359,18 +359,20 @@ ${fontFace()}
 * { box-sizing:border-box; }
 html,body { margin:0; padding:0; }
 body { font-family:'ReportArabic','Noto Sans Arabic','Segoe UI',Tahoma,sans-serif; color:var(--ink); font-size:11px; line-height:1.55; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-.hero { background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%); color:#fff; border-radius:16px; padding:22px 26px; position:relative; overflow:hidden; }
-.hero::after { content:''; position:absolute; inset-inline-start:-50px; bottom:-70px; width:200px; height:200px; border-radius:50%; border:1px solid rgba(200,162,75,.28); }
-.hero-top { display:flex; align-items:center; justify-content:space-between; gap:16px; position:relative; z-index:1; }
+.hero { background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%); color:#fff; border-radius:16px; padding:24px 28px 20px; position:relative; overflow:hidden; }
+
+.hero-top { margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:16px; position:relative; z-index:1; }
 .brand { display:flex; align-items:center; gap:12px; }
 .brand img { width:52px; height:52px; border-radius:12px; display:block; }
 .brand .name { font-size:20px; font-weight:800; letter-spacing:.4px; }
 .brand .sub { font-size:10.5px; color:#cbd5e1; }
 .badge { font-size:26px; font-weight:800; color:var(--gold); letter-spacing:.5px; }
-.gold-rule { height:3px; width:70px; background:var(--gold); border-radius:2px; margin:14px 0 12px; position:relative; z-index:1; }
-.meta { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; position:relative; z-index:1; }
-.meta div { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px 10px; }
-.meta dt { font-size:9.5px; color:#cbd5e1; } .meta dd { margin:1px 0 0; font-weight:700; font-size:11.5px; }
+.gold-rule { display:none; }
+.meta { display:flex; gap:0; position:relative; z-index:1; margin:0; border-top:1px solid rgba(255,255,255,.14); padding-top:12px; }
+.meta div { flex:1; padding:0 14px; border-inline-start:1px solid rgba(255,255,255,.14); }
+.meta div:first-child { padding-inline-start:0; border-inline-start:0; }
+.meta dt { font-size:9.5px; color:var(--gold); letter-spacing:.3px; }
+.meta dd { margin:2px 0 0; font-weight:700; font-size:12px; color:#fff; }
 .intro { margin:20px 4px 14px; }
 .intro h2 { font-size:17px; margin:0 0 4px; color:var(--navy); }
 .intro p { margin:0; color:#475569; font-size:11.5px; }
@@ -442,7 +444,7 @@ table.cmp td.c svg { vertical-align:middle; }
     <div><dt>${esc(t.ref)}</dt><dd><bdi dir="ltr">${esc(input.reference)}</bdi></dd></div>
     <div><dt>${esc(t.date)}</dt><dd>${esc(dateText(input.issuedAt, locale))}</dd></div>
     <div><dt>${esc(t.valid)}</dt><dd>${esc(dateText(validUntil, locale))}</dd></div>
-    <div><dt>${esc(t.preparedFor)}</dt><dd>${esc(input.client?.trim() || '—')}</dd></div>
+    ${input.client?.trim() ? `<div><dt>${esc(t.preparedFor)}</dt><dd>${esc(input.client.trim())}</dd></div>` : ''}
   </dl>
 </section>
 <section class="intro">
