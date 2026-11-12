@@ -111,7 +111,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
     expect(effective(view, 'feature.brokers')).toBe(false);
     expect(effective(view, 'feature.advancedReports')).toBe(false);
     expect(effective(view, 'feature.maintenance')).toBe(false);
-    expect(effective(view, 'feature.customDomain')).toBe(true);
+    expect(effective(view, 'feature.customDomain')).toBe(false);
     // Column-backed features match the supplied column values
     expect(effective(view, 'feature.publicWebsite')).toBe(false);
     expect(effective(view, 'feature.customerApp')).toBe(false);
