@@ -60,6 +60,16 @@ export default async function SuperAdminOverviewPage() {
     return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
   }).length;
 
+  // Staff seats against the plan limit: over, at, or within 20% of it. Unlimited plans never show.
+  const attention = companies
+    .filter((c) => c.staffLimit !== null && c.staffLimit > 0 && c.staffCount >= c.staffLimit * 0.8)
+    .map((c) => {
+      const limit = c.staffLimit as number;
+      const state: 'over' | 'at' | 'near' = c.staffCount > limit ? 'over' : c.staffCount === limit ? 'at' : 'near';
+      return { c, limit, state };
+    })
+    .sort((a, b) => b.c.staffCount / b.limit - a.c.staffCount / a.limit);
+
   return (
     <div className="space-y-6">
       <PremiumPageHero
@@ -87,6 +97,36 @@ export default async function SuperAdminOverviewPage() {
           ]}
         />
       </PremiumPageHero>
+
+      {attention.length > 0 && (
+        <PremiumSectionCard title={m.overview.attention.title} icon={<AlertTriangle />} padded={false}>
+          <p className="px-6 pt-1 pb-3 text-[12px] text-slate-400">{m.overview.attention.hint}</p>
+          <ul data-testid="attention-list" className="divide-y divide-hairline border-t border-hairline">
+            {attention.map(({ c, limit, state }) => (
+              <li key={c.id}>
+                <Link
+                  href={`/dashboard/super-admin/companies/${c.id}`}
+                  className="flex flex-wrap items-center gap-3 px-6 py-3.5 hover:bg-canvas/40 transition-colors"
+                >
+                  <span className="min-w-0 flex-1 font-semibold text-slate-900">{c.name}</span>
+                  <span dir="ltr" className="tabular-nums text-[13px] text-slate-700">{c.staffCount} / {limit}</span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                      state === 'over' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {state === 'over'
+                      ? m.overview.attention.over(c.staffCount - limit)
+                      : state === 'at'
+                        ? m.overview.attention.at
+                        : m.overview.attention.near}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </PremiumSectionCard>
+      )}
 
       <PremiumSectionCard
         title={m.overview.tableTitleFn(total)}
