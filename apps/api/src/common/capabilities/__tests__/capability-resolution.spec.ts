@@ -106,7 +106,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
   test('STARTER: users limited, restricted feature set', () => {
     const view = buildEffectiveView('STARTER', noOverride, false, false, true);
     expect(effective(view, 'limit.maxUnits')).toBeNull();
-    expect(effective(view, 'limit.maxUsers')).toBe(15);
+    expect(effective(view, 'limit.maxUsers')).toBe(10);
     expect(effective(view, 'limit.maxProjects')).toBeNull();
     expect(effective(view, 'feature.brokers')).toBe(false);
     expect(effective(view, 'feature.advancedReports')).toBe(false);
@@ -121,7 +121,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
   test('PROFESSIONAL: more users, more features', () => {
     const view = buildEffectiveView('PROFESSIONAL', noOverride, true, true, true);
     expect(effective(view, 'limit.maxUnits')).toBeNull();
-    expect(effective(view, 'limit.maxUsers')).toBe(50);
+    expect(effective(view, 'limit.maxUsers')).toBe(20);
     expect(effective(view, 'limit.maxProjects')).toBeNull();
     expect(effective(view, 'feature.brokers')).toBe(true);
     expect(effective(view, 'feature.advancedReports')).toBe(true);
@@ -161,10 +161,10 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
 // ── 2. Override wins in both directions ───────────────────────────────────────
 
 describe('buildEffectiveView — override wins over plan default', () => {
-  test('setting a limit: STARTER maxUsers 15 → 30 via override', () => {
+  test('setting a limit: STARTER maxUsers 10 → 30 via override', () => {
     const view = buildEffectiveView('STARTER', { 'limit.maxUsers': 30 }, false, false, true);
     const unitKey = view.keys.find((k) => k.key === 'limit.maxUsers')!;
-    expect(unitKey.planDefault).toBe(15);
+    expect(unitKey.planDefault).toBe(10);
     expect(unitKey.override).toBe(30);
     expect(unitKey.effective).toBe(30);
     expect(unitKey.source).toBe('capabilities_override');
@@ -412,7 +412,7 @@ describe('CapabilityService.getEffectiveCapabilities — tenant scope', () => {
     expect(viewB.plan).toBe('STARTER');
     expect(effective(viewA, 'limit.maxUnits')).toBeNull();  // ENTERPRISE unlimited
     expect(effective(viewB, 'limit.maxUnits')).toBeNull();  // no plan limits units
-    expect(effective(viewB, 'limit.maxUsers')).toBe(15);    // STARTER: the user limit
+    expect(effective(viewB, 'limit.maxUsers')).toBe(10);    // STARTER: the user limit
   });
 });
 

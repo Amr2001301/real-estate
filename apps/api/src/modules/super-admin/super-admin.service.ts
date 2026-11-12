@@ -25,6 +25,8 @@ import { seedLeadSourcesForCompany } from '../leads/lead-source-defaults';
 import { seedLostReasonsForCompany } from '../leads/lost-reason-defaults';
 import { seedMaintenanceCategoriesForCompany } from '../maintenance/maintenance-category-defaults';
 import { seedUnitTypesForCompany } from '../units/unit-type-defaults';
+import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
+import { buildPricingQuotationHtml } from '../../common/report-pdf/pricing-quotation-html';
 import { NotificationsService } from '../notifications/notifications.module';
 import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { runInCompany } from '../../common/tenant/tenant-context';
@@ -51,6 +53,7 @@ export class SuperAdminService {
     private readonly domainResolver: DomainResolverService,
     private readonly companyDomainsService: CompanyDomainsService,
     @Optional() private readonly notifications?: NotificationsService,
+    @Optional() private readonly reportPdf?: ReportPdfService,
   ) {}
 
   private readonly logger = new Logger(SuperAdminService.name);
@@ -679,6 +682,42 @@ export class SuperAdminService {
       where: companyId ? { companyId } : { companyId: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     });
+  }
+
+  /**
+   * The price quotation as a PDF: the active paid plans (this company's own when it has some,
+   * otherwise the global list), in the requested language.
+   */
+  async pricingQuotationPdf(opts: { locale?: 'ar' | 'en'; client?: string; companyId?: string }): Promise<Buffer> {
+    const locale = opts.locale ?? 'ar';
+    let packages = opts.companyId ? await this.listPricingPackages(opts.companyId) : [];
+    if (packages.filter((p) => p.isActive).length === 0) packages = await this.listPricingPackages();
+    const active = packages.filter((p) => p.isActive && p.planTier !== 'TRIAL');
+    if (active.length === 0) {
+      throw new BadRequestException('Add at least one active paid pricing package before issuing a quotation');
+    }
+    const aiPackages = await this.prisma.aiPackage.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { questions: 'asc' }],
+    });
+    const issuedAt = new Date();
+    const stamp = issuedAt.toISOString().slice(0, 10).replace(/-/g, '');
+    const reference = `Q-${stamp}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
+    const html = buildPricingQuotationHtml({
+      packages: active,
+      locale,
+      client: opts.client,
+      reference,
+      issuedAt,
+      validDays: 30,
+      aiPackages,
+      contact: {
+        email: process.env.PLATFORM_CONTACT_EMAIL,
+        phone: process.env.PLATFORM_CONTACT_PHONE,
+        website: process.env.PLATFORM_CONTACT_WEBSITE,
+      },
+    });
+    return presentReportPdf(this.reportPdf, html, { name: 'Devora' }, undefined, locale);
   }
 
   async createPricingPackage(dto: CreatePricingPackageDto, companyId?: string) {

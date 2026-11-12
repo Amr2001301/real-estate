@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition, useMemo } from 'react';
-import Link from 'next/link';
 import {
   Plus, Pencil, Trash2, FileText, Tag, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, Sparkles,
@@ -12,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
+import { PricingCalculator } from './_calculator';
 import {
   PremiumPageHero, PremiumSectionCard, PremiumCommandPanel,
 } from '@/components/premium';
@@ -45,6 +45,7 @@ function fmt(val: string | null, currency: string) {
 export default function PricingPage() {
   const locale = useClientLocale();
   const m = useMemo(() => pricingT(locale), [locale]);
+  const quoteHref = `/api-proxy/super-admin/pricing/quotation.pdf?locale=${locale === 'en' ? 'en' : 'ar'}`;
 
   const [packages, setPackages] = useState<PricingPackage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,11 +104,11 @@ export default function PricingPage() {
         ]}
         actions={
           <div className="flex gap-2">
-            <Link href="/dashboard/super-admin/pricing/pdf">
+            <a href={quoteHref} download data-testid="quote-pdf">
               <Button variant="outline" leftIcon={<FileText className="h-4 w-4" />}>
                 {m.pdfBtn}
               </Button>
-            </Link>
+            </a>
             <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={openNew}>
               {m.newBtn}
             </Button>
@@ -118,6 +119,7 @@ export default function PricingPage() {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-5 items-start">
         {/* Package list */}
         <div className="xl:col-span-3 space-y-4">
+          {!loading && packages.length > 0 && <PricingCalculator packages={packages} locale={locale} m={m} />}
           {loading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -152,12 +154,12 @@ export default function PricingPage() {
               </span>
               <span className="font-semibold text-[13px]">{m.newBtn}</span>
             </button>
-            <Link href="/dashboard/super-admin/pricing/pdf" className="group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150">
+            <a href={quoteHref} download className="group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150">
               <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-[15px] [&_svg]:w-[15px]">
                 <FileText />
               </span>
               <span className="text-[13px]">{m.pdfBtn}</span>
-            </Link>
+            </a>
           </PremiumCommandPanel>
 
           <PremiumSectionCard title="الخطط" icon={<Sparkles />}>

@@ -39,6 +39,8 @@ const CANDIDATES = [
 export interface PdfFooter {
   /** Shown at the leading edge of every page footer (e.g. the company name). */
   text?: string;
+  /** Language of the page counter; Arabic when omitted. */
+  lang?: 'ar' | 'en';
 }
 
 @Injectable()
@@ -94,7 +96,7 @@ export class ReportPdfService implements OnModuleDestroy {
           preferCSSPageSize: true,
           displayHeaderFooter: true,
           headerTemplate: '<span></span>',
-          footerTemplate: footerTemplate(footer.text),
+          footerTemplate: footerTemplate(footer.text, footer.lang),
           margin: { top: '14mm', bottom: '16mm', left: '12mm', right: '12mm' },
           timeout: RENDER_TIMEOUT_MS,
         });
@@ -189,11 +191,11 @@ export class ReportPdfService implements OnModuleDestroy {
 }
 
 /** "صفحة 2 من 5" at the trailing edge and the company name at the leading edge. */
-function footerTemplate(text?: string): string {
+function footerTemplate(text?: string, lang: 'ar' | 'en' = 'ar'): string {
   const safe = (text ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-  return `<div dir="rtl" style="width:100%;margin:0 12mm;font-family:'Noto Sans Arabic','DejaVu Sans',sans-serif;font-size:8px;color:#64748b;display:flex;justify-content:space-between;">
+  return `<div dir="${lang === 'en' ? 'ltr' : 'rtl'}" style="width:100%;margin:0 12mm;font-family:'Noto Sans Arabic','DejaVu Sans',sans-serif;font-size:8px;color:#64748b;display:flex;justify-content:space-between;">
   <span>${safe}</span>
-  <span>صفحة <span class="pageNumber"></span> من <span class="totalPages"></span></span>
+  <span>${lang === 'en' ? 'Page' : 'صفحة'} <span class="pageNumber"></span> ${lang === 'en' ? 'of' : 'من'} <span class="totalPages"></span></span>
 </div>`;
 }
 
@@ -209,10 +211,11 @@ export async function presentReportPdf(
   html: string,
   brand: { name: string },
   fallback?: () => Promise<Buffer>,
+  lang?: 'ar' | 'en',
 ): Promise<Buffer> {
   if (pdf?.available()) {
     try {
-      return await pdf.render(html, { text: brand.name });
+      return await pdf.render(html, { text: brand.name, lang });
     } catch (err) {
       presentLogger.warn(`Chromium report render failed${fallback ? ', using the fallback' : ''}: ${(err as Error).message}`);
     }

@@ -109,6 +109,7 @@ export interface EffectiveCapabilitiesView {
 }
 
 // ── Plan defaults ─────────────────────────────────────────────────────────────
+// Plans: STARTER 10 staff users, PROFESSIONAL 20, ENTERPRISE unlimited (more than that is a custom override).
 // A plan limits the company's STAFF USERS only (owner's decision, 2026-11-12). The unit and
 // project limits stay in the schema, unlimited on every plan, so a company override can still
 // set one; nothing sets one by default.
@@ -134,7 +135,7 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
   },
   STARTER: {
     'limit.maxUnits':       null,
-    'limit.maxUsers':       15,
+    'limit.maxUsers':       10,
     'limit.maxProjects':    null,
     'feature.dashboard':    true,
     'feature.crm':          true,
@@ -150,7 +151,7 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
   },
   PROFESSIONAL: {
     'limit.maxUnits':       null,
-    'limit.maxUsers':       50,
+    'limit.maxUsers':       20,
     'limit.maxProjects':    null,
     'feature.dashboard':    true,
     'feature.crm':          true,

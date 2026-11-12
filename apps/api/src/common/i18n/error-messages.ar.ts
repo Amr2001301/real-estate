@@ -7,6 +7,7 @@
  * edit by hand from here.
  */
 export const AR_ERROR_MESSAGES: ReadonlyArray<readonly [string, string]> = [
+  ["Add at least one active paid pricing package before issuing a quotation", "أضف باقة أسعار مدفوعة نشطة واحدة على الأقل قبل إصدار عرض السعر"],
   ["\"${dto.contentType}\" is not allowed for branding ${dto.brandingAsset}. Accepted: ${[...policy.allowedMimes].join(', ')}", "نوع الملف «{1}» غير مسموح به لأصل الهوية {2}. الأنواع المسموحة: {3}"],
   ["${UNITS_SHEET.fields[f]} must be greater than 0", "{1} يجب أن يكون أكبر من 0"],
   ["${dto.channel} channel requires Firebase — not configured or the API was not restarted after adding FIREBASE_* credentials. Use IN_APP to skip push.", "قناة {1} تتطلب إعداد Firebase، وهو غير مُعَدّ أو لم يُعَد تشغيل الخادم بعد إضافة بيانات FIREBASE_*. استخدم الإشعار داخل التطبيق فقط."],

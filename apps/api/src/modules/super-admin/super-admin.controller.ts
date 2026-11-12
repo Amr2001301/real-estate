@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards,
+  Body, Controller, Delete, Get, Header, Param, Patch, Post, Put, Query, StreamableFile, UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
@@ -15,6 +15,7 @@ import {
   ActivateCompanyDto,
   CreateCompanyAdminDto,
   CreatePricingPackageDto,
+  PricingQuotationQueryDto,
   UpdatePricingPackageDto,
   UpdateCompanyModulesDto,
 } from './dto/super-admin.dto';
@@ -96,6 +97,13 @@ export class SuperAdminController {
   }
 
   // ── Global Pricing Packages ────────────────────────────────────────────────
+
+  @Get('pricing/quotation.pdf')
+  @Header('Content-Type', 'application/pdf')
+  @Header('Content-Disposition', 'attachment; filename="devora-quotation.pdf"')
+  async pricingQuotation(@Query() q: PricingQuotationQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.service.pricingQuotationPdf(q));
+  }
 
   @Get('pricing')
   listPricing() { return this.service.listPricingPackages(); }
