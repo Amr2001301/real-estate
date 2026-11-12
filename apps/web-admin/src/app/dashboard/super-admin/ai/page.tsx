@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Field } from '@/components/form/field';
 import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { useClientLocale } from '@/components/locale-provider';
+import { saT } from '@/messages/super-admin';
 import { formatDate } from '@/lib/format';
 import { aiT, readError, usageTone, type AiPlanView } from '@/components/ai/ai-strings';
 
@@ -101,7 +102,7 @@ export default function SuperAdminAiPage() {
       <PremiumPageHero
         title={m.title}
         description={m.description}
-        breadcrumbs={[{ label: 'Platform', href: '/dashboard/super-admin' }, { label: m.title }]}
+        breadcrumbs={[{ label: saT(locale).companies.breadcrumbs.platform, href: '/dashboard/super-admin' }, { label: m.title }]}
         actions={
           editing !== 'new' && (
             <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setEditing('new')}>

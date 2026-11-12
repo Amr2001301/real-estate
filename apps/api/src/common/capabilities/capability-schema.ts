@@ -109,14 +109,17 @@ export interface EffectiveCapabilitiesView {
 }
 
 // ── Plan defaults ─────────────────────────────────────────────────────────────
+// A plan limits the company's STAFF USERS only (owner's decision, 2026-11-12). The unit and
+// project limits stay in the schema, unlimited on every plan, so a company override can still
+// set one; nothing sets one by default.
 
 type PlanDefaults = Record<CapabilityKey, CapabilityValue>;
 
 export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
   TRIAL: {
-    'limit.maxUnits':       150,
+    'limit.maxUnits':       null,
     'limit.maxUsers':       15,
-    'limit.maxProjects':    5,
+    'limit.maxProjects':    null,
     'feature.dashboard':    true,
     'feature.crm':          true,
     'feature.contracts':    true,
@@ -130,9 +133,9 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
     'feature.customDomain': true,
   },
   STARTER: {
-    'limit.maxUnits':       500,
+    'limit.maxUnits':       null,
     'limit.maxUsers':       15,
-    'limit.maxProjects':    5,
+    'limit.maxProjects':    null,
     'feature.dashboard':    true,
     'feature.crm':          true,
     'feature.contracts':    true,
@@ -146,9 +149,9 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
     'feature.customDomain': false,
   },
   PROFESSIONAL: {
-    'limit.maxUnits':       2500,
+    'limit.maxUnits':       null,
     'limit.maxUsers':       50,
-    'limit.maxProjects':    20,
+    'limit.maxProjects':    null,
     'feature.dashboard':    true,
     'feature.crm':          true,
     'feature.contracts':    true,
