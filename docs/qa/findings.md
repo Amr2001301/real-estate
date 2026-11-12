@@ -372,12 +372,12 @@ All six screens (home, companies, new company, pricing, AI assistant, company de
 
 | Id | What | Fix |
 |---|---|---|
-| F-078 | The plans limited units (150 / 500 / 2,500) and projects (5 / 5 / 20) as well as staff users, against the owner's decision that a plan limits the company's users only | Unit and project limits are now unlimited on every plan (`PLAN_DEFAULTS`); the keys stay so a company override can still set one. Users are still limited (staff roles only; customers are not counted) |
-| F-079 | The sidebar item for the pricing page was labelled «التقارير» | Its own label «باقات الأسعار» |
-| F-080 | The top search box says «search units, customers, projects» and does nothing for any role | Hidden for the platform owner (no company data); for the other roles it is still a box without a search behind it — to decide |
-| F-081 | The AI page breadcrumb said «Platform» | «إدارة المنصة» |
-| F-082 | Raw enum names on screen: roles (CLIENT, MAINTENANCE_SUPERVISOR…) in a company's users, plan tiers (TRIAL, STARTER…) on the pricing page | Arabic (and English) labels |
-| F-083 | The data-migration panels were worded in colloquial Arabic | Modern Standard Arabic |
+| F-080 | The plans limited units (150 / 500 / 2,500) and projects (5 / 5 / 20) as well as staff users, against the owner's decision that a plan limits the company's users only | Unit and project limits are now unlimited on every plan (`PLAN_DEFAULTS`); the keys stay so a company override can still set one. Users are still limited (staff roles only; customers are not counted) |
+| F-081 | The sidebar item for the pricing page was labelled «التقارير» | Its own label «باقات الأسعار» |
+| F-082 | The top search box says «search units, customers, projects» and does nothing for any role | Hidden for the platform owner (no company data); for the other roles it is still a box without a search behind it — to decide |
+| F-083 | The AI page breadcrumb said «Platform» | «إدارة المنصة» |
+| F-084 | Raw enum names on screen: roles (CLIENT, MAINTENANCE_SUPERVISOR…) in a company's users, plan tiers (TRIAL, STARTER…) on the pricing page | Arabic (and English) labels |
+| F-085 | The data-migration panels were worded in colloquial Arabic | Modern Standard Arabic |
 
 Not done, on purpose: the company page's «modules» switches (`Company.modules`: broker, website, maintenance…) have an API and a finished panel that is not mounted, and **nothing in the product reads that field**, so mounting it would add switches that change nothing. Features are controlled by the plan and the capability overrides.
 

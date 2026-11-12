@@ -813,6 +813,14 @@ The owner asked for the customer app to look like the staff app. The method: sha
 
 ---
 
+### 2t. Plans limit staff users only; super-admin dashboard review (2026-11-12)
+
+- **Decision (owner):** a plan limits the company's **staff users** only (customers and visitors are not counted). Units and projects are unlimited on every plan: `PLAN_DEFAULTS` in `apps/api/src/common/capabilities/capability-schema.ts` has `limit.maxUnits` / `limit.maxProjects` = null for all plans. The keys and `PlanLimitService` checks stay, so a company override can still set one; nothing sets one by default. (Before this the plans had 150 / 500 / 2,500 units and 5 / 5 / 20 projects: F-080.)
+- **Super-admin dashboard** (desktop and phone): latest design, no errors. The review's small fixes (F-081 to F-085) are in `docs/qa/findings.md`. `Company.modules` (the «modules» switches) is **not read anywhere**; do not mount `_modules-panel.tsx` — features are controlled by the plan and the capability overrides.
+- **Still to build (API exists, no screen):** per-company capability overrides (plan default / override / effective), staff users used against the limit, and a platform report of companies near or over their user limit. Design change: send before/after screenshots first.
+
+---
+
 ### 2s. F-023 — API error messages in Arabic (2026-11-12)
 
 The API's ~460 English error messages (exceptions and DTO messages) stay English in the code and the tests. A client that asks for Arabic (`Accept-Language: ar` or `X-Locale: ar`) gets them in Arabic; any other client gets the English text exactly as before.
