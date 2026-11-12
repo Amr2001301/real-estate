@@ -23,6 +23,8 @@ export interface CalcInput {
   extraUserPrice: number;
   /** Discount on the whole subscription, 0–100. */
   discountPct: number;
+  /** Optional assistant add-on: a monthly price, billed for every month of the subscription. */
+  aiMonthlyPrice?: number;
 }
 
 export interface CalcResult {
@@ -35,6 +37,10 @@ export interface CalcResult {
   /** The whole subscription after the discount. */
   total: number;
   discount: number;
+  /** Assistant add-on over the whole subscription (0 when none); not discounted. */
+  aiTotal: number;
+  /** Subscription after the discount plus the add-on. */
+  grandTotal: number;
   /** What one staff user costs per year (after the discount); null for unlimited. */
   perUserPerYear: number | null;
 }
@@ -44,7 +50,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 export function calculateQuote(input: CalcInput): CalcResult | null {
   const users = Math.floor(input.users);
   if (!Number.isFinite(users) || users < 1) return null;
-  const years = clamp(Math.floor(input.years) || 1, 1, 10);
+  const years = clamp(Math.floor(input.years) || 1, 1, 20);
   const discountPct = clamp(Number(input.discountPct) || 0, 0, 100);
   const extra = Math.max(0, Number(input.extraUserPrice) || 0);
 
@@ -87,6 +93,7 @@ export function calculateQuote(input: CalcInput): CalcResult | null {
   const gross = perYear * years;
   const discount = Math.round(gross * (discountPct / 100));
   const total = gross - discount;
+  const aiTotal = Math.max(0, Number(input.aiMonthlyPrice) || 0) * 12 * years;
   return {
     kind,
     planName,
@@ -94,6 +101,8 @@ export function calculateQuote(input: CalcInput): CalcResult | null {
     perYear,
     total,
     discount,
+    aiTotal,
+    grandTotal: total + aiTotal,
     perUserPerYear: kind === 'unlimited' ? null : Math.round(total / years / users),
   };
 }

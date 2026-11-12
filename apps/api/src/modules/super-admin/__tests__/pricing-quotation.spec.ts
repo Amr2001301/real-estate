@@ -8,7 +8,7 @@ const row = (over: Record<string, unknown> = {}) => ({
 });
 
 function make(rows: unknown[], pdf?: { available: () => boolean; render: jest.Mock }) {
-  const prisma = { pricingPackage: { findMany: jest.fn().mockResolvedValue(rows) } };
+  const prisma = { pricingPackage: { findMany: jest.fn().mockResolvedValue(rows) }, aiPackage: { findMany: jest.fn().mockResolvedValue([]) } };
   return { prisma, service: new SuperAdminService(prisma as never, {} as never, {} as never, {} as never, undefined, pdf as never) };
 }
 

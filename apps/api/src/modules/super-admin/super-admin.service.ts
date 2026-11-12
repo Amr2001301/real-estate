@@ -696,6 +696,10 @@ export class SuperAdminService {
     if (active.length === 0) {
       throw new BadRequestException('Add at least one active paid pricing package before issuing a quotation');
     }
+    const aiPackages = await this.prisma.aiPackage.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { questions: 'asc' }],
+    });
     const issuedAt = new Date();
     const stamp = issuedAt.toISOString().slice(0, 10).replace(/-/g, '');
     const reference = `Q-${stamp}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
@@ -706,6 +710,7 @@ export class SuperAdminService {
       reference,
       issuedAt,
       validDays: 30,
+      aiPackages,
       contact: {
         email: process.env.PLATFORM_CONTACT_EMAIL,
         phone: process.env.PLATFORM_CONTACT_PHONE,

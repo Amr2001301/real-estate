@@ -39,6 +39,8 @@ export interface QuoteInput {
   validDays: number;
   /** Contact line printed on the last page. */
   contact?: { email?: string; phone?: string; website?: string };
+  /** The assistant add-on: question packages renewed monthly (price per month). */
+  aiPackages?: Array<{ name: string; questions: number; price: unknown; currency: string }>;
 }
 
 const LOGO_PATH = resolve(__dirname, '../assets/brand/devora-logo.png');
@@ -94,11 +96,36 @@ const T = {
       'الأسعار بالعملة المذكورة في كل باقة وقد لا تشمل الضرائب والرسوم المطبقة.',
       'يُسدَّد الاشتراك السنوي دفعة واحدة عند التعاقد، ويبدأ من تاريخ التفعيل.',
       'يمكن ترقية الباقة في أي وقت، ويُحتسب الفرق عن المدة المتبقية.',
+      'الاستضافة والتدريب الأولي والتحديثات والدعم الفني مشمولة بدون رسوم إضافية.',
       'تحتفظ الشركة بحقها في تعديل الأسعار بإشعار مسبق.',
     ],
     customTitle: 'تحتاج أكثر من ذلك؟ نخصّص باقتك',
     custom:
       'لو فريقك أكبر من الباقات المعروضة، أو تحتاج مميزات إضافية، نصمّم لك باقة مخصصة بعدد الموظفين والمميزات التي تناسب حجم أعمالك، بسعر واضح يتناسب مع احتياجك. تواصل معنا وسنرسل لك عرضاً مفصّلاً.',
+    included: 'مشمول مجاناً مع كل باقة',
+    services: [
+      ['استضافة سحابية', 'استضافة آمنة للنظام وبياناتك بدون رسوم إضافية'],
+      ['تدريب وتشغيل أولي', 'نجهّز النظام ونُدرّب فريقك في البداية'],
+      ['تحديثات وميزات جديدة', 'كل تطوير جديد على المنصة يصلك مجاناً'],
+      ['دعم فني على مدار الساعة', 'فريق دعم متاح 24 ساعة، كل يوم'],
+    ] as ReadonlyArray<readonly [string, string]>,
+    coreTitle: 'أساسيات في كل الباقات',
+    core: [
+      'العقود الإلكترونية والتوقيع الإلكتروني', 'خطط التقسيط وغرامات التأخير', 'الشيكات ومتابعة ارتدادها',
+      'الدفعات وإثباتات السداد', 'دفتر الحسابات', 'العمولات والمكافآت وأهداف المبيعات',
+      'المحادثة والإشعارات', 'استيراد وتصدير البيانات', 'سجل التدقيق وتسجيل الدخول بخطوتين',
+      'هوية الشركة وقوالب الطباعة', 'خانات عملاء مخصصة', 'تقارير PDF وExcel',
+    ],
+    aiTitle: 'المساعد الذكي (إضافة اختيارية)',
+    aiIntro: 'مساعد يجيب عن بيانات شركتك بالعربي. يُباع منفصلاً بباقات أسئلة شهرية، مثل باقات الإنترنت:',
+    aiRules: [
+      'لكل باقة عدد أسئلة محدد في الشهر، وعند انتهائه يتوقف المساعد حتى موعد التجديد.',
+      'يمكن التجديد مبكراً في أي وقت، ويبدأ الشهر الجديد من يوم التجديد بكامل الأسئلة.',
+      'الأسئلة غير المستخدمة لا تُرحَّل للشهر التالي، ويمكن إضافة أسئلة خلال الشهر.',
+    ],
+    aiQuestions: 'عدد الأسئلة شهرياً',
+    aiPackage: 'الباقة',
+    aiPrice: 'السعر شهرياً',
     thanks: 'نشكركم على اهتمامكم، ويسعدنا خدمتكم.',
     authorized: 'اعتماد',
     sign: 'التوقيع والختم',
@@ -151,11 +178,36 @@ const T = {
       'Prices are in the currency shown on each plan and may exclude applicable taxes and fees.',
       'The annual subscription is paid once on signing and starts on the activation date.',
       'You can upgrade your plan at any time; the difference is charged for the remaining period.',
+      'Hosting, initial training, updates and technical support are included at no extra cost.',
       'We may revise prices with prior notice.',
     ],
     customTitle: 'Need more? We tailor your plan',
     custom:
       'If your team is larger than the plans above, or you need extra features, we will build a custom plan around the number of staff users and the features you need, at a clear price that matches your requirements. Get in touch and we will send you a detailed offer.',
+    included: 'Free with every plan',
+    services: [
+      ['Cloud hosting', 'Secure hosting for the system and your data at no extra cost'],
+      ['Training & onboarding', 'We set the system up and train your team at the start'],
+      ['Updates & new features', 'Every new release of the platform reaches you for free'],
+      ['24/7 technical support', 'A support team available 24 hours, every day'],
+    ] as ReadonlyArray<readonly [string, string]>,
+    coreTitle: 'Core in every plan',
+    core: [
+      'E-contracts and e-signature', 'Instalment plans and late fees', 'Cheques and bounce handling',
+      'Payments and proof of payment', 'General ledger', 'Commissions, bonuses and sales targets',
+      'Chat and notifications', 'Data import and export', 'Audit log and two-step sign-in',
+      'Company branding and print templates', 'Custom customer fields', 'PDF and Excel reports',
+    ],
+    aiTitle: 'AI assistant (optional add-on)',
+    aiIntro: 'An assistant that answers questions about your company data in Arabic. Sold separately in monthly question packages, like an internet bundle:',
+    aiRules: [
+      'Each package has a fixed number of questions a month; when they run out the assistant pauses until renewal.',
+      'You can renew early at any time; the new month starts on the renewal day with the full question count.',
+      'Unused questions do not roll over, and extra questions can be added during the month.',
+    ],
+    aiQuestions: 'Questions per month',
+    aiPackage: 'Package',
+    aiPrice: 'Price per month',
     thanks: 'Thank you for your interest. We look forward to working with you.',
     authorized: 'Authorised by',
     sign: 'Signature & stamp',
@@ -287,6 +339,15 @@ export function buildPricingQuotationHtml(input: QuoteInput): string {
     .map((x) => `<bdi dir="ltr">${esc(x)}</bdi>`)
     .join(' &nbsp;·&nbsp; ');
 
+  const ai = input.aiPackages ?? [];
+  const aiHtml = ai.length
+    ? `<div class="ai"><h2 class="sec-title">${esc(t.aiTitle)}</h2><p class="ai-intro">${esc(t.aiIntro)}</p>
+  <table class="cmp ai-t"><thead><tr><th>${esc(t.aiPackage)}</th><th>${esc(t.aiQuestions)}</th><th>${esc(t.aiPrice)}</th></tr></thead><tbody>${ai
+    .map((a) => `<tr><td>${esc(a.name)}</td><td class="c"><b><bdi dir="ltr">${a.questions.toLocaleString('en')}</bdi></b></td><td class="c"><b><bdi dir="ltr">${fmt(Number(a.price) || 0)}</bdi></b> ${esc(cur(a.currency, locale))}</td></tr>`)
+    .join('')}</tbody></table>
+  <ul class="ai-rules">${t.aiRules.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>`
+    : '';
+
   return `<!doctype html>
 <html lang="${locale}" dir="${t.dir}">
 <head>
@@ -348,6 +409,16 @@ table.cmp td { padding:7px 12px; border-top:1px solid var(--line); }
 table.cmp tbody tr:nth-child(even) td { background:var(--paper); }
 table.cmp td.c { text-align:center; }
 table.cmp td.c svg { vertical-align:middle; }
+.svc { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.svc div { border:1px solid var(--line); background:var(--paper); border-radius:10px; padding:8px 12px; break-inside:avoid; }
+.svc b { display:block; color:var(--navy); font-size:11.5px; } .svc span { color:var(--muted); font-size:10px; }
+.sub-title { font-size:12px; margin:14px 0 6px; color:var(--gold-d); }
+.chips { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
+.chips li { display:flex; gap:7px; align-items:flex-start; font-size:10.5px; }
+.chips li svg { flex:none; margin-top:2px; }
+.ai { margin-top:22px; break-inside:avoid; }
+.ai-intro { margin:0 0 8px; color:#475569; font-size:10.5px; }
+.ai-rules { margin:8px 0 0; padding-inline-start:18px; color:#475569; font-size:10px; }
 .terms { margin-top:22px; }
 .terms ol { margin:0; padding-inline-start:18px; color:#334155; font-size:10.5px; }
 .terms li { margin:3px 0; }
@@ -392,6 +463,11 @@ table.cmp td.c svg { vertical-align:middle; }
     <thead><tr><th>${esc(t.feature)}</th>${head}</tr></thead>
     <tbody>${seatRow}${featureRows}</tbody>
   </table>
+  <h2 class="sec-title" style="margin-top:22px">${esc(t.included)}</h2>
+  <div class="svc">${t.services.map(([h, d]) => `<div><b>${esc(h)}</b><span>${esc(d)}</span></div>`).join('')}</div>
+  <h3 class="sub-title">${esc(t.coreTitle)}</h3>
+  <ul class="chips">${t.core.map((x) => `<li>${CHECK}<span>${esc(x)}</span></li>`).join('')}</ul>
+  ${aiHtml}
   <div class="terms">
     <h2 class="sec-title">${esc(t.termsTitle)}</h2>
     <ol>${t.terms(input.validDays).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>

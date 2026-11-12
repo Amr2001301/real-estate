@@ -19,6 +19,8 @@ interface PkgLike {
   isActive: boolean;
 }
 
+interface AiPkg { id: string; name: string; questions: number; price: string; isActive: boolean }
+
 const EXTRA_KEY = 'pricing-calc-extra-user';
 const money = (n: number) => n.toLocaleString('en');
 
@@ -28,6 +30,15 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
   const [years, setYears] = useState('1');
   const [extra, setExtra] = useState('1500');
   const [discount, setDiscount] = useState('0');
+  const [aiId, setAiId] = useState('');
+  const [aiPackages, setAiPackages] = useState<AiPkg[]>([]);
+
+  useEffect(() => {
+    fetch('/api-proxy/super-admin/ai/packages')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: AiPkg[]) => setAiPackages(d.filter((a) => a.isActive)))
+      .catch(() => setAiPackages([]));
+  }, []);
 
   useEffect(() => {
     try {
@@ -59,8 +70,9 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
         years: Number(years),
         extraUserPrice: Number(extra),
         discountPct: Number(discount),
+        aiMonthlyPrice: Number(aiPackages.find((a) => a.id === aiId)?.price ?? 0),
       }),
-    [plans, users, years, extra, discount],
+    [plans, users, years, extra, discount, aiPackages, aiId],
   );
 
   const c = m.calc;
@@ -69,18 +81,14 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
   return (
     <PremiumSectionCard title={c.title} icon={<Calculator />}>
       <p className="mb-4 text-[12px] text-slate-400">{c.hint}</p>
-      <div data-testid="price-calc" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div data-testid="price-calc" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-slate-500">{c.users}</span>
           <Input type="number" min={1} inputMode="numeric" value={users} onChange={(e) => setUsers(e.target.value)} inputSize="sm" aria-label={c.users} />
         </label>
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-slate-500">{c.years}</span>
-          <Select value={years} onChange={(e) => setYears(e.target.value)} inputSize="sm" aria-label={c.years}>
-            {[1, 2, 3].map((n) => (
-              <option key={n} value={n}>{c.yearsOpt(n)}</option>
-            ))}
-          </Select>
+          <Input type="number" min={1} max={20} inputMode="numeric" value={years} onChange={(e) => setYears(e.target.value)} inputSize="sm" aria-label={c.years} />
         </label>
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-slate-500">{c.extraPrice}</span>
@@ -100,6 +108,15 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-slate-500">{c.discount}</span>
           <Input type="number" min={0} max={100} inputMode="numeric" value={discount} onChange={(e) => setDiscount(e.target.value)} inputSize="sm" aria-label={c.discount} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[12px] font-semibold text-slate-500">{c.ai}</span>
+          <Select value={aiId} onChange={(e) => setAiId(e.target.value)} inputSize="sm" aria-label={c.ai}>
+            <option value="">{c.aiNone}</option>
+            {aiPackages.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </Select>
         </label>
       </div>
 
@@ -125,6 +142,9 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
                 {result.discount > 0 && (
                   <> · {c.discountLine}: <span dir="ltr" className="tabular-nums">−{money(result.discount)}</span></>
                 )}
+                {result.aiTotal > 0 && (
+                  <> · {c.aiLine}: <span dir="ltr" className="tabular-nums">{money(result.aiTotal)}</span></>
+                )}
                 {result.perUserPerYear !== null && (
                   <> · {c.perUser}: <span dir="ltr" className="tabular-nums">{money(result.perUserPerYear)}</span></>
                 )}
@@ -133,7 +153,7 @@ export function PricingCalculator({ packages, locale, m }: { packages: PkgLike[]
             <div className="text-end">
               <p className="text-[11.5px] text-slate-400">{c.total}</p>
               <p className="text-[26px] font-extrabold tabular-nums text-slate-900" dir="ltr">
-                {money(result.total)} <span className="text-[13px] font-semibold text-slate-500">{currency}</span>
+                {money(result.grandTotal)} <span className="text-[13px] font-semibold text-slate-500">{currency}</span>
               </p>
             </div>
           </div>

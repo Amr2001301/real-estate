@@ -81,6 +81,23 @@ describe('pricing quotation HTML', () => {
     expect(html).not.toContain('Tailored');
   });
 
+  it('prints the free services and the assistant add-on with its monthly rules', () => {
+    const html = buildPricingQuotationHtml({
+      ...base,
+      locale: 'en',
+      packages: [pkg('STARTER')],
+      aiPackages: [{ name: 'Assistant 500', questions: 500, price: '2000', currency: 'EGP' }],
+    });
+    expect(html).toContain('24/7 technical support');
+    expect(html).toContain('Assistant 500');
+    expect(html).toContain('renew early');
+  });
+
+  it('leaves the add-on section out when no assistant package is offered', () => {
+    const html = buildPricingQuotationHtml({ ...base, locale: 'en', packages: [pkg('STARTER')], aiPackages: [] });
+    expect(html).not.toContain('AI assistant (optional add-on)');
+  });
+
   it('drops an expired special offer', () => {
     const html = buildPricingQuotationHtml({
       ...base,

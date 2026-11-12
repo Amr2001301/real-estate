@@ -37,6 +37,14 @@ test.describe('pricing calculator', () => {
     expect(r.perUserPerYear).toBe(1620);
   });
 
+  test('any number of years is computed, and the assistant add-on is billed every month', () => {
+    const r = calculateQuote({ ...base, users: 10, years: 5, aiMonthlyPrice: 1500 })!;
+    expect(r.total).toBe(90000); // 18,000 x 5
+    expect(r.aiTotal).toBe(90000); // 1,500 x 12 x 5
+    expect(r.grandTotal).toBe(180000);
+    expect(calculateQuote({ ...base, users: 10 })!.aiTotal).toBe(0);
+  });
+
   test('rejects an empty or unpriced input', () => {
     expect(calculateQuote({ ...base, users: 0 })).toBeNull();
     expect(calculateQuote({ ...base, plans: [], users: 5 })).toBeNull();
