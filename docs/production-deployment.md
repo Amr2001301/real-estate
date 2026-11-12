@@ -36,6 +36,48 @@ Before starting a production deploy, verify all of these:
 
 ---
 
+## Production environment (API)
+
+The API refuses to start in production (`NODE_ENV=production`) unless these are set; the check lives in `apps/api/src/config/env.validation.ts` and fails with a list of what is missing. `apps/api/.env.example` documents every variable.
+
+**Required (the API will not boot without them):**
+
+| Group | Variables |
+|---|---|
+| Database / cache | `DATABASE_URL`, `REDIS_URL` (an external Redis; `localhost` is refused) |
+| Sessions | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (each at least 32 characters, different from each other, not the `.env.example` placeholders) |
+| Web | `CORS_ORIGINS` (at least one origin), `PUBLIC_WEB_URL` (the website; not `localhost`: password-reset links use it), `PLATFORM_BASE_DOMAIN` (company sub-domains are `{slug}.{PLATFORM_BASE_DOMAIN}`) |
+| Files | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (public media), `R2_PUBLIC_URL`, `R2_PRIVATE_BUCKET` (contracts, receipts, documents; must be a different bucket from `R2_BUCKET`) |
+| E-mail | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (`SMTP_PORT` optional) |
+| SMS codes | `OTP_PROVIDER=twilio` with `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (`console` is refused: codes would never be delivered) |
+| Push | `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` |
+| Seed | `SEED_ADMIN_PASSWORD` must not be the default |
+
+**Not required, but set them in production:**
+
+- `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` (12+ characters), `SUPER_ADMIN_NAME`: on startup, when the platform has no super admin yet, the API creates one. This is how the first platform owner exists.
+- `METRICS_TOKEN`: `/metrics` is closed in production until it is set (F-055).
+- `TRUST_PROXY_HOPS`: the exact number of reverse proxies in front of the API. Rate limits key on the client address; left at 0 behind a proxy, every user shares one bucket (F-056). Too high lets a client spoof its address.
+- `TOTP_ENCRYPTION_KEY`: before anyone turns two-step sign-in on (unset, it is derived from `JWT_REFRESH_SECRET`, so rotating that secret would lock those users out).
+- `ANTHROPIC_API_KEY` (the AI assistant; unset it answers 503), `SENTRY_DSN`, `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` (custom company domains are then added to the website's Vercel project automatically).
+- `INSTALLMENT_REMINDERS_ENABLED=true` and the reminder settings, if customers should get due-soon reminders; `UNIT_VALUE_ALERTS_ENABLED` / `UNIT_VALUE_RISE_CRON` for the unit-value rise notice (on in production unless `false`).
+- `CHROMIUM_PATH`: PDF reports use Chromium when it is there and a plainer PDFKit layout when it is not.
+- `DISABLE_DEFAULT_COMPANY_FALLBACK=true`: stops legacy users with no company from falling back to `DEFAULT_COMPANY_ID`; safe once every user belongs to a company.
+
+**`DEFAULT_COMPANY_ID` is optional.** Leave it empty on a multi-company platform: the website, the apps and the dashboard always name their company (host or `X-Tenant-Slug`), and a public request that names none is refused with 503 instead of being guessed. It used to be required at boot, which blocked the very first deploy (no company exists until the super admin creates one in the product).
+
+**Website (`apps/web-public`)** needs `API_BASE_URL` and `NEXT_PUBLIC_SITE_URL` (canonical URLs, sitemap, robots); never set `E2E_TENANT_BYPASS_SLUG` or `DEV_TENANT_SLUG` (they are for localhost only). **Dashboard (`apps/web-admin`)** needs `API_BASE_URL`.
+
+### First deploy of a new platform
+
+1. Provision PostgreSQL, Redis and the two R2 buckets; set the variables above.
+2. `pnpm db:deploy`, then `pnpm db:schema-check` (exit 0).
+3. Start the API with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` set; it creates the platform owner.
+4. Deploy the dashboard and the website; sign in at `/super-admin/login`.
+5. Create the first company in the super-admin UI (its admin is invited there), then open its site at `{slug}.{PLATFORM_BASE_DOMAIN}` and check the home page, a sign-in and one upload.
+
+---
+
 ## Deployment Sequence
 
 Execute in this exact order. Stop if any step fails.
