@@ -171,6 +171,8 @@ async function readPayload(res: Response): Promise<unknown> {
 async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
   const c = await cookies();
   const token = c.get('access_token')?.value;
+  // F-023: the API words its errors in the dashboard's language (a caller's own header wins).
+  opts = { ...opts, headers: { 'Accept-Language': c.get('admin-locale')?.value === 'en' ? 'en' : 'ar', ...(opts.headers as Record<string, string> | undefined) } };
 
   const first = await doFetch(path, token, opts);
   if (first.status !== 401) {
