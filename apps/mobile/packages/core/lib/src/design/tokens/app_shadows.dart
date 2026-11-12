@@ -40,7 +40,7 @@ abstract final class AppShadows {
   }) {
     final base = b == Brightness.dark
         ? const Color(0xFF000000)
-        : const Color(0xFF0F1E33);
+        : const Color(0xFF0E1626);
     final alpha = b == Brightness.dark ? darkAlpha : lightAlpha;
     return [
       BoxShadow(

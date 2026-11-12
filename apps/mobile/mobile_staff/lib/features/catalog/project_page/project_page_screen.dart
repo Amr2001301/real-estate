@@ -169,7 +169,7 @@ class _Occupancy extends StatelessWidget {
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: homeLine(context)),
-        boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
+        boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Row(children: [
         _Ring(percent: pct, label: l10n.ppOccupancy),

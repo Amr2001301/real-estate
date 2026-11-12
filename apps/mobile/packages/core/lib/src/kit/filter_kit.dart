@@ -273,7 +273,7 @@ class FilterSegments<T> extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: o.value == selected ? (homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.22) : Colors.white) : Colors.transparent,
                   borderRadius: BorderRadius.circular(11),
-                  boxShadow: o.value == selected && !homeIsDark(context) ? const [BoxShadow(color: Color(0x1F0F1E33), blurRadius: 8, offset: Offset(0, 2))] : null,
+                  boxShadow: o.value == selected && !homeIsDark(context) ? const [BoxShadow(color: Color(0x1F0E1626), blurRadius: 8, offset: Offset(0, 2))] : null,
                 ),
                 child: Column(children: [
                   Text(o.label,

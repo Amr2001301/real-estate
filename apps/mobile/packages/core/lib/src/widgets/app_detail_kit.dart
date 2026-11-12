@@ -359,7 +359,7 @@ class AppPriceCard extends StatelessWidget {
         color: colors.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: colors.hairline),
-        boxShadow: const [BoxShadow(color: Color(0x290F1E33), blurRadius: 40, offset: Offset(0, 18))],
+        boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -76,6 +76,6 @@ class StatusBadge extends StatelessWidget {
   }
 
   Color _onColor(Color bg) {
-    return bg.computeLuminance() > 0.5 ? const Color(0xFF0F1E33) : Colors.white;
+    return bg.computeLuminance() > 0.5 ? const Color(0xFF0E1626) : Colors.white;
   }
 }
