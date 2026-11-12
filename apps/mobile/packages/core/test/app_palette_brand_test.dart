@@ -7,7 +7,7 @@ void main() {
 
   test('with no colour the platform palette stays', () {
     AppPalette.applyBrand();
-    expect(AppPalette.navy, const Color(0xFF0F1E33));
+    expect(AppPalette.navy, const Color(0xFF0E1626));
     expect(AppPalette.gold400, const Color(0xFFC8A24B));
   });
 
@@ -25,14 +25,14 @@ void main() {
   });
 
   test('an accent that would vanish on the primary is lightened', () {
-    AppPalette.applyBrand(primary: const Color(0xFF0F1E33), accent: const Color(0xFF0F1E34));
+    AppPalette.applyBrand(primary: const Color(0xFF0E1626), accent: const Color(0xFF0E1627));
     expect(AppPalette.gold400.computeLuminance(), greaterThan(0.1));
   });
 
   test('clearing the brand restores the platform palette', () {
     AppPalette.applyBrand(primary: const Color(0xFF3730A3), accent: const Color(0xFFD97706));
     AppPalette.applyBrand();
-    expect(AppPalette.navy, const Color(0xFF0F1E33));
+    expect(AppPalette.navy, const Color(0xFF0E1626));
   });
 
   // The customer app's headers and cards used fixed navy shades, so a company's

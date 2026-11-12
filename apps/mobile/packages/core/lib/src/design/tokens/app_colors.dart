@@ -13,7 +13,7 @@ abstract final class AppPalette {
     Color(0xFFFBF6EA), Color(0xFFF4E8C9), Color(0xFFE2C792), Color(0xFFD4B36A),
     Color(0xFFC8A24B), Color(0xFFB7902F), Color(0xFF9C7A26),
   ];
-  static const _navy = [Color(0xFF0F1E33), Color(0xFF1C3050), Color(0xFF26405F)];
+  static const _navy = [Color(0xFF0E1626), Color(0xFF1C3050), Color(0xFF26405F)];
   static List<Color> _g = _gold;
   static List<Color> _n = _navy;
 
@@ -163,7 +163,7 @@ abstract final class AppPalette {
   static const lightHairline = Color(0xFFE7DFD3);
   static const lightInk = Color(0xFF1A2230);
   static const lightInkMuted = Color(0xFF6B6256);
-  static const lightInkStrong = Color(0xFF0F1E33);
+  static const lightInkStrong = Color(0xFF0E1626);
 
   // ---- Dark surfaces --------------------------------------------------------
   // The platform's own tools keep the navy dark surfaces. A company's customer

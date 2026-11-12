@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../design/tokens/app_colors.dart';
 
 // Brand palette
-Color get _kNavy => AppPalette.navy;        // 0xFF0F1E33
+Color get _kNavy => AppPalette.navy;        // 0xFF0E1626
 Color get _kGold => AppPalette.gold400;     // 0xFFC8A24B
 const _kBody = AppPalette.darkInkMuted; // 0xFF9AA6B6
 
