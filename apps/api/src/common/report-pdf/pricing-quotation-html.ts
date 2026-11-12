@@ -75,7 +75,7 @@ const T = {
     popular: 'الأكثر طلباً',
     perMonth: 'شهرياً',
     perYear: 'سنوياً',
-    orAnnual: 'أو',
+    oneTime: 'دفعة واحدة عند التعاقد',
     save: (n: number) => `وفّر ${n}%`,
     setup: 'رسوم الإعداد',
     noSetup: 'بدون رسوم إعداد',
@@ -92,7 +92,7 @@ const T = {
     terms: (days: number) => [
       `هذا العرض صالح لمدة ${days} يوماً من تاريخ الإصدار.`,
       'الأسعار بالعملة المذكورة في كل باقة وقد لا تشمل الضرائب والرسوم المطبقة.',
-      'تُحتسب الاشتراكات مقدماً، ويبدأ الاشتراك من تاريخ التفعيل.',
+      'يُسدَّد الاشتراك السنوي دفعة واحدة عند التعاقد، ويبدأ من تاريخ التفعيل.',
       'يمكن ترقية الباقة في أي وقت، ويُحتسب الفرق عن المدة المتبقية.',
       'تحتفظ الشركة بحقها في تعديل الأسعار بإشعار مسبق.',
     ],
@@ -129,7 +129,7 @@ const T = {
     popular: 'Most popular',
     perMonth: 'per month',
     perYear: 'per year',
-    orAnnual: 'or',
+    oneTime: 'One payment on signing',
     save: (n: number) => `Save ${n}%`,
     setup: 'Setup fee',
     noSetup: 'No setup fee',
@@ -146,7 +146,7 @@ const T = {
     terms: (days: number) => [
       `This quotation is valid for ${days} days from the issue date.`,
       'Prices are in the currency shown on each plan and may exclude applicable taxes and fees.',
-      'Subscriptions are billed in advance and start on the activation date.',
+      'The annual subscription is paid once on signing and starts on the activation date.',
       'You can upgrade your plan at any time; the difference is charged for the remaining period.',
       'We may revise prices with prior notice.',
     ],
@@ -230,8 +230,6 @@ export function buildPricingQuotationHtml(input: QuoteInput): string {
       const seats = seatsOf(p);
       const defaults = planDefaults(p.planTier);
       const offer = offerOf(p, locale);
-      const saving =
-        monthly && annual && monthly * 12 > annual ? Math.round((1 - annual / (monthly * 12)) * 100) : 0;
       const isFeatured = p.planTier === featured;
       const bullets = FEATURES.filter((k) => defaults[k] === true)
         .map((k) => `<li>${CHECK}<span>${esc(t.features[k])}</span></li>`)
@@ -245,15 +243,13 @@ export function buildPricingQuotationHtml(input: QuoteInput): string {
   <h3>${esc(name)}</h3>
   <p class="desc">${esc(desc ?? '')}</p>
   <div class="price">${
-    monthly !== null
-      ? `<span class="amount"><bdi dir="ltr">${fmt(monthly)}</bdi></span><span class="unit">${esc(c)} / ${esc(t.perMonth)}</span>`
-      : `<span class="ask">${esc(t.contactUs)}</span>`
-  }</div>
-  ${
     annual !== null
-      ? `<div class="annual">${esc(t.orAnnual)} <bdi dir="ltr">${fmt(annual)}</bdi> ${esc(c)} ${esc(t.perYear)}${saving ? ` <span class="save">${esc(t.save(saving))}</span>` : ''}</div>`
-      : '<div class="annual">&nbsp;</div>'
-  }
+      ? `<span class="amount"><bdi dir="ltr">${fmt(annual)}</bdi></span><span class="unit">${esc(c)} / ${esc(t.perYear)}</span>`
+      : monthly !== null
+        ? `<span class="amount"><bdi dir="ltr">${fmt(monthly)}</bdi></span><span class="unit">${esc(c)} / ${esc(t.perMonth)}</span>`
+        : `<span class="ask">${esc(t.contactUs)}</span>`
+  }</div>
+  <div class="annual">${t.oneTime ? esc(t.oneTime) : '&nbsp;'}</div>
   <div class="setup">${setup ? `${esc(t.setup)}: <bdi dir="ltr">${fmt(setup)}</bdi> ${esc(c)}` : esc(t.noSetup)}</div>
   ${offer ? `<div class="offer"><b>${esc(t.offer)}</b> ${esc(offer.title)} <bdi dir="ltr">−${offer.pct}%</bdi></div>` : ''}
   <div class="seats">${esc(seats === null ? t.seatsUnlimited : t.seats(seats))}</div>

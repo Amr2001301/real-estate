@@ -29,9 +29,10 @@ describe('pricing quotation HTML', () => {
       locale: 'en',
       packages: [pkg('STARTER'), pkg('PROFESSIONAL', { monthlyPrice: '8500', annualPrice: '85000', maxUsers: 50 })],
     });
-    expect(html).toContain('3,500');
+    expect(html).toContain('35,000');
     expect(html).toContain('85,000');
-    expect(html).toContain('Save 17%');
+    expect(html).toContain('per year');
+    expect(html).not.toContain('per month'); // sold as an annual subscription, not monthly
     expect(html).toContain('Up to 15 staff users'); // STARTER default seats
     expect(html).toContain('Up to 50 staff users');
     expect(html).toContain('Q-20261112-TEST');
