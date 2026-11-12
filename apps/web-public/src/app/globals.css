@@ -23,11 +23,11 @@
     /* Per-tenant brand tokens. Overridden by the root layout <style> when the
        backend branding response supplies primaryColor / accentColor. Defaults
        match navy DEFAULT and gold-400 so existing utilities still resolve. */
-    --c-brand-primary: 15 30 51;    /* navy DEFAULT #0F1E33 */
+    --c-brand-primary: 14 22 38;    /* navy DEFAULT #0E1626 — the admin dashboard navy (Devora) */
     --c-brand-accent:  200 162 75;  /* gold-400  #C8A24B  */
     /* The navy and gold scales (tailwind.config.ts reads these); the root layout
        replaces them with the company's own colours. */
-    --c-navy: 15 30 51;       /* #0F1E33 */
+    --c-navy: 14 22 38;       /* #0E1626 */
     --c-navy-700: 28 48 80;   /* #1C3050 */
     --c-navy-600: 38 64 95;   /* #26405F */
     --c-gold-50: 251 246 234;  /* #FBF6EA */

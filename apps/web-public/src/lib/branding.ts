@@ -94,7 +94,7 @@ export function brandThemeVars(primaryHex: string | undefined, accentHex: string
     );
   }
   if (accent) {
-    const base = primary ?? ([15, 30, 51] as Rgb);
+    const base = primary ?? ([14, 22, 38] as Rgb);
     for (let i = 0; i < 12 && contrast(accent, base) < 3; i++) accent = mix(accent, WHITE, 0.12);
     out.push(
       `--c-brand-accent:${vars(accent)}`,

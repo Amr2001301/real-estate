@@ -31,6 +31,7 @@ import { CoverImage } from '@/components/ui/CoverImage';
 import { WhatsAppIcon } from '@/components/icons/WhatsAppIcon';
 import { DEEP_BG } from '@/components/home/Hero';
 import { notificationTitle } from '@/components/account/NotificationCard';
+import type { UnitValueItem } from '@/components/account/UnitValueCard';
 import { extraT } from '@/messages/site-extra';
 
 export async function generateMetadata() {
@@ -88,10 +89,15 @@ export default async function AccountPage() {
   const maintenance = (settled(mntR) as Paginated<MeMaintenanceRequest> | null)?.data ?? [];
 
   const project = contract?.unit?.building?.phase?.project ?? null;
-  const [projectRes, branding] = await Promise.all([
+  const [projectRes, branding, unitValues] = await Promise.all([
     project && tenant ? apiFetch<PublicProjectDetail>(`/public/projects/${project.id}`, { revalidate: 300, tenantSlug: tenant.slug }) : null,
     tenant ? fetchBranding(tenant.slug) : null,
+    // «قيمة وحدتك» — only what the company chose to show (off by default).
+    contract
+      ? authFetch<{ enabled: boolean; items: UnitValueItem[] }>('/me/unit-values').catch(() => ({ enabled: false, items: [] as UnitValueItem[] }))
+      : null,
   ]);
+  const valued = unitValues?.items ?? [];
   const cover = projectRes?.ok ? projectRes.data.media?.find((x) => x.type === 'IMAGE' || !x.type)?.url ?? null : null;
   const place = projectRes?.ok ? projectRes.data.city : null;
   const contact = companyContact(branding);
@@ -311,6 +317,9 @@ export default async function AccountPage() {
               </div>
             </section>
           )}
+          {/* An owner: what the unit is worth today (the pre-purchase shortcuts are in the menu). */}
+          {contract && valued.length > 0 && <UnitValueSummary items={valued} locale={locale} />}
+          {!contract && (
           <section className="grid grid-cols-2 gap-3">
             {shortcuts.map(({ href, label, count, icon: Icon }) => (
               <Link key={href} href={href as Route} className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 transition-colors hover:bg-surface-soft">
@@ -320,8 +329,29 @@ export default async function AccountPage() {
               </Link>
             ))}
           </section>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** «قيمة وحدتك» in brief on the dashboard: today's value and the change, to «عقاراتي» for the rest. */
+function UnitValueSummary({ items, locale }: { items: UnitValueItem[]; locale: Locale }) {
+  const u = extraT(locale).unitValue;
+  const value = items.reduce((s, i) => s + Number(i.currentValue), 0);
+  const paid = items.reduce((s, i) => s + Number(i.purchasePrice), 0);
+  const gain = value - paid;
+  const pct = paid > 0 ? Math.round((gain / paid) * 1000) / 10 : 0;
+  const up = gain >= 0;
+  return (
+    <Link href={routes.accountProperty as Route} className="block rounded-[1.5rem] border border-hairline bg-surface p-6 transition-colors hover:bg-surface-soft" data-testid="dashboard-unit-value">
+      <p className="text-[13px] font-semibold text-gold-700 dark:text-gold-300">{u.title}</p>
+      <p className="mt-1 font-display text-[1.6rem] font-semibold text-ink-strong" dir="auto"><Price value={value} /></p>
+      <p className={`mt-1 text-sm font-semibold ${up ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`} dir="ltr">
+        {up ? '+' : '−'}{formatNumber(Math.abs(pct), locale)}%
+      </p>
+      <p className="mt-2 text-xs text-ink-muted">{u.sub}</p>
+    </Link>
   );
 }

@@ -180,7 +180,7 @@ export function SignFlow({ token, view, locale }: { token: string; view: SignVie
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedAt, setSignedAt] = useState<string | null>(view.state === 'SIGNED' ? view.signedAt : null);
-  const brand = s.company.primaryColor ?? '#0F1E33';
+  const brand = s.company.primaryColor ?? '#0E1626';
   const errorFor = (status: number) => (t.errors as Record<string, string | undefined>)[String(status)] ?? t.errors.other;
   const dt = (v: string) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG-u-nu-latn', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(v));

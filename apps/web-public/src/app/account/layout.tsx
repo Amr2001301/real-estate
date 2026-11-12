@@ -3,9 +3,8 @@ import { getSession, isPortalRole, type SessionRole } from '@/lib/session';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
-import { Container } from '@/components/ui/Container';
-import { PageHero } from '@/components/layout/PageHero';
 import { AccountSidebar } from '@/components/account/AccountSidebar';
+import { AccountFrame } from '@/components/account/AccountFrame';
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const [session, locale] = await Promise.all([getSession(), getLocale()]);
@@ -40,27 +39,24 @@ export default async function AccountLayout({ children }: { children: React.Reac
   }
 
   return (
-    <>
-      <PageHero
-        eyebrow={m.account.eyebrow}
-        title={session.fullName ? m.account.welcome(session.fullName) : m.account.yourAccount}
-        subtitle={m.account.subtitle}
-        overlap
-        compact
-      />
-      <Container className="relative z-10 -mt-14 pb-20 sm:-mt-16">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[284px_minmax(0,1fr)] lg:gap-8">
-          <AccountSidebar
-            fullName={session.fullName}
-            roleLabel={roleLabel}
-            avatarUrl={avatarUrl}
-            isCustomer={session.role === 'CUSTOMER'}
-            unreadNotifications={unreadNotifications}
-            locale={locale}
-          />
-          <div className="min-w-0 pt-12 md:pt-16 lg:pt-28">{children}</div>
-        </div>
-      </Container>
-    </>
+    <AccountFrame
+      hero={{
+        eyebrow: m.account.eyebrow,
+        title: session.fullName ? m.account.welcome(session.fullName) : m.account.yourAccount,
+        subtitle: m.account.subtitle,
+      }}
+      sidebar={
+        <AccountSidebar
+          fullName={session.fullName}
+          roleLabel={roleLabel}
+          avatarUrl={avatarUrl}
+          isCustomer={session.role === 'CUSTOMER'}
+          unreadNotifications={unreadNotifications}
+          locale={locale}
+        />
+      }
+    >
+      {children}
+    </AccountFrame>
   );
 }
