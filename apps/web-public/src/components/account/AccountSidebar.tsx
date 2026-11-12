@@ -2,6 +2,7 @@
 
 import type { Route } from 'next';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   LayoutGrid,
@@ -44,19 +45,35 @@ const CLIENT_ITEMS: SidebarItem[] = [
   { href: routes.accountNotifications, labelKey: 'notifications', icon: Bell },
 ];
 
-const CUSTOMER_ITEMS: SidebarItem[] = [
+/**
+ * An owner's own services come first — what they open every month — then
+ * the pre-purchase pages (favourites, visits, requests, reservations) under
+ * their own heading, then the profile (owner, 2026-11-12). The schedule and
+ * the recorded payments are one entry, «المدفوعات», with two tabs.
+ */
+const OWNER_ITEMS: SidebarItem[] = [
+  { href: routes.account, labelKey: 'dashboard', icon: LayoutGrid },
   { href: routes.accountProperty, labelKey: 'property', icon: Building2 },
+  { href: routes.accountInstallments, labelKey: 'payments', icon: Wallet },
   { href: routes.accountContracts, labelKey: 'contracts', icon: FileText },
-  { href: routes.accountInstallments, labelKey: 'installments', icon: CalendarClock },
-  { href: routes.accountDeposits, labelKey: 'deposits', icon: Wallet },
   { href: routes.accountMaintenance, labelKey: 'maintenance', icon: Wrench },
   { href: routes.accountDocuments, labelKey: 'documents', icon: FolderOpen },
+  { href: routes.accountNotifications, labelKey: 'notifications', icon: Bell },
+];
+
+const OWNER_BROWSING: SidebarItem[] = [
+  { href: routes.accountReservations, labelKey: 'reservations', icon: BookmarkCheck },
+  { href: routes.accountVisits, labelKey: 'visits', icon: CalendarClock },
+  { href: routes.accountRequests, labelKey: 'requests', icon: MessageSquareText },
+  { href: routes.accountFavorites, labelKey: 'favorites', icon: Heart },
 ];
 
 function isActive(pathname: string, href: string): boolean {
-  return href === routes.account
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
+  if (href === routes.account) return pathname === href;
+  const under = (h: string) => pathname === h || pathname.startsWith(`${h}/`);
+  // «المدفوعات» covers both of its tabs.
+  if (href === routes.accountInstallments) return under(routes.accountInstallments) || under(routes.accountDeposits);
+  return under(href);
 }
 
 function getInitials(name?: string): string {
@@ -83,6 +100,14 @@ export function AccountSidebar({
 }) {
   const pathname = usePathname();
   const m = siteT(locale);
+  // On a phone the menu is a sideways strip: keep the current page in view.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !current || nav.scrollWidth <= nav.clientWidth) return;
+    current.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [pathname]);
 
   const renderItem = ({ href, labelKey, icon: Icon }: SidebarItem) => {
     const active = isActive(pathname, href);
@@ -153,17 +178,19 @@ export function AccountSidebar({
         </div>
 
         <div className="relative mt-3 px-0.5">
-          <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:gap-1 lg:overflow-visible">
-            {CLIENT_ITEMS.map(renderItem)}
-
-            {isCustomer && (
+          <nav ref={navRef} className="flex gap-1.5 overflow-x-auto lg:flex-col lg:gap-1 lg:overflow-visible">
+            {isCustomer ? (
               <>
+                {OWNER_ITEMS.map(renderItem)}
                 <span className="my-auto h-6 w-px shrink-0 bg-white/10 lg:my-2.5 lg:h-px lg:w-full" aria-hidden />
                 <span className="hidden px-3.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/40 lg:block">
-                  {m.account.sidebar.customerServices}
+                  {m.account.sidebar.browsing}
                 </span>
-                {CUSTOMER_ITEMS.map(renderItem)}
+                {OWNER_BROWSING.map(renderItem)}
+                {renderItem({ href: routes.accountProfile, labelKey: 'profile', icon: UserCircle2 })}
               </>
+            ) : (
+              CLIENT_ITEMS.map(renderItem)
             )}
 
             <form

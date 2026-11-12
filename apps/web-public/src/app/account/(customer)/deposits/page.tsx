@@ -1,14 +1,12 @@
 import { redirect } from 'next/navigation';
 import { Price } from '@/components/currency/CurrencyProvider';
-import Link from 'next/link';
-import type { Route } from 'next';
-import { Wallet, CalendarClock } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
-import { formatPrice, formatNumber } from '@/lib/format';
+import { formatNumber } from '@/lib/format';
 import type { MeDepositsResponse } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
@@ -16,6 +14,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { DepositCard } from '@/components/account/DepositCard';
 import { SubmitProofTrigger } from '@/components/account/SubmitProofTrigger';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import { PaymentsTabs } from '@/components/account/PaymentsTabs';
 
 export async function generateMetadata() {
   return pageMeta('deposits', { robots: { index: false, follow: false } });
@@ -36,11 +35,13 @@ export default async function AccountDepositsPage() {
   const locale = await getLocale();
   const m = siteT(locale).accountPages.deposits;
 
+  const pm = siteT(locale).accountPages.payments;
+  // One «المدفوعات» page with two tabs (owner, 2026-11-12): this is «الدفعات المسجّلة».
   const header = (
-    <AccountPageHeader
-      title={m.title}
-      description={m.description}
-    />
+    <>
+      <AccountPageHeader title={pm.title} description={pm.description} />
+      <PaymentsTabs active="paid" locale={locale} />
+    </>
   );
 
   let result: MeDepositsResponse;
@@ -69,25 +70,6 @@ export default async function AccountDepositsPage() {
       {header}
 
       <SubmitProofTrigger />
-
-      {/* P11 — installments shortcut so customers can pick a due installment
-          and submit a proof without leaving the deposits surface. */}
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline/60 bg-surface-soft/80 p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 ring-1 ring-gold-200/60">
-            <CalendarClock className="h-4 w-4" aria-hidden />
-          </span>
-          <span className="text-xs font-bold text-ink-strong md:text-sm">
-            {m.installmentsNote}
-          </span>
-        </div>
-        <Link
-          href={routes.accountInstallments as Route}
-          className="shrink-0 rounded-xl border border-hairline bg-surface px-4 py-2 text-xs font-semibold text-ink-strong shadow-sm transition-all duration-200 hover:bg-navy hover:text-white"
-        >
-          {m.installmentsLink}
-        </Link>
-      </div>
 
       {deposits.length === 0 ? (
         <EmptyState

@@ -5,21 +5,22 @@ import { Price } from '@/components/currency/CurrencyProvider';
 import type { Route } from 'next';
 import Link from 'next/link';
 import {
-  CalendarClock, CheckCircle2, Clock, AlertCircle, Building2, Home, Upload, Wallet,
+  CalendarClock, CheckCircle2, Clock, AlertCircle, Upload, Wallet,
 } from 'lucide-react';
 import { pageMeta } from '@/lib/page-meta';
 import { routes } from '@/lib/routes';
 import { getLocale } from '@/lib/locale';
 import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
-import { pickAr, unitTypeLabel, formatPrice, formatDateShort } from '@/lib/format';
+import { unitTypeLabel, formatDateShort } from '@/lib/format';
 import type { MeInstallment, MeInstallmentsResponse } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
+import { AccountCard } from '@/components/account/AccountCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
+import { PaymentsTabs } from '@/components/account/PaymentsTabs';
 import { SegmentedFilter } from '@/components/ui/SegmentedFilter';
 import { cn } from '@/lib/cn';
 import { accountT } from '@/messages/account';
@@ -57,12 +58,6 @@ function fmtMonthYear(iso: string | null, locale: Locale): string {
   }
 }
 
-function statusIcon(status: MeInstallment['status']) {
-  if (status === 'PAID') return CheckCircle2;
-  if (status === 'OVERDUE') return AlertCircle;
-  return CalendarClock;
-}
-
 // To the piaster, as the statement of account: rounded to the pound, the
 // figures here did not match it (129,222.22 read 129,222).
 const AMT_FMT = new Intl.NumberFormat('ar-SA-u-nu-latn', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -82,6 +77,7 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
 
   const [locale, currency] = await Promise.all([getLocale(), getSiteCurrency()]);
   const m = siteT(locale).accountPages.installments;
+  const pm = siteT(locale).accountPages.payments;
 
   const FILTERS = [
     { key: 'all', label: m.filterAll, status: undefined },
@@ -102,10 +98,8 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <AccountPageHeader
-          title={m.title}
-          description={m.description}
-        />
+        <AccountPageHeader title={pm.title} description={pm.description} />
+        <PaymentsTabs active="schedule" locale={locale} />
         <ErrorState
           title={m.errorTitle}
           message={m.errorMsg}
@@ -151,10 +145,8 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
 
   return (
     <div className="space-y-8">
-      <AccountPageHeader
-        title={m.title}
-        description={m.description}
-      />
+      <AccountPageHeader title={pm.title} description={pm.description} />
+      <PaymentsTabs active="schedule" locale={locale} />
 
       {scheduleEmpty ? (
         <EmptyState
@@ -212,32 +204,14 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
               }
             />
           ) : (
-            <div className="space-y-4">
-              {installments.map((inst) => (
-                <InstallmentCard key={inst.id} installment={inst} m={m} locale={locale} />
-              ))}
-            </div>
+            <>
+              {/* What is due now (overdue, or due within 30 days) — or else the next one. */}
+              {!activeStatus && <DueNow installments={installments} m={m} locale={locale} />}
+              <ScheduleByYear installments={installments} m={m} locale={locale} />
+            </>
           )}
         </>
       )}
-    </div>
-  );
-}
-
-/** Shared data block — label above, content below, hairline separator on start edge at md+. */
-function Block({
-  label,
-  separator,
-  children,
-}: {
-  label: string;
-  separator?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={cn('min-w-0', separator && 'md:border-s md:border-hairline/70 md:ps-6')}>
-      <div className="mb-1 text-xs font-medium tracking-wide text-ink-muted">{label}</div>
-      {children}
     </div>
   );
 }
@@ -336,126 +310,143 @@ function SummaryStrip({ summary, m, symbol, locale }: { summary: NonNullable<MeI
   );
 }
 
-/** Single installment — mirrors the ReservationCard layout. */
-function InstallmentCard({ installment, m, locale }: { installment: MeInstallment; m: InstallmentsMessages; locale: Locale }) {
-  const contract = installment.plan?.contract ?? null;
-  const project = contract?.unit?.building?.phase?.project ?? null;
-  const projectName = project ? pickAr(project.name, '', locale) : '';
-  const unitLabel = contract?.unit
-    ? `${unitTypeLabel(contract.unit.type, null, locale)} · ${contract.unit.code}`
-    : '';
-  const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
-  const label = accountT(locale).installmentStatus[installment.status] ?? installment.status;
-  const tone = STATUS_TONES[installment.status] ?? 'muted';
-  const Icon = statusIcon(installment.status);
-  // Not while a proof or cheque waits on it: the API refuses a second one.
-  const waiting = installment.status !== 'PAID' && !!installment.paymentOnItsWay;
-  const canSubmit = installment.status !== 'PAID' && !waiting;
-  // A row reopened by a reversal keeps its old paid date: shown only when paid.
-  const paidOn = installment.status === 'PAID' ? installment.paidAt : null;
-  const accent: AccountCardAccent =
-    installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'error' : 'gold';
+const DAY = 24 * 60 * 60 * 1000;
+/** Whole days from today (UTC) to the due date; negative when it is past. */
+function daysUntil(iso: string): number {
+  const today = new Date();
+  const t = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return Math.round((new Date(iso.slice(0, 10) + 'T00:00:00Z').getTime() - t) / DAY);
+}
 
+/** A row the customer may send a proof for now: unpaid and nothing waiting on it. */
+function canSubmitProof(i: MeInstallment): boolean {
+  return i.status !== 'PAID' && !i.paymentOnItsWay;
+}
+
+function proofHref(i: MeInstallment): Route {
+  return {
+    pathname: routes.accountDeposits,
+    query: { submit: 'proof', installmentId: i.id, amount: i.amount },
+  } as unknown as Route;
+}
+
+function rowTitle(i: MeInstallment, m: InstallmentsMessages, locale: Locale): string {
+  return `${m.typeLabels[i.type] ?? m.installmentLabel} ${fmtMonthYear(i.dueDate, locale)}`;
+}
+
+/**
+ * The top of the page: what the customer owes now — overdue rows and those
+ * due within 30 days — each with its proof button. With none, the next row
+ * to fall due. Proof buttons live here only, not on rows years away.
+ */
+function DueNow({ installments, m, locale }: { installments: MeInstallment[]; m: InstallmentsMessages; locale: Locale }) {
+  const unpaid = installments.filter((i) => i.status !== 'PAID').sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const now = unpaid.filter((i) => i.status === 'OVERDUE' || daysUntil(i.dueDate) <= 30);
+  const rows = now.length > 0 ? now : unpaid.slice(0, 1);
+  if (rows.length === 0) return null;
   return (
-    <AccountCard accent={accent} className="p-5 sm:p-6">
-      {/* ── Header: icon + title/subtitle + status badge ── */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <AccountCardIcon>
-            <Icon className="h-5 w-5" aria-hidden />
-          </AccountCardIcon>
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              {m.typeLabels[installment.type] ?? m.installmentLabel} {fmtMonthYear(installment.dueDate, locale)}
-            </h3>
-            {subtitle && (
-              <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
-                {contract?.unit ? (
-                  <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+    <section className="mt-6" data-testid="installments-due-now">
+      <h2 className="mb-3 text-base font-bold text-ink-strong">{now.length > 0 ? m.dueNowTitle : m.nextUpTitle}</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        {rows.map((i) => {
+          const days = daysUntil(i.dueDate);
+          const late = i.status === 'OVERDUE' || days < 0;
+          return (
+            <AccountCard key={i.id} accent={late ? 'error' : 'gold'} className="flex flex-col gap-4 p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-strong">{rowTitle(i, m, locale)}</p>
+                  <p className="mt-0.5 text-xs text-ink-muted" dir="auto">{formatDateShort(i.dueDate, locale)}</p>
+                </div>
+                <span className={cn('inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold', late ? STATUS_TONE_CLS.error : STATUS_TONE_CLS.accent)}>
+                  {late ? m.lateBy(Math.abs(days)) : m.dueIn(days)}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <p className="font-display text-2xl font-black tracking-tight text-ink-strong" dir="auto">
+                  <Price value={i.amount} />
+                </p>
+                {canSubmitProof(i) ? (
+                  <Link
+                    href={proofHref(i)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-navy/90 active:scale-95"
+                  >
+                    <Upload className="h-3.5 w-3.5" aria-hidden />
+                    {m.submitProof}
+                  </Link>
                 ) : (
-                  <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-600" data-testid="installment-proof-waiting">
+                    <Clock className="h-3.5 w-3.5" aria-hidden />
+                    {m.proofWaiting}
+                  </span>
                 )}
-                <span className="line-clamp-1">{subtitle}</span>
-              </p>
-            )}
-          </div>
-        </div>
-        <span
-          className={cn(
-            'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium',
-            STATUS_TONE_CLS[tone],
-          )}
-        >
-          {label}
-        </span>
+              </div>
+            </AccountCard>
+          );
+        })}
       </div>
+    </section>
+  );
+}
 
-      {/* ── Three balanced data blocks ── */}
-      <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
-        <Block label={m.amountCol}>
-          <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            <Price value={installment.amount} />
-          </div>
-        </Block>
-        <Block label={m.dateCol} separator>
-          <div className="text-sm font-semibold text-ink-strong" dir="auto">
-            {formatDateShort(installment.dueDate, locale)}
-          </div>
-        </Block>
-        <Block label={paidOn ? m.paidDateCol : m.statusCol} separator>
-          {paidOn ? (
-            <div className="text-sm font-semibold text-ink-strong" dir="auto">
-              {formatDateShort(paidOn, locale)}
-            </div>
-          ) : (
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                STATUS_TONE_CLS[tone],
-              )}
+/**
+ * The whole schedule as a compact table, one block per year: this year (and
+ * any year with a late row) open, the others folded with what was paid.
+ */
+function ScheduleByYear({ installments, m, locale }: { installments: MeInstallment[]; m: InstallmentsMessages; locale: Locale }) {
+  const thisYear = new Date().getUTCFullYear();
+  const years = new Map<number, MeInstallment[]>();
+  for (const i of [...installments].sort((a, b) => a.dueDate.localeCompare(b.dueDate))) {
+    const y = Number(i.dueDate.slice(0, 4));
+    years.set(y, [...(years.get(y) ?? []), i]);
+  }
+  return (
+    <section className="mt-8" data-testid="installments-schedule">
+      <h2 className="mb-3 text-base font-bold text-ink-strong">{m.scheduleTitle}</h2>
+      <div className="space-y-3">
+        {[...years].map(([year, rows]) => {
+          const paid = rows.filter((r) => r.status === 'PAID').length;
+          const anyLate = rows.some((r) => r.status === 'OVERDUE');
+          const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+          return (
+            <details
+              key={year}
+              open={year === thisYear || anyLate || years.size === 1}
+              className="group overflow-hidden rounded-2xl border border-hairline bg-surface"
             >
-              {label}
-            </span>
-          )}
-        </Block>
+              <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4 hover:bg-surface-soft/60">
+                <span className="font-display text-lg font-bold text-ink-strong">{year}</span>
+                <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-semibold', anyLate ? STATUS_TONE_CLS.error : paid === rows.length ? STATUS_TONE_CLS.success : STATUS_TONE_CLS.muted)}>
+                  {m.yearSummary(paid, rows.length)}
+                </span>
+                <span className="ms-auto text-sm font-semibold text-ink-muted" dir="auto">
+                  <Price value={total} />
+                </span>
+                <span className="text-ink-muted transition-transform group-open:rotate-180" aria-hidden>▾</span>
+              </summary>
+              <ul className="divide-y divide-hairline border-t border-hairline">
+                {rows.map((i) => {
+                  const tone = STATUS_TONES[i.status] ?? 'muted';
+                  const label = accountT(locale).installmentStatus[i.status] ?? i.status;
+                  return (
+                    <li key={i.id} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-5 py-3 text-sm sm:grid-cols-[1.4fr_1fr_1fr_auto]">
+                      <span className="font-medium text-ink-strong">
+                        {fmtMonthYear(i.dueDate, locale)}
+                        <span className="ms-2 text-xs font-normal text-ink-muted" dir="auto">{formatDateShort(i.dueDate, locale)}</span>
+                      </span>
+                      <span className="order-3 text-xs text-ink-muted sm:order-none">{m.typeLabels[i.type] ?? m.installmentLabel}</span>
+                      <span className="text-end font-semibold text-ink-strong sm:text-start" dir="auto"><Price value={i.amount} /></span>
+                      <span className={cn('order-4 justify-self-end rounded-full px-2.5 py-0.5 text-xs font-medium sm:order-none', STATUS_TONE_CLS[tone])}>
+                        {i.status === 'PAID' && i.paidAt ? `${label} · ${formatDateShort(i.paidAt, locale)}` : i.paymentOnItsWay ? m.proofWaiting : label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          );
+        })}
       </div>
-
-      {/* ── Footer: action or paid confirmation ── */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
-        {canSubmit ? (
-          <Link
-            href={
-              {
-                pathname: routes.accountDeposits,
-                query: {
-                  submit: 'proof',
-                  installmentId: installment.id,
-                  amount: installment.amount,
-                },
-              } as unknown as Route
-            }
-            className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-navy/90 active:scale-95"
-          >
-            <Upload className="h-3.5 w-3.5" aria-hidden />
-            {m.submitProof}
-          </Link>
-        ) : waiting ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold-600" data-testid="installment-proof-waiting">
-            <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-            {m.proofWaiting}
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
-            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-            {m.verifiedStatus}
-          </span>
-        )}
-        {contract?.contractNumber && (
-          <span className="rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] font-medium text-ink-muted">
-            {contract.contractNumber}
-          </span>
-        )}
-      </div>
-    </AccountCard>
+    </section>
   );
 }
