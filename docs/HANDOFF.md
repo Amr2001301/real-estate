@@ -1,7 +1,41 @@
-# Handoff — where the work stands (2026-11-08, after #372)
+# Handoff — where the work stands (2026-11-12, after #396)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
+
+---
+
+## ملخص سريع — التصميم الجديد للموقع وحساب العميل (9–12 نوفمبر، #373–#396، كله مدموج)
+
+**ابدأ من هنا:** بعد فحص الجودة (تحت) اتعمل تصميم جديد للموقع العام كله، وحساب العميل اتعمل من جديد، وفيه حاجتين جداد: «قيمة وحدتك» وخطط الدفعات الكبيرة. التفاصيل في القسم **2r**.
+
+- **الموقع:** كل الصفحات بالتصميم الجديد. اتعملوا بالترتيب ده:
+  - الرئيسية، والمشاريع والوحدات وصفحة كل واحد فيهم
+  - المقارنة، وتواصل معنا، والدخول والتسجيل
+  - صفحات المحتوى والمقالات، والفوتر
+  - الحساب
+- **ألوان كل شركة:** الموقع بيمشي على ألوان الشركة.
+  - الوضع الليلي لونه فحمي ثابت لكل الشركات.
+  - الموقع بيتكلم باسم الشركة، ومفيش اسم المنصة.
+  - الشركة اللي ما اختارتش ألوان بتاخد ألوان الداشبورد: كحلي `#0E1626` وذهبي `#C8A24B`.
+- **صفحة المشروع:**
+  - أقسام وأسئلة شائعة خاصة بالمشروع.
+  - مميزات بأيقونات، ونسبة الإنشاءات. المالك بيشوف النسبة في «عقاراتي» في الموقع و«عقاري» في التطبيق، وبيوصله إشعار لما تتحدّث.
+  - أسعار وأنواع الوحدات، وكارت أقساط محسوب من الخطط الحقيقية.
+- **«قيمة وحدتك»:** قيمة وحدة المالك النهاردة بأسعار الشركة الحالية، مقارنة باللي دفعه، ومعاها رسم بياني لسعر المتر.
+  - الشركة هي اللي بتشغّلها من الإعدادات (`unitValue.*`)، وهي مقفولة من الأول.
+  - موجودة في الموقع والتطبيق.
+  - فيه إشعار لما القيمة تزيد: مرة كل 30 يوم بحد أقصى، ولزيادة 1% أو أكتر. النزول عمره ما بيتبعت.
+- **خطط الدفعات الكبيرة (balloon):** قسط شهري صغير، ومعاه دفعة كبيرة كل 3 أو 6 أو 12 شهر.
+  - الشركة بتحدد نسبة الدفعات الكبيرة من المبلغ المقسّط.
+  - المدة لازم تتقسم على فترات كاملة.
+- **حساب العميل:**
+  - القائمة بتبدأ بحاجات المالك: عقاري، المدفوعات، العقود، الصيانة. البحث والحجز في مجموعة لوحدها.
+  - «المدفوعات» صفحة واحدة بتابين: جدول الأقساط والدفعات المسجّلة.
+  - البانر في لوحة الحساب بس.
+- **الخطوة الجاية (مقترحة):**
+  - ألوان تطبيقات الموبايل الافتراضية لسه الكحلي القديم `#0F1E33`. المفروض تبقى `#0E1626` زي الموقع، وتتبعت صور قبل/بعد الأول.
+  - بعدها التثبيت قبل الإطلاق (P0) وقرارات النشر (REL1)، في القسم 5.
 
 ---
 
@@ -750,6 +784,33 @@ The owner asked for the customer app to look like the staff app. The method: sha
 
 **Still open or the owner's:** F-023 (accepted, Low); real devices, real storage, push and e-mail (cannot be done from the cloud); the production deploy and the owner tasks in section 5.
 
+### 2r. #373–#396 (2026-11-09 → 2026-11-12) — QA fixes, the new website design, project pages, unit value, balloon plans, the customer account
+
+| Theme | PRs |
+|---|---|
+| QA third cycle | #373, #376 (docs), #374 (F-078: visit numbers unique per company), #375 (F-079: reservation notices name the customer) |
+| Theme | #377 (dark mode = fixed neutral charcoal for every company, site and customer app), #378 (site speaks as the company, no platform name) |
+| New website design | #379 home, #380 projects + units lists and unit card, #381 unit + project detail, #382 compare + contact, #383 auth pages, #384 content pages + account home, #386 footer (slim on task pages), #392 tighter project/unit pages + articles on home and footer |
+| Project page content | #385 prices, unit mix and instalment card from the real plans; #387 unit plan durations, site session cookies apart from the dashboard's; #388 API + dashboard tabs (sections, own FAQ, amenities with icon + group, construction progress, owners notified); #389 website; #390 customer app |
+| Unit value («قيمة وحدتك») | #391 API (`UnitPriceRate` per project / unit type, settings `unitValue.enabled` / `showDecrease` / `notifyRise`, off by default) + website card; #393 customer-app card + rise notice (`UnitValueRiseCron`, template `unit_value_rise_customer`) |
+| Balloon plans | #394 template `balloonSharePct` + `balloonEveryMonths` (3/6/12), reservation snapshot, contract `InstallmentPlan.balloonAmount` / `balloonEveryMonths`; maths in `duration-calc.ts` (`splitFinanced`, `financedRows`, `balloonOf`, `balloonProblem`); e2e `e2e-bp3-balloon-plan` |
+| Customer account | #395 owner-first menu, one «المدفوعات» page (tabs: schedule / recorded payments), due-now + schedule by year; #396 welcome band on the dashboard only (`AccountFrame`), owners see a unit-value summary there; default navy = the admin dashboard navy `#0E1626` |
+
+**Migrations added (run on production with `pnpm db:deploy`, then `pnpm db:schema-check`):** `20261109190000_visit_numbers_per_company`, `20261111120000_project_page_details`, `20261111150000_unit_price_rates`, `20261112090000_balloon_plans`.
+
+**API env added:** `UNIT_VALUE_ALERTS_ENABLED` (on in production unless `false`; elsewhere only when `true`), `UNIT_VALUE_RISE_CRON` (default `0 10 * * *`, UTC).
+
+**Rules learned (apply them):**
+- Design changes: send the owner before/after screenshots (desktop and phone) first; build and merge only on approval. Merge only on «ادمج».
+- Instalment figures shown to customers come from the real plan, never estimated; never invent customer-facing data.
+- Website colours: a company's `primaryColor` / `accentColor` go through `brandThemeVars()` (`apps/web-public/src/lib/branding.ts`), which rewrites the `--c-navy*` / `--c-gold-*` scales; the defaults are in `globals.css`. Branding is cached (Redis + Next revalidate): to preview a colour change locally, `redis-cli FLUSHALL` and load the page a few times before the screenshot.
+- Pages without a hero must clear the fixed site header (`pt-24 sm:pt-28`).
+- Flutter RTL: wrap a signed number in `\u2066…\u2069` so the sign stays with it; give chart labels an explicit `textDirection`.
+- A cron in `UnitsModule` looks `NotificationsService` up lazily through `ModuleRef` (importing `NotificationsModule` broke the unit tests).
+- Time-of-day tests: clamp test timestamps to the Cairo day (MC3 failed near Cairo midnight).
+
+**Local servers used for screenshots:** API on :4200 and the site on :3002 (the container restarts often, so start them again). Demo customer `client1@demo-full.devora` (password inline only). Web admin: `env -u DATABASE_URL API_BASE_URL=http://localhost:4200 npx next dev -p 3001` from `apps/web-admin`.
+
 ---
 
 ## 3. Round 4 — the plan (U1–U4 done; U5 in progress)
@@ -1039,4 +1100,6 @@ Left for the owner, not in V1–V3:
   - Production deploy of everything since 2026-09-18 (#114–#240): take a backup first, run the migrations of 2b, 2c, 2d and 2g, then `pnpm db:schema-check`; then Actions → "CD — Deploy to Production".
   - API env on the server: `PUBLIC_API_URL`, `ANTHROPIC_API_KEY`, `SUPER_ADMIN_*`, `TOTP_ENCRYPTION_KEY` (before anyone turns two-step sign-in on).
   - Campaigns go-live: check the company's website domain is set (ad links use it), connect a Zapier or Make account for Meta lead forms, then run a small test campaign and check its leads arrive.
+- **Next (proposed, 2026-11-12):** mobile apps' default navy `#0F1E33` → `#0E1626` (the dashboard and site navy), with before/after screenshots first; then P0 (maintenance e2e, two-tenant test, staging QA, device test, production hosting) and REL1 (app name, applicationId, signing key, Firebase files, real-device run); P7 white-label apps.
+- **Production deploy:** also run the migrations of 2r.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
