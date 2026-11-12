@@ -5,7 +5,7 @@
  *   MC-1  Every model in MODEL_TENANCY has a valid tier string.
  *   MC-2  The count of TENANT_OWNED models matches the audit-documented 46.
  *   MC-3  Specific representative models land in their documented tiers.
- *   MC-4  TENANT_OWNED model counts: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=3,
+ *   MC-4  TENANT_OWNED model counts: PLATFORM_GLOBAL=3, TENANT_CONTROLLED=5,
  *          TENANT_VIA_RELATION≥7.
  *   MC-5  Middleware fails CLOSED: calling PrismaService.lead.findMany() outside
  *          any ALS context throws MissingTenantContextError (not silently unscoped).
@@ -45,6 +45,9 @@ const EXPECTED_CLASSIFICATIONS: [string, ModelTenancyTier][] = [
   ['CompanyDomain', 'TENANT_CONTROLLED'],
   // FG-26: platform defaults (companyId NULL) + per-company overrides
   ['NotificationTemplate', 'TENANT_CONTROLLED'],
+  // Meta lead webhooks arrive with no tenant context; the Page id finds the company first.
+  ['MetaConnection', 'TENANT_CONTROLLED'],
+  ['MetaLeadReceipt', 'TENANT_CONTROLLED'],
   // TENANT_VIA_RELATION
   ['RefreshToken', 'TENANT_VIA_RELATION'],
   ['AuthSession', 'TENANT_VIA_RELATION'],
@@ -116,12 +119,12 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   );
 
   // MC-4
-  it('MC-4: PLATFORM_GLOBAL=5 (+ AiPackage, MigrationMapping), TENANT_CONTROLLED=3, TENANT_VIA_RELATION≥7', () => {
+  it('MC-4: PLATFORM_GLOBAL=5 (+ AiPackage, MigrationMapping), TENANT_CONTROLLED=5 (+ MetaConnection, MetaLeadReceipt), TENANT_VIA_RELATION≥7', () => {
     const byTier = (tier: ModelTenancyTier) =>
       Object.values(MODEL_TENANCY).filter((t) => t === tier).length;
 
     expect(byTier('PLATFORM_GLOBAL')).toBe(5);
-    expect(byTier('TENANT_CONTROLLED')).toBe(3);
+    expect(byTier('TENANT_CONTROLLED')).toBe(5);
     expect(byTier('TENANT_VIA_RELATION')).toBeGreaterThanOrEqual(7);
   });
 
