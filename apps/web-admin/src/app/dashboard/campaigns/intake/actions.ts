@@ -46,3 +46,25 @@ export async function deleteIntakeKeyAction(id: string) {
 export async function saveRoutingAction(patch: { autoAssign?: 'ROUND_ROBIN' | 'NONE'; firstCallMinutes?: number }) {
   return run(() => api.put('/lead-intake/settings', patch));
 }
+
+export async function connectMetaAction() {
+  try {
+    const r = await api.post<{ url: string }>('/meta/connect', {});
+    return { ok: true as const, url: r.url };
+  } catch (e) {
+    unstable_rethrow(e);
+    return { ok: false as const, error: (e as Error).message };
+  }
+}
+
+export async function activateMetaPageAction(id: string, route: { campaignId: string | null; projectId: string | null }) {
+  return run(() => api.post(`/meta/connections/${id}/activate`, route));
+}
+
+export async function routeMetaPageAction(id: string, route: { campaignId?: string | null; projectId?: string | null }) {
+  return run(() => api.patch(`/meta/connections/${id}`, route));
+}
+
+export async function disconnectMetaPageAction(id: string) {
+  return run(() => api.delete(`/meta/connections/${id}`));
+}
