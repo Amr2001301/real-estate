@@ -42,8 +42,9 @@ describe('pricing quotation HTML', () => {
     const html = buildPricingQuotationHtml({ ...base, locale: 'en', packages: [pkg('STARTER')] });
     const card = html.slice(html.indexOf('<article'), html.indexOf('</article>'));
     expect(card).toContain('Dashboard');
+    expect(card).not.toContain('Custom website domain'); // the domain goes with the public website
     expect(card).not.toContain('Broker portal'); // STARTER has no brokers
-    expect(card).not.toContain('Custom website domain');
+    expect(card).not.toContain('Advanced reports'); // STARTER has no advanced reports
   });
 
   it('marks unlimited staff for a plan without a seat limit', () => {

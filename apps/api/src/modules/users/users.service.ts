@@ -729,10 +729,12 @@ export class UsersService {
     const companyId = getRequiredCompanyId(); // MT-009
     const user = await this.prisma.user.findFirst({
       where: { id, companyId },
-      select: { id: true, deletedAt: true },
+      select: { id: true, deletedAt: true, role: true },
     });
     if (!user) throw new NotFoundException('User not found');
     if (user.deletedAt === null) throw new BadRequestException('User is not deleted');
+    // A restored staff user takes a seat again, so the plan's limit applies as it does on create.
+    await this.planLimits.checkUserLimit(user.role);
     // Restored as it was before the delete: able to sign in again.
     return this.prisma.user.update({
       where: { id },

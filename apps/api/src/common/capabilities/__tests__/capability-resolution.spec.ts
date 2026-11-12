@@ -126,7 +126,7 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
     expect(effective(view, 'feature.brokers')).toBe(true);
     expect(effective(view, 'feature.advancedReports')).toBe(true);
     expect(effective(view, 'feature.maintenance')).toBe(false);
-    expect(effective(view, 'feature.customDomain')).toBe(false);
+    expect(effective(view, 'feature.customDomain')).toBe(true);
   });
 
   test('ENTERPRISE: unlimited, all features enabled', () => {

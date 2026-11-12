@@ -109,6 +109,7 @@ export interface EffectiveCapabilitiesView {
 }
 
 // ── Plan defaults ─────────────────────────────────────────────────────────────
+// A company's own domain goes with the public website: PROFESSIONAL and up (owner's decision, 2026-11-12).
 // Plans: STARTER 10 staff users, PROFESSIONAL 20, ENTERPRISE unlimited (more than that is a custom override).
 // A plan limits the company's STAFF USERS only (owner's decision, 2026-11-12). The unit and
 // project limits stay in the schema, unlimited on every plan, so a company override can still
@@ -163,7 +164,7 @@ export const PLAN_DEFAULTS: Record<SubscriptionPlan, PlanDefaults> = {
     'feature.brokers':      true,
     'feature.advancedReports': true,
     'feature.maintenance':  false,
-    'feature.customDomain': false,
+    'feature.customDomain': true,
   },
   ENTERPRISE: {
     'limit.maxUnits':       null,
