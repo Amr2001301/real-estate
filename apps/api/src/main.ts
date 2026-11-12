@@ -23,7 +23,7 @@ import { requestIdMiddleware } from './common/logging/request-id.middleware';
 import { isSentryEnabled } from './common/observability/sentry';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   app.useLogger(new JsonLoggerService());
   const config = app.get(ConfigService);
 

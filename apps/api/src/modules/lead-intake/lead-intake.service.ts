@@ -43,13 +43,22 @@ export class LeadIntakeService {
     const key = await this.prisma.leadIntakeKey.findFirst({ where: { companyId, tokenHash: hash(rawKey), active: true } });
     if (!key) throw new UnauthorizedException('Invalid intake key');
 
+    await this.prisma.leadIntakeKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } });
+    return this.ingest({ name: key.name, campaignId: key.campaignId, projectId: key.projectId }, dto);
+  }
+
+  /**
+   * A lead from any automatic source (an intake key, a linked Facebook Page…): the company comes from
+   * the tenant context; `via` names the source and the campaign / project its leads default to.
+   */
+  async ingest(via: { name: string; campaignId?: string | null; projectId?: string | null }, dto: IntakeLeadDto) {
+    const companyId = getRequiredCompanyId();
     const phone = await phoneForWrite(this.prisma, dto.phone, companyId);
     if (!phone) throw new BadRequestException('Invalid phone number');
-    const campaign = (await campaignForUtm(this.prisma, companyId, dto.campaign)) ?? (key.campaignId ? { id: key.campaignId } : null);
+    const campaign = (await campaignForUtm(this.prisma, companyId, dto.campaign)) ?? (via.campaignId ? { id: via.campaignId } : null);
     if (dto.projectId && !(await this.prisma.project.findFirst({ where: { id: dto.projectId, companyId }, select: { id: true } }))) {
       throw new BadRequestException('Project not found');
     }
-    await this.prisma.leadIntakeKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } });
 
     const existing = await this.prisma.lead.findFirst({
       where: { companyId, phone, stage: { notIn: [LeadStage.WON, LeadStage.LOST] } },
@@ -57,7 +66,7 @@ export class LeadIntakeService {
     });
     if (existing) {
       await this.prisma.leadActivity.create({
-        data: { leadId: existing.id, type: 'returned', payload: { via: key.name, campaignId: campaign?.id ?? null, message: dto.message ?? null } },
+        data: { leadId: existing.id, type: 'returned', payload: { via: via.name, campaignId: campaign?.id ?? null, message: dto.message ?? null } },
       });
       // First touch stays: a returning lead only gains a campaign it had none of.
       if (!existing.campaignId && campaign) {
@@ -77,10 +86,10 @@ export class LeadIntakeService {
       fullName: dto.name.trim(),
       phone,
       email: dto.email,
-      projectInterestId: dto.projectId ?? key.projectId ?? undefined,
+      projectInterestId: dto.projectId ?? via.projectId ?? undefined,
       campaignId: campaign?.id,
       assignedSalesId: assignee ?? undefined,
-      notes: dto.message?.trim() ? `رسالة العميل (${key.name}): ${dto.message.trim()}` : undefined,
+      notes: dto.message?.trim() ? `رسالة العميل (${via.name}): ${dto.message.trim()}` : undefined,
       // A returning customer was handled above (by the lead's phone); this
       // path keeps adding as before, and DUP2's question is for people.
       allowDuplicate: true,

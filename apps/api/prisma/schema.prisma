@@ -171,6 +171,7 @@ model Company {
 
   @@index([slug])
   @@index([isActive])
+  metaConnections MetaConnection[]
 }
 
 // =============================================================================
@@ -492,6 +493,43 @@ model AiLedgerEntry {
   createdAt   DateTime   @default(now())
 
   @@index([companyId, createdAt])
+}
+
+/// A Facebook Page a company has linked so its Lead Ads leads arrive on their own (Instagram
+/// lead ads run through the Page too). The Page token is stored encrypted; a Page belongs to one
+/// company at a time, so `pageId` is unique. PENDING until the admin picks it, then ACTIVE.
+model MetaConnection {
+  id            String    @id @default(uuid()) @db.Uuid
+  companyId     String    @db.Uuid
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pageId        String    @unique @db.VarChar(64)
+  pageName      String    @db.VarChar(200)
+  /// AES-256-GCM of the Page access token (see common/security/secret-box.ts)
+  tokenEnc      String
+  /// PENDING | ACTIVE
+  status        String    @default("PENDING") @db.VarChar(10)
+  /// Leads from this Page are filed under this campaign / project
+  campaignId    String?   @db.Uuid
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  projectId     String?   @db.Uuid
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  connectedById String?   @db.Uuid
+  lastLeadAt    DateTime?
+  leadCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([companyId])
+}
+
+/// Meta may deliver the same lead more than once; this remembers the ones already taken.
+model MetaLeadReceipt {
+  leadgenId String   @id @db.VarChar(64)
+  companyId String   @db.Uuid
+  leadId    String?  @db.Uuid
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
 }
 
 model CompanyDomain {
@@ -980,6 +1018,7 @@ model Project {
   @@index([city])
   @@index([status, featured])
   @@index([companyId])
+  metaConnections MetaConnection[]
 }
 
 model ProjectMedia {
@@ -1296,6 +1335,7 @@ model Campaign {
 
   @@unique([companyId, code])
   @@index([companyId])
+  metaConnections MetaConnection[]
 }
 
 /// A secret key a lead source posts new leads with (Zapier / Make, Google

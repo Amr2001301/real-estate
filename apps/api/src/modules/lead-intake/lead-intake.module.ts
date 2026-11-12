@@ -8,5 +8,6 @@ import { LeadIntakeService } from './lead-intake.service';
   imports: [LeadsModule, NotificationsModule],
   controllers: [LeadIntakeController],
   providers: [LeadIntakeService],
+  exports: [LeadIntakeService],
 })
 export class LeadIntakeModule {}

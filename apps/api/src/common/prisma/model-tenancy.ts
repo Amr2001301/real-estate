@@ -87,6 +87,10 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   // MT-044: CompanyDomain queried before tenant context exists (DomainResolverService).
   // Writes always enforce explicit ownership: req.user.companyId === companyId.
   CompanyDomain: 'TENANT_CONTROLLED',
+  // Meta lead webhooks arrive with no tenant context: the Page id finds the company first, so
+  // these two are read by page / lead-gen id and carry an explicit companyId on every write.
+  MetaConnection: 'TENANT_CONTROLLED',
+  MetaLeadReceipt: 'TENANT_CONTROLLED',
 
   // ── TENANT_VIA_RELATION ────────────────────────────────────────────────────
   // No companyId column. Scoped through a parent FK. No auto-injection.
