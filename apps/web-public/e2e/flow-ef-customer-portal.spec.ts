@@ -54,7 +54,8 @@ test.describe('Phase 7D + 7E — customer portal sees the seeded contract / depo
     // ── /account/deposits ────────────────────────────────────────────────
     await page.goto('/account/deposits');
     await expect(
-      page.getByRole('heading', { name: 'الدفعات', level: 1 }),
+      // «الدفعات» is now the «الدفعات المسجّلة» tab of «المدفوعات».
+      page.getByRole('heading', { name: 'المدفوعات', level: 1 }),
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/لا توجد دفعات/)).toHaveCount(0);
     await expect(
