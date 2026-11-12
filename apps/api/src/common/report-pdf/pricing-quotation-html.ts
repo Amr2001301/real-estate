@@ -96,6 +96,9 @@ const T = {
       'يمكن ترقية الباقة في أي وقت، ويُحتسب الفرق عن المدة المتبقية.',
       'تحتفظ الشركة بحقها في تعديل الأسعار بإشعار مسبق.',
     ],
+    customTitle: 'تحتاج أكثر من ذلك؟ نخصّص باقتك',
+    custom:
+      'لو فريقك أكبر من الباقات المعروضة، أو تحتاج مميزات إضافية، نصمّم لك باقة مخصصة بعدد الموظفين والمميزات التي تناسب حجم أعمالك، بسعر واضح يتناسب مع احتياجك. تواصل معنا وسنرسل لك عرضاً مفصّلاً.',
     thanks: 'نشكركم على اهتمامكم، ويسعدنا خدمتكم.',
     authorized: 'اعتماد',
     sign: 'التوقيع والختم',
@@ -150,6 +153,9 @@ const T = {
       'You can upgrade your plan at any time; the difference is charged for the remaining period.',
       'We may revise prices with prior notice.',
     ],
+    customTitle: 'Need more? We tailor your plan',
+    custom:
+      'If your team is larger than the plans above, or you need extra features, we will build a custom plan around the number of staff users and the features you need, at a clear price that matches your requirements. Get in touch and we will send you a detailed offer.',
     thanks: 'Thank you for your interest. We look forward to working with you.',
     authorized: 'Authorised by',
     sign: 'Signature & stamp',
@@ -212,7 +218,8 @@ function offerOf(p: QuotePackage, locale: QuoteLocale): { title: string; pct: nu
 export function buildPricingQuotationHtml(input: QuoteInput): string {
   const { locale } = input;
   const t = T[locale];
-  const packages = input.packages;
+  // CUSTOM is not a card: it is the "need more? we tailor it" panel below the plans.
+  const packages = input.packages.filter((p) => p.planTier !== 'CUSTOM');
   const validUntil = new Date(input.issuedAt.getTime() + input.validDays * 86_400_000);
   const mark = logo();
   const featured = packages.some((p) => p.planTier === 'PROFESSIONAL')
@@ -326,6 +333,10 @@ body { font-family:'ReportArabic','Noto Sans Arabic','Segoe UI',Tahoma,sans-seri
 .plan li { display:flex; gap:7px; align-items:flex-start; padding:3px 0; font-size:10.5px; border-top:1px dashed #eee9dc; }
 .plan li:first-child { border-top:0; }
 .plan li svg { flex:none; margin-top:2px; }
+.custombox { margin-top:16px; border:1.5px dashed var(--gold); background:#fffdf6; border-radius:14px; padding:14px 18px; break-inside:avoid; }
+.custom-t { font-weight:800; font-size:13.5px; color:var(--navy); }
+.custombox p { margin:4px 0 0; color:#475569; font-size:11px; }
+.custom-c { margin-top:6px; font-weight:700; color:var(--gold-d); font-size:11px; }
 .seatsnote { margin:8px 4px 0; font-size:9.5px; color:var(--muted); }
 .page2 { break-before:page; padding-top:6mm; }
 .sec-title { font-size:15px; margin:0 0 10px; color:var(--navy); display:flex; align-items:center; gap:8px; }
@@ -369,6 +380,11 @@ table.cmp td.c svg { vertical-align:middle; }
 </section>
 <section class="plans">${cards}</section>
 <p class="seatsnote">${esc(t.seatsHint)}</p>
+<section class="custombox">
+  <div class="custom-t">${esc(t.customTitle)}</div>
+  <p>${esc(t.custom)}</p>
+  ${contact ? `<div class="custom-c">${contact}</div>` : ''}
+</section>
 
 <section class="page2">
   <h2 class="sec-title">${esc(t.compareTitle)}</h2>

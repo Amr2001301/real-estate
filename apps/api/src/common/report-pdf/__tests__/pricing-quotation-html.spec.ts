@@ -33,7 +33,7 @@ describe('pricing quotation HTML', () => {
     expect(html).toContain('85,000');
     expect(html).toContain('per year');
     expect(html).not.toContain('per month'); // sold as an annual subscription, not monthly
-    expect(html).toContain('Up to 15 staff users'); // STARTER default seats
+    expect(html).toContain('Up to 10 staff users'); // STARTER default seats
     expect(html).toContain('Up to 50 staff users');
     expect(html).toContain('Q-20261112-TEST');
   });
@@ -66,9 +66,19 @@ describe('pricing quotation HTML', () => {
     const html = buildPricingQuotationHtml({
       ...base,
       locale: 'en',
-      packages: [pkg('CUSTOM', { monthlyPrice: null, annualPrice: null })],
+      packages: [pkg('PROFESSIONAL', { monthlyPrice: null, annualPrice: null })],
     });
     expect(html).toContain('Contact us for pricing');
+  });
+
+  it('shows the custom-plan message and never a card for the CUSTOM tier', () => {
+    const html = buildPricingQuotationHtml({
+      ...base,
+      locale: 'en',
+      packages: [pkg('STARTER'), pkg('CUSTOM', { nameEn: 'Tailored' })],
+    });
+    expect(html).toContain('Need more? We tailor your plan');
+    expect(html).not.toContain('Tailored');
   });
 
   it('drops an expired special offer', () => {

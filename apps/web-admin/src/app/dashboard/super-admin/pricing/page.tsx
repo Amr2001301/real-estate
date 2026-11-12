@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/form/field';
+import { PricingCalculator } from './_calculator';
 import {
   PremiumPageHero, PremiumSectionCard, PremiumCommandPanel,
 } from '@/components/premium';
@@ -118,6 +119,7 @@ export default function PricingPage() {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-5 items-start">
         {/* Package list */}
         <div className="xl:col-span-3 space-y-4">
+          {!loading && packages.length > 0 && <PricingCalculator packages={packages} locale={locale} m={m} />}
           {loading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
