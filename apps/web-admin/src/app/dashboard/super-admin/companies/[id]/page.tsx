@@ -160,7 +160,7 @@ export default function CompanyDetailPage() {
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-[11px] font-semibold">
               <Users className="h-3 w-3" />
-              {company.staffCount}{company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}
+              <span dir="ltr">{company.staffCount}{company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}</span>
             </span>
           </>
         }
@@ -243,8 +243,8 @@ export default function CompanyDetailPage() {
                   </Field>
                   <Field label={m.detail.fields.usersCount}>
                     <span className="text-[13px] tabular-nums text-slate-700">
-                      {company.staffCount}
-                      {company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}
+                      <span dir="ltr">{company.staffCount}
+                      {company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}</span>
                     </span>
                   </Field>
                   <Field label={m.detail.fields.createdAt}>
