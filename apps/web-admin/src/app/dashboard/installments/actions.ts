@@ -259,6 +259,10 @@ function projectPlanPayload(formData: FormData): Record<string, unknown> {
           startDateRule: str('startDateRule') || 'AFTER_RESERVATION',
           manualStartDate: date('manualStartDate'),
           durationOptions,
+          // Balloon plan: both or neither (null clears them on edit).
+          ...(str('paymentShape') === 'BALLOON'
+            ? { balloonSharePct: num('balloonSharePct') ?? null, balloonEveryMonths: num('balloonEveryMonths') ?? null }
+            : { balloonSharePct: null, balloonEveryMonths: null }),
         }),
     status: str('status') || 'DRAFT',
     visibility: str('visibility') || 'SALES_ONLY',

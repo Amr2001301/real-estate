@@ -630,7 +630,11 @@ String? cheapestInstallmentLine(AppLocalizations l10n, String lang, List<Install
     if (o != null && (best == null || InstallmentOffer.monthlyEquivalent(o) < InstallmentOffer.monthlyEquivalent(best))) best = o;
   }
   if (best == null) return null;
-  return l10n.detailOrFrom(PriceFormatter.format(best.amount.round(), languageCode: lang), best.period.every(l10n));
+  final line = l10n.detailOrFrom(PriceFormatter.format(best.amount.round(), languageCode: lang), best.period.every(l10n));
+  // A balloon plan's small monthly amount never reads as the whole instalment.
+  return best.hasBalloon
+      ? '$line + ${PriceFormatter.format(best.balloonAmount.round(), languageCode: lang)} ${l10n.planBalloonEvery(best.balloonEveryMonths)}'
+      : line;
 }
 
 /// A plan as a table: booking, down payment, the instalments of its longest
@@ -652,6 +656,8 @@ class AppPaymentPlanTable extends StatelessWidget {
       if (offer.booking > 0) (l10n.detailRowBooking, money(offer.booking)),
       if (offer.downPayment > 0) (offer.isCash ? l10n.detailCashPayment : l10n.detailRowDownPayment, money(offer.downPayment)),
       if (o != null) (l10n.detailRowInstallments(o.count), '${money(o.amount)} ${o.period.every(l10n)}'),
+      if (o != null && o.hasBalloon)
+        (l10n.planBalloonRow(o.balloonEveryMonths, o.durationMonths ~/ o.balloonEveryMonths), money(o.balloonAmount)),
       if (offer.finalPayment > 0) (l10n.detailRowFinal, money(offer.finalPayment)),
     ];
     final total = o?.totalPayable ?? offer.netPrice;
@@ -861,6 +867,12 @@ class _CalculatorSheetState extends State<_CalculatorSheet> {
                       style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
                     ),
                   ),
+                  if (option.hasBalloon)
+                    Text(
+                      '+ ${money(option.balloonAmount)} ${l10n.planBalloonEvery(option.balloonEveryMonths)}',
+                      key: const Key('calc-balloon'),
+                      style: theme.textTheme.titleMedium?.copyWith(color: const Color(0xFFE6C46A), fontWeight: FontWeight.w800),
+                    ),
                   const SizedBox(height: AppSpacing.sm),
                   Container(height: 1, color: Colors.white.withValues(alpha: 0.14)),
                   const SizedBox(height: AppSpacing.sm),

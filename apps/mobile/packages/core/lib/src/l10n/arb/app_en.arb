@@ -3182,5 +3182,9 @@
   "unitValueSince": "since you bought on {date}",
   "@unitValueSince": { "placeholders": { "date": { "type": "String" } } },
   "unitValueChart": "Price per m² from purchase to today",
-  "unitValueNote": "An estimate from the company's current prices for similar units in the same project — not an offer or an official valuation."
+  "unitValueNote": "An estimate from the company's current prices for similar units in the same project — not an offer or an official valuation.",
+  "planBalloonEvery": "every {n} months",
+  "@planBalloonEvery": { "placeholders": { "n": { "type": "int" } } },
+  "planBalloonRow": "Payment every {n} months ({count})",
+  "@planBalloonRow": { "placeholders": { "n": { "type": "int" }, "count": { "type": "int" } } }
 }

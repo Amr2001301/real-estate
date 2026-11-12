@@ -9651,4 +9651,14 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get unitValueNote =>
       'قيمة تقديرية حسب أسعار الشركة الحالية لوحدات مماثلة في نفس المشروع، وليست عرض شراء أو تقييمًا رسميًا.';
+
+  @override
+  String planBalloonEvery(int n) {
+    return 'كل $n شهور';
+  }
+
+  @override
+  String planBalloonRow(int n, int count) {
+    return 'دفعة كل $n شهور ($count)';
+  }
 }

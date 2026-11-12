@@ -18,7 +18,13 @@ import { siteT } from '@/messages/site';
 import type { Locale } from '@/lib/locale';
 
 /** A unit's public payment terms, worked out on the server (null = no public plan). */
-export type CompareTerms = { downPercent: number; downAmount: number; monthly: number } | null;
+export type CompareTerms = {
+  downPercent: number;
+  downAmount: number;
+  monthly: number;
+  /** Balloon plan: the big payment beside that monthly instalment. */
+  balloon?: { amount: number; everyMonths: number } | null;
+} | null;
 
 interface Row {
   label: string;
@@ -51,7 +57,17 @@ function groups(locale: Locale, terms: Record<string, CompareTerms>): { title: s
         ...(anyTerms
           ? ([
               { label: t.rows.down, value: (u, c) => (term(u) ? `${formatNumber(term(u)!.downPercent, locale)}% · ${formatPrice(term(u)!.downAmount, c, locale)}` : '—'), metric: (u) => term(u)?.downAmount ?? 0, dir: 'min' },
-              { label: t.rows.monthly, value: (u, c) => (term(u)?.monthly ? formatPrice(term(u)!.monthly, c, locale) : '—'), metric: (u) => term(u)?.monthly ?? 0, dir: 'min' },
+              {
+                label: t.rows.monthly,
+                value: (u, c) => {
+                  const tm = term(u);
+                  if (!tm?.monthly) return '—';
+                  const b = tm.balloon;
+                  return b ? `${formatPrice(tm.monthly, c, locale)} + ${formatPrice(b.amount, c, locale)} ${extraT(locale).unitPage.balloonEvery(b.everyMonths)}` : formatPrice(tm.monthly, c, locale);
+                },
+                metric: (u) => term(u)?.monthly ?? 0,
+                dir: 'min',
+              },
             ] as Row[])
           : []),
       ],

@@ -116,6 +116,9 @@ export interface PublicPaymentPlan {
     installmentAmount: number;
     totalPayable: number;
     frequency?: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
+    /** Balloon plan: a big payment every `balloonEveryMonths` months beside the monthly one (0 when none). */
+    balloonAmount?: number;
+    balloonEveryMonths?: number;
   }[];
 }
 

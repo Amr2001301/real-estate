@@ -78,7 +78,7 @@ import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { fallbackBrand } from '../../common/utils/report-brand';
 import { installmentPlanReportHtml, PLAN_TYPE_AR } from './installment-plan-template';
-import { computeDurationOption } from './duration-calc';
+import { balloonOf, balloonProblem, computeDurationOption, type BalloonTerms } from './duration-calc';
 import {
   addTitledTable,
   addFooter,
@@ -189,6 +189,10 @@ class CreatePlanTemplateDto {
   @IsOptional() @IsIn(PLAN_VISIBILITIES) visibility?: PlanVisibility;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
+  /** Balloon plan: share (1–100%) of the financed amount paid in big payments; null / 0 = an ordinary plan. */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsNumber() @Min(0) @Max(100) balloonSharePct?: number | null;
+  /** Balloon plan: months between two big payments (3, 6 or 12). */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsIn([3, 6, 12]) balloonEveryMonths?: number | null;
 }
 
 class UpdatePlanTemplateDto {
@@ -220,6 +224,10 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsIn(PLAN_VISIBILITIES) visibility?: PlanVisibility;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
+  /** Balloon plan: share (1–100%) of the financed amount paid in big payments; null / 0 = an ordinary plan. */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsNumber() @Min(0) @Max(100) balloonSharePct?: number | null;
+  /** Balloon plan: months between two big payments (3, 6 or 12). */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsIn([3, 6, 12]) balloonEveryMonths?: number | null;
 }
 
 /** What a project plan screen sends to see its amounts on real units (nothing is saved). */
@@ -235,6 +243,10 @@ class PreviewPlanDto {
   @IsOptional() @IsNumber() @Min(0) downPaymentValue?: number;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
   durationOptions?: DurationOptionDto[];
+  /** Balloon plan: share (1–100%) of the financed amount paid in big payments; null / 0 = an ordinary plan. */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsNumber() @Min(0) @Max(100) balloonSharePct?: number | null;
+  /** Balloon plan: months between two big payments (3, 6 or 12). */
+  @IsOptional() @ValidateIf((_o, v) => v !== null) @IsIn([3, 6, 12]) balloonEveryMonths?: number | null;
 }
 
 class BulkPlanVisibilityDto {
@@ -251,6 +263,9 @@ class CalculateInstallmentDto {
   @IsInt() @Min(1) @Max(600) durationMonths!: number;
   @IsNumber() @Min(0) increasePercentage!: number;
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
+  /** Balloon plan: share (1–100%) of the financed amount in big payments, and their spacing. */
+  @IsOptional() @IsNumber() @Min(0) @Max(100) balloonSharePct?: number;
+  @IsOptional() @IsIn([3, 6, 12]) balloonEveryMonths?: number;
 }
 
 /** Booking + down payment + final payment must fit in the plan's net price. */
@@ -259,6 +274,31 @@ function assertFinalPaymentFits(reservation: number, down: number, final: number
   if (cents(reservation) + cents(down) + cents(final) > cents(netPrice)) {
     throw new BadRequestException('مبلغ الحجز + الدفعة الأولى + الدفعة الأخيرة تتجاوز صافي السعر');
   }
+}
+
+/**
+ * A plan's balloon terms (big payment every few months) as they will be
+ * stored, checked: both given or neither, never on a cash plan or a plan
+ * priced by instalment count, and every duration must split into whole
+ * periods. `null` for both = an ordinary plan.
+ */
+function resolveBalloonTerms(
+  input: { balloonSharePct?: number | null; balloonEveryMonths?: number | null },
+  plan: { isCash: boolean; durations: number[]; installmentsCount?: number | null },
+): { balloonSharePct: Prisma.Decimal | null; balloonEveryMonths: number | null } {
+  const share = input.balloonSharePct ?? 0;
+  const every = input.balloonEveryMonths ?? 0;
+  if (!share && !every) return { balloonSharePct: null, balloonEveryMonths: null };
+  if (!share || !every) throw new BadRequestException('حدد نسبة الدفعات الكبيرة وكل كام شهر تكون — الاتنين مع بعض');
+  if (plan.isCash) throw new BadRequestException('خطة الكاش ليس لها دفعات كبيرة');
+  if (plan.durations.length === 0 || plan.installmentsCount) {
+    throw new BadRequestException('الدفعات الكبيرة متاحة لخطط المدد فقط (أضف مدة واحدة على الأقل)');
+  }
+  for (const months of plan.durations) {
+    const problem = balloonProblem({ sharePct: share, everyMonths: every }, months);
+    if (problem) throw new BadRequestException(problem);
+  }
+  return { balloonSharePct: new Prisma.Decimal(share), balloonEveryMonths: every };
 }
 
 // ─── Existing contract-based plan service ─────────────────────────────────────
@@ -1037,6 +1077,8 @@ function enrichDurationOptions(
     reservationAmount: Prisma.Decimal | number;
     downPaymentAmount: Prisma.Decimal | number;
     finalPaymentAmount?: Prisma.Decimal | number | null;
+    /** A big payment every few months beside the monthly one. */
+    balloon?: BalloonTerms | null;
   },
 ) {
   const netPrice = Number(context.netPrice);
@@ -1055,6 +1097,7 @@ function enrichDurationOptions(
       durationMonths: o.durationMonths,
       increasePercentage: Number(o.increasePercentage),
       finalPaymentAmount,
+      balloon: context.balloon ?? null,
     }),
   }));
 }
@@ -1091,6 +1134,8 @@ type PublicPlanSource = {
   finalPaymentAmount: Prisma.Decimal | null;
   installmentsCount: number | null;
   frequency: InstallmentFrequency;
+  balloonSharePct?: Prisma.Decimal | null;
+  balloonEveryMonths?: number | null;
   durationOptions: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal; order: number }[];
   scheduleItems: { amount: Prisma.Decimal }[];
 };
@@ -1111,6 +1156,9 @@ export function serializePublicPlan(p: PublicPlanSource) {
     installmentsCount: number;
     installmentAmount: number;
     totalPayable: number;
+    /** Balloon plan: each big payment and the months between them (0 when none). */
+    balloonAmount: number;
+    balloonEveryMonths: number;
   }[] = [];
   if (!p.isCash && p.durationOptions.length > 0) {
     options = enrichDurationOptions(p.durationOptions, {
@@ -1118,12 +1166,15 @@ export function serializePublicPlan(p: PublicPlanSource) {
       reservationAmount,
       downPaymentAmount,
       finalPaymentAmount,
+      balloon: balloonOf(p),
     }).map((o) => ({
       durationMonths: o.durationMonths,
       frequency: InstallmentFrequency.MONTHLY,
       installmentsCount: o.durationMonths,
       installmentAmount: o.calculated.monthlyInstallment,
       totalPayable: o.calculated.totalPayable,
+      balloonAmount: o.calculated.balloonAmount,
+      balloonEveryMonths: o.calculated.balloonEveryMonths,
     }));
   } else if (!p.isCash && p.installmentsCount) {
     const remaining = Math.max(0, netPrice - reservationAmount - downPaymentAmount - finalPaymentAmount);
@@ -1135,6 +1186,8 @@ export function serializePublicPlan(p: PublicPlanSource) {
         installmentsCount: p.installmentsCount,
         installmentAmount: Math.round(amount * 100) / 100,
         totalPayable: netPrice,
+        balloonAmount: 0,
+        balloonEveryMonths: 0,
       },
     ];
   }
@@ -1383,6 +1436,7 @@ export class PlanTemplatesService {
         reservationAmount: plan.reservationAmount,
         downPaymentAmount: plan.downPaymentAmount,
         finalPaymentAmount: plan.finalPaymentAmount,
+        balloon: balloonOf(plan),
       }),
     };
   }
@@ -1487,6 +1541,11 @@ export class PlanTemplatesService {
 
     const useDurationOptions = !!dto.durationOptions && dto.durationOptions.length > 0;
     const durationOptionRows = buildDurationOptionRows(dto.durationOptions);
+    const balloon = resolveBalloonTerms(dto, {
+      isCash,
+      durations: durationOptionRows.map((r) => r.durationMonths),
+      installmentsCount: useDurationOptions ? null : dto.installmentsCount,
+    });
 
     // Duration-option templates are used by Reservations to derive bookingAmount.
     // The reservation flow rejects plans with reservationAmount <= 0, so block this
@@ -1519,6 +1578,7 @@ export class PlanTemplatesService {
           installmentsCount: useDurationOptions || isCash ? null : dto.installmentsCount,
           isCash,
           frequency: dto.frequency,
+          ...balloon,
           startDateRule: dto.startDateRule,
           manualStartDate: dto.manualStartDate ? new Date(dto.manualStartDate) : null,
           finalPaymentAmount: dto.finalPaymentAmount
@@ -1635,6 +1695,7 @@ export class PlanTemplatesService {
     if (!isCash && durationRows.length === 0) {
       throw new BadRequestException('خطة المشروع تحتاج خيار مدة واحدًا على الأقل');
     }
+    const balloon = resolveBalloonTerms(dto, { isCash, durations: durationRows.map((r) => r.durationMonths) });
     // The company's discount cap, on a price of 100.
     await assertDiscountAllowed(this.prisma, {
       companyId: getRequiredCompanyId(),
@@ -1673,6 +1734,7 @@ export class PlanTemplatesService {
           installmentsCount: null,
           isCash,
           frequency: dto.frequency,
+          ...balloon,
           startDateRule: dto.startDateRule,
           manualStartDate: dto.manualStartDate ? new Date(dto.manualStartDate) : null,
           finalPaymentAmount: null,
@@ -1725,6 +1787,13 @@ export class PlanTemplatesService {
     const durationRows = explicit ? buildDurationOptionRows(dto.durationOptions) : [];
     const willHaveDurations = explicit ? durationRows.length > 0 : existing.durationOptions.length > 0;
     if (!isCash && !willHaveDurations) throw new BadRequestException('خطة المشروع تحتاج خيار مدة واحدًا على الأقل');
+    const balloon = resolveBalloonTerms(
+      {
+        balloonSharePct: dto.balloonSharePct !== undefined ? dto.balloonSharePct : existing.balloonSharePct == null ? null : Number(existing.balloonSharePct),
+        balloonEveryMonths: dto.balloonEveryMonths !== undefined ? dto.balloonEveryMonths : existing.balloonEveryMonths,
+      },
+      { isCash, durations: explicit ? durationRows.map((r) => r.durationMonths) : existing.durationOptions.map((o) => o.durationMonths) },
+    );
     if (terms.discValue !== Number(existing.discountValue)) {
       await assertDiscountAllowed(this.prisma, {
         companyId: getRequiredCompanyId(),
@@ -1753,6 +1822,7 @@ export class PlanTemplatesService {
           downPaymentType: terms.dpType,
           downPaymentValue: new Prisma.Decimal(terms.dpValue),
           frequency: dto.frequency ?? existing.frequency,
+          ...balloon,
           startDateRule: dto.startDateRule ?? existing.startDateRule,
           manualStartDate:
             dto.manualStartDate !== undefined
@@ -1816,10 +1886,12 @@ export class PlanTemplatesService {
         downPaymentType: dto.downPaymentType,
         downPaymentValue: dto.downPaymentValue,
       });
+      resolveBalloonTerms(dto, { isCash, durations: (dto.durationOptions ?? []).map((o) => o.durationMonths) });
     } catch (e) {
       if (!(e instanceof BadRequestException)) throw e;
       problem = String((e.getResponse() as { message?: unknown }).message ?? e.message);
     }
+    const balloon = balloonOf({ balloonSharePct: dto.balloonSharePct ?? null, balloonEveryMonths: dto.balloonEveryMonths ?? null });
     const unitWhere = {
       companyId,
       building: { phase: { projectId: dto.projectId } },
@@ -1878,8 +1950,15 @@ export class PlanTemplatesService {
                     downPaymentAmount: Number(m.downPaymentAmount),
                     durationMonths: o.durationMonths,
                     increasePercentage: o.increasePercentage,
+                    balloon,
                   });
-                  return { durationMonths: o.durationMonths, monthly: c.monthlyInstallment, total: c.totalPayable };
+                  return {
+                    durationMonths: o.durationMonths,
+                    monthly: c.monthlyInstallment,
+                    total: c.totalPayable,
+                    balloon: c.balloonAmount,
+                    balloonEveryMonths: c.balloonEveryMonths,
+                  };
                 }),
           };
         });
@@ -1912,11 +1991,14 @@ export class PlanTemplatesService {
         finalPaymentAmount: Number(p.finalPaymentAmount ?? 0),
         installmentsCount: p.installmentsCount,
         frequency: p.frequency,
+        balloonSharePct: p.balloonSharePct == null ? null : Number(p.balloonSharePct),
+        balloonEveryMonths: p.balloonEveryMonths,
         durationOptions: enrichDurationOptions(p.durationOptions, {
           netPrice: p.netPrice,
           reservationAmount: p.reservationAmount,
           downPaymentAmount: p.downPaymentAmount,
           finalPaymentAmount: p.finalPaymentAmount,
+          balloon: balloonOf(p),
         }),
       })),
     };
@@ -2072,6 +2154,17 @@ export class PlanTemplatesService {
         'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة',
       );
     }
+    const balloon = resolveBalloonTerms(
+      {
+        balloonSharePct: dto.balloonSharePct !== undefined ? dto.balloonSharePct : existing.balloonSharePct == null ? null : Number(existing.balloonSharePct),
+        balloonEveryMonths: dto.balloonEveryMonths !== undefined ? dto.balloonEveryMonths : existing.balloonEveryMonths,
+      },
+      {
+        isCash,
+        durations: explicitDurationOptions ? durationOptionRows.map((r) => r.durationMonths) : existing.durationOptions.map((o) => o.durationMonths),
+        installmentsCount: willUseDurationOptions ? null : merged.installmentsCount,
+      },
+    );
 
     const updatedId = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlanTemplate.update({
@@ -2094,6 +2187,7 @@ export class PlanTemplatesService {
           downPaymentAmount: new Prisma.Decimal(dpAmount),
           installmentsCount: willUseDurationOptions ? null : merged.installmentsCount,
           frequency: merged.frequency,
+          ...balloon,
           startDateRule: merged.startDateRule,
           manualStartDate: merged.manualStartDate ? new Date(merged.manualStartDate) : null,
           finalPaymentAmount: merged.finalPaymentAmount
@@ -2796,6 +2890,12 @@ class PlanTemplatesController {
       durationMonths: dto.durationMonths,
       increasePercentage: dto.increasePercentage,
       finalPaymentAmount: dto.finalPaymentAmount,
+      balloon: (() => {
+        const b = balloonOf({ balloonSharePct: dto.balloonSharePct ?? null, balloonEveryMonths: dto.balloonEveryMonths ?? null });
+        const problem = b && balloonProblem(b, dto.durationMonths);
+        if (problem) throw new BadRequestException(problem);
+        return b;
+      })(),
     });
   }
 

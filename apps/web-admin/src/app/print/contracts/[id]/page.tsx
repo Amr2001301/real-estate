@@ -25,6 +25,7 @@ import {
   formatMoney,
   formatNumber,
 } from '@/components/print/PrintDocument';
+import { projectPlansT } from '@/messages/project-plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,6 +188,10 @@ export default async function ContractPrintPage({ params, searchParams }: { para
             plan && { label: m.amounts.frequency, value: m.frequency[plan.frequency] ?? plan.frequency },
             plan && { label: m.amounts.duration, value: t.common.months(plan.totalMonths) },
             plan && { label: m.amounts.periodic, value: money(plan.monthlyAmount) },
+            plan && plan.balloonAmount != null && !!plan.balloonEveryMonths && {
+              label: projectPlansT(locale).colBalloon(plan.balloonEveryMonths),
+              value: money(plan.balloonAmount),
+            },
             plan && { label: m.amounts.firstDue, value: date(plan.startsAt) },
           ]}
         />

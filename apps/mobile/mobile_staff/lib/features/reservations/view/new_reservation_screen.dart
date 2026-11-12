@@ -584,6 +584,10 @@ class _Summary extends StatelessWidget {
         if (from != null) ...[
           const Divider(color: Color(0x1FFFFFFF)),
           row(l10n.rnSumMonthly, '${contractMoney(from.amount)} $currency', total: true),
+          if (from.hasBalloon)
+            row(l10n.planBalloonRow(from.balloonEveryMonths, from.durationMonths ~/ from.balloonEveryMonths),
+                '${contractMoney(from.balloonAmount)} $currency',
+                total: true),
         ],
       ]),
     );

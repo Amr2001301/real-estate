@@ -45,8 +45,9 @@ function termsOf(plans: PublicPaymentPlan[]): CompareTerms {
   const inst = plans.filter((p) => !p.isCash && p.downPaymentPercent > 0).sort((a, b) => a.downPaymentPercent - b.downPaymentPercent);
   const p = inst[0];
   if (!p) return null;
-  const monthly = p.options.reduce((a, o) => (a === 0 || o.installmentAmount < a ? o.installmentAmount : a), 0);
-  return { downPercent: p.downPaymentPercent, downAmount: p.downPaymentAmount, monthly };
+  const lowest = p.options.reduce<(typeof p.options)[number] | null>((a, o) => (a === null || o.installmentAmount < a.installmentAmount ? o : a), null);
+  const balloon = lowest?.balloonAmount && lowest.balloonEveryMonths ? { amount: lowest.balloonAmount, everyMonths: lowest.balloonEveryMonths } : null;
+  return { downPercent: p.downPaymentPercent, downAmount: p.downPaymentAmount, monthly: lowest?.installmentAmount ?? 0, balloon };
 }
 
 export default async function ComparePage({ searchParams }: { searchParams: SearchParams }) {

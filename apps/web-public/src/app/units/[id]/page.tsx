@@ -126,7 +126,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   const down = instalment[0] ? { percent: instalment[0].downPaymentPercent, amount: instalment[0].downPaymentAmount } : null;
   // A discounted cash plan shows beside the (instalment) listed price.
   const cash = plans.find((p) => p.isCash && cashSaving(p, Number(unit.price)) > 0) ?? null;
-  const monthly = instalment[0]?.options.reduce((a, o) => (a === 0 || o.installmentAmount < a ? o.installmentAmount : a), 0) ?? 0;
+  // The lowest monthly instalment — with its big payment when the plan has
+  // one, so a small monthly figure never reads as the whole instalment.
+  const lowest = instalment[0]?.options.reduce<(typeof instalment)[number]['options'][number] | null>(
+    (a, o) => (a === null || o.installmentAmount < a.installmentAmount ? o : a),
+    null,
+  ) ?? null;
+  const monthly = lowest?.installmentAmount ?? 0;
   const longestMonths = Math.max(0, ...instalment.flatMap((p) => p.options.map((o) => o.durationMonths)));
   const yearsText = longestMonths >= 12 && longestMonths % 12 === 0
     ? `${formatNumber(longestMonths / 12, locale)} ${longestMonths / 12 === 1 ? x.yearsOne : x.yearsMany}`
@@ -278,7 +284,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 headSub={cash || unit.pricePerMeter ? <>{cash && `${x.listPrice} (${x.payInstalment})`}{cash && unit.pricePerMeter && ' · '}{unit.pricePerMeter && <><Price value={unit.pricePerMeter} /> {m.unitDetail.perMeter}</>}</> : undefined}
                 rows={[
                   down ? { label: `${x.downAmount} (${formatNumber(down.percent, locale)}%)`, value: <Price value={down.amount} />, testId: 'unit-down-payment' } : null,
-                  monthly ? { label: x.installmentFrom, value: <><Price value={monthly} /> <span className="text-[13px] font-normal text-ink-muted">/ {x.perMonth}</span></> } : null,
+                  monthly ? { label: x.installmentFrom, value: <><Price value={monthly} /> <span className="text-[13px] font-normal text-ink-muted">/ {x.perMonth}</span>{lowest?.balloonAmount && lowest.balloonEveryMonths ? <span className="block text-[13px] font-semibold"> + <Price value={lowest.balloonAmount} /> <span className="font-normal text-ink-muted">/ {x.balloonEvery(lowest.balloonEveryMonths)}</span></span> : null}</> } : null,
                   longestMonths > 0 ? { label: x.duration, value: yearsText } : null,
                   cash ? { label: x.cashPrice, value: <span className="text-emerald-700 dark:text-emerald-400"><Price value={cash.netPrice} /></span> } : null,
                   handover ? { label: x.handover, value: handover } : null,

@@ -185,4 +185,52 @@ void main() {
     expect(o.netPrice, 3420000);
     expect(o.booking, 100000);
   });
+
+  test('a balloon plan: a small monthly amount plus a big payment every 3 months', () {
+    final public = installmentOfferFromPublicJson({
+      'name': 'خطة الدفعات',
+      'netPrice': 1000000,
+      'reservationAmount': 50000,
+      'downPaymentAmount': 150000,
+      'options': [
+        {'durationMonths': 12, 'installmentsCount': 12, 'installmentAmount': 26666.66, 'balloonAmount': 120000, 'balloonEveryMonths': 3, 'totalPayable': 1000000},
+      ],
+    });
+    final o = public.options.single;
+    expect([o.amount, o.balloonAmount, o.balloonEveryMonths, o.hasBalloon], [26666.66, 120000, 3, true]);
+
+    // The staff app works it out from the plan itself: the same figures.
+    final template = installmentOfferFromTemplateJson({
+      'name': 'خطة الدفعات',
+      'isCash': false,
+      'netPrice': 1000000,
+      'reservationAmount': 50000,
+      'downPaymentAmount': 150000,
+      'balloonSharePct': '60',
+      'balloonEveryMonths': 3,
+      'durationOptions': [
+        {'durationMonths': 12, 'increasePercentage': '0', 'order': 0},
+      ],
+    }).options.single;
+    expect([template.amount, template.balloonAmount, template.balloonEveryMonths], [26666.66, 120000, 3]);
+  });
+
+  testWidgets('the plan table and the "or from" line show the big payment', (tester) async {
+    final offer = installmentOfferFromPublicJson({
+      'name': 'خطة الدفعات',
+      'netPrice': 1000000,
+      'reservationAmount': 50000,
+      'downPaymentAmount': 150000,
+      'options': [
+        {'durationMonths': 12, 'installmentsCount': 12, 'installmentAmount': 26666.66, 'balloonAmount': 120000, 'balloonEveryMonths': 3, 'totalPayable': 1000000},
+      ],
+    });
+    late String? line;
+    await tester.pumpWidget(_app(Builder(builder: (context) {
+      line = cheapestInstallmentLine(context.l10n, 'ar', [offer]);
+      return SingleChildScrollView(child: AppPaymentPlanTable(offer: offer));
+    })));
+    expect(line, contains('كل 3 شهور'));
+    expect(find.textContaining('دفعة كل 3 شهور (4)'), findsOneWidget);
+  });
 }

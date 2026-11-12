@@ -1831,6 +1831,10 @@ model Reservation {
   // A plan priced by instalment count (no duration options): how often its
   // rows fall. Null = monthly, as every duration option is.
   snapshotFrequency          InstallmentFrequency?
+  /// Balloon plan: each big payment and how many months apart they fall
+  /// (the monthly snapshot is then the small monthly amount). Null = none.
+  snapshotBalloonAmount      Decimal?                       @db.Decimal(14, 2)
+  snapshotBalloonEveryMonths Int?
 
   // ── Broker attribution (additive, all nullable; salesId stays required) ──
   brokerId               String?  @db.Uuid
@@ -1987,6 +1991,9 @@ model InstallmentPlan {
   monthlyAmount Decimal              @db.Decimal(14, 2)
   startsAt      DateTime
   frequency     InstallmentFrequency @default(MONTHLY)
+  /// Balloon plan: the big payment beside the monthly one, and its spacing.
+  balloonAmount      Decimal? @db.Decimal(14, 2)
+  balloonEveryMonths Int?
   createdAt     DateTime             @default(now())
 
   // ── Step D1: set when contract is cancelled ──────────────────────────────
@@ -2450,6 +2457,12 @@ model InstallmentPlanTemplate {
   // Cash sale (F11): no instalments — whatever the booking leaves is one
   // payment due at signing. No durations, no instalment count, no final payment.
   isCash                 Boolean              @default(false)
+  // A big payment every few months beside a small (or zero) monthly one:
+  // this share (1–100%) of the financed amount is paid in equal big payments,
+  // one every `balloonEveryMonths` (3, 6 or 12) months, the rest monthly.
+  // Both null = an ordinary plan. Duration plans only (monthly).
+  balloonSharePct        Decimal?             @db.Decimal(5, 2)
+  balloonEveryMonths     Int?
   visibility             String               @default("SALES_ONLY")
   status                 PlanTemplateStatus   @default(DRAFT)
   // Scope. A plan with a unitId is that unit's own plan (absolute amounts at the

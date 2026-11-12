@@ -26,6 +26,7 @@ import {
   formatNumber,
   type PrintTone,
 } from '@/components/print/PrintDocument';
+import { projectPlansT } from '@/messages/project-plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -196,6 +197,10 @@ export default async function ReservationPrintPage({ params, searchParams }: { p
             r.snapshotMonthlyInstallment != null && {
               label: periodicInstallmentLabel(r.snapshotFrequency, locale) ?? m.amounts.monthly,
               value: money(r.snapshotMonthlyInstallment),
+            },
+            r.snapshotBalloonAmount != null && !!r.snapshotBalloonEveryMonths && {
+              label: projectPlansT(locale).colBalloon(r.snapshotBalloonEveryMonths),
+              value: money(r.snapshotBalloonAmount),
             },
             r.snapshotTotalPayable != null && { label: m.amounts.total, value: money(r.snapshotTotalPayable) },
           ]}

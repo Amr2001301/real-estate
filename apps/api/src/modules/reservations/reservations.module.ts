@@ -80,7 +80,7 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { enumFilter, parseEnumList, parseIsoInstant } from '../../common/utils/query-filters';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
-import { computeDurationOption } from '../installments/duration-calc';
+import { balloonOf, computeDurationOption, financedRows } from '../installments/duration-calc';
 import {
   NotificationsModule,
   NotificationsService,
@@ -329,7 +329,13 @@ function toMeReservation<
  * would add up to more than the price.
  */
 function durationCalc(
-  plan: { netPrice: Prisma.Decimal; downPaymentAmount: Prisma.Decimal; finalPaymentAmount: Prisma.Decimal | null },
+  plan: {
+    netPrice: Prisma.Decimal;
+    downPaymentAmount: Prisma.Decimal;
+    finalPaymentAmount: Prisma.Decimal | null;
+    balloonSharePct?: Prisma.Decimal | null;
+    balloonEveryMonths?: number | null;
+  },
   durationMonths: number,
   increasePercentage: Prisma.Decimal,
   bookingAmount: Prisma.Decimal,
@@ -345,7 +351,15 @@ function durationCalc(
     durationMonths,
     increasePercentage: Number(increasePercentage),
     finalPaymentAmount: Number(plan.finalPaymentAmount ?? 0),
+    balloon: balloonOf(plan),
   });
+}
+
+/** A balloon plan's snapshot: each big payment and their spacing; nulls for an ordinary plan. */
+function balloonSnapshot(calc: { balloonAmount: number; balloonCount: number; balloonEveryMonths: number }) {
+  return calc.balloonCount > 0
+    ? { snapshotBalloonAmount: new Prisma.Decimal(calc.balloonAmount), snapshotBalloonEveryMonths: calc.balloonEveryMonths }
+    : { snapshotBalloonAmount: null, snapshotBalloonEveryMonths: null };
 }
 
 /** Months between two rows of a schedule that falls at this frequency. */
@@ -390,6 +404,8 @@ export function countPlanSnapshot(
     snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
     snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
     snapshotFrequency: plan.frequency,
+    snapshotBalloonAmount: null,
+    snapshotBalloonEveryMonths: null,
   };
 }
 
@@ -412,6 +428,8 @@ function cashPlanSnapshot(netPrice: Prisma.Decimal, bookingAmount: Prisma.Decima
     snapshotTotalPayable: new Prisma.Decimal(netPrice),
     snapshotFinalPaymentAmount: null,
     snapshotFrequency: InstallmentFrequency.MONTHLY,
+    snapshotBalloonAmount: null,
+    snapshotBalloonEveryMonths: null,
   };
 }
 
@@ -490,6 +508,8 @@ export class ReservationsService {
         installmentsCount: true,
         frequency: true,
         isCash: true,
+        balloonSharePct: true,
+        balloonEveryMonths: true,
         durationOptions: {
           select: { id: true, durationMonths: true, increasePercentage: true },
         },
@@ -551,6 +571,8 @@ export class ReservationsService {
       snapshotMonthlyInstallment: null,
       snapshotFinalPaymentAmount: null,
       snapshotFrequency: null,
+      snapshotBalloonAmount: null,
+      snapshotBalloonEveryMonths: null,
       snapshotTotalPayable: unitPrice,
     };
     if (!plan || plan.durationOptions.length === 0) {
@@ -572,6 +594,7 @@ export class ReservationsService {
       snapshotTotalPayable: new Prisma.Decimal(calc.totalPayable),
       snapshotFinalPaymentAmount: plan.finalPaymentAmount ?? null,
       snapshotFrequency: null,
+      ...balloonSnapshot(calc),
     };
   }
 
@@ -748,6 +771,7 @@ export class ReservationsService {
     let snapshotTotalPayable: Prisma.Decimal | null = null;
     let snapshotFinalPaymentAmount: Prisma.Decimal | null = null;
     let snapshotFrequency: InstallmentFrequency | null = null;
+    let snapshotBalloon: ReturnType<typeof balloonSnapshot> = { snapshotBalloonAmount: null, snapshotBalloonEveryMonths: null };
     let countPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
     let durationPlan: Awaited<ReturnType<ReservationsService['validateBookingPlan']>> | null = null;
     let durationOption: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal } | null = null;
@@ -865,6 +889,7 @@ export class ReservationsService {
       snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
       snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
       snapshotFinalPaymentAmount = durationPlan.finalPaymentAmount ?? null;
+      snapshotBalloon = balloonSnapshot(calc);
     } else if (countPlan) {
       const snap = countPlanSnapshot(countPlan, resolvedBookingAmount);
       if (snap) {
@@ -930,6 +955,7 @@ export class ReservationsService {
           snapshotTotalPayable: snapshotTotalPayable ?? new Prisma.Decimal(unit.price),
           snapshotFinalPaymentAmount,
           snapshotFrequency,
+          ...snapshotBalloon,
         },
       });
       await tx.unitStatusHistory.create({
@@ -2401,6 +2427,8 @@ export class ReservationsService {
             monthlyAmount: reservation.snapshotMonthlyInstallment,
             startsAt,
             frequency,
+            balloonAmount: reservation.snapshotBalloonAmount ?? null,
+            balloonEveryMonths: reservation.snapshotBalloonEveryMonths ?? null,
           },
         });
 
@@ -2422,27 +2450,31 @@ export class ReservationsService {
         }
 
         // 4b. INSTALLMENT rows: equal amounts, the last one carrying the
-        // rounding so the rows add up to the financed amount exactly.
+        // rounding so the rows add up to the financed amount exactly. A
+        // balloon plan adds a big payment at the end of every few months
+        // (same month as that month's row); the monthly part may be zero.
         const months = Math.round(reservation.selectedDurationMonths / period);
         const monthlyCents = Math.round(Number(reservation.snapshotMonthlyInstallment) * 100);
+        const balloonCents = reservation.snapshotBalloonAmount != null ? Math.round(Number(reservation.snapshotBalloonAmount) * 100) : 0;
+        const balloonEvery = reservation.snapshotBalloonEveryMonths ?? 0;
+        const balloonCount = balloonCents > 0 && balloonEvery > 0 ? Math.floor(months / balloonEvery) : 0;
         const financedCents =
           reservation.snapshotFinancedAmount != null
             ? Math.round(Number(reservation.snapshotFinancedAmount) * 100)
-            : monthlyCents * months;
-        const lastCents = financedCents - monthlyCents * (months - 1);
-        const rows: Prisma.InstallmentCreateManyInput[] = [];
-        for (let i = 0; i < months; i++) {
-          const cents = i === months - 1 ? lastCents : monthlyCents;
-          // Nothing financed (booking + down + final cover the price): no
-          // rows of 0.00 — they could not be paid and would go overdue.
-          if (cents <= 0) continue;
-          rows.push({
-            planId: plan.id,
-            type: PlanPaymentType.INSTALLMENT,
-            dueDate: addMonths(startsAt, i * period),
-            amount: new Prisma.Decimal(cents).div(100),
-          });
-        }
+            : monthlyCents * months + balloonCents * balloonCount;
+        // Nothing financed (booking + down + final cover the price): no rows
+        // of 0.00 — they could not be paid and would go overdue.
+        const rows: Prisma.InstallmentCreateManyInput[] = financedRows(
+          financedCents,
+          months,
+          monthlyCents,
+          balloonCount > 0 ? { amount: balloonCents, everyMonths: balloonEvery } : null,
+        ).map((r) => ({
+          planId: plan.id,
+          type: PlanPaymentType.INSTALLMENT,
+          dueDate: addMonths(startsAt, r.monthIndex * period),
+          amount: new Prisma.Decimal(r.cents).div(100),
+        }));
         if (rows.length > 0) await tx.installment.createMany({ data: rows });
 
         // 4c. FINAL_PAYMENT row (one period after the last installment).
