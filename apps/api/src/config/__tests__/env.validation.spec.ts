@@ -70,6 +70,15 @@ function expectValidationPass(raw: Record<string, unknown>): void {
 // OTP Provider
 // ─────────────────────────────────────────────────────────────────────────────
 
+describe('DEFAULT_COMPANY_ID (optional legacy fallback)', () => {
+  it('a production boot without it passes: companies are made in the product after the first deploy', () => {
+    expectValidationPass(validProd({ DEFAULT_COMPANY_ID: undefined }));
+  });
+  it('a malformed one is still refused', () => {
+    expectValidationError(validProd({ DEFAULT_COMPANY_ID: 'not-a-uuid' }), 'DEFAULT_COMPANY_ID');
+  });
+});
+
 describe('OTP provider', () => {
   describe('production', () => {
     it('rejects OTP_PROVIDER=console — codes silently undelivered', () => {

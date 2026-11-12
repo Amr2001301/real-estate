@@ -75,8 +75,9 @@ const EnvSchema = z.object({
   SEED_ADMIN_PASSWORD: z.string().min(8).default('ChangeMe123!'),
 
   // ─── Multi-tenancy ───────────────────────────────────────────────────────
-  // UUID of the default company used for @Public() routes (website catalog).
-  // Must be set whenever multi-tenancy enforcement is active.
+  // Optional legacy fallback: the company a @Public() request without a tenant slug
+  // (and a legacy user with no company) falls back to. Leave unset on a multi-company
+  // platform: such a request is then refused (503) instead of guessed.
   DEFAULT_COMPANY_ID: z.string().uuid().optional(),
 
   // MT-044: Platform subdomain base domain (e.g. "platform.example.com").
@@ -233,12 +234,11 @@ function assertProductionRequirements(env: AppEnv): string[] {
     errs.push('SEED_ADMIN_PASSWORD still uses the .env.example default — change it');
   }
 
-  // Multi-tenancy: DEFAULT_COMPANY_ID is required for @Public() routes to scope
-  // catalog queries to the correct tenant. Without it public listing endpoints
-  // will return 500 on any scoped model read.
-  if (!env.DEFAULT_COMPANY_ID) {
-    errs.push('DEFAULT_COMPANY_ID is required in production (public website catalog routes use it to scope tenant data)');
-  }
+  // Multi-tenancy: DEFAULT_COMPANY_ID is NOT required. The website, the apps and the
+  // dashboard always name their company (host or X-Tenant-Slug), and a public request
+  // that names none is refused with a clear 503 rather than guessed. Requiring it
+  // blocked the first deploy of a platform whose companies are created in the product
+  // (no company exists yet to take its id). It stays as an optional legacy fallback.
 
   // MT-044: PLATFORM_BASE_DOMAIN is required so platform subdomains can be
   // provisioned ({slug}.{PLATFORM_BASE_DOMAIN}) and DomainResolverService
