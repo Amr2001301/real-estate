@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { RequireCapability } from '../../common/decorators/require-capability.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { GrantedBy } from '../../common/decorators/granted-by.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -87,6 +88,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial')
   financial(
     @Query('period') period?: string,
@@ -110,6 +112,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @GrantedBy('reports:sales:read')
+  @RequireCapability('feature.advancedReports')
   @Get('sales-trend')
   salesTrend(
     @Query('year') year?: string,
@@ -122,6 +125,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @GrantedBy('reports:sales:read')
+  @RequireCapability('feature.advancedReports')
   @Get('sales-funnel')
   salesFunnel(
     @Query('dateFrom') dateFrom?: string,
@@ -133,6 +137,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @GrantedBy('reports:sales:read')
+  @RequireCapability('feature.advancedReports')
   @Get('broker-leaderboard')
   brokerLeaderboard(
     @Query('dateFrom') dateFrom?: string,
@@ -144,6 +149,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial-dashboard')
   financialDashboard(@Query() query: FinancialDashboardQueryDto) {
     return this.svc.financialDashboard({
@@ -159,6 +165,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial-comparison')
   financialComparison(@Query() query: FinancialComparisonQueryDto) {
     return this.comparison.compare(query);
@@ -168,6 +175,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('ledger')
   ledgerSummary(@Query() query: LedgerQueryDto) {
     return this.ledger.summary(query);
@@ -177,6 +185,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('ledger/rows')
   ledgerRows(@Query() query: LedgerRowsQueryDto) {
     return this.ledger.rows({ ...query, page: query.page ?? 1, pageSize: query.pageSize ?? 50 });
@@ -223,6 +232,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="financial-report.csv"')
@@ -238,6 +248,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial/export.xlsx')
   @Header(
     'Content-Type',
@@ -280,6 +291,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial-dashboard/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="financial-dashboard.csv"')
@@ -298,6 +310,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial-dashboard/export.xlsx')
   @Header(
     'Content-Type',
@@ -344,6 +357,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial-dashboard/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="financial-dashboard.pdf"')
@@ -376,6 +390,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')
+  @RequireCapability('feature.advancedReports')
   @Get('financial/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="financial-report.pdf"')
@@ -390,6 +405,7 @@ export class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @GrantedBy('reports:sales:read')
+  @RequireCapability('feature.advancedReports')
   @Get('broker-leaderboard/export.pdf')
   @Header('Content-Type', 'application/pdf')
   @Header('Content-Disposition', 'attachment; filename="broker-report.pdf"')
