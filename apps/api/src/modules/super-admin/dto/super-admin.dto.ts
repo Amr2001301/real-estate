@@ -8,6 +8,7 @@ import {
   IsNotEmpty,
   IsNumber,
   IsObject,
+  IsArray,
   IsOptional,
   IsString,
   MinLength,
@@ -131,6 +132,10 @@ export class UpdateCapabilitiesDto {
 export class UpdateCapabilityOverridesDto {
   @IsObject()
   overrides!: Record<string, unknown>;
+
+  /** Keys whose override is removed, so they follow the plan again. */
+  @IsOptional() @IsArray() @IsString({ each: true })
+  reset?: string[];
 }
 
 export class CancelCompanyDto {

@@ -97,8 +97,19 @@ export class SuperAdminService {
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } } },
     });
+    // The plan limits STAFF users, so the list shows staff seats used against the effective limit
+    // (userCount stays the count of every account, for the existing consumers).
+    const staff = await this.prisma.user.groupBy({
+      by: ['companyId'],
+      where: { deletedAt: null, role: { in: [...STAFF_SEAT_ROLES] } },
+      _count: { _all: true },
+    });
+    const staffBy = new Map(staff.map((r) => [r.companyId, r._count._all]));
+    const limits = await Promise.all(
+      companies.map(async (c) => (await this.capabilityService.getEffectiveLimits(c.id))['limit.maxUsers'] as number | null | undefined),
+    );
     // MT-043: include D1 foundation fields in platform-admin projection
-    return companies.map((c) => ({
+    return companies.map((c, i) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
@@ -119,6 +130,8 @@ export class SuperAdminService {
       cancelledAt: c.cancelledAt,
       cancelReason: c.cancelReason,
       userCount: c._count.users,
+      staffCount: staffBy.get(c.id) ?? 0,
+      staffLimit: limits[i] ?? null,
       createdAt: c.createdAt,
     }));
   }
@@ -145,6 +158,10 @@ export class SuperAdminService {
       },
     });
     if (!company) throw new NotFoundException('Company not found');
+    const [staffCount, effectiveLimits] = await Promise.all([
+      this.prisma.user.count({ where: { companyId: id, deletedAt: null, role: { in: [...STAFF_SEAT_ROLES] } } }),
+      this.capabilityService.getEffectiveLimits(id),
+    ]);
     // MT-043: return D1 foundation fields in platform-admin detail view
     return {
       id: company.id,
@@ -171,6 +188,8 @@ export class SuperAdminService {
       cancelReason: company.cancelReason,
       modules: company.modules,
       userCount: company._count.users,
+      staffCount,
+      staffLimit: (effectiveLimits['limit.maxUsers'] as number | null | undefined) ?? null,
       users: company.users,
       createdAt: company.createdAt,
       updatedAt: company.updatedAt,
@@ -346,7 +365,7 @@ export class SuperAdminService {
 
   // Phase 1 — typed override write
   async setCapabilityOverrides(id: string, dto: UpdateCapabilityOverridesDto) {
-    return this.capabilityService.setCapabilityOverrides(id, dto.overrides);
+    return this.capabilityService.setCapabilityOverrides(id, dto.overrides, dto.reset ?? []);
   }
 
   // Phase 1 — side-by-side view (plan default / override / effective) for all keys

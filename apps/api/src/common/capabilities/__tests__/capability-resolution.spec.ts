@@ -346,6 +346,28 @@ describe('CapabilityService — cache invalidation on override write', () => {
     expect(effective(view, 'feature.brokers')).toBe(true);
   });
 
+  test('reset removes an override so the key follows the plan again; the others stay', async () => {
+    const row = makeCompanyRow({ subscriptionPlan: 'STARTER', capabilities: { 'feature.brokers': true, 'limit.maxUsers': 30 } });
+    const prisma = {
+      company: {
+        findUnique: jest.fn().mockResolvedValueOnce({ id: 'comp-x', capabilities: { 'feature.brokers': true, 'limit.maxUsers': 30 } }).mockResolvedValue(row),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const { svc } = makeService(prisma as never);
+    await svc.setCapabilityOverrides('comp-x', { 'feature.maintenance': false }, ['feature.brokers']);
+    expect(prisma.company.update).toHaveBeenCalledWith({
+      where: { id: 'comp-x' },
+      data: { capabilities: { 'limit.maxUsers': 30, 'feature.maintenance': false } },
+    });
+  });
+
+  test('a key cannot be written and reset together, and only override-eligible keys can be reset', async () => {
+    const { svc } = makeService(makePrisma(makeCompanyRow({ subscriptionPlan: 'STARTER', capabilities: null })));
+    await expect(svc.setCapabilityOverrides('comp-x', { 'feature.brokers': true }, ['feature.brokers'])).rejects.toThrow(BadRequestException);
+    await expect(svc.setCapabilityOverrides('comp-x', {}, ['feature.crm'])).rejects.toThrow(BadRequestException);
+  });
+
   test('setCapabilities (legacy) also invalidates cache', async () => {
     const redis  = makeRedis();
     const { svc } = makeService(undefined, redis);
