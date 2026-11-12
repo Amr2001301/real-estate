@@ -19,7 +19,7 @@ interface QrCodeProps {
  * `qrcode-generator` encoder (no canvas / browser APIs), so this works as a
  * plain server component.
  */
-export function QrCode({ value, size = 96, className, color = '#0F1E33', margin = 4 }: QrCodeProps) {
+export function QrCode({ value, size = 96, className, color = '#0E1626', margin = 4 }: QrCodeProps) {
   const qr = qrcode(0, 'M');
   qr.addData(value);
   qr.make();
