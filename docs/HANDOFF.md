@@ -47,7 +47,7 @@
 - **اتغطى من السحابة:** الأدوار كلها (أدمن، مبيعات، مدير، بروكر، صيانة، عميل، زائر)، عربي وإنجليزي، فاتح وليلي، موبايل ودسكتوب، عزل الشركات، الصلاحيات، الفلوس بـ SQL، الأمان، الأداء، إنجليزي كامل للموقع العام وللوحة الأدمن، دفعات وعمولات ومكافآت البروكر، الحملات، الإشعارات وقوالبها وإلغاء الاشتراك، صفحات المحتوى، المبلغ بالحروف في المستندات.
 - **الدورة التالتة (9–10 نوفمبر، من داتا بيز فاضية، كل الخطوات الـ 21):** خلصت. اتجرّب فيها توقيع العميل بنفسه على نموذج الحجز (كود OTP، وكود غلط، وتوقيع تاني مرفوض) واعتماد الخصم فوق الحد (403 من غير صلاحية `pricing:approve-discount`، ويعدّي بيها، والاتنين في سجل التدقيق). لقت ملاحظتين: F-078 (أرقام الزيارات بين الشركات، High) وF-079 (اسم العميل فاضي في إشعارات الحجز، Low)، واتصلحوا واتدمجوا (#374 و#375). باقي الدورة (تحصيل، رفض وإعادة رفع إيصال، غرامة تأخير، صيانة، وسيط وعمولة وصرف، إلغاء واسترداد واسترجاع عمولة) اشتغل كله زي التصميم، ومطابقة الـ SQL مع اللوحة طلعت صح على كل رقم.
 - **مش ممكن من السحابة (عليك):** تجربة على أجهزة حقيقية (iOS وAndroid)، التخزين الحقيقي (R2)، إشعارات push (FCM)، الإيميل الحقيقي (SMTP).
-- **اللي مقبول ومفتوح:** F-023 (Low): حوالي 400 رسالة خطأ في الـ API لسه بالإنجليزي لحد ما يبقى فيه كتالوج رسائل مشترك. F-013: تحذير React في وضع التطوير بس.
+- **اللي مقبول ومفتوح:** F-013: تحذير React في وضع التطوير بس. (F-023 اتقفل في 12 نوفمبر: رسائل الأخطاء بقت بالعربي لأي عميل بيطلب العربي، والتفاصيل في القسم 2s.)
 - **قرارات المالك:** الدفع الجزئي للقسط مش مدعوم (F-052)؛ شرط غرامة التأخير في العقد وحقل الإعدادات شغالين ومقفولين بالتصميم (F-033)؛ حجز الأدمن من غير مندوب بيتسجل باسمه والمكافأة له، والشاشة بتقول كده (F-077)؛ بث «كل المبيعات» يشمل المديرين (F-076)؛ بث «كل العملاء» لا يشمل حسابات الموقع اللي ما اشترتش.
 - **الخطوة الجاية:** مفيش دورة QA تانية مطلوبة. اللي فاضل بتاعك: REL1 والأجهزة الحقيقية والتخزين والإشعارات والإيميل (فوق).
 
@@ -782,7 +782,7 @@ The owner asked for the customer app to look like the staff app. The method: sha
 
 **Master cycle to repeat (third run, from an empty database):** lead → visit → reservation (booking payment confirmed) → conversion to a contract → **the customer signs the contract himself** (not yet tested) → down payment and instalments with proofs (reject one, approve one) → a **discount that needs approval** (not yet tested) → overdue and late fee → maintenance → broker path (register, activate, grant, reserve, commission, payout) → cancellation with refund and clawback → reconciliation against SQL (gross collected − refunds = net, dashboard `netCollected`). Log every finding as F-078+ in `findings.md`.
 
-**Still open or the owner's:** F-023 (accepted, Low); real devices, real storage, push and e-mail (cannot be done from the cloud); the production deploy and the owner tasks in section 5.
+**Still open or the owner's:** real devices, real storage, push and e-mail (cannot be done from the cloud); the production deploy and the owner tasks in section 5.
 
 ### 2r. #373–#396 (2026-11-09 → 2026-11-12) — QA fixes, the new website design, project pages, unit value, balloon plans, the customer account
 
@@ -810,6 +810,18 @@ The owner asked for the customer app to look like the staff app. The method: sha
 - Time-of-day tests: clamp test timestamps to the Cairo day (MC3 failed near Cairo midnight).
 
 **Local servers used for screenshots:** API on :4200 and the site on :3002 (the container restarts often, so start them again). Demo customer `client1@demo-full.devora` (password inline only). Web admin: `env -u DATABASE_URL API_BASE_URL=http://localhost:4200 npx next dev -p 3001` from `apps/web-admin`.
+
+---
+
+### 2s. F-023 — API error messages in Arabic (2026-11-12)
+
+The API's ~460 English error messages (exceptions and DTO messages) stay English in the code and the tests. A client that asks for Arabic (`Accept-Language: ar` or `X-Locale: ar`) gets them in Arabic; any other client gets the English text exactly as before.
+
+- **Catalogue:** `apps/api/src/common/i18n/error-messages.ar.ts` — keys are the English source text (`${…}` marks a varying part), values use `{1}`, `{2}`… for those parts in order. `error-catalogue.ts` turns a key into a pattern (`translateErrorMessage`) and also covers class-validator's default wording and Nest's defaults («Unauthorized», «Internal server error»…).
+- **Filter:** `apps/api/src/common/filters/localized-error.filter.ts` (`LocalizedErrorFilter`, registered in `main.ts` and the e2e/security test app). It translates `message` (string or array), keeps the status and the other body fields (`code`, `permissions`…), and answers an unexpected error as a 500 in Arabic after logging it.
+- **Clients:** the dashboard now sends the dashboard language (`admin-locale`) on every API call (`web-admin/src/lib/api.ts`; a caller's own header wins); the mobile apps always sent `Accept-Language`; the website sends it where it asks for English. `security-actions.ts` matched English password messages, so it now accepts both wordings.
+- **The rule that keeps it closed:** `src/common/i18n/__tests__/error-catalogue.spec.ts` reads the source and fails when a thrown English message (or a DTO `message:`) has no Arabic. Add the Arabic entry with the message. A message whose whole text varies cannot be matched and goes in `UNTRANSLATABLE_ERROR_MESSAGES`.
+- A client that matches the API's English text must accept the Arabic too (the dashboard's password dialogs did).
 
 ---
 

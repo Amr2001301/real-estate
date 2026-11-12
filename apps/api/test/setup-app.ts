@@ -46,6 +46,7 @@ _rsWarmup.end();
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { RejectNulBytesPipe } from '../src/common/pipes/reject-nul-bytes.pipe';
 import { BooleanStringsPipe } from '../src/common/pipes/boolean-strings.pipe';
+import { LocalizedErrorFilter } from '../src/common/filters/localized-error.filter';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
@@ -245,6 +246,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
+  app.useGlobalFilters(new LocalizedErrorFilter(app.getHttpAdapter()));
   app.useGlobalPipes(
     new RejectNulBytesPipe(),
     new BooleanStringsPipe(),
@@ -374,6 +376,7 @@ export async function createE2ETestApp(): Promise<TestApp> {
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
+  app.useGlobalFilters(new LocalizedErrorFilter(app.getHttpAdapter()));
   app.useGlobalPipes(
     new RejectNulBytesPipe(),
     new BooleanStringsPipe(),
@@ -465,6 +468,7 @@ export async function createSecurityTestApp(): Promise<TestApp> {
   app.use(helmet());
   app.use(cookieParser());
   app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
+  app.useGlobalFilters(new LocalizedErrorFilter(app.getHttpAdapter()));
   app.useGlobalPipes(
     new RejectNulBytesPipe(),
     new BooleanStringsPipe(),

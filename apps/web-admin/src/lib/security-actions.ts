@@ -42,8 +42,9 @@ export async function changePasswordAction(_prev: PasswordState, form: FormData)
     await api.post('/auth/change-password', { currentPassword, newPassword });
   } catch (e) {
     if (e instanceof ApiError && e.status === 400) {
-      if (/incorrect/i.test(e.rawMessage)) return { error: m.wrongCurrent };
-      if (/different/i.test(e.rawMessage)) return { error: m.sameAsOld };
+      // The API answers in the dashboard's language, so match both wordings.
+      if (/incorrect|غير صحيحة/i.test(e.rawMessage)) return { error: m.wrongCurrent };
+      if (/different|تختلف/i.test(e.rawMessage)) return { error: m.sameAsOld };
     }
     return { error: `${m.failed}: ${(e as Error).message}` };
   }
@@ -64,7 +65,7 @@ export interface TwoFactorResult {
 async function tfaError(e: unknown): Promise<string> {
   const m = securityT(await getLocale());
   if (e instanceof ApiError) {
-    if (e.status === 400 && /password/i.test(e.rawMessage)) return m.wrongCurrent;
+    if (e.status === 400 && /password|كلمة المرور/i.test(e.rawMessage)) return m.wrongCurrent;
     if (e.status === 400 || e.status === 401) return m.tfaWrongCode;
     if (e.status === 429) return e.rawMessage;
   }

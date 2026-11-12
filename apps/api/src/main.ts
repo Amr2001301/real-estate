@@ -14,6 +14,7 @@ import cookieParser from 'cookie-parser';
 import { clientMetaMiddleware } from './common/request/client-meta';
 import { RejectNulBytesPipe } from './common/pipes/reject-nul-bytes.pipe';
 import { BooleanStringsPipe } from './common/pipes/boolean-strings.pipe';
+import { LocalizedErrorFilter } from './common/filters/localized-error.filter';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
@@ -55,6 +56,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // F-023: error messages in Arabic for a client that asks for Arabic.
+  app.useGlobalFilters(new LocalizedErrorFilter(app.getHttpAdapter()));
 
   app.useGlobalInterceptors(new DateSerializerInterceptor(), new ApiVersionInterceptor());
 
