@@ -365,3 +365,20 @@ Run from an empty database, all 21 steps of QA_PLAN.md §6a, including the two n
 - **Reconciliation (SQL vs dashboard):** verified deposits 528,472.22 = total collected; refunds 80,000; net collected 448,472.22; collected towards the price 328,472.22 (signed contract only); overdue 130,416.66 = 3 × 43,472.22.
 
 Notes (not bugs): login throttling (5/min) applies to staff sign-in even with throttling disabled; the late-fee sweep has no API and runs from the daily cron.
+
+## Super-admin dashboard review (2026-11-12)
+
+All six screens (home, companies, new company, pricing, AI assistant, company detail) were opened on desktop and phone: the latest design, no console errors, no sideways scroll. Fixed in the same pass:
+
+| Id | What | Fix |
+|---|---|---|
+| F-080 | The plans limited units (150 / 500 / 2,500) and projects (5 / 5 / 20) as well as staff users, against the owner's decision that a plan limits the company's users only | Unit and project limits are now unlimited on every plan (`PLAN_DEFAULTS`); the keys stay so a company override can still set one. Users are still limited (staff roles only; customers are not counted) |
+| F-081 | The sidebar item for the pricing page was labelled «التقارير» | Its own label «باقات الأسعار» |
+| F-082 | The top search box says «search units, customers, projects» and does nothing for any role | Hidden for the platform owner (no company data); for the other roles it is still a box without a search behind it — to decide |
+| F-083 | The AI page breadcrumb said «Platform» | «إدارة المنصة» |
+| F-084 | Raw enum names on screen: roles (CLIENT, MAINTENANCE_SUPERVISOR…) in a company's users, plan tiers (TRIAL, STARTER…) on the pricing page | Arabic (and English) labels |
+| F-085 | The data-migration panels were worded in colloquial Arabic | Modern Standard Arabic |
+
+Not done, on purpose: the company page's «modules» switches (`Company.modules`: broker, website, maintenance…) have an API and a finished panel that is not mounted, and **nothing in the product reads that field**, so mounting it would add switches that change nothing. Features are controlled by the plan and the capability overrides.
+
+Still missing in the super-admin UI (API exists): per-company capability overrides (plan default / override / effective), users used against the limit, and the platform report of companies near or over their user limit.

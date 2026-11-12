@@ -73,16 +73,27 @@ function effective(view: EffectiveCapabilitiesView, key: string) {
 
 // ── 1. Plan defaults per tier ─────────────────────────────────────────────────
 
+describe('plans limit staff users only (owner decision, 2026-11-12)', () => {
+  test.each(['TRIAL', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE', 'CUSTOM'] as const)('%s has no unit or project limit', (plan) => {
+    expect(PLAN_DEFAULTS[plan]['limit.maxUnits']).toBeNull();
+    expect(PLAN_DEFAULTS[plan]['limit.maxProjects']).toBeNull();
+  });
+  test.each(['TRIAL', 'STARTER', 'PROFESSIONAL'] as const)('%s still limits staff users', (plan) => {
+    expect(typeof PLAN_DEFAULTS[plan]['limit.maxUsers']).toBe('number');
+  });
+});
+
 describe('buildEffectiveView — plan defaults (no override)', () => {
   const noOverride = {};
   const cols = { website: true, customer: true, staff: true };
 
-  test('TRIAL: all limits set, all features enabled', () => {
+  test('TRIAL: users limited, units and projects unlimited, all features enabled', () => {
     const view = buildEffectiveView('TRIAL', noOverride, cols.website, cols.customer, cols.staff);
     expect(view.plan).toBe('TRIAL');
-    expect(effective(view, 'limit.maxUnits')).toBe(150);
+    // A plan limits staff users only; units and projects are unlimited (owner's decision, 2026-11-12).
+    expect(effective(view, 'limit.maxUnits')).toBeNull();
     expect(effective(view, 'limit.maxUsers')).toBe(15);
-    expect(effective(view, 'limit.maxProjects')).toBe(5);
+    expect(effective(view, 'limit.maxProjects')).toBeNull();
     expect(effective(view, 'feature.maintenance')).toBe(true);
     expect(effective(view, 'feature.customDomain')).toBe(true);
     expect(effective(view, 'feature.brokers')).toBe(true);
@@ -92,11 +103,11 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
     });
   });
 
-  test('STARTER: limited counts, restricted feature set', () => {
+  test('STARTER: users limited, restricted feature set', () => {
     const view = buildEffectiveView('STARTER', noOverride, false, false, true);
-    expect(effective(view, 'limit.maxUnits')).toBe(500);
+    expect(effective(view, 'limit.maxUnits')).toBeNull();
     expect(effective(view, 'limit.maxUsers')).toBe(15);
-    expect(effective(view, 'limit.maxProjects')).toBe(5);
+    expect(effective(view, 'limit.maxProjects')).toBeNull();
     expect(effective(view, 'feature.brokers')).toBe(false);
     expect(effective(view, 'feature.advancedReports')).toBe(false);
     expect(effective(view, 'feature.maintenance')).toBe(false);
@@ -107,11 +118,11 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
     expect(effective(view, 'feature.staffApp')).toBe(true);
   });
 
-  test('PROFESSIONAL: higher limits, more features', () => {
+  test('PROFESSIONAL: more users, more features', () => {
     const view = buildEffectiveView('PROFESSIONAL', noOverride, true, true, true);
-    expect(effective(view, 'limit.maxUnits')).toBe(2500);
+    expect(effective(view, 'limit.maxUnits')).toBeNull();
     expect(effective(view, 'limit.maxUsers')).toBe(50);
-    expect(effective(view, 'limit.maxProjects')).toBe(20);
+    expect(effective(view, 'limit.maxProjects')).toBeNull();
     expect(effective(view, 'feature.brokers')).toBe(true);
     expect(effective(view, 'feature.advancedReports')).toBe(true);
     expect(effective(view, 'feature.maintenance')).toBe(false);
@@ -150,12 +161,12 @@ describe('buildEffectiveView — plan defaults (no override)', () => {
 // ── 2. Override wins in both directions ───────────────────────────────────────
 
 describe('buildEffectiveView — override wins over plan default', () => {
-  test('raising a limit: STARTER maxUnits 500 → 1000 via override', () => {
-    const view = buildEffectiveView('STARTER', { 'limit.maxUnits': 1000 }, false, false, true);
-    const unitKey = view.keys.find((k) => k.key === 'limit.maxUnits')!;
-    expect(unitKey.planDefault).toBe(500);
-    expect(unitKey.override).toBe(1000);
-    expect(unitKey.effective).toBe(1000);
+  test('setting a limit: STARTER maxUsers 15 → 30 via override', () => {
+    const view = buildEffectiveView('STARTER', { 'limit.maxUsers': 30 }, false, false, true);
+    const unitKey = view.keys.find((k) => k.key === 'limit.maxUsers')!;
+    expect(unitKey.planDefault).toBe(15);
+    expect(unitKey.override).toBe(30);
+    expect(unitKey.effective).toBe(30);
     expect(unitKey.source).toBe('capabilities_override');
   });
 
@@ -378,7 +389,8 @@ describe('CapabilityService.getEffectiveCapabilities — tenant scope', () => {
     expect(viewA.plan).toBe('ENTERPRISE');
     expect(viewB.plan).toBe('STARTER');
     expect(effective(viewA, 'limit.maxUnits')).toBeNull();  // ENTERPRISE unlimited
-    expect(effective(viewB, 'limit.maxUnits')).toBe(500);   // STARTER 500
+    expect(effective(viewB, 'limit.maxUnits')).toBeNull();  // no plan limits units
+    expect(effective(viewB, 'limit.maxUsers')).toBe(15);    // STARTER: the user limit
   });
 });
 

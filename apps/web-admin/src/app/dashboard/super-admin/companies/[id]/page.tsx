@@ -310,7 +310,7 @@ export default function CompanyDetailPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[11px] font-semibold">
-                            {u.role}
+                            {m.roleLabels[u.role] ?? u.role}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-[12px] text-slate-500 tabular-nums">

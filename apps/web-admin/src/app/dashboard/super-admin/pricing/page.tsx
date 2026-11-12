@@ -165,7 +165,7 @@ export default function PricingPage() {
               {PLAN_TIERS.map((t) => (
                 <div key={t} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-                  {t}
+                  {m.planTiers[t] ?? t}
                   <span className="ms-auto tabular-nums text-slate-400 text-[11px]">
                     {packages.filter((p) => p.planTier === t).length}
                   </span>
@@ -211,7 +211,7 @@ function PricingCard({ pkg, locale, m, onEdit, onDelete, pending }: {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] font-bold text-slate-900">{name}</span>
             <span className="inline-flex rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200 px-2 py-0.5 text-[10px] font-semibold">
-              {pkg.planTier}
+              {m.planTiers[pkg.planTier] ?? pkg.planTier}
             </span>
             {pkg.specialOffer && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 px-2 py-0.5 text-[10px] font-semibold">
@@ -376,7 +376,7 @@ function PackageFormModal({ pkg, m, error, pending, onSubmit, onClose }: {
           <div className="grid grid-cols-2 gap-4">
             <Field label={m.form.planTier} name="planTier" required>
               <Select name="planTier" defaultValue={pkg?.planTier ?? 'STARTER'}>
-                {PLAN_TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+                {PLAN_TIERS.map((t) => <option key={t} value={t}>{m.planTiers[t] ?? t}</option>)}
               </Select>
             </Field>
             <Field label={m.form.currency} name="currency">

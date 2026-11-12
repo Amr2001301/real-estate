@@ -7,7 +7,11 @@ const SA = {
       CANCELLED: 'ملغي', EXPIRED: 'منتهي', SUSPENDED: 'موقوف',
     } as Record<string, string>,
     plan: {
-      TRIAL: 'تجريبي', STARTER: 'أساسي', PROFESSIONAL: 'احترافي', ENTERPRISE: 'مؤسسي',
+      TRIAL: 'تجريبي', STARTER: 'أساسي', PROFESSIONAL: 'احترافي', ENTERPRISE: 'مؤسسي', CUSTOM: 'مخصص',
+    } as Record<string, string>,
+    roleLabels: {
+      ADMIN: 'مدير النظام', SALES: 'مبيعات', SALES_MANAGER: 'مدير مبيعات', MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
+      BROKER: 'وسيط', CLIENT: 'متصفّح', CUSTOMER: 'عميل', SUPER_ADMIN: 'مدير المنصة',
     } as Record<string, string>,
     overview: {
       title: 'إدارة المنصة',
@@ -126,7 +130,11 @@ const SA = {
       CANCELLED: 'Cancelled', EXPIRED: 'Expired', SUSPENDED: 'Suspended',
     } as Record<string, string>,
     plan: {
-      TRIAL: 'Trial', STARTER: 'Starter', PROFESSIONAL: 'Professional', ENTERPRISE: 'Enterprise',
+      TRIAL: 'Trial', STARTER: 'Starter', PROFESSIONAL: 'Professional', ENTERPRISE: 'Enterprise', CUSTOM: 'Custom',
+    } as Record<string, string>,
+    roleLabels: {
+      ADMIN: 'Admin', SALES: 'Sales', SALES_MANAGER: 'Sales manager', MAINTENANCE_SUPERVISOR: 'Maintenance supervisor',
+      BROKER: 'Broker', CLIENT: 'Visitor', CUSTOMER: 'Customer', SUPER_ADMIN: 'Platform owner',
     } as Record<string, string>,
     overview: {
       title: 'Platform Management',
@@ -246,6 +254,7 @@ const PRICING = {
     title: 'باقات الأسعار',
     description: 'إدارة الباقات والعروض الخاصة للمنصة.',
     badge: 'التسعير',
+    planTiers: { TRIAL: 'تجريبي', STARTER: 'أساسي', PROFESSIONAL: 'احترافي', ENTERPRISE: 'مؤسسي', CUSTOM: 'مخصص' } as Record<string, string>,
     newBtn: 'باقة جديدة',
     globalTab: 'الباقات العامة',
     companyTab: 'تسعير الشركة',
@@ -283,6 +292,7 @@ const PRICING = {
     title: 'Pricing Packages',
     description: 'Manage platform pricing packages and special offers.',
     badge: 'Pricing',
+    planTiers: { TRIAL: 'Trial', STARTER: 'Starter', PROFESSIONAL: 'Professional', ENTERPRISE: 'Enterprise', CUSTOM: 'Custom' } as Record<string, string>,
     newBtn: 'New Package',
     globalTab: 'Global Packages',
     companyTab: 'Company Pricing',

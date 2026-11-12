@@ -319,7 +319,7 @@ export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/super-admin', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
       { href: '/dashboard/super-admin/companies', label: 'الشركات', labelKey: 'companies', iconKey: 'Globe' },
-      { href: '/dashboard/super-admin/pricing', label: 'باقات الأسعار', labelKey: 'reports', iconKey: 'Tag' },
+      { href: '/dashboard/super-admin/pricing', label: 'باقات الأسعار', labelKey: 'pricingPackages', iconKey: 'Tag' },
       { href: '/dashboard/super-admin/ai', label: 'المساعد الذكي', labelKey: 'aiAssistant', iconKey: 'Sparkles' },
     ],
   },

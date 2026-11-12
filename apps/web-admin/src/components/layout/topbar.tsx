@@ -26,7 +26,7 @@ async function getUnreadCount(): Promise<number> {
   }
 }
 
-export async function Topbar({ locale, notificationsHref, leading }: Props) {
+export async function Topbar({ user, locale, notificationsHref, leading }: Props) {
   const unread = await getUnreadCount();
   const m = uiT(locale);
   return (
@@ -34,8 +34,9 @@ export async function Topbar({ locale, notificationsHref, leading }: Props) {
       <div className="h-full px-5 sm:px-7 lg:px-10 flex items-center gap-4">
         {leading && <div className="lg:hidden shrink-0">{leading}</div>}
 
-        {/* Search — a wide pill at the start of the bar (U5). */}
-        <div className="hidden md:flex items-center flex-1 max-w-[640px]">
+        {/* Search — a wide pill at the start of the bar (U5). The platform owner has no company
+            data to search, so the box is not shown to them. */}
+        {user.role !== 'SUPER_ADMIN' && <div className="hidden md:flex items-center flex-1 max-w-[640px]">
           <div className="relative w-full group">
             <Search
               aria-hidden
@@ -48,7 +49,7 @@ export async function Topbar({ locale, notificationsHref, leading }: Props) {
               className="h-12 w-full ps-11 pe-5 rounded-full border border-hairline bg-surface text-[14px] placeholder:text-slate-400 text-slate-800 focus:outline-none focus:border-brand-400/60 focus:shadow-[0_0_0_3px_rgb(200_162_75/_0.10)] transition-all duration-200"
             />
           </div>
-        </div>
+        </div>}
 
         <div className="flex-1" />
 
