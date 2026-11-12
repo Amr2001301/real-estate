@@ -1,5 +1,7 @@
 import {
   IsBoolean,
+  IsUUID,
+  MaxLength,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -305,4 +307,21 @@ export class UpdateCompanyModulesDto {
     installments?: boolean;
     deposits?: boolean;
   };
+}
+
+export class PricingQuotationQueryDto {
+  @IsOptional()
+  @IsIn(['ar', 'en'])
+  locale?: 'ar' | 'en';
+
+  /** Who the quotation is prepared for. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  client?: string;
+
+  /** Quote this company's own prices instead of the global list (when it has any). */
+  @IsOptional()
+  @IsUUID()
+  companyId?: string;
 }

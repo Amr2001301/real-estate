@@ -18,7 +18,7 @@ import { formatStamp } from '../utils/xlsx';
 const FONT_PATH = resolve(__dirname, '../assets/fonts/NotoSansArabic.ttf');
 let fontDataUrl: string | null | undefined;
 
-function fontFace(): string {
+export function fontFace(): string {
   if (fontDataUrl === undefined) {
     try {
       fontDataUrl = `data:font/ttf;base64,${readFileSync(FONT_PATH).toString('base64')}`;
