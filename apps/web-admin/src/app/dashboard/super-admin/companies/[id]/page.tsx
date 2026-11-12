@@ -17,6 +17,7 @@ import { useClientLocale } from '@/components/locale-provider';
 import type { Locale } from '@/lib/locale';
 import { saT, type SaStrings } from '@/messages/super-admin';
 import { CompanyPricingPanel } from './_pricing-panel';
+import { CompanyCapabilitiesPanel } from './_capabilities-panel';
 import { CompanyAiPanel } from './_ai-panel';
 import { CompanyMobileAppPanel } from './_mobile-app-panel';
 import { CompanyWebsiteDomainPanel } from './_website-domain-panel';
@@ -50,6 +51,8 @@ interface CompanyDetail {
   createdAt: string; updatedAt: string;
   // Staff and customers (not SUPER_ADMIN) — as the API names it.
   userCount: number;
+  staffCount: number;
+  staffLimit: number | null;
   users: Array<{
     id: string; fullName: string; email: string | null;
     role: string; active: boolean; lastLoginAt: string | null; createdAt: string;
@@ -157,7 +160,7 @@ export default function CompanyDetailPage() {
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-[11px] font-semibold">
               <Users className="h-3 w-3" />
-              {company.userCount}{company.maxUsers ? ` / ${company.maxUsers}` : ''}
+              <span dir="ltr">{company.staffCount}{company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}</span>
             </span>
           </>
         }
@@ -240,8 +243,8 @@ export default function CompanyDetailPage() {
                   </Field>
                   <Field label={m.detail.fields.usersCount}>
                     <span className="text-[13px] tabular-nums text-slate-700">
-                      {company.userCount}
-                      {company.maxUsers ? ` / ${company.maxUsers}` : ''}
+                      <span dir="ltr">{company.staffCount}
+                      {company.staffLimit !== null ? ` / ${company.staffLimit}` : ''}</span>
                     </span>
                   </Field>
                   <Field label={m.detail.fields.createdAt}>
@@ -334,6 +337,9 @@ export default function CompanyDetailPage() {
                 </table>
               </div>
             </PremiumSectionCard>
+
+            {/* Staff users against the limit, and the plan's features with this company's overrides */}
+            <CompanyCapabilitiesPanel companyId={company.id} />
 
             {/* Company-specific pricing */}
             <CompanyPricingPanel companyId={company.id} />

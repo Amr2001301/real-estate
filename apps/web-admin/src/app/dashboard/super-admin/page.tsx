@@ -22,6 +22,8 @@ interface CompanySummary {
   subscriptionStatus: string;
   subscriptionEndAt: string | null;
   userCount: number;
+  staffCount: number;
+  staffLimit: number | null;
   maxUsers: number | null;
   createdAt: string;
 }
@@ -129,7 +131,7 @@ export default async function SuperAdminOverviewPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5 tabular-nums text-slate-700 text-[13px]">
-                      {c.userCount}{c.maxUsers ? ` / ${c.maxUsers}` : ''}
+                      <span dir="ltr">{c.staffCount}{c.staffLimit !== null ? ` / ${c.staffLimit}` : ''}</span>
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 text-[12px]">
                       {c.subscriptionEndAt ? formatDate(c.subscriptionEndAt, locale) : '—'}

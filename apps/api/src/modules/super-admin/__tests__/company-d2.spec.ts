@@ -61,6 +61,7 @@ function makeCapabilityService(overrides: Record<string, unknown> = {}) {
     hasCapability: jest.fn().mockResolvedValue(false),
     getCapabilities: jest.fn().mockResolvedValue({}),
     requireCapability: jest.fn().mockResolvedValue(undefined),
+    getEffectiveLimits: jest.fn().mockResolvedValue({ 'limit.maxUsers': 15 }),
     ...overrides,
   };
 }
@@ -95,7 +96,7 @@ function makeService(
         Promise.resolve({ ...makeCompanyRow(), ...args.data }),
       ),
     },
-    user: { findUnique: jest.fn().mockResolvedValue(null), findFirst: jest.fn().mockResolvedValue(null), create: jest.fn(), update: jest.fn() },
+    user: { findUnique: jest.fn().mockResolvedValue(null), findFirst: jest.fn().mockResolvedValue(null), create: jest.fn(), update: jest.fn(), groupBy: jest.fn().mockResolvedValue([{ companyId: 'c-d2-001', _count: { _all: 6 } }]), count: jest.fn().mockResolvedValue(6) },
     pricingPackage: { findFirst: jest.fn().mockResolvedValue(null) },
     setting: { createMany: jest.fn().mockResolvedValue({ count: 8 }) },
   };
@@ -258,6 +259,14 @@ describe('MT-043 — listCompanies projection', () => {
     expect(c.staffAppEnabled).toBe(true);
   });
 
+  test('shows the staff seats used against the effective limit (the plan limits staff users only)', async () => {
+    const { service } = makeService();
+    const c = (await service.listCompanies())[0]!;
+    expect(c.userCount).toBe(2); // every account, as before
+    expect(c.staffCount).toBe(6);
+    expect(c.staffLimit).toBe(15);
+  });
+
   test('also includes existing fields: id, name, slug, subscriptionStatus', async () => {
     const { service } = makeService();
     const companies = await service.listCompanies();
@@ -281,6 +290,7 @@ describe('MT-043 — getCompany projection', () => {
   function makeServiceWithDetail() {
     const prisma = {
       company: { findUnique: jest.fn().mockResolvedValue(rowWithCount) },
+      user: { count: jest.fn().mockResolvedValue(2) },
     };
     const capService = makeCapabilityService();
     const service = new SuperAdminService(prisma as never, capService as never, makeDomainResolver() as never, makeCompanyDomainsService() as never);

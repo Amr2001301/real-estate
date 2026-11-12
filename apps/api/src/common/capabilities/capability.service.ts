@@ -26,6 +26,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   buildEffectiveView,
+  OVERRIDE_ELIGIBLE_KEYS,
   validateCapabilityOverrides,
   type CapabilityValue,
   type EffectiveCapabilitiesView,
@@ -226,10 +227,31 @@ export class CapabilityService {
    * Throws BadRequestException with errors if any value is invalid.
    * Throws NotFoundException if companyId does not exist.
    */
+  /**
+   * Writes overrides (merged into the existing ones). `reset` names keys whose override is removed,
+   * so the key follows the plan again; a key cannot be both written and reset.
+   */
   async setCapabilityOverrides(
     companyId: string,
     overrides: Record<string, unknown>,
+    reset: readonly string[] = [],
   ): Promise<EffectiveCapabilitiesView> {
+    const clash = reset.filter((k) => k in overrides);
+    if (clash.length > 0) {
+      throw new BadRequestException({
+        message: 'Invalid capability overrides',
+        code: 'CAPABILITY_OVERRIDE_INVALID',
+        errors: clash.map((k) => `${k}: cannot be set and reset in the same request`),
+      });
+    }
+    const notEligible = reset.filter((k) => !(OVERRIDE_ELIGIBLE_KEYS as readonly string[]).includes(k));
+    if (notEligible.length > 0) {
+      throw new BadRequestException({
+        message: 'Invalid capability overrides',
+        code: 'CAPABILITY_OVERRIDE_INVALID',
+        errors: notEligible.map((k) => `${k}: not an override-eligible key`),
+      });
+    }
     const errors = validateCapabilityOverrides(overrides);
     if (errors.length > 0) {
       throw new BadRequestException({
@@ -246,10 +268,11 @@ export class CapabilityService {
     if (!existing) throw new NotFoundException('Company not found');
 
     // Merge: existing overrides are preserved unless the new write explicitly updates them.
-    const merged = {
+    const merged: Record<string, unknown> = {
       ...(existing.capabilities as Record<string, unknown> ?? {}),
       ...overrides,
     };
+    for (const k of reset) delete merged[k];
 
     await this.prisma.company.update({
       where: { id: companyId },
