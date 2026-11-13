@@ -7,7 +7,7 @@ const PARTS: SkeletonPart[] = [
   {
     t: 'grid',
     cls: 'grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]',
-    cols: [{ h: [560] }, { h: [560] }],
+    cols: [{ h: [560], block: true }, { h: [560] }],
   },
 ];
 

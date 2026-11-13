@@ -346,7 +346,7 @@ export type SkeletonPart =
   | { t: 'tabs'; n?: number }
   | { t: 'table'; cols?: number; rows?: number; head?: boolean }
   | { t: 'card'; h: number; list?: boolean; form?: boolean }
-  | { t: 'grid'; cls: string; cols: Array<{ s?: string; h: number[] }> };
+  | { t: 'grid'; cls: string; cols: Array<{ s?: string; h: number[]; block?: boolean }> };
 
 /** The white row of figures (cockpit FigureBar): label, large figure, a note — hairlines between. */
 export function FigureBarSkeleton({ count = 4 }: { count?: number }) {
@@ -467,7 +467,7 @@ export function PageSkeleton({ parts }: { parts: SkeletonPart[] }) {
                 {p.cols.map((col, c) => (
                   <div key={c} className={cn('flex flex-col gap-5', col.s)}>
                     {col.h.map((h, k) => (
-                      <BlockCardSkeleton key={k} h={h} />
+                      <BlockCardSkeleton key={k} h={h} list={!col.block} />
                     ))}
                   </div>
                 ))}
