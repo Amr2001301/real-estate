@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
@@ -55,7 +56,9 @@ export function MobileNav({
         <Menu />
       </IconButton>
 
-      {open && (
+      {/* Portalled to <body>: the top bar's backdrop-blur makes it the containing
+          block for fixed children, which squeezed the drawer into the bar's height. */}
+      {open && createPortal(
         <div className="lg:hidden fixed inset-0 z-50 animate-fade-in" role="dialog" aria-modal="true">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -73,7 +76,8 @@ export function MobileNav({
             </button>
             <SidebarContent user={user} locale={locale} sections={sections} onNavigate={() => setOpen(false)} />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
