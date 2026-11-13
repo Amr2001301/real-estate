@@ -3,7 +3,7 @@ import { activityActionLabel, monthChartLabel } from '@/lib/activity-labels';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import { getSession } from '@/lib/session';
+import { getSession, isBrokerage } from '@/lib/session';
 import { getDisabledFeatures } from '@/lib/capabilities';
 import { compactParts, intlLocale } from '@/lib/format';
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone } from '@/lib/currency';
@@ -25,6 +25,7 @@ import {
   groupActivity,
 } from '@/components/dashboard/admin-panels';
 import { SalesDashboard } from './_components/sales-home';
+import { BrokerageDashboard } from './_components/brokerage-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 import type { TopBrokersResponse } from '@/lib/types';
 import { AiUsageCard, type AiUsage } from '@/components/ai/ai-usage-card';
@@ -178,6 +179,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   const session = await getSession();
   // ?day=YYYY-MM-DD picks the agenda day on the sales homes; anything else reads as today.
   const { day } = await searchParams;
+  // BRK-1: a brokerage company's home is its pipeline, whatever the role.
+  if (isBrokerage(session) && session?.role !== 'SUPER_ADMIN') return <BrokerageDashboard day={day} />;
   if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} day={day} />;
   if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard day={day} />;
 

@@ -9,7 +9,7 @@ import { AppShell } from '@/components/layout/app-shell';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAdmin();
   const disabled = await getDisabledFeatures(user.role);
-  const sections = filterNavForRole(user.role, disabled, await getMyCodes());
+  const sections = filterNavForRole(user.role, disabled, await getMyCodes(), user.companyType ?? null);
   // How many customer payment proofs wait for an admin, beside its nav item.
   if (user.role === 'ADMIN') {
     const waiting = (await safe(api.get<Paged<unknown>>('/deposits/review-queue?pageSize=1'))).data?.meta.total ?? 0;

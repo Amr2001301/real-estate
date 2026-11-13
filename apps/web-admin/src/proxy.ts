@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isBrokerageDashboardPath } from './lib/brokerage';
 
 /**
  * Request proxy (Next 16 renamed the `middleware` convention to `proxy`; it
@@ -30,7 +31,7 @@ interface RefreshSuccess {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
-  user: { id: string; role: string; fullName: string };
+  user: { id: string; role: string; fullName: string; companyType?: string | null };
 }
 
 async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSuccess> {
@@ -45,7 +46,7 @@ async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSucc
     });
     if (!res.ok) return { success: false };
     const data = (await res.json()) as {
-      user: { id: string; role: string; fullName: string };
+      user: { id: string; role: string; fullName: string; companyType?: string | null };
       tokens: { accessToken: string; refreshToken: string; expiresIn: number };
     };
     return {
@@ -68,9 +69,19 @@ function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: Nex
   response.cookies.set('refresh_token', r.refreshToken, {
     httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: THIRTY_DAYS,
   });
-  response.cookies.set('user', JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }), {
+  response.cookies.set('user', JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName, companyType: r.user.companyType ?? null }), {
     httpOnly: false, sameSite: 'lax', path: '/', maxAge: THIRTY_DAYS,
   });
+}
+
+/** BRK-1: whether the `user` cookie names a brokerage company. */
+function isBrokerageSession(req: NextRequest): boolean {
+  try {
+    const raw = req.cookies.get('user')?.value;
+    return raw ? (JSON.parse(raw) as { companyType?: unknown }).companyType === 'BROKERAGE' : false;
+  } catch {
+    return false;
+  }
 }
 
 /** Derive the role from the non-httpOnly `user` cookie. Returns null if unparseable. */
@@ -125,6 +136,11 @@ export async function proxy(req: NextRequest) {
 
   // ── 3b. Protected app surfaces — require token presence ──────────────────
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) {
+    // BRK-1: a brokerage opening a developer page (an old link, a typed URL)
+    // lands on its home page instead of a page the API would refuse.
+    if (hasToken && pathname.startsWith('/dashboard') && isBrokerageSession(req) && !isBrokerageDashboardPath(pathname)) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
     if (hasToken) return NextResponse.next();
 
     // Server Action POSTs carry a `Next-Action` header — don't redirect them.

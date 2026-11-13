@@ -13,6 +13,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { CompanyTypeGuard } from './common/guards/company-type.guard';
 import { CompanyLifecycleGuard } from './common/guards/lifecycle.guard';
 import { CapabilityGuard } from './common/guards/capability.guard';
 
@@ -167,6 +168,8 @@ import { PermissionCatalogBootstrap } from './modules/permissions/permission-cat
     // role check executes. Guards run before interceptors — TenantContextInterceptor
     // has NOT yet populated ALS when this guard fires; only req.user.companyId is used.
     { provide: APP_GUARD, useClass: CompanyLifecycleGuard },
+    // BRK-1: a brokerage company reaches only its own route groups.
+    { provide: APP_GUARD, useClass: CompanyTypeGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     // Runs after RolesGuard: routes without @Permissions short-circuit to allow.
     { provide: APP_GUARD, useClass: PermissionsGuard },

@@ -643,11 +643,14 @@ export class AuthService {
         phone: true,
         locale: true,
         emailVerifiedAt: true,
+        // A brokerage company gets its own dashboard menu (BRK-1).
+        company: { select: { type: true } },
       },
     });
+    const { company, ...rest } = user ?? { company: null };
 
     return {
-      user,
+      user: user ? { ...rest, companyType: company?.type ?? null } : null,
       tokens: {
         accessToken,
         refreshToken: refreshRaw,

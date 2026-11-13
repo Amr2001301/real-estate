@@ -33,6 +33,7 @@ export default function NewCompanyPage() {
     const body = {
       name:                fd.get('name') as string,
       slug:                fd.get('slug') as string,
+      type:               (fd.get('type') as string) || 'DEVELOPER',
       country:            fd.get('country') as string,
       currency:           (fd.get('currency') as string) || 'EGP',
       timezone:           (fd.get('timezone') as string) || 'Africa/Cairo',
@@ -100,6 +101,15 @@ export default function NewCompanyPage() {
             description={m.fields.name}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Field label={m.typeLabel} name="type" hint={m.typeHint}>
+                  <Select name="type" defaultValue="DEVELOPER" data-testid="company-type">
+                    {Object.entries(m.typeOptions).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
               <Field label={m.fields.name} name="name" required>
                 <Input name="name" required placeholder="شركة المدينة للعقارات" />
               </Field>

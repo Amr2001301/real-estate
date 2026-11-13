@@ -3,10 +3,19 @@ import { redirect } from 'next/navigation';
 
 export type SessionRole = 'SUPER_ADMIN' | 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'BROKER' | 'MAINTENANCE_SUPERVISOR';
 
+/** DEVELOPER (the default) or BROKERAGE — an independent broker company (BRK-1). */
+export type CompanyType = 'DEVELOPER' | 'BROKERAGE';
+
 export interface SessionUser {
   id: string;
   role: SessionRole;
   fullName: string;
+  /** Missing on sessions from before BRK-1: read as DEVELOPER. */
+  companyType?: CompanyType | null;
+}
+
+export function isBrokerage(user: Pick<SessionUser, 'companyType'> | null | undefined): boolean {
+  return user?.companyType === 'BROKERAGE';
 }
 
 export async function getSession(): Promise<SessionUser | null> {

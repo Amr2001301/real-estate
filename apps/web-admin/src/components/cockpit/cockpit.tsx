@@ -43,17 +43,17 @@ export function DayHeader({
   /** Full date · desk name. */
   date: string;
   actions: ReactNode;
-  /** The month's target, as a slim line under the date. */
-  target: { label: string; pct: number | null; detail: string; note: string };
+  /** The month's target, as a slim line under the date (a brokerage has none yet). */
+  target?: { label: string; pct: number | null; detail: string; note: string };
 }) {
-  const p = Math.max(0, Math.min(100, target.pct ?? 0));
+  const p = Math.max(0, Math.min(100, target?.pct ?? 0));
   return (
     <header data-testid="day-header" className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0 space-y-2">
         <p className={cn('text-[13px] font-bold tracking-wide', GOLD)}>{kicker}</p>
         <h1 className="font-heading text-[40px] font-bold leading-[1.1] text-slate-900 sm:text-[46px]">{title}</h1>
         <p className="text-[14px] text-slate-500">{date}</p>
-        <div className="max-w-md pt-3">
+        {target && <div className="max-w-md pt-3">
           <div className="flex items-baseline justify-between gap-4 text-[12.5px]">
             <span className="font-semibold text-slate-600">
               {target.label}
@@ -65,7 +65,7 @@ export function DayHeader({
             <div className="h-full rounded-full bg-gradient-to-l from-[#E6C77E] to-[#B8913F]" style={{ width: `${p}%` }} />
           </div>
           <p className="mt-1.5 text-[12px] tabular-nums text-slate-500">{target.detail}</p>
-        </div>
+        </div>}
       </div>
       <div className="flex flex-wrap items-center gap-2">{actions}</div>
     </header>

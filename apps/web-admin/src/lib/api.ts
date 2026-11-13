@@ -1,3 +1,4 @@
+import type { CompanyType } from './session';
 import { cookies, headers } from 'next/headers';
 import { redirect, unstable_rethrow } from 'next/navigation';
 import { formatMissingPermissionMessage, planRefusalMessage, userFacingRefusal } from './permission-error';
@@ -98,7 +99,7 @@ async function refreshAdminSession(): Promise<boolean> {
   if (!res.ok) return false;
 
   let data: {
-    user: { id: string; role: string; fullName: string };
+    user: { id: string; role: string; fullName: string; companyType?: CompanyType | null };
     tokens: { accessToken: string; refreshToken: string; expiresIn: number };
   };
   try {
@@ -115,7 +116,7 @@ async function refreshAdminSession(): Promise<boolean> {
     c.set('refresh_token', data.tokens.refreshToken, {
       httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * 30,
     });
-    c.set('user', JSON.stringify({ id: data.user.id, role: data.user.role, fullName: data.user.fullName }), {
+    c.set('user', JSON.stringify({ id: data.user.id, role: data.user.role, fullName: data.user.fullName, companyType: data.user.companyType ?? null }), {
       httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30,
     });
     return true;
@@ -209,7 +210,7 @@ export const api = {
 };
 
 export type AuthResult = {
-  user: { id: string; role: string; fullName: string };
+  user: { id: string; role: string; fullName: string; companyType?: CompanyType | null };
   tokens: { accessToken: string; refreshToken: string; expiresIn: number };
 };
 
