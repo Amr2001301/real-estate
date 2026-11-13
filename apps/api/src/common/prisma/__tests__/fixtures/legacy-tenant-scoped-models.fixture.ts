@@ -56,6 +56,7 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'migrationrun', // a company's data moved in from another system (MG1)
   'migrationrecord',
   'unitpricerate',
+  'listing',
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

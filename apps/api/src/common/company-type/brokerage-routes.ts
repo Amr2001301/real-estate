@@ -35,6 +35,9 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
   '/meta',
   '/visits',
   '/campaigns',
+  // BRK-2 — its listings, and the unit types they are filed under
+  '/listings',
+  '/unit-types',
   // Tools
   '/notifications',
   '/ai',
@@ -43,8 +46,23 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
   '/health',
 ];
 
+/** The brokerage's own route groups: a developer company does not reach them. */
+export const BROKERAGE_ONLY_ROUTE_PREFIXES: readonly string[] = ['/listings'];
+
+function bare(path: string): string {
+  return (path.split('?')[0] ?? '').replace(/^\/v\d+(?=\/)/, '');
+}
+
+function under(p: string, prefixes: readonly string[]): boolean {
+  return prefixes.some((prefix) => p === prefix || p.startsWith(prefix + '/'));
+}
+
 /** Whether a request path (with or without the /v1 prefix) is open to a brokerage. */
 export function isBrokerageRouteAllowed(path: string): boolean {
-  const p = (path.split('?')[0] ?? '').replace(/^\/v\d+(?=\/)/, '');
-  return BROKERAGE_ROUTE_PREFIXES.some((prefix) => p === prefix || p.startsWith(prefix + '/'));
+  return under(bare(path), BROKERAGE_ROUTE_PREFIXES);
+}
+
+/** Whether a request path belongs to the brokerage only (closed to developers). */
+export function isBrokerageOnlyRoute(path: string): boolean {
+  return under(bare(path), BROKERAGE_ONLY_ROUTE_PREFIXES);
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isBrokerageDashboardPath } from './lib/brokerage';
+import { isBrokerageDashboardPath, isBrokerageOnlyDashboardPath } from './lib/brokerage';
 
 /**
  * Request proxy (Next 16 renamed the `middleware` convention to `proxy`; it
@@ -138,8 +138,11 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) {
     // BRK-1: a brokerage opening a developer page (an old link, a typed URL)
     // lands on its home page instead of a page the API would refuse.
-    if (hasToken && pathname.startsWith('/dashboard') && isBrokerageSession(req) && !isBrokerageDashboardPath(pathname)) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+    if (hasToken && pathname.startsWith('/dashboard')) {
+      const brokerage = isBrokerageSession(req);
+      if (brokerage ? !isBrokerageDashboardPath(pathname) : isBrokerageOnlyDashboardPath(pathname)) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
     }
     if (hasToken) return NextResponse.next();
 

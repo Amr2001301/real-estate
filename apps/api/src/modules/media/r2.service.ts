@@ -19,7 +19,9 @@ export type StorageFolder =
   | 'banners'
   | 'documents'
   | 'avatars'
-  | 'branding';
+  | 'branding'
+  /** BRK-2 — a brokerage's listing photos (public). */
+  | 'listings';
 
 /**
  * Private folders — always uploaded to / downloaded from the private bucket.

@@ -141,6 +141,8 @@ export interface NavItem {
   /** Plan feature the page needs (CapabilityService key). Hidden when the
    *  company's plan switches it off — the API would refuse the page. */
   feature?: string;
+  /** BRK-2: a brokerage company's own page — hidden from developer companies. */
+  brokerageOnly?: boolean;
   /** A count shown beside the label (set per request, e.g. proofs waiting). */
   badge?: number;
   /** Other pages this link stands for (the settings page's): active on them too. */
@@ -174,6 +176,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'المبيعات',
     titleKey: 'sales',
     items: [
+      { href: '/dashboard/listings', label: 'الوحدات المعروضة', labelKey: 'listings', iconKey: 'Building2', brokerageOnly: true },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },
@@ -336,7 +339,7 @@ export function filterNavForRole(
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
   if (role === 'BROKER') return [];
   const roleVisible = navItemVisible(role, disabledFeatures, codes);
-  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : roleVisible;
+  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : (i: NavItem) => !i.brokerageOnly && roleVisible(i);
   const hub = filterSettingsHub(role, disabledFeatures, codes, companyType);
   return NAV_SECTIONS.map((section) => ({
     ...section,
@@ -357,7 +360,7 @@ export function filterSettingsHub(
 ) {
   if (role === 'SUPER_ADMIN' || role === 'BROKER') return [];
   const roleVisible = navItemVisible(role, disabledFeatures, codes);
-  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : roleVisible;
+  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : (i: NavItem) => !i.brokerageOnly && roleVisible(i);
   return SETTINGS_HUB.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length > 0);
 }
 

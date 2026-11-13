@@ -163,15 +163,16 @@ model Company {
   // Module flags — controls which dashboard sections are visible for this company
   modules           Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
   campaigns         Campaign[]
+  listings          Listing[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
   migrationRuns     MigrationRun[]
   migrationRecords  MigrationRecord[]
   migrationMappings MigrationMapping[]
+  metaConnections   MetaConnection[]
 
   @@index([slug])
   @@index([isActive])
-  metaConnections MetaConnection[]
 }
 
 // =============================================================================
@@ -629,6 +630,7 @@ model User {
   visitRequests           VisitRequest[]            @relation("VisitRequestUser")
   infoRequests            InfoRequest[]             @relation("InfoRequestUser")
   assignedLeads           Lead[]                    @relation("LeadAssignedSales")
+  assignedListings        Listing[]                 @relation("ListingAgent")
   leads                   Lead[]                    @relation("LeadClient")
   leadNotes               LeadNote[]
   reservations            Reservation[]             @relation("ReservationSales")
@@ -1009,16 +1011,16 @@ model Project {
   brokerAccess      BrokerProjectAccess[]
   brokerCommissions BrokerCommission[]
 
-  companyId      String?         @db.Uuid
-  company        Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  campaigns      Campaign[]
-  leadIntakeKeys LeadIntakeKey[]
+  companyId       String?          @db.Uuid
+  company         Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  campaigns       Campaign[]
+  leadIntakeKeys  LeadIntakeKey[]
+  metaConnections MetaConnection[]
 
   @@unique([companyId, code])
   @@index([city])
   @@index([status, featured])
   @@index([companyId])
-  metaConnections MetaConnection[]
 }
 
 model ProjectMedia {
@@ -1285,6 +1287,73 @@ model Lead {
   @@index([companyId, campaignId])
 }
 
+// ─── Brokerage listings (BRK-2) ─────────────────────────────────────────────
+
+/// How a brokerage offers a property: a developer's unit it sells (primary),
+/// an owner's property for sale (resale) or for rent.
+enum ListingKind {
+  PRIMARY
+  RESALE
+  RENT
+}
+
+/// AVAILABLE → UNDER_OFFER (an offer or a deposit) → CLOSED (sold / rented);
+/// WITHDRAWN when the owner takes it off the market.
+enum ListingStatus {
+  AVAILABLE
+  UNDER_OFFER
+  CLOSED
+  WITHDRAWN
+}
+
+/// A property a brokerage company markets (BRK-2). Entered by hand; linking a
+/// developer's unit on the platform comes later. For RENT `price` is the
+/// monthly rent; otherwise the asking price. The owner's name and phone are
+/// staff-only. Photos are public-bucket URLs, in order.
+model Listing {
+  id            String         @id @default(uuid()) @db.Uuid
+  code          String
+  kind          ListingKind
+  status        ListingStatus  @default(AVAILABLE)
+  title         String
+  /// A UnitType code of the company (apartment, villa, office…).
+  unitType      String
+  usage         UnitUsage      @default(RESIDENTIAL)
+  city          String
+  district      String?
+  compound      String?
+  address       String?
+  /// The developer and project, when known (always for PRIMARY).
+  developerName String?
+  projectName   String?
+  area          Float
+  bedrooms      Int?
+  bathrooms     Int?
+  floor         Int?
+  finishing     UnitFinishing?
+  view          UnitView?
+  price         Decimal        @db.Decimal(14, 2)
+  /// The down payment asked, for a sale on instalments.
+  downPayment   Decimal?       @db.Decimal(14, 2)
+  /// Handover / availability date, when known.
+  deliveryDate  DateTime?      @db.Date
+  description   String?
+  ownerName     String?
+  ownerPhone    String?
+  photos        String[]       @default([])
+  agentId       String?        @db.Uuid
+  agent         User?          @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  createdById   String?        @db.Uuid
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId, kind, status])
+}
+
 enum CampaignChannel {
   FACEBOOK
   INSTAGRAM
@@ -1329,13 +1398,13 @@ model Campaign {
   leads     Lead[]
   spend     CampaignSpend[]
 
-  companyId  String?         @db.Uuid
-  company    Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  intakeKeys LeadIntakeKey[]
+  companyId       String?          @db.Uuid
+  company         Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  intakeKeys      LeadIntakeKey[]
+  metaConnections MetaConnection[]
 
   @@unique([companyId, code])
   @@index([companyId])
-  metaConnections MetaConnection[]
 }
 
 /// A secret key a lead source posts new leads with (Zapier / Make, Google
@@ -2024,17 +2093,17 @@ model Contract {
 }
 
 model InstallmentPlan {
-  id            String               @id @default(uuid()) @db.Uuid
-  contractId    String               @unique @db.Uuid
-  contract      Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  totalMonths   Int
-  monthlyAmount Decimal              @db.Decimal(14, 2)
-  startsAt      DateTime
-  frequency     InstallmentFrequency @default(MONTHLY)
+  id                 String               @id @default(uuid()) @db.Uuid
+  contractId         String               @unique @db.Uuid
+  contract           Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  totalMonths        Int
+  monthlyAmount      Decimal              @db.Decimal(14, 2)
+  startsAt           DateTime
+  frequency          InstallmentFrequency @default(MONTHLY)
   /// Balloon plan: the big payment beside the monthly one, and its spacing.
-  balloonAmount      Decimal? @db.Decimal(14, 2)
+  balloonAmount      Decimal?             @db.Decimal(14, 2)
   balloonEveryMonths Int?
-  createdAt     DateTime             @default(now())
+  createdAt          DateTime             @default(now())
 
   // ── Step D1: set when contract is cancelled ──────────────────────────────
   cancelledAt DateTime?

@@ -89,6 +89,8 @@ export const PERMISSION_CATALOG: ReadonlyArray<{ code: string; description: stri
   { code: 'leads:note', description: 'Add lead notes' },
   { code: 'lead_sources:manage', description: 'Manage lead sources' },
   { code: 'campaigns:manage', description: 'Manage marketing campaigns and their spend' },
+  { code: 'listings:read', description: 'View the brokerage company\'s listings' },
+  { code: 'listings:manage', description: 'Add, edit and close the brokerage company\'s listings' },
   { code: 'visits:read', description: 'Read visit requests and appointments' },
   { code: 'visits:create', description: 'Create visit appointments' },
   { code: 'visits:approve', description: 'Review or update visit requests' },

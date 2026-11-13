@@ -8,6 +8,7 @@
 export const BROKERAGE_DASHBOARD_PATHS: readonly string[] = [
   '/dashboard',
   '/dashboard/assistant',
+  '/dashboard/listings',
   '/dashboard/leads',
   '/dashboard/follow-ups',
   '/dashboard/calendar',
@@ -25,6 +26,13 @@ export const BROKERAGE_DASHBOARD_PATHS: readonly string[] = [
   '/dashboard/setup',
   '/dashboard/security',
 ];
+
+/** BRK-2 — the brokerage's own pages: a developer company is sent home from them. */
+export const BROKERAGE_ONLY_DASHBOARD_PATHS: readonly string[] = ['/dashboard/listings'];
+
+export function isBrokerageOnlyDashboardPath(path: string): boolean {
+  return BROKERAGE_ONLY_DASHBOARD_PATHS.some((p) => path === p || path.startsWith(p + '/'));
+}
 
 /** Whether a brokerage may open this dashboard path (the home page exactly; the rest with their sub-pages). */
 export function isBrokerageDashboardPath(path: string): boolean {

@@ -39,6 +39,9 @@ export const SALES_DEFAULT_PERMISSIONS = [
   // Inventory / read-only references
   'projects:read',
   'units:read',
+  // BRK-2 — a brokerage's agents capture and update listings
+  'listings:read',
+  'listings:manage',
   'installments:read',
   'deposits:read',
   // Compensation self-read (API self-scopes SALES to their own rows)
