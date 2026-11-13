@@ -9,6 +9,14 @@
  * - Two brokerages never see each other's listings (list, read, edit,
  *   status, delete all answer as if the listing did not exist).
  * - A developer company does not reach the listings at all (NOT_FOR_DEVELOPER).
+ * - An owner's mandate (resale / rent): one at a time, cancel, counted in the
+ *   home's alerts when it ends within 14 days.
+ * - A rent is let: the listing reads as rented, its months are owed, a month
+ *   is recorded once, unpaid rent counts in the alerts; ending it relists.
+ * - A visit is booked on a listing for a lead (the lead moves to VISIT), with
+ *   no visit request filed; another company's listing is refused.
+ * - The morning reminders reach the agent once: a mandate ending, a tenancy
+ *   ending, a month's rent unpaid; a second run sends nothing.
  */
 import 'reflect-metadata';
 import request from 'supertest';
@@ -66,6 +74,17 @@ describe('BRK-2 — brokerage listings (e2e)', () => {
 
   afterAll(async () => {
     const raw = testApp.rawPrisma;
+    await raw.visitActivity.deleteMany({ where: { visit: { companyId: { in: companyIds } } } });
+    await raw.visitAppointment.deleteMany({ where: { companyId: { in: companyIds } } });
+    await raw.leadActivity.deleteMany({ where: { lead: { companyId: { in: companyIds } } } });
+    await raw.leadNote.deleteMany({ where: { lead: { companyId: { in: companyIds } } } });
+    const leadClients = (await raw.lead.findMany({ where: { companyId: { in: companyIds } }, select: { clientId: true } })).map((l) => l.clientId);
+    await raw.lead.deleteMany({ where: { companyId: { in: companyIds } } });
+    await raw.user.deleteMany({ where: { id: { in: leadClients }, role: UserRole.CLIENT } });
+    await raw.notification.deleteMany({ where: { companyId: { in: companyIds } } });
+    await raw.rentPayment.deleteMany({ where: { companyId: { in: companyIds } } });
+    await raw.tenancy.deleteMany({ where: { companyId: { in: companyIds } } });
+    await raw.listingMandate.deleteMany({ where: { companyId: { in: companyIds } } });
     await raw.listing.deleteMany({ where: { companyId: { in: companyIds } } });
     const users = await raw.user.findMany({ where: { companyId: { in: companyIds } }, select: { id: true } });
     const ids = users.map((u) => u.id);
@@ -139,5 +158,106 @@ describe('BRK-2 — brokerage listings (e2e)', () => {
     const res = await as(devAdmin, http().get('/v1/listings')).expect(403);
     expect(res.body.code).toBe('NOT_FOR_DEVELOPER');
     await as(devAdmin, http().post('/v1/listings')).send(resale).expect(403);
+  });
+
+  const isoDay = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+
+  it('BRK2-6: an owner\'s mandate — one at a time, cancelled, ending soon counted', async () => {
+    const l = await as(aAdmin, http().post('/v1/listings')).send({ ...resale, title: 'تفويض' }).expect(201);
+    await as(aAdmin, http().post(`/v1/listings/${l.body.id}/mandates`))
+      .send({ kind: 'EXCLUSIVE', commissionPct: 2.5, commissionAmount: 50_000, startDate: isoDay(-30), endDate: isoDay(10) })
+      .expect(400);
+    const m = await as(aAdmin, http().post(`/v1/listings/${l.body.id}/mandates`))
+      .send({ kind: 'EXCLUSIVE', commissionPct: 2.5, startDate: isoDay(-30), endDate: isoDay(10) })
+      .expect(201);
+    expect(m.body).toMatchObject({ state: 'ACTIVE', expiringSoon: true });
+    await as(aAdmin, http().post(`/v1/listings/${l.body.id}/mandates`)).send({ kind: 'OPEN', commissionPct: 2, startDate: isoDay(0), endDate: isoDay(60) }).expect(409);
+    const alerts = await as(aRep, http().get('/v1/listings/alerts')).expect(200);
+    expect(alerts.body.mandatesExpiring).toBeGreaterThanOrEqual(1);
+    // Company B cannot cancel it.
+    await as(bAdmin, http().post(`/v1/listings/mandates/${m.body.id}/cancel`)).expect(404);
+    await as(aAdmin, http().post(`/v1/listings/mandates/${m.body.id}/cancel`)).expect(201);
+    const terms = await as(aAdmin, http().get(`/v1/listings/${l.body.id}/terms`)).expect(200);
+    expect(terms.body.mandates[0].state).toBe('CANCELLED');
+    // A primary sale has no owner's mandate.
+    const primary = await as(aAdmin, http().post('/v1/listings')).send({ ...resale, kind: 'PRIMARY', developerName: 'مطوّر' }).expect(201);
+    await as(aAdmin, http().post(`/v1/listings/${primary.body.id}/mandates`)).send({ kind: 'OPEN', commissionPct: 2, startDate: isoDay(0), endDate: isoDay(30) }).expect(400);
+  });
+
+  it('BRK2-7: a rent is let, its months are owed and recorded once, ending it relists', async () => {
+    const l = await as(aAdmin, http().post('/v1/listings')).send({ ...resale, kind: 'RENT', title: 'للإيجار', price: 30_000 }).expect(201);
+    const t = await as(aRep, http().post(`/v1/listings/${l.body.id}/tenancies`))
+      .send({ tenantName: 'مستأجر', tenantPhone: '01009998887', startDate: isoDay(-70), endDate: isoDay(294), monthlyRent: 30_000, paymentDay: 1 })
+      .expect(201);
+    // A year's lease (the end one day short of a year) owes 12 months.
+    expect(t.body.schedule).toHaveLength(12);
+    expect(t.body.summary.overdueCount).toBeGreaterThanOrEqual(2);
+    expect((await as(aAdmin, http().get(`/v1/listings/${l.body.id}`)).expect(200)).body.status).toBe('CLOSED');
+    await as(aAdmin, http().post(`/v1/listings/${l.body.id}/tenancies`))
+      .send({ tenantName: 'آخر', tenantPhone: '01000000000', startDate: isoDay(0), endDate: isoDay(100), monthlyRent: 1, paymentDay: 1 })
+      .expect(409);
+
+    const first = t.body.schedule[0].period as string;
+    const paid = await as(aRep, http().post(`/v1/listings/tenancies/${t.body.id}/payments`)).send({ period: first, amount: 30_000, paidOn: isoDay(-60) }).expect(201);
+    expect(paid.body.schedule[0].state).toBe('PAID');
+    await as(aRep, http().post(`/v1/listings/tenancies/${t.body.id}/payments`)).send({ period: first, amount: 30_000, paidOn: isoDay(-60) }).expect(409);
+    await as(aRep, http().post(`/v1/listings/tenancies/${t.body.id}/payments`)).send({ period: '2099-01', amount: 1, paidOn: isoDay(0) }).expect(400);
+    // Company B reaches none of it.
+    await as(bAdmin, http().post(`/v1/listings/tenancies/${t.body.id}/payments`)).send({ period: t.body.schedule[1].period, amount: 1, paidOn: isoDay(0) }).expect(404);
+    await as(bAdmin, http().get(`/v1/listings/${l.body.id}/terms`)).expect(404);
+
+    const alerts = await as(aAdmin, http().get('/v1/listings/alerts')).expect(200);
+    expect(alerts.body.rentOverdue).toBeGreaterThanOrEqual(1);
+    expect((await as(bAdmin, http().get('/v1/listings/alerts')).expect(200)).body.rentOverdue).toBe(0);
+
+    // A rep does not undo a payment; the admin does.
+    const paymentId = (await testApp.rawPrisma.rentPayment.findFirstOrThrow({ where: { tenancyId: t.body.id } })).id;
+    await as(aRep, http().delete(`/v1/listings/rent-payments/${paymentId}`)).expect(403);
+    await as(aAdmin, http().delete(`/v1/listings/rent-payments/${paymentId}`)).expect(200);
+
+    await as(aAdmin, http().post(`/v1/listings/tenancies/${t.body.id}/end`)).expect(201);
+    expect((await as(aAdmin, http().get(`/v1/listings/${l.body.id}`)).expect(200)).body.status).toBe('AVAILABLE');
+    // A sale listing is never let.
+    const sale = await as(aAdmin, http().post('/v1/listings')).send(resale).expect(201);
+    await as(aAdmin, http().post(`/v1/listings/${sale.body.id}/tenancies`))
+      .send({ tenantName: 'مستأجر', tenantPhone: '01000000000', startDate: isoDay(0), endDate: isoDay(100), monthlyRent: 1, paymentDay: 1 })
+      .expect(400);
+  });
+
+  it('BRK2-8: a visit is booked on a listing for a lead — no visit request — and another company\'s listing is refused', async () => {
+    const l = await as(aAdmin, http().post('/v1/listings')).send({ ...resale, title: 'للمعاينة' }).expect(201);
+    const lead = await as(aAdmin, http().post('/v1/leads')).send({ fullName: 'عميل وساطة', phone: `0100${stamp}`.slice(0, 11), allowDuplicate: true }).expect(201);
+    const when = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const visit = await as(aAdmin, http().post('/v1/visits/appointments')).send({ leadId: lead.body.id, listingId: l.body.id, scheduledAt: when }).expect(201);
+    expect(visit.body).toMatchObject({ listingId: l.body.id, projectId: null, visitRequestId: null });
+    expect(visit.body.listing).toMatchObject({ code: l.body.code });
+    const raw = testApp.rawPrisma;
+    expect((await raw.lead.findUniqueOrThrow({ where: { id: lead.body.id } })).stage).toBe('VISIT');
+    // Neither a project nor a listing, or both: refused.
+    await as(aAdmin, http().post('/v1/visits/appointments')).send({ leadId: lead.body.id, scheduledAt: when }).expect(400);
+    // Company B's listing is not company A's.
+    const theirs = (await as(bAdmin, http().get('/v1/listings')).expect(200)).body.data[0].id as string;
+    await as(aAdmin, http().post('/v1/visits/appointments')).send({ leadId: lead.body.id, listingId: theirs, scheduledAt: when }).expect(400);
+    const list = await as(aAdmin, http().get(`/v1/visits/appointments?leadId=${lead.body.id}`)).expect(200);
+    expect(list.body.data[0].listing).toMatchObject({ id: l.body.id });
+  });
+
+  it('BRK2-9: the morning reminders reach the agent once', async () => {
+    const raw = testApp.rawPrisma;
+    const l = await as(aAdmin, http().post('/v1/listings'))
+      .send({ ...resale, kind: 'RENT', title: 'تذكيرات', price: 10_000, agentId: aRepId })
+      .expect(201);
+    await as(aAdmin, http().post(`/v1/listings/${l.body.id}/mandates`)).send({ kind: 'OPEN', commissionAmount: 10_000, startDate: isoDay(-200), endDate: isoDay(5) }).expect(201);
+    await as(aAdmin, http().post(`/v1/listings/${l.body.id}/tenancies`))
+      .send({ tenantName: 'مستأجر التذكير', tenantPhone: '01011112222', startDate: isoDay(-40), endDate: isoDay(20), monthlyRent: 10_000, paymentDay: 1 })
+      .expect(201);
+    const run = () => testApp.runCronJob('listing-reminders');
+    await run();
+    const sent = await raw.notification.findMany({ where: { userId: aRepId }, select: { templateCode: true } });
+    const codes = sent.map((n) => n.templateCode);
+    expect(codes).toEqual(expect.arrayContaining(['listing_mandate_expiring', 'tenancy_ending', 'rent_due']));
+    const before = sent.length;
+    await run();
+    expect(await raw.notification.count({ where: { userId: aRepId } })).toBe(before);
   });
 });

@@ -268,9 +268,9 @@ export default async function VisitsPage({
                       code={a.visitNumber}
                     />
                     <PlaceCell
-                      project={tx(a.project?.name)}
+                      project={a.listing ? a.listing.title : tx(a.project?.name)}
                       projectId={a.project?.id}
-                      unit={a.unit?.code}
+                      unit={a.unit?.code ?? a.listing?.code}
                       unitId={a.unit?.id}
                       unitWord={m.unitPrefix.replace(':', '')}
                     />

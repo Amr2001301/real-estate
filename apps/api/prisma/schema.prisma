@@ -164,6 +164,9 @@ model Company {
   modules           Json? // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
   campaigns         Campaign[]
   listings          Listing[]
+  listingMandates   ListingMandate[]
+  tenancies         Tenancy[]
+  rentPayments      RentPayment[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
   migrationRuns     MigrationRun[]
@@ -1311,14 +1314,14 @@ enum ListingStatus {
 /// monthly rent; otherwise the asking price. The owner's name and phone are
 /// staff-only. Photos are public-bucket URLs, in order.
 model Listing {
-  id            String         @id @default(uuid()) @db.Uuid
+  id            String             @id @default(uuid()) @db.Uuid
   code          String
   kind          ListingKind
-  status        ListingStatus  @default(AVAILABLE)
+  status        ListingStatus      @default(AVAILABLE)
   title         String
   /// A UnitType code of the company (apartment, villa, office…).
   unitType      String
-  usage         UnitUsage      @default(RESIDENTIAL)
+  usage         UnitUsage          @default(RESIDENTIAL)
   city          String
   district      String?
   compound      String?
@@ -1332,26 +1335,121 @@ model Listing {
   floor         Int?
   finishing     UnitFinishing?
   view          UnitView?
-  price         Decimal        @db.Decimal(14, 2)
+  price         Decimal            @db.Decimal(14, 2)
   /// The down payment asked, for a sale on instalments.
-  downPayment   Decimal?       @db.Decimal(14, 2)
+  downPayment   Decimal?           @db.Decimal(14, 2)
   /// Handover / availability date, when known.
-  deliveryDate  DateTime?      @db.Date
+  deliveryDate  DateTime?          @db.Date
   description   String?
   ownerName     String?
   ownerPhone    String?
-  photos        String[]       @default([])
-  agentId       String?        @db.Uuid
-  agent         User?          @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
-  createdById   String?        @db.Uuid
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  photos        String[]           @default([])
+  agentId       String?            @db.Uuid
+  agent         User?              @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  mandates      ListingMandate[]
+  tenancies     Tenancy[]
+  appointments  VisitAppointment[]
+  createdById   String?            @db.Uuid
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, code])
   @@index([companyId, kind, status])
+}
+
+/// An owner's mandate to market a resale or rent listing (BRK-2): exclusive
+/// or open, its commission (a share of the price or a fixed amount) and its
+/// term. A mandate is in force from its start to its end day unless
+/// cancelled; the agent is told once before it ends (expiryNotifiedAt).
+enum MandateKind {
+  EXCLUSIVE
+  OPEN
+}
+
+model ListingMandate {
+  id               String      @id @default(uuid()) @db.Uuid
+  listingId        String      @db.Uuid
+  listing          Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  kind             MandateKind
+  /// The commission as a share of the deal (e.g. 2.5) — or a fixed amount.
+  commissionPct    Decimal?    @db.Decimal(5, 2)
+  commissionAmount Decimal?    @db.Decimal(14, 2)
+  startDate        DateTime    @db.Date
+  endDate          DateTime    @db.Date
+  notes            String?
+  cancelledAt      DateTime?
+  expiryNotifiedAt DateTime?
+  createdById      String?     @db.Uuid
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, endDate])
+  @@index([listingId])
+}
+
+enum TenancyStatus {
+  ACTIVE
+  ENDED
+}
+
+/// A rent listing let to a tenant (BRK-2): the monthly rent falls due on
+/// `paymentDay` of each month from the start month to the end month. Each
+/// month's payment is a RentPayment; the agent is reminded on a due day
+/// still unpaid (lastDueReminderPeriod) and once before the end.
+model Tenancy {
+  id                    String        @id @default(uuid()) @db.Uuid
+  listingId             String        @db.Uuid
+  listing               Listing       @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tenantName            String
+  tenantPhone           String
+  startDate             DateTime      @db.Date
+  endDate               DateTime      @db.Date
+  monthlyRent           Decimal       @db.Decimal(14, 2)
+  /// The day of the month the rent is due (1–28).
+  paymentDay            Int
+  deposit               Decimal?      @db.Decimal(14, 2)
+  notes                 String?
+  status                TenancyStatus @default(ACTIVE)
+  endedAt               DateTime?
+  /// "YYYY-MM" of the last month the agent was reminded of an unpaid rent.
+  lastDueReminderPeriod String?
+  endingNotifiedAt      DateTime?
+  createdById           String?       @db.Uuid
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  payments              RentPayment[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([listingId])
+}
+
+/// One month's rent received (BRK-2): one per tenancy and month.
+model RentPayment {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenancyId   String   @db.Uuid
+  tenancy     Tenancy  @relation(fields: [tenancyId], references: [id], onDelete: Cascade)
+  /// "YYYY-MM".
+  period      String
+  amount      Decimal  @db.Decimal(14, 2)
+  paidOn      DateTime @db.Date
+  note        String?
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([tenancyId, period])
+  @@index([companyId])
 }
 
 enum CampaignChannel {
@@ -1720,6 +1818,9 @@ model VisitAppointment {
   project            Project?          @relation(fields: [projectId], references: [id])
   unitId             String?           @db.Uuid
   unit               Unit?             @relation(fields: [unitId], references: [id])
+  /// BRK-2 — a brokerage's visit is to one of its listings (no project).
+  listingId          String?           @db.Uuid
+  listing            Listing?          @relation(fields: [listingId], references: [id], onDelete: SetNull)
   assignedSalesId    String?           @db.Uuid
   assignedSales      User?             @relation("AppointmentSales", fields: [assignedSalesId], references: [id])
   scheduledAt        DateTime
@@ -1780,6 +1881,7 @@ model VisitAppointment {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@index([listingId])
 }
 
 model VisitActivity {

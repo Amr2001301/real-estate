@@ -75,6 +75,7 @@ const APPOINTMENT_INCLUDE = {
   client: { select: { id: true, fullName: true, phone: true, email: true } },
   project: { select: { id: true, name: true } },
   unit: { select: { id: true, code: true, type: true } },
+  listing: { select: { id: true, code: true, title: true } },
   assignedSales: { select: { id: true, fullName: true, phone: true } },
   createdBy: { select: { id: true, fullName: true } },
 } satisfies Prisma.VisitAppointmentInclude;
@@ -125,6 +126,7 @@ export class VisitsService {
           visitRequestId: true,
           project: { select: { name: true } },
           unit: { select: { code: true } },
+          listing: { select: { code: true, title: true } },
           visitRequest: {
             select: {
               customerName: true,
@@ -142,8 +144,9 @@ export class VisitsService {
         visitId: a.id,
         requestId: a.visitRequestId ?? '',
         customerName: a.client?.fullName ?? a.visitRequest?.customerName ?? '',
-        projectName: name.ar || name.en || '',
-        unitCode: a.unit?.code ?? '',
+        // A brokerage's visit names its listing where a developer's names the project.
+        projectName: name.ar || name.en || a.listing?.title || '',
+        unitCode: a.unit?.code ?? a.listing?.code ?? '',
         scheduledAt: a.scheduledAt.toISOString(),
         preferredDate: a.visitRequest?.preferredDate?.toISOString() ?? '',
         preferredTime: a.visitRequest?.preferredTime ?? '',
@@ -526,6 +529,11 @@ export class VisitsService {
     if (dto.leadId && dto.clientId) {
       throw new BadRequestException('لا يمكن تحديد عميل محتمل وعميل مسجل معًا');
     }
+    // BRK-2 — a visit is to a project (developer) or to a listing (brokerage).
+    if (Boolean(dto.projectId) === Boolean(dto.listingId)) {
+      throw new BadRequestException('حدّد المشروع أو الوحدة المعروضة للزيارة');
+    }
+    if (dto.listingId) return this.createListingAppointment(dto, user);
 
     const customerName = dto.customerName?.trim() || null;
     const customerPhone = dto.customerPhone?.trim() || null;
@@ -580,7 +588,7 @@ export class VisitsService {
     }
 
     const project = await this.prisma.project.findUnique({
-      where: { id: dto.projectId },
+      where: { id: dto.projectId! },
       select: { id: true },
     });
     if (!project) throw new BadRequestException('Project not found');
@@ -640,7 +648,7 @@ export class VisitsService {
         const visitRequest = await tx.visitRequest.create({
           data: {
             requestNumber,
-            projectId: dto.projectId,
+            projectId: dto.projectId!,
             unitId: dto.unitId ?? null,
             leadId: resolvedLeadId,
             userId: resolvedClientId,
@@ -720,7 +728,7 @@ export class VisitsService {
       } else if (resolvedClientId) {
         const { leadId: targetLeadId } = await matchOrCreateLeadForClient(tx, {
           clientId: resolvedClientId,
-          projectId: dto.projectId,
+          projectId: dto.projectId!,
           unitId: dto.unitId ?? null,
           bumpableStages: [LeadStage.NEW, LeadStage.INTERESTED],
           targetStage: LeadStage.VISIT,
@@ -757,6 +765,102 @@ export class VisitsService {
       }
       return appointment;
     });
+  }
+
+  /**
+   * BRK-2 — a brokerage's visit to one of its listings, for one of its leads
+   * or a walk-in. No visit request is filed (a request names a developer's
+   * project); the lead moves to «زيارة» and the rep is told, as for a
+   * project visit.
+   */
+  private async createListingAppointment(dto: CreateDirectAppointmentDto, user: AuthUser) {
+    if (dto.clientId || dto.unitId) throw new BadRequestException('زيارة الوحدة المعروضة لعميل محتمل أو لزائر فقط');
+    const listing = await this.prisma.listing.findFirst({ where: { id: dto.listingId! }, select: { id: true, address: true } });
+    if (!listing) throw new BadRequestException('الوحدة المعروضة غير موجودة');
+
+    const ownerScope = await clientOwnerScope(this.prisma, user);
+    let leadId: string | null = null;
+    if (dto.leadId) {
+      const l = await this.prisma.lead.findUnique({ where: { id: dto.leadId }, select: { id: true, assignedSalesId: true } });
+      if (!l) throw new BadRequestException('Lead not found');
+      assertLeadInScope(ownerScope, l.assignedSalesId);
+      leadId = l.id;
+    } else if (!dto.customerName?.trim() || !dto.customerPhone?.trim()) {
+      throw new BadRequestException('يجب إدخال اسم العميل ورقم الهاتف في حالة الزيارة بدون حساب مسجل');
+    }
+
+    const scheduledAt = new Date(dto.scheduledAt);
+    if (Number.isNaN(scheduledAt.getTime())) throw new BadRequestException('Invalid scheduled date');
+    const isPast = scheduledAt < new Date();
+    if (isPast && user.role !== UserRole.ADMIN) throw new BadRequestException('لا يمكن جدولة زيارة في الماضي');
+    if (isPast && dto.status !== AppointmentStatus.COMPLETED) {
+      throw new BadRequestException('الزيارة في تاريخ ماضٍ يجب حفظها كمنفّذة (COMPLETED)');
+    }
+    const effectiveSalesId =
+      user.role === UserRole.SALES ? user.sub : dto.assignedSalesId ? await this.resolveAssignableSalesId(dto.assignedSalesId, user) : null;
+    const status = dto.status === AppointmentStatus.COMPLETED ? AppointmentStatus.COMPLETED : AppointmentStatus.SCHEDULED;
+    if (status !== AppointmentStatus.COMPLETED) {
+      await this.assertVisitSlot({
+        assignedSalesId: effectiveSalesId,
+        unitId: null,
+        scheduledAt,
+        durationMinutes: dto.durationMinutes ?? null,
+        leadId,
+        clientId: null,
+      });
+    }
+    const walkIn = leadId ? null : `${dto.customerName!.trim()} — ${dto.customerPhone!.trim()}`;
+
+    const appointment = await withNumberRetry(async () => {
+      const visitNumber = await this.nextVisitNumber();
+      return this.prisma.$transaction(async (tx) => {
+        const a = await tx.visitAppointment.create({
+          data: {
+            visitNumber,
+            leadId,
+            listingId: listing.id,
+            assignedSalesId: effectiveSalesId,
+            scheduledAt,
+            durationMinutes: dto.durationMinutes ?? null,
+            location: dto.location ?? listing.address ?? null,
+            meetingPoint: dto.meetingPoint ?? null,
+            // A walk-in has no lead: the name and phone stay with the visit.
+            salesNotes: [walkIn, dto.salesNotes].filter(Boolean).join('\n') || null,
+            status,
+            completedAt: status === AppointmentStatus.COMPLETED ? scheduledAt : null,
+            createdById: user.sub,
+            updatedById: user.sub,
+          },
+          include: APPOINTMENT_INCLUDE,
+        });
+        await tx.visitActivity.create({
+          data: {
+            visitId: a.id,
+            leadId,
+            actorId: user.sub,
+            actorRole: user.role,
+            type: status === AppointmentStatus.COMPLETED ? VisitActivityType.VISIT_COMPLETED : VisitActivityType.VISIT_SCHEDULED,
+            newValue: { visitNumber, scheduledAt: scheduledAt.toISOString(), status, listingId: listing.id },
+          },
+        });
+        if (leadId) {
+          await tx.lead.updateMany({
+            where: { id: leadId, stage: { in: [LeadStage.NEW, LeadStage.INTERESTED] } },
+            data: { stage: LeadStage.VISIT },
+          });
+          await tx.leadActivity.create({
+            data: { leadId, type: 'visit', payload: { visitId: a.id, visitNumber, status, scheduledAt: scheduledAt.toISOString() } },
+          });
+        }
+        return a;
+      });
+    });
+    if (status !== AppointmentStatus.COMPLETED) {
+      await this.notifications.sendToUsers([effectiveSalesId], 'visit_scheduled', await this.buildAppointmentPayload(appointment.id), {
+        except: user.sub,
+      });
+    }
+    return appointment;
   }
 
   private async nextRequestNumber(): Promise<string> {

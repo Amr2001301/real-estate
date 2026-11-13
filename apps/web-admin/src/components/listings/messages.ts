@@ -96,6 +96,57 @@ const ar = {
     cancel: 'إلغاء',
     photoError: 'تعذّر رفع الصورة',
   },
+  terms: {
+    mandate: 'تفويض المالك',
+    mandateSub: 'المدة والعمولة المتفق عليها مع المالك.',
+    noMandate: 'لا يوجد تفويض مسجّل لهذه الوحدة.',
+    newMandate: 'تسجيل تفويض',
+    mandateKind: { EXCLUSIVE: 'حصري', OPEN: 'مفتوح' } as Record<string, string>,
+    mandateState: { ACTIVE: 'ساري', UPCOMING: 'لم يبدأ', EXPIRED: 'منتهٍ', CANCELLED: 'مُلغى' } as Record<string, string>,
+    kindLabel: 'نوع التفويض',
+    commission: 'العمولة',
+    commissionPct: 'نسبة من الصفقة',
+    commissionAmount: 'مبلغ ثابت',
+    from: 'من',
+    to: 'إلى',
+    notes: 'ملاحظات',
+    daysLeft: (n: number) => (n === 0 ? 'ينتهي اليوم' : n === 1 ? 'ينتهي غدًا' : `باقٍ ${n} يومًا`),
+    cancelMandate: 'إلغاء',
+    cancelMandateConfirm: 'إلغاء هذا التفويض؟',
+    saveMandate: 'حفظ التفويض',
+    tenancy: 'عقد الإيجار',
+    tenancySub: 'المستأجر، المدة، والإيجار الشهري ومواعيده.',
+    noTenancy: 'الوحدة غير مؤجّرة حاليًا.',
+    newTenancy: 'تأجير الوحدة',
+    tenantName: 'اسم المستأجر',
+    tenantPhone: 'هاتف المستأجر',
+    start: 'بداية العقد',
+    end: 'نهاية العقد',
+    rent: 'الإيجار الشهري',
+    paymentDay: 'يوم الدفع',
+    paymentDayHint: 'يوم من 1 إلى 28 من كل شهر',
+    deposit: 'التأمين',
+    saveTenancy: 'حفظ العقد',
+    endTenancy: 'إنهاء العقد',
+    endTenancyConfirm: 'إنهاء عقد الإيجار؟ ستعود الوحدة متاحة.',
+    term: 'المدة',
+    payDayOf: (d: number) => `يوم ${d} من كل شهر`,
+    paidMonths: (paid: number, all: number) => `${paid} من ${all} شهر مدفوع`,
+    overdue: (n: number) => (n === 1 ? 'شهر متأخر' : `${n} أشهر متأخرة`),
+    endsIn: (n: number) => (n < 0 ? 'انتهت المدة' : `ينتهي بعد ${n} يومًا`),
+    month: 'الشهر',
+    due: 'الاستحقاق',
+    amount: 'المبلغ',
+    rowState: { PAID: 'مدفوع', OVERDUE: 'متأخر', DUE_TODAY: 'مستحق اليوم', UPCOMING: 'قادم' } as Record<string, string>,
+    record: 'تسجيل الدفع',
+    paidOn: 'تاريخ الدفع',
+    save: 'حفظ',
+    undo: 'تراجع',
+    undoConfirm: 'حذف هذه الدفعة؟',
+    past: 'عقود سابقة',
+    ended: 'انتهى',
+    scheduleVisit: 'جدولة زيارة',
+  },
   detail: {
     edit: 'تعديل',
     setStatus: 'تغيير الحالة',
@@ -206,6 +257,57 @@ const en: typeof ar = {
     cancel: 'Cancel',
     photoError: 'The photo could not be uploaded',
   },
+  terms: {
+    mandate: "Owner's mandate",
+    mandateSub: 'The term and commission agreed with the owner.',
+    noMandate: 'No mandate recorded for this listing.',
+    newMandate: 'Record a mandate',
+    mandateKind: { EXCLUSIVE: 'Exclusive', OPEN: 'Open' },
+    mandateState: { ACTIVE: 'In force', UPCOMING: 'Not started', EXPIRED: 'Expired', CANCELLED: 'Cancelled' },
+    kindLabel: 'Mandate type',
+    commission: 'Commission',
+    commissionPct: 'Share of the deal',
+    commissionAmount: 'Fixed amount',
+    from: 'From',
+    to: 'To',
+    notes: 'Notes',
+    daysLeft: (n: number) => (n === 0 ? 'Ends today' : n === 1 ? 'Ends tomorrow' : `${n} days left`),
+    cancelMandate: 'Cancel',
+    cancelMandateConfirm: 'Cancel this mandate?',
+    saveMandate: 'Save mandate',
+    tenancy: 'Tenancy',
+    tenancySub: 'The tenant, the term, and the monthly rent and its days.',
+    noTenancy: 'The unit is not let at the moment.',
+    newTenancy: 'Let the unit',
+    tenantName: "Tenant's name",
+    tenantPhone: "Tenant's phone",
+    start: 'Starts',
+    end: 'Ends',
+    rent: 'Monthly rent',
+    paymentDay: 'Payment day',
+    paymentDayHint: 'A day from 1 to 28 of each month',
+    deposit: 'Deposit',
+    saveTenancy: 'Save tenancy',
+    endTenancy: 'End tenancy',
+    endTenancyConfirm: 'End the tenancy? The unit goes back on the market.',
+    term: 'Term',
+    payDayOf: (d: number) => `Day ${d} of each month`,
+    paidMonths: (paid: number, all: number) => `${paid} of ${all} months paid`,
+    overdue: (n: number) => (n === 1 ? '1 month overdue' : `${n} months overdue`),
+    endsIn: (n: number) => (n < 0 ? 'Term ended' : `Ends in ${n} days`),
+    month: 'Month',
+    due: 'Due',
+    amount: 'Amount',
+    rowState: { PAID: 'Paid', OVERDUE: 'Overdue', DUE_TODAY: 'Due today', UPCOMING: 'Upcoming' },
+    record: 'Record payment',
+    paidOn: 'Paid on',
+    save: 'Save',
+    undo: 'Undo',
+    undoConfirm: 'Delete this payment?',
+    past: 'Past tenancies',
+    ended: 'Ended',
+    scheduleVisit: 'Schedule a visit',
+  },
   detail: {
     edit: 'Edit',
     setStatus: 'Change status',
@@ -264,3 +366,47 @@ export interface Listing {
 
 export const LISTING_KINDS: ListingKind[] = ['PRIMARY', 'RESALE', 'RENT'];
 export const LISTING_STATUSES: ListingStatus[] = ['AVAILABLE', 'UNDER_OFFER', 'CLOSED', 'WITHDRAWN'];
+
+export interface ListingMandate {
+  id: string;
+  kind: 'EXCLUSIVE' | 'OPEN';
+  commissionPct: string | null;
+  commissionAmount: string | null;
+  startDate: string;
+  endDate: string;
+  notes: string | null;
+  state: 'ACTIVE' | 'UPCOMING' | 'EXPIRED' | 'CANCELLED';
+  daysLeft: number;
+  expiringSoon: boolean;
+}
+
+export interface RentRow {
+  period: string;
+  dueDate: string;
+  amount: number;
+  state: 'PAID' | 'OVERDUE' | 'DUE_TODAY' | 'UPCOMING';
+  paid: { amount: number; paidOn: string } | null;
+}
+
+export interface Tenancy {
+  id: string;
+  tenantName: string;
+  tenantPhone: string;
+  startDate: string;
+  endDate: string;
+  monthlyRent: string;
+  paymentDay: number;
+  deposit: string | null;
+  notes: string | null;
+  status: 'ACTIVE' | 'ENDED';
+  endedAt: string | null;
+  payments: Array<{ id: string; period: string; amount: string; paidOn: string }>;
+  schedule: RentRow[];
+  summary: { paid: number; months: number; overdueCount: number; overdueAmount: number; next: RentRow | null; daysLeft: number; endingSoon: boolean };
+}
+
+export interface ListingTerms {
+  mandates: ListingMandate[];
+  tenancies: Tenancy[];
+}
+

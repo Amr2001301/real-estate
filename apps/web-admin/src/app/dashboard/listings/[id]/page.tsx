@@ -1,17 +1,18 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Pencil, MapPin, Phone, MessageCircle, UserRound } from 'lucide-react';
+import { Pencil, MapPin, Phone, MessageCircle, UserRound, CalendarPlus } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { UnitTypeOption } from '@/lib/types';
 import { tx, compactParts, formatDate } from '@/lib/format';
-import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { PremiumPageHero } from '@/components/premium';
 import { KindTag, StatusTag, ListingPhotoPlaceholder, ListingPrice, placeLine } from '@/components/listings/listing-card';
-import { listingsT, LISTING_STATUSES, type Listing } from '@/components/listings/messages';
+import { listingsT, LISTING_STATUSES, type Listing, type ListingTerms } from '@/components/listings/messages';
+import { ListingTermsPanels } from '../_components/listing-terms';
 import { ListingStatusSelect, DeleteListingButton } from '../_components/listing-actions';
 
 export const dynamic = 'force-dynamic';
@@ -32,9 +33,11 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
   const m = listingsT(locale);
   const u = uiT(locale).pages.units;
   const symbol = currencySymbol(currency, locale);
-  const [listingRes, typesRes] = await Promise.all([
+  const [listingRes, typesRes, termsRes, timeZone] = await Promise.all([
     safe(api.get<Listing>(`/listings/${id}`)),
     safe(api.get<UnitTypeOption[]>('/unit-types')),
+    safe(api.get<ListingTerms>(`/listings/${id}/terms`)),
+    getCompanyTimeZone(),
   ]);
   const l = listingRes.data;
   if (!l) notFound();
@@ -82,11 +85,17 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
           <>
             {canDelete && <DeleteListingButton id={l.id} label={m.detail.delete} confirm={m.detail.deleteConfirm} />}
             <ListingStatusSelect
+              key={l.status}
               id={l.id}
               status={l.status}
               label={m.detail.setStatus}
               options={LISTING_STATUSES.map((s) => ({ value: s, label: s === 'CLOSED' ? m.closed[l.kind] : m.status[s] }))}
             />
+            {l.status !== 'CLOSED' && l.status !== 'WITHDRAWN' && (
+              <Link href={`/dashboard/visits/new?listingId=${l.id}` as never}>
+                <Button variant="outline" size="md" leftIcon={<CalendarPlus className="h-4 w-4" />}>{m.terms.scheduleVisit}</Button>
+              </Link>
+            )}
             <Link href={`/dashboard/listings/${l.id}/edit` as never}>
               <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>{m.detail.edit}</Button>
             </Link>
@@ -126,6 +135,19 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
               ))}
             </dl>
           </Card>
+
+          {termsRes.data && (
+            <ListingTermsPanels
+              listingId={l.id}
+              kind={l.kind}
+              price={price}
+              terms={termsRes.data}
+              locale={locale}
+              symbol={symbol}
+              today={todayIn(timeZone)}
+              canUndo={canDelete}
+            />
+          )}
 
           {l.description && (
             <Card title={m.detail.description}>

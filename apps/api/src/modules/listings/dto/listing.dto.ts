@@ -10,12 +10,13 @@ import {
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
   Min,
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { ListingKind, ListingStatus, UnitFinishing, UnitUsage, UnitView } from '@prisma/client';
+import { ListingKind, ListingStatus, MandateKind, UnitFinishing, UnitUsage, UnitView } from '@prisma/client';
 
 /** A stored photo is the upload's public URL. */
 const PHOTO_URL = /^https?:\/\/\S+$/;
@@ -90,4 +91,34 @@ export class ListingPhotoPresignDto {
   @IsString() @Matches(/^image\/(jpeg|png|webp)$/, { message: 'الصور فقط: JPEG أو PNG أو WebP' }) contentType!: string;
   @Type(() => Number) @IsInt() @Min(1) sizeBytes!: number;
   @IsOptional() @IsString() @MaxLength(8) extension?: string;
+}
+
+// ─── Mandates and tenancies (BRK-2) ─────────────────────────────────────────
+
+export class CreateMandateDto {
+  @IsEnum(MandateKind) kind!: MandateKind;
+  /** A share of the deal (e.g. 2.5), or `commissionAmount` — one of them. */
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) @Max(100) commissionPct?: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) commissionAmount?: number;
+  @IsDateString() startDate!: string;
+  @IsDateString() endDate!: string;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class CreateTenancyDto {
+  @IsString() @MinLength(2) @MaxLength(120) tenantName!: string;
+  @IsString() @Matches(/^\+?[0-9 ()-]{6,20}$/, { message: 'رقم هاتف المستأجر غير صحيح' }) tenantPhone!: string;
+  @IsDateString() startDate!: string;
+  @IsDateString() endDate!: string;
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) monthlyRent!: number;
+  @Type(() => Number) @IsInt() @Min(1) @Max(28) paymentDay!: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) deposit?: number;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
+}
+
+export class RecordRentPaymentDto {
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'الشهر بصيغة YYYY-MM' }) period!: string;
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) amount!: number;
+  @IsDateString() paidOn!: string;
+  @IsOptional() @IsString() @MaxLength(500) note?: string;
 }

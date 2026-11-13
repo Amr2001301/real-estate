@@ -82,7 +82,7 @@ export function buildWeek(
         href: `/dashboard/visits/appointments/${v.id}`,
         time: formatTime(v.scheduledAt, locale, timeZone),
         title: v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber,
-        sub: [v.project ? tx(v.project.name, locale) : null, withOwner ? v.assignedSales?.fullName : null]
+        sub: [v.project ? tx(v.project.name, locale) : v.listing ? `${v.listing.code} · ${v.listing.title}` : null, withOwner ? v.assignedSales?.fullName : null]
           .filter(Boolean).join(' · ') || v.visitNumber,
         tag: 'visit' as const,
       },

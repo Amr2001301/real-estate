@@ -1,6 +1,6 @@
 import {
   Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users,
-  MessageSquareText, Wrench, CalendarClock, type LucideIcon,
+  MessageSquareText, Wrench, CalendarClock, Building2, type LucideIcon,
 } from 'lucide-react';
 import type { NotificationItem, NotificationChannel } from '@/lib/types';
 import { Card } from '@/components/ui/card';
@@ -61,6 +61,10 @@ function relatedLink(
     // New entityType payloads first (maintenance/visit must beat legacy requestId).
     if (entityType === 'contract' && entityId) {
       return { href: `/dashboard/contracts/${entityId}`, icon: FileText, label: rl.contract };
+    }
+    // BRK-2 — a brokerage's mandate, tenancy and rent notices open the listing.
+    if (entityType === 'listing' && entityId) {
+      return { href: `/dashboard/listings/${entityId}`, icon: Building2, label: rl.listing };
     }
     if (entityType === 'reservation' && entityId) {
       return { href: `/dashboard/reservations/${entityId}`, icon: BookmarkCheck, label: rl.reservation };

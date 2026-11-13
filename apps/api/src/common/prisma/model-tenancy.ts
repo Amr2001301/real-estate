@@ -118,6 +118,9 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   UnitPriceRate: 'TENANT_OWNED',
   // BRK-2 — a brokerage company's listings.
   Listing: 'TENANT_OWNED',
+  ListingMandate: 'TENANT_OWNED',
+  Tenancy: 'TENANT_OWNED',
+  RentPayment: 'TENANT_OWNED',
   // P4 — printed documents: the company's print settings and its wording.
   PrintSettings: 'TENANT_OWNED',
   DocumentTemplate: 'TENANT_OWNED',

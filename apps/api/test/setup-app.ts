@@ -69,6 +69,7 @@ import { AssistantTools, type AssistantActor } from '../src/modules/ai/ai-assist
 import { InstallmentRemindersService, InstallmentsService } from '../src/modules/installments/installments.module';
 import { UnsignedContractAlertCron } from '../src/modules/installments/unsigned-contract-alert.cron';
 import { UnitValueRiseCron } from '../src/modules/units/unit-value-rise.cron';
+import { ListingRemindersCron } from '../src/modules/listings/listing-reminders.cron';
 import { MaintenanceSlaCheckCron, MaintenanceUnresolvedCron } from '../src/modules/maintenance/maintenance.module';
 import { ReservationExpiryCron } from '../src/modules/reservations/reservations.module';
 import { AppointmentReminderCron } from '../src/modules/visits/appointment-reminder.cron';
@@ -142,7 +143,9 @@ export type CronJob =
   | 'follow-up-reminders'
   | 'follow-up-daily'
   | 'unsigned-contract-alerts'
-  | 'unit-value-rise';
+  | 'unit-value-rise'
+  /** BRK-2 — every brokerage's morning reminders, whatever its local hour. */
+  | 'listing-reminders';
 
 function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const appointments = app.get(AppointmentReminderCron);
@@ -158,6 +161,7 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
   const followUps = app.get(FollowUpReminderCron);
   const unsignedAlerts = app.get(UnsignedContractAlertCron);
   const unitValueRise = app.get(UnitValueRiseCron);
+  const listingReminders = app.get(ListingRemindersCron);
   const asCron = (fn: () => Promise<unknown>) =>
     runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
       await fn();
@@ -195,6 +199,8 @@ function cronRunner(app: INestApplication): (job: CronJob) => Promise<void> {
         return asCron(() => unsignedAlerts.run());
       case 'unit-value-rise':
         return asCron(() => unitValueRise.run());
+      case 'listing-reminders':
+        return asCron(() => listingReminders.run(new Date(), null));
     }
   };
 }

@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { Plus, Users, Megaphone, AlertTriangle, PhoneCall } from 'lucide-react';
+import { Plus, CalendarPlus, Megaphone, AlertTriangle, PhoneCall, FileSignature, Wallet, KeyRound } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import { getCompanyTimeZone, todayIn } from '@/lib/currency';
+import { getCompanyTimeZone, getReportsCurrency, currencySymbol, todayIn } from '@/lib/currency';
+import { compactParts } from '@/lib/format';
 import type { Paged, Lead, VisitAppointment } from '@/lib/types';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -44,13 +45,17 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
 
   // Scoped by the API to what this user may see; every count is the server's.
   const monthStart = `${today.slice(0, 8)}01`;
-  const [leadsRes, monthRes, staleRes, visitsRes, unconfirmedRes] = await Promise.all([
+  const [leadsRes, monthRes, staleRes, visitsRes, unconfirmedRes, alertsRes, currency] = await Promise.all([
     safe(api.get<Paged<Lead>>('/leads?pageSize=1')),
     safe(api.get<Paged<Lead>>(`/leads?dateFrom=${monthStart}&pageSize=1`)),
     safe(api.get<Paged<Lead>>(`/leads?stage=NEW,INTERESTED&createdBefore=${staleIso}&pageSize=1`)),
     safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?scheduledFrom=${fromIso}&scheduledTo=${toIso}&open=true&pageSize=100`)),
     safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?status=SCHEDULED&scheduledFrom=${nowIso}&pageSize=1`)),
+    safe(api.get<{ mandatesExpiring: number; rentOverdue: number; rentOverdueAmount: number; tenanciesEnding: number }>('/listings/alerts')),
+    getReportsCurrency(),
   ]);
+  const alerts = alertsRes.data;
+  const overdueRent = compactParts(alerts?.rentOverdueAmount ?? 0, currencySymbol(currency, locale), locale).join(' ');
 
   const stages = leadsRes.data?.meta.facets?.counts?.stage ?? {};
   const openLeads = (leadsRes.data?.meta.total ?? 0) - (stages.WON ?? 0) - (stages.LOST ?? 0);
@@ -78,9 +83,8 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
             <Link href={'/dashboard/campaigns' as never}>
               <Button variant="outline" size="md" leftIcon={<Megaphone className="h-4 w-4" />}>{b.campaigns}</Button>
             </Link>
-            {/* No «schedule a visit» yet: a visit needs a listing (brokerage phase 2). */}
-            <Link href={'/dashboard/leads' as never}>
-              <Button variant="outline" size="md" leftIcon={<Users className="h-4 w-4" />}>{b.leadsList}</Button>
+            <Link href={'/dashboard/visits/new' as never}>
+              <Button variant="outline" size="md" leftIcon={<CalendarPlus className="h-4 w-4" />}>{m.btnScheduleVisit}</Button>
             </Link>
             <Link href={'/dashboard/leads/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.btnAddLead}</Button>
@@ -137,6 +141,9 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
               tasks={[
                 { key: 'follow', icon: <AlertTriangle />, tone: 'amber', label: c.followUps, desc: c.followUpsDesc, count: stale, href: '/dashboard/leads?stage=NEW,INTERESTED' },
                 { key: 'unconfirmed', icon: <PhoneCall />, tone: 'sky', label: c.unconfirmed, desc: c.unconfirmedDesc, count: unconfirmedRes.data?.meta.total ?? 0, href: '/dashboard/visits?tab=appointments' },
+                { key: 'rent', icon: <Wallet />, tone: 'rose', label: b.rentOverdue, desc: b.rentOverdueDesc(overdueRent), count: alerts?.rentOverdue ?? 0, href: '/dashboard/listings?kind=RENT&status=CLOSED' },
+                { key: 'mandates', icon: <FileSignature />, tone: 'violet', label: b.mandatesExpiring, desc: b.mandatesExpiringDesc, count: alerts?.mandatesExpiring ?? 0, href: '/dashboard/listings' },
+                { key: 'tenancies', icon: <KeyRound />, tone: 'amber', label: b.tenanciesEnding, desc: b.tenanciesEndingDesc, count: alerts?.tenanciesEnding ?? 0, href: '/dashboard/listings?kind=RENT&status=CLOSED' },
               ]}
             />
           </Panel>

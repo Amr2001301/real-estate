@@ -18,6 +18,7 @@ export async function createVisitAction(
   const rawLeadId = String(formData.get('leadId') ?? '').trim() || undefined;
   const rawClientId = String(formData.get('clientId') ?? '').trim() || undefined;
   const projectId = String(formData.get('projectId') ?? '').trim();
+  const listingId = String(formData.get('listingId') ?? '').trim();
   const unitId = String(formData.get('unitId') ?? '').trim() || undefined;
   const assignedSalesId = String(formData.get('assignedSalesId') ?? '').trim() || undefined;
   const scheduledAt = String(formData.get('scheduledAt') ?? '').trim();
@@ -33,7 +34,7 @@ export async function createVisitAction(
   const leadId = ownerType === 'lead' ? rawLeadId : undefined;
   const clientId = ownerType === 'client' ? rawClientId : undefined;
 
-  if (!projectId) return { error: 'يجب اختيار المشروع' };
+  if (!projectId && !listingId) return { error: listingId === '' && formData.has('listingId') ? 'يجب اختيار الوحدة المعروضة' : 'يجب اختيار المشروع' };
   if (!scheduledAt) return { error: 'يجب تحديد تاريخ ووقت الزيارة' };
 
   if (ownerType === 'lead' && !leadId) return { error: 'يجب اختيار العميل المحتمل' };
@@ -47,8 +48,7 @@ export async function createVisitAction(
     const res = await api.post<{ id: string }>('/visits/appointments', {
       ...(leadId ? { leadId } : {}),
       ...(clientId ? { clientId } : {}),
-      projectId,
-      unitId,
+      ...(listingId ? { listingId } : { projectId, unitId }),
       assignedSalesId,
       // The time typed is the company's, not the server's (UTC on Vercel).
       scheduledAt: wallTimeToIso(scheduledAt, await getCompanyTimeZone()),

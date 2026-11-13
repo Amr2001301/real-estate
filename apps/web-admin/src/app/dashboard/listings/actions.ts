@@ -81,3 +81,73 @@ export async function deleteListingAction(id: string): Promise<void> {
   revalidatePath('/dashboard/listings');
   redirect('/dashboard/listings');
 }
+
+// ─── Mandates and tenancies ────────────────────────────────────────────────
+
+async function termsCall(listingId: string, call: () => Promise<unknown>): Promise<ListingFormState> {
+  try {
+    await call();
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/listings/${listingId}`);
+  revalidatePath('/dashboard');
+  return {};
+}
+
+export async function createMandateAction(listingId: string, _prev: ListingFormState, f: FormData): Promise<ListingFormState> {
+  const value = Number(str(f, 'commissionValue'));
+  const byPct = str(f, 'commissionMode') !== 'AMOUNT';
+  return termsCall(listingId, () =>
+    api.post(`/listings/${listingId}/mandates`, {
+      kind: str(f, 'kind'),
+      ...(byPct ? { commissionPct: value } : { commissionAmount: value }),
+      startDate: str(f, 'startDate'),
+      endDate: str(f, 'endDate'),
+      notes: str(f, 'notes') || undefined,
+    }),
+  );
+}
+
+export async function cancelMandateAction(listingId: string, mandateId: string): Promise<void> {
+  await termsCall(listingId, () => api.post(`/listings/mandates/${mandateId}/cancel`, {}));
+}
+
+export async function createTenancyAction(listingId: string, _prev: ListingFormState, f: FormData): Promise<ListingFormState> {
+  const deposit = str(f, 'deposit');
+  const res = await termsCall(listingId, () =>
+    api.post(`/listings/${listingId}/tenancies`, {
+      tenantName: str(f, 'tenantName'),
+      tenantPhone: str(f, 'tenantPhone'),
+      startDate: str(f, 'startDate'),
+      endDate: str(f, 'endDate'),
+      monthlyRent: Number(str(f, 'monthlyRent')),
+      paymentDay: Number(str(f, 'paymentDay')),
+      deposit: deposit ? Number(deposit) : undefined,
+      notes: str(f, 'notes') || undefined,
+    }),
+  );
+  revalidatePath('/dashboard/listings');
+  return res;
+}
+
+export async function endTenancyAction(listingId: string, tenancyId: string): Promise<void> {
+  await termsCall(listingId, () => api.post(`/listings/tenancies/${tenancyId}/end`, {}));
+  revalidatePath('/dashboard/listings');
+}
+
+export async function recordRentAction(listingId: string, tenancyId: string, period: string, _prev: ListingFormState, f: FormData): Promise<ListingFormState> {
+  return termsCall(listingId, () =>
+    api.post(`/listings/tenancies/${tenancyId}/payments`, {
+      period,
+      amount: Number(str(f, 'amount')),
+      paidOn: str(f, 'paidOn'),
+      note: str(f, 'note') || undefined,
+    }),
+  );
+}
+
+export async function removeRentPaymentAction(listingId: string, paymentId: string): Promise<void> {
+  await termsCall(listingId, () => api.delete(`/listings/rent-payments/${paymentId}`));
+}

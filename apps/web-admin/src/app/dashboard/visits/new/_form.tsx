@@ -52,6 +52,10 @@ interface Props {
   projects: Pick<Project, 'id' | 'name' | 'city'>[];
   salesOptions: SalesUser[];
   locale?: Locale;
+  /** BRK-2 — a brokerage visits one of its listings instead of a project and unit. */
+  listings?: Array<{ id: string; code: string; title: string; kind: string }>;
+  /** Opened from a listing's page: that listing is picked. */
+  defaultListingId?: string;
 }
 
 type OwnerType = 'lead' | 'client' | 'walkin';
@@ -67,7 +71,10 @@ export default function NewVisitForm({
   projects,
   salesOptions,
   locale = 'ar',
+  listings,
+  defaultListingId,
 }: Props) {
+  const brokerage = Boolean(listings);
   const m = uiT(locale).pages.visitsForm;
   const c = uiT(locale).common;
 
@@ -114,14 +121,15 @@ export default function NewVisitForm({
 
   const navSections = [
     { id: 'section-client',   num: '01', label: m.nav01Label, sub: m.nav01Sub },
-    { id: 'section-project',  num: '02', label: m.nav02Label, sub: m.nav02Sub },
+    { id: 'section-project',  num: '02', label: brokerage ? m.listingLabel : m.nav02Label, sub: brokerage ? m.listingNavSub : m.nav02Sub },
     { id: 'section-schedule', num: '03', label: m.nav03Label, sub: m.nav03Sub },
     { id: 'section-agent',    num: '04', label: m.nav04Label, sub: m.nav04Sub },
   ];
 
   const clientTypeOptions: { value: OwnerType; label: string }[] = [
     { value: 'lead',   label: m.typeLeadLabel },
-    { value: 'client', label: m.typeClientLabel },
+    // A brokerage's customers are its leads: no registered-client visits.
+    ...(brokerage ? [] : [{ value: 'client' as const, label: m.typeClientLabel }]),
     { value: 'walkin', label: m.typeWalkinLabel },
   ];
 
@@ -242,9 +250,20 @@ export default function NewVisitForm({
         <PremiumFormPanel
           id="section-project"
           number="02"
-          title={m.p2Title}
-          description={m.p2Desc}
+          title={brokerage ? m.listingLabel : m.p2Title}
+          description={brokerage ? m.listingDesc : m.p2Desc}
         >
+        {brokerage ? (
+        <Field label={m.listingLabel} name="listingId" required>
+          <Select name="listingId" required defaultValue={listings!.some((l) => l.id === defaultListingId) ? defaultListingId : ''} data-testid="visit-listing">
+            <option value="">{m.listingOptionEmpty}</option>
+            {listings!.map((l) => (
+              <option key={l.id} value={l.id}>{`${l.code} — ${l.title}`}</option>
+            ))}
+          </Select>
+        </Field>
+        ) : (
+        <>
         <Field label={m.projectLabel} name="projectId" required>
           <Select
             name="projectId"
@@ -273,6 +292,8 @@ export default function NewVisitForm({
             locale={locale}
           />
         </Field>
+        </>
+        )}
         </PremiumFormPanel>
 
         <PremiumFormPanel
