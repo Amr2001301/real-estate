@@ -1,20 +1,20 @@
-import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
+import { AccountLoadingPage, RowCardsSkeleton } from '@/components/account/AccountLoading';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
-export default async function MaintenanceLoading() {
-  const t = accountT(await getLocale());
+/** «الصيانة» while it loads: heading with its «new request» button, then request cards. */
+export default async function Loading() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.maintenance;
   return (
-    <div className="space-y-6">
-      <span className="sr-only">{t.loading}</span>
-      <div className="flex items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-40 rounded-full" />
-          <Skeleton className="h-4 w-64 rounded-full" />
-        </div>
-        <Skeleton className="h-12 w-44 rounded-full" />
-      </div>
-      <SkeletonList count={4} />
-    </div>
+    <AccountLoadingPage
+      title={m.title}
+      description={m.description}
+      loadingLabel={accountT(locale).loading}
+      action
+    >
+      <RowCardsSkeleton count={3} />
+    </AccountLoadingPage>
   );
 }

@@ -1,21 +1,29 @@
-import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountLoadingPage } from '@/components/account/AccountLoading';
+import { AccountCard } from '@/components/account/AccountCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
-export default async function MaintenanceNewLoading() {
-  const t = accountT(await getLocale());
+/** «طلب صيانة جديد» while it loads: the request form card. */
+export default async function Loading() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.maintenanceNew;
   return (
-    <div className="space-y-6">
-      <span className="sr-only">{t.loading}</span>
-      <div className="space-y-3">
-        <Skeleton className="h-4 w-32 rounded-full" />
-        <Skeleton className="h-7 w-44 rounded-full" />
-        <Skeleton className="h-4 w-72 rounded-full" />
-      </div>
-      <PremiumCard className="p-6 sm:p-8">
-        <SkeletonForm fields={3} />
-      </PremiumCard>
-    </div>
+    <AccountLoadingPage
+      title={m.title}
+      description={m.subtitle}
+      loadingLabel={accountT(locale).loading}
+    >
+      <AccountCard className="p-6">
+        <div className="space-y-5">
+          <Skeleton className="h-11 rounded-xl" />
+          <Skeleton className="h-11 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-24 rounded-xl" />
+          <div className="h-11 w-32 rounded-full bg-navy" />
+        </div>
+      </AccountCard>
+    </AccountLoadingPage>
   );
 }

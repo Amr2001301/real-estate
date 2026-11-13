@@ -1,29 +1,25 @@
-import { Section } from '@/components/ui/Section';
-import { PageHero } from '@/components/layout/PageHero';
-import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
+import { Container } from '@/components/ui/Container';
+import { ListHero } from '@/components/layout/ListHero';
+import { SkeletonFilterBar, SkeletonListingGrid, SkeletonToolbar } from '@/components/ui/skeleton';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
+/** «الوحدات» while it loads: the page's own header, filter bar and unit cards. */
 export default async function UnitsLoading() {
-  const t = accountT(await getLocale());
+  const locale = await getLocale();
+  const m = siteT(locale);
   return (
     <>
-      <PageHero
-        eyebrow="الوحدات السكنية"
-        title="وحدات فاخرة جاهزة لاختيارك"
-        subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
-      />
-      <Section tone="canvas">
-        <span className="sr-only">{t.loading}</span>
-        {/* Filter bar (taller — more controls) */}
-        <Skeleton className="h-40 w-full rounded-3xl" />
-        {/* Card grid */}
-        <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      </Section>
+      <span className="sr-only">{accountT(locale).loading}</span>
+      <ListHero homeLabel={m.listing.home} title={m.units.title} subtitle={m.units.subtitle} />
+      <Container className="relative z-20 -mt-14 px-6 sm:px-10 lg:px-12">
+        <SkeletonFilterBar fields={5} />
+      </Container>
+      <Container className="pt-8 pb-20">
+        <SkeletonToolbar />
+        <SkeletonListingGrid count={6} />
+      </Container>
     </>
   );
 }
