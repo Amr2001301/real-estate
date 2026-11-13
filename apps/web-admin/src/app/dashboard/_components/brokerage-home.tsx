@@ -1,4 +1,5 @@
-import { Plus, CalendarPlus, Megaphone, AlertTriangle, PhoneCall } from 'lucide-react';
+import Link from 'next/link';
+import { Plus, Users, Megaphone, AlertTriangle, PhoneCall } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getCompanyTimeZone, todayIn } from '@/lib/currency';
 import type { Paged, Lead, VisitAppointment } from '@/lib/types';
@@ -6,15 +7,26 @@ import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import { uiT } from '@/messages/ui';
-import { DayHeader, DayAction, FigureBar, Panel, DayStrip, Timeline, TaskList, PipelineSplit } from '@/components/cockpit/cockpit';
+import { Button } from '@/components/ui/button';
+import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { Panel, DayStrip, Timeline, TaskList } from '@/components/cockpit/cockpit';
 import { STALE_AFTER_DAYS, AGENDA_DAYS, greeting, dayTitle, buildWeek } from './cockpit-data';
 
+/** The open stages on the navy band, light to deep: how far each lead has come. */
+const STAGE_COLORS = {
+  NEW: '#F4ECD8',
+  INTERESTED: '#E2C989',
+  VISIT: '#C79A3B',
+  NEGOTIATION: '#5E7F6B',
+} as const;
+
 /**
- * BRK-1 — a brokerage company's home: the day of its pipeline. One row of
- * figures (open, new, visits, won, lost), the week's visits beside the
- * follow-ups and what needs attention, and the open leads by stage. No
- * reservations or contracts: those are the developer's (deals and commissions
- * come in the next brokerage phases).
+ * BRK-1 — a brokerage company's home, in the developer home's look: the
+ * greeting, then one navy band with the pipeline (open, new this month, how
+ * far the open leads have come, visits) and the open leads by stage across
+ * its foot; the week's
+ * visits beside the follow-ups and what needs attention. No reservations or
+ * contracts: deals and commissions come in the next brokerage phases.
  */
 export async function BrokerageDashboard({ day }: { day?: string }) {
   const [locale, timeZone, session] = await Promise.all([getLocale(), getCompanyTimeZone(), getSession()]);
@@ -31,8 +43,10 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
   const toIso = new Date(now.getTime() + (AGENDA_DAYS + 1) * 86400000).toISOString();
 
   // Scoped by the API to what this user may see; every count is the server's.
-  const [leadsRes, staleRes, visitsRes, unconfirmedRes] = await Promise.all([
+  const monthStart = `${today.slice(0, 8)}01`;
+  const [leadsRes, monthRes, staleRes, visitsRes, unconfirmedRes] = await Promise.all([
     safe(api.get<Paged<Lead>>('/leads?pageSize=1')),
+    safe(api.get<Paged<Lead>>(`/leads?dateFrom=${monthStart}&pageSize=1`)),
     safe(api.get<Paged<Lead>>(`/leads?stage=NEW,INTERESTED&createdBefore=${staleIso}&pageSize=1`)),
     safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?scheduledFrom=${fromIso}&scheduledTo=${toIso}&open=true&pageSize=100`)),
     safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?status=SCHEDULED&scheduledFrom=${nowIso}&pageSize=1`)),
@@ -41,6 +55,10 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
   const stages = leadsRes.data?.meta.facets?.counts?.stage ?? {};
   const openLeads = (leadsRes.data?.meta.total ?? 0) - (stages.WON ?? 0) - (stages.LOST ?? 0);
   const stale = staleRes.data?.meta.total ?? 0;
+  // How much of the open pipeline has reached a visit or a negotiation.
+  // (Closed deals come with the deals phase: a brokerage has no contracts yet.)
+  const advanced = (stages.VISIT ?? 0) + (stages.NEGOTIATION ?? 0);
+  const advancedPct = openLeads > 0 ? Math.round((advanced / openLeads) * 100) : null;
 
   const week = buildWeek(today, visitsRes.data?.data ?? [], [], locale, timeZone, true);
   const selected = week.find((d) => d.key === day) ?? week[0]!;
@@ -50,32 +68,50 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
   const head = dayTitle(today, locale);
 
   return (
-    <div className="space-y-6" data-testid="brokerage-home">
-      <DayHeader
-        kicker={greeting(c, timeZone, session?.fullName ?? '')}
-        title={head.weekday}
-        date={`${head.date} · ${b.subtitle}`}
+    <div className="flex flex-col gap-6" data-testid="brokerage-home">
+      <PremiumPageHero
+        eyebrow={`${head.weekday}${locale === 'ar' ? '،' : ','} ${head.date} · ${b.subtitle}`}
+        title={greeting(c, timeZone, session?.fullName ?? '')}
+        description={b.description}
         actions={
           <>
-            <DayAction primary href="/dashboard/leads/new" icon={<Plus />}>{m.btnAddLead}</DayAction>
-            <DayAction href="/dashboard/visits/new" icon={<CalendarPlus />}>{m.btnScheduleVisit}</DayAction>
-            <DayAction href="/dashboard/campaigns" icon={<Megaphone />}>{b.campaigns}</DayAction>
+            <Link href={'/dashboard/campaigns' as never}>
+              <Button variant="outline" size="md" leftIcon={<Megaphone className="h-4 w-4" />}>{b.campaigns}</Button>
+            </Link>
+            {/* No «schedule a visit» yet: a visit needs a listing (brokerage phase 2). */}
+            <Link href={'/dashboard/leads' as never}>
+              <Button variant="outline" size="md" leftIcon={<Users className="h-4 w-4" />}>{b.leadsList}</Button>
+            </Link>
+            <Link href={'/dashboard/leads/new' as never}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.btnAddLead}</Button>
+            </Link>
           </>
         }
-      />
+      >
+        <PremiumMetricStrip
+          cols={4}
+          metrics={[
+            {
+              label: c.openLeads, value: openLeads, sub: c.staleHint(stale),
+              trend: stale > 0 ? c.followUps : undefined, trendCls: 'warning',
+            },
+            { label: b.newThisMonth, value: monthRes.data?.meta.total ?? 0, sub: b.awaitingFirstContact(stages.NEW ?? 0) },
+            {
+              label: b.advanced, value: advancedPct ?? '—', unit: advancedPct !== null ? '%' : '',
+              ring: advancedPct ?? undefined, sub: advancedPct !== null ? b.advancedSub : b.advancedNone,
+            },
+            { label: c.upcomingVisits, value: upcomingVisits, sub: c.todayCount(todayVisits) },
+          ]}
+          distribution={[
+            { label: m.stageLabelNew, value: stages.NEW ?? 0, color: STAGE_COLORS.NEW },
+            { label: m.stageLabelInterested, value: stages.INTERESTED ?? 0, color: STAGE_COLORS.INTERESTED },
+            { label: m.stageLabelVisit, value: stages.VISIT ?? 0, color: STAGE_COLORS.VISIT },
+            { label: m.stageLabelNegotiation, value: stages.NEGOTIATION ?? 0, color: STAGE_COLORS.NEGOTIATION },
+          ]}
+        />
+      </PremiumPageHero>
 
-      <FigureBar
-        cols={5}
-        figures={[
-          { label: c.openLeads, value: openLeads, sub: c.staleHint(stale), warn: stale > 0, href: '/dashboard/leads' },
-          { label: b.newLeads, value: stages.NEW ?? 0, sub: b.newLeadsSub, href: '/dashboard/leads?stage=NEW' },
-          { label: c.upcomingVisits, value: upcomingVisits, sub: c.todayCount(todayVisits), href: '/dashboard/visits?tab=appointments' },
-          { label: b.won, value: stages.WON ?? 0, sub: b.wonSub, href: '/dashboard/leads?stage=WON' },
-          { label: b.lost, value: stages.LOST ?? 0, href: '/dashboard/leads?stage=LOST' },
-        ]}
-      />
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 xl:items-start">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
         <Panel
           testId="agenda"
           className="xl:col-span-2"
@@ -94,8 +130,7 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
           />
         </Panel>
 
-        <div className="space-y-5">
-          <FollowUpsPanel locale={locale} />
+        <div className="flex flex-col gap-6">
           <Panel testId="attention" title={c.attention}>
             <TaskList
               empty={c.attentionEmpty}
@@ -105,16 +140,7 @@ export async function BrokerageDashboard({ day }: { day?: string }) {
               ]}
             />
           </Panel>
-          <Panel title={c.pipeline} link={{ href: '/dashboard/leads', label: c.viewAll }}>
-            <PipelineSplit
-              stages={[
-                { stage: 'NEW', label: m.stageLabelNew, count: stages.NEW ?? 0 },
-                { stage: 'INTERESTED', label: m.stageLabelInterested, count: stages.INTERESTED ?? 0 },
-                { stage: 'VISIT', label: m.stageLabelVisit, count: stages.VISIT ?? 0 },
-                { stage: 'NEGOTIATION', label: m.stageLabelNegotiation, count: stages.NEGOTIATION ?? 0 },
-              ]}
-            />
-          </Panel>
+          <FollowUpsPanel locale={locale} />
         </div>
       </div>
     </div>

@@ -81,14 +81,17 @@ export function PremiumPageHero({
         </div>
 
         {(actions || badge) && (
-          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:gap-3">
             {badge && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-400/40 bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-700 select-none">
                 {badge.dot !== false && <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />}
                 {badge.label}
               </span>
             )}
-            {actions}
+            {/* On a phone each action grows to fill its row: no lone half-width button. */}
+            <div className="contents max-sm:[&>*]:grow max-sm:[&>*>button]:w-full max-sm:[&>a>button]:justify-center">
+              {actions}
+            </div>
           </div>
         )}
       </div>

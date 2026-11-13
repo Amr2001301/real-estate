@@ -1,5 +1,5 @@
 import { PageSkeleton, type SkeletonPart } from '@/components/ui/skeletons';
-import { getSession } from '@/lib/session';
+import { getSession, isBrokerage } from '@/lib/session';
 
 /** The admin's home (cockpit): hero, the action queue, the day, then panels in columns. */
 const ADMIN: SkeletonPart[] = [
@@ -26,9 +26,21 @@ const DAY = (side: number[]): SkeletonPart[] => [
   },
 ];
 
+/** A brokerage's home: the greeting, the navy pipeline band, the week beside what needs attention. */
+const BROKERAGE: SkeletonPart[] = [
+  { t: 'hero', a: 3, h: 150 },
+  { t: 'navy', n: 4 },
+  {
+    t: 'grid',
+    cls: 'grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start',
+    cols: [{ s: 'xl:col-span-2', h: [360] }, { h: [205, 210] }],
+  },
+];
+
 /** The dashboard home while it loads, in the shape of the home this role gets. */
 export default async function DashboardHomeLoading() {
-  const role = (await getSession())?.role;
-  const parts = role === 'SALES' ? DAY([360]) : role === 'SALES_MANAGER' ? DAY([300, 260]) : ADMIN;
+  const session = await getSession();
+  const role = session?.role;
+  const parts = isBrokerage(session) && role !== 'SUPER_ADMIN' ? BROKERAGE : role === 'SALES' ? DAY([360]) : role === 'SALES_MANAGER' ? DAY([300, 260]) : ADMIN;
   return <PageSkeleton parts={parts} />;
 }

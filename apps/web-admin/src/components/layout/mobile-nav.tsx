@@ -65,12 +65,12 @@ export function MobileNav({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 end-0 w-[280px] max-w-[88vw] bg-sidebar-bg shadow-xl border-s border-sidebar-border">
+          <div className="absolute inset-y-0 start-0 w-[300px] max-w-[86vw] bg-sidebar-bg shadow-2xl border-e border-sidebar-border animate-fade-in">
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label={closeLabel}
-              className="absolute top-5 start-4 inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text-muted hover:text-white hover:bg-sidebar-bg-hover transition-colors z-10"
+              className="absolute top-6 end-4 inline-flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-text-muted hover:text-white hover:bg-sidebar-bg-hover transition-colors z-10"
             >
               <X className="h-4 w-4" />
             </button>

@@ -62,11 +62,24 @@ export const UNIT_STATUS_COLORS = {
   available: '#5E7F6B',
 } as const;
 
+/**
+ * On the two-column phone grid an odd count left one empty cell; the first
+ * figure (the headline) takes the full width instead, until the grid widens.
+ */
+const LEAD_SPAN: Record<number, string> = {
+  2: 'col-span-2',
+  3: 'max-sm:col-span-2',
+  4: 'max-lg:col-span-2',
+  5: 'max-lg:col-span-2',
+  6: 'max-sm:col-span-2',
+  8: 'max-sm:col-span-2',
+};
+
 const COLS: Record<number, string> = {
   2: 'grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 lg:grid-cols-4',
-  5: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
+  5: 'grid-cols-2 lg:grid-cols-5',
   6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
   8: 'grid-cols-2 sm:grid-cols-4',
 };
@@ -168,7 +181,11 @@ export function PremiumMetricStrip({
           return (
             <div
               key={i}
-              className={cn('flex min-w-0 items-center gap-4 bg-navy-band', compact ? 'px-6 py-5' : 'px-6 py-6')}
+              className={cn(
+                'flex min-w-0 items-center gap-4 bg-navy-band',
+                compact ? 'px-5 py-4 sm:px-6 sm:py-5' : 'px-5 py-5 sm:px-6 sm:py-6',
+                i === 0 && metrics.length % 2 === 1 && LEAD_SPAN[effectiveCols],
+              )}
             >
               {m.icon && (
                 <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#D8B66A]/45 text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:stroke-[1.6]">
@@ -178,7 +195,7 @@ export function PremiumMetricStrip({
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] leading-snug text-[#A9B0BD] line-clamp-2">{m.label}</p>
                 {m.ring !== undefined ? (
-                  <div className="mt-2 flex items-center gap-3">
+                  <div className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                     <Ring pct={m.ring}>
                       <span className="num text-[28px] font-semibold text-[#F4ECD8]">{num}</span>
                       {autoUnit && <span className="text-[12px] font-bold text-[#D8B66A]">{autoUnit}</span>}

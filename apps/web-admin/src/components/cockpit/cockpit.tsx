@@ -67,7 +67,7 @@ export function DayHeader({
           <p className="mt-1.5 text-[12px] tabular-nums text-slate-500">{target.detail}</p>
         </div>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">{actions}</div>
+      <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:grow max-sm:[&>*]:justify-center">{actions}</div>
     </header>
   );
 }
@@ -108,7 +108,9 @@ export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols
       className={cn(
         'grid grid-cols-2 overflow-hidden',
         !bare && 'rounded-[22px] border border-hairline bg-surface',
-        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : cols === 5 ? 'sm:grid-cols-3 xl:grid-cols-5' : 'xl:grid-cols-4',
+        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : cols === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
+        // An odd count: the first figure spans the phone row, no empty cell.
+        figures.length % 2 === 1 && 'max-xl:[&>*:first-child]:col-span-2',
       )}
     >
       {figures.map((f) => {
