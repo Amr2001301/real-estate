@@ -58,7 +58,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                   child: state.status == DataStatus.failure && c == null
                       ? ErrorState(failure: state.failure, onRetry: cubit.load)
                       : c == null
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const KitDetailSkeleton(heroHeight: 0, facts: 5)
                           : RefreshIndicator(onRefresh: cubit.load, child: _Body(campaign: c, full: state.campaign != null)),
                 ),
               ],

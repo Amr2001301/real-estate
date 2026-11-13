@@ -17,7 +17,6 @@ import '../widgets/contact_buttons.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
 
-Color get _navyDeep => AppPalette.navyDeep;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
@@ -66,14 +65,10 @@ class _LoadingScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
+      // The project page's own shape: its photo hero, the name, facts and text.
       child: Scaffold(
-        backgroundColor: _navyDeep,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: AppPalette.gold400,
-            strokeWidth: 2,
-          ),
-        ),
+        backgroundColor: context.appColors.canvas,
+        body: const SafeArea(bottom: false, child: KitDetailSkeleton(heroHeight: 280)),
       ),
     );
   }

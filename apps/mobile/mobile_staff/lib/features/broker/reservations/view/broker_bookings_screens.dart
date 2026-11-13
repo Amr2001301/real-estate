@@ -205,7 +205,7 @@ class _BrokerBookingScreenState extends State<BrokerBookingScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<BrokerBookingCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 6),
                 ),
               ]);
             }

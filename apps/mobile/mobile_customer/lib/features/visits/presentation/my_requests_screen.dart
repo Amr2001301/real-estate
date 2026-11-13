@@ -195,7 +195,17 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones (the same cards, placeholder text).
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                        itemCount: _skeletonVisits.length + 1,
+                        separatorBuilder: (_, _) => SizedBox(height: 14),
+                        itemBuilder: (context, i) => i == 0 ? const _VisitSummary(total: 3, pending: 1, confirmed: 1, completed: 1) : _VisitCard(request: _skeletonVisits[i - 1], lang: Localizations.localeOf(context).languageCode, l10n: l10n, busy: false),
+                      ),
+                    );
 
                   case DataStatus.failure:
                     return ErrorState(
@@ -1085,3 +1095,15 @@ class _DotPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DotPainter _) => false;
 }
+
+/// Placeholder visit requests the loading screen lays out (never shown as data).
+final _skeletonVisits = [
+  for (var i = 1; i <= 2; i++)
+    VisitRequest(
+      id: 'skeleton-$i',
+      projectId: 'skeleton',
+      status: VisitStatus.pending,
+      preferredDate: DateTime(2026),
+      projectName: const Translatable(ar: 'اسم المشروع', en: 'Project name'),
+    ),
+];

@@ -336,7 +336,7 @@ class _PickSheetState extends State<PickSheet> {
           ),
           Flexible(
             child: _hits == null
-                ? const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+                ? const KitCardsSkeleton(count: 3, padding: EdgeInsets.all(AppSpacing.md))
                 : _hits!.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(24),

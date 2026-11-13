@@ -133,7 +133,7 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<ReservationPageCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 6),
                 ),
               ]);
             }

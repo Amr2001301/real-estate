@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           switch (state.status) {
             case DataStatus.initial:
             case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
+              return const KitFormSkeleton(fields: 3, avatar: true);
             case DataStatus.failure:
               return ErrorState(
                 failure: state.failure,

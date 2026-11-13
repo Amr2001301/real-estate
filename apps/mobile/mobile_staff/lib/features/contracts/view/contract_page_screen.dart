@@ -61,7 +61,7 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<ContractPageCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 6),
                 ),
               ]);
             }

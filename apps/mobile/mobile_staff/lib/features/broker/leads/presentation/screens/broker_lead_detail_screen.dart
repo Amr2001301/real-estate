@@ -53,7 +53,7 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: () => context.read<BrokerLeadDetailCubit>().load())
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 5),
                 ),
               ]);
             }

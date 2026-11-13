@@ -1,5 +1,13 @@
-import { BrokersPageSkeleton } from '@/components/ui/skeletons';
+import { PageSkeleton, type SkeletonPart } from '@/components/ui/skeletons';
 
-export default function BrokersLoading() {
-  return <BrokersPageSkeleton />;
+/** /dashboard/brokers while it loads — its own layout, read off the page (see PageSkeleton). */
+const PARTS: SkeletonPart[] = [
+  { t: 'hero', a: 1, h: 114 },
+  { t: 'figures', n: 4 },
+  { t: 'filter' },
+  { t: 'card', h: 391, list: true },
+];
+
+export default function Loading() {
+  return <PageSkeleton parts={PARTS} />;
 }

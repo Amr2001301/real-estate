@@ -75,7 +75,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
             child: _failure != null
                 ? ErrorState(failure: _failure, onRetry: _load)
                 : prefs == null
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const KitSettingsSkeleton()
                     : ListView(
                         padding: EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 24),
                         children: [

@@ -53,7 +53,7 @@ class _LoadByIdState<T> extends State<LoadById<T>> {
         if (snap.hasError) return _page(ErrorState(onRetry: _retry));
         final result = snap.data;
         if (result == null) {
-          return _page(const Center(child: CircularProgressIndicator()));
+          return _page(const KitDetailSkeleton(heroHeight: 0));
         }
         return result.when(
           ok: (items) {

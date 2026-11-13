@@ -97,7 +97,19 @@ class _ContractsScreenState extends State<ContractsScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones: the summary card and two contract cards.
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+                        itemCount: _skeletonContracts.length + 1,
+                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, i) => i == 0
+                            ? _ContractsSummary(contracts: _skeletonContracts, l10n: l10n)
+                            : _ContractCard(contract: _skeletonContracts[i - 1], l10n: l10n),
+                      ),
+                    );
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
@@ -149,6 +161,20 @@ class _ContractsScreenState extends State<ContractsScreen> {
     );
   }
 }
+
+/// Placeholder contracts the loading screen lays out (never shown as data).
+final _skeletonContracts = [
+  for (var i = 1; i <= 2; i++)
+    Contract(
+      id: 'skeleton-$i',
+      contractNumber: 'CON-2026-000$i',
+      unitCode: 'DF-NG-B01-10$i',
+      unitType: 'APARTMENT',
+      projectName: const Translatable(ar: 'اسم المشروع', en: 'Project name'),
+      status: ContractStatus.signed,
+      signedAt: DateTime(2026),
+    ),
+];
 
 // ── Header ────────────────────────────────────────────────────────────────────
 

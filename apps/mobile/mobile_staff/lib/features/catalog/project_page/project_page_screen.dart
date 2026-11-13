@@ -64,7 +64,7 @@ class _ProjectPageScreenState extends State<ProjectPageScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<ProjectPageCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 280),
                 ),
               ]);
             }

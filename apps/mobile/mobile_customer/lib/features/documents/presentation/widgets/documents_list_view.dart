@@ -22,10 +22,7 @@ class DocumentsListView extends StatelessWidget {
         switch (state.status) {
           case DataStatus.initial:
           case DataStatus.loading:
-            return const Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
-              child: Center(child: CircularProgressIndicator()),
-            );
+            return const KitCardsSkeleton(count: 3);
           case DataStatus.failure:
             return ErrorState(
               failure: state.failure,

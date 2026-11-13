@@ -78,7 +78,17 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones (the same cards, placeholder text).
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+                        itemCount: _skeletonFavorites.length,
+                        separatorBuilder: (_, _) => SizedBox(height: 16),
+                        itemBuilder: (context, i) => _FavoriteCard(fav: _skeletonFavorites[i], lang: Localizations.localeOf(context).languageCode, onTap: () {}, onRemove: () {}),
+                      ),
+                    );
 
                   case DataStatus.failure:
                     return ErrorState(
@@ -542,3 +552,15 @@ class _CtaButton extends StatelessWidget {
 }
 
 // ─── Shared chrome ────────────────────────────────────────────────────────────
+
+/// Placeholder favourites the loading screen lays out (never shown as data).
+final _skeletonFavorites = [
+  for (var i = 1; i <= 3; i++)
+    Favorite(
+      id: 'skeleton-$i',
+      targetId: 'skeleton-$i',
+      isProject: true,
+      title: const Translatable(ar: 'اسم المشروع', en: 'Project name'),
+      subtitle: 'المدينة',
+    ),
+];

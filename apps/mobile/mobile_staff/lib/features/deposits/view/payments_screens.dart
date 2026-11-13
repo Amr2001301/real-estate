@@ -484,7 +484,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<PaymentCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 5),
                 ),
               ]);
             }

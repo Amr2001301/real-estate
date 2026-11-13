@@ -134,7 +134,17 @@ class _MaintenanceRequestsScreenState
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones (the same cards, placeholder text).
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+                        itemCount: _skeletonRequests.length + 1,
+                        separatorBuilder: (_, _) => SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, i) => i == 0 ? _MaintSummary(requests: _skeletonRequests, l10n: l10n) : _RequestCard(request: _skeletonRequests[i - 1]),
+                      ),
+                    );
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
@@ -371,3 +381,15 @@ class _GoldRingAvatar extends StatelessWidget {
 
 // ── Filter row ────────────────────────────────────────────────────────────────
 
+
+/// Placeholder requests the loading screen lays out (never shown as data).
+final _skeletonRequests = [
+  for (var i = 1; i <= 3; i++)
+    MaintenanceRequest(
+      id: 'skeleton-$i',
+      description: 'وصف طلب الصيانة',
+      status: MaintenanceStatus.open,
+      priority: MaintenancePriority.medium,
+      unitCode: 'DF-NG-B01-101',
+    ),
+];

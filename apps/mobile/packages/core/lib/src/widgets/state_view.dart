@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'kit_skeletons.dart';
+
 import '../state/data_state.dart';
 import 'empty_state.dart';
 import 'error_state.dart';
@@ -33,7 +35,7 @@ class StateView<T> extends StatelessWidget {
     switch (state.status) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return loading ?? const Center(child: CircularProgressIndicator());
+        return loading ?? const KitCardsSkeleton();
       case DataStatus.empty:
         return empty ?? const EmptyState();
       case DataStatus.failure:

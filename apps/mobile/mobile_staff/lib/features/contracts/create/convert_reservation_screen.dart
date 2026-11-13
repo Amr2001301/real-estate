@@ -72,7 +72,7 @@ class _ConvertReservationScreenState extends State<ConvertReservationScreen> {
           HomeListHero(title: l10n.cvTitle, subtitle: s?.number == null ? null : l10n.cvReservationN(ltr(s!.number!)), back: true),
           Expanded(
             child: s == null
-                ? (_failure != null ? ErrorState(failure: _failure, onRetry: _load) : const Center(child: CircularProgressIndicator()))
+                ? (_failure != null ? ErrorState(failure: _failure, onRetry: _load) : const KitFormSkeleton(fields: 5))
                 : ListView(padding: const EdgeInsets.only(top: 14, bottom: 16), children: _body(context, s)),
           ),
           if (s != null)

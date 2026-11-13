@@ -136,7 +136,8 @@ class HomePage extends StatelessWidget {
             if (failure != null && loading == false && overlap == null && children.isEmpty)
               Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: ErrorState(failure: failure, onRetry: onRetry))
             else if (loading)
-              const Padding(padding: EdgeInsets.only(top: 120), child: Center(child: CircularProgressIndicator()))
+              // The home's own shape while it loads: its cards, as bones.
+              const KitSectionsSkeleton(band: false, cards: [170, 230, 230])
             else ...[
               if (overlap != null) const SizedBox(height: 18), // as the old -78 card over -60 sections
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),

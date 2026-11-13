@@ -215,7 +215,7 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
       case DataStatus.initial:
       case DataStatus.loading:
         return const [
-          SliverToBoxAdapter(child: Padding(padding: EdgeInsets.only(top: 80), child: Center(child: CircularProgressIndicator()))),
+          SliverToBoxAdapter(child: KitCardsSkeleton(count: 5)),
         ];
       case DataStatus.failure:
         return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<BrokerLeadsCubit>().load))];

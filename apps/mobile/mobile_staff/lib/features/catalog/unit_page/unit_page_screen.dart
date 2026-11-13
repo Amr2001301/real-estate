@@ -89,7 +89,7 @@ class _UnitPageScreenState extends State<UnitPageScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<UnitPageCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 260, facts: 6),
                 ),
               ]);
             }

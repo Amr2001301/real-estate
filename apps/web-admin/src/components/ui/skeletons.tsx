@@ -331,3 +331,150 @@ export function FormPageSkeleton({ sections = 2 }: { sections?: number }) {
     </div>
   );
 }
+
+// ── Page-shaped skeletons (2026-11-13) ──────────────────────────────────────
+// Every loading screen is its page minus the data: the parts below are laid
+// out from a spec read off the real page (its hero, white figure row or navy
+// band, filter bar, table, cards, and columns with their own widths), so the
+// page fills in where the skeleton stood. Specs live in each loading.tsx.
+
+export type SkeletonPart =
+  | { t: 'hero'; a?: number; h?: number }
+  | { t: 'figures'; n: number }
+  | { t: 'navy'; n: number }
+  | { t: 'filter' }
+  | { t: 'tabs'; n?: number }
+  | { t: 'table'; cols?: number; rows?: number; head?: boolean }
+  | { t: 'card'; h: number; list?: boolean; form?: boolean }
+  | { t: 'grid'; cls: string; cols: Array<{ s?: string; h: number[] }> };
+
+/** The white row of figures (cockpit FigureBar): label, large figure, a note — hairlines between. */
+export function FigureBarSkeleton({ count = 4 }: { count?: number }) {
+  const cols = count >= 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : count === 5 ? 'sm:grid-cols-3 xl:grid-cols-5' : count === 3 ? 'sm:grid-cols-3' : 'xl:grid-cols-4';
+  return (
+    <div aria-hidden className={cn('grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface', cols)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="space-y-3 border-hairline px-5 py-5 xl:[&:not(:last-child)]:border-e max-xl:border-b">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-7 w-24 rounded-lg" />
+          <Skeleton className="h-2.5 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A white card of the given height: a title row, then rows (lists) or a block (anything else). */
+export function BlockCardSkeleton({ h, list = true, form = false }: { h: number; list?: boolean; form?: boolean }) {
+  const small = h < 130;
+  if (form) {
+    const fields = Math.max(2, Math.floor((h - 110) / 84));
+    return (
+      <div aria-hidden className={cn(card, 'space-y-5 p-6')} style={{ minHeight: h }}>
+        <Skeleton className="h-5 w-40" />
+        <div className="grid gap-5 md:grid-cols-2">
+          {Array.from({ length: fields }).map((_, k) => (
+            <div key={k} className="space-y-2">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  const rows = Math.max(1, Math.floor((h - 64) / 58));
+  return (
+    <div aria-hidden className={cn(card, 'flex flex-col')} style={{ height: h }}>
+      {small ? (
+        <div className="flex flex-1 items-center gap-4 px-5">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between px-6 pb-3 pt-5">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-3.5 w-14" />
+          </div>
+          {list ? (
+            <ul className="flex-1 divide-y divide-hairline overflow-hidden">
+              {Array.from({ length: rows }).map((_, r) => (
+                <li key={r} className="flex items-center gap-3 px-6 py-3.5">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className={cn('h-3.5', r % 2 ? 'w-1/2' : 'w-2/3')} />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                  <Skeleton className="h-3.5 w-16" />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex-1 px-6 pb-6">
+              <Skeleton className="h-full w-full rounded-2xl" />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Renders a page's skeleton from its spec (see SkeletonPart). */
+export function PageSkeleton({ parts }: { parts: SkeletonPart[] }) {
+  return (
+    <div className="space-y-6" aria-busy="true">
+      {parts.map((p, i) => {
+        switch (p.t) {
+          case 'hero':
+            return (
+              <div key={i} className="space-y-5">
+                <PageHeaderSkeleton actions={p.a ?? 0} />
+                {(p.h ?? 0) > 200 && (
+                  <div className="flex gap-2">
+                    {[0, 1, 2, 3].map((k) => (
+                      <Skeleton key={k} className="h-9 w-24 rounded-full" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          case 'figures':
+            return <FigureBarSkeleton key={i} count={p.n} />;
+          case 'navy':
+            return <MetricStripSkeleton key={i} count={p.n} />;
+          case 'filter':
+            return <FilterBarSkeleton key={i} />;
+          case 'tabs':
+            return (
+              <div key={i} aria-hidden className="flex gap-6 border-b border-hairline pb-3">
+                {Array.from({ length: p.n ?? 5 }).map((_, k) => (
+                  <Skeleton key={k} className="h-4 w-20" />
+                ))}
+              </div>
+            );
+          case 'table':
+            return <TableCardSkeleton key={i} cols={p.cols} rows={p.rows} title={p.head !== false} />;
+          case 'card':
+            return <BlockCardSkeleton key={i} h={p.h} list={p.list} form={p.form} />;
+          case 'grid':
+            return (
+              <div key={i} className={p.cls}>
+                {p.cols.map((col, c) => (
+                  <div key={c} className={cn('flex flex-col gap-5', col.s)}>
+                    {col.h.map((h, k) => (
+                      <BlockCardSkeleton key={k} h={h} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            );
+        }
+      })}
+    </div>
+  );
+}

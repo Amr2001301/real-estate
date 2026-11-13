@@ -813,10 +813,8 @@ class _Units extends StatelessWidget {
     switch (state.unitsStatus) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Center(child: CircularProgressIndicator()),
-        );
+        // The choices' own shape while they load: a couple of option cards.
+        return const KitCardsSkeleton(count: 2, padding: EdgeInsets.all(AppSpacing.md));
       case DataStatus.failure:
         return ErrorState(
           failure: state.unitsFailure,
@@ -945,10 +943,8 @@ class _Categories extends StatelessWidget {
     switch (state.categoriesStatus) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Center(child: CircularProgressIndicator()),
-        );
+        // The choices' own shape while they load: a couple of option cards.
+        return const KitCardsSkeleton(count: 2, padding: EdgeInsets.all(AppSpacing.md));
       case DataStatus.failure:
         return ErrorState(
           failure: state.categoriesFailure,

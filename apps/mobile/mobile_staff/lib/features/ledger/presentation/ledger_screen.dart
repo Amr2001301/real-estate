@@ -89,7 +89,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ],
               ),
               ...switch (r) {
-                null => [const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()))],
+                null => [const KitCardsSkeleton(count: 4)],
                 Err(:final failure) => [ErrorState(failure: failure, onRetry: _load)],
                 Ok(:final data) => _body(context, data),
               },

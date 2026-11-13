@@ -1,33 +1,21 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { PageSkeleton, type SkeletonPart } from '@/components/ui/skeletons';
 
-export default function OperationsLoading() {
-  return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-44 rounded-xl" />
-        <Skeleton className="h-4 w-80 rounded-lg" />
-      </div>
+/** /dashboard/operations while it loads — its own layout, read off the page (see PageSkeleton). */
+const PARTS: SkeletonPart[] = [
+  { t: 'hero', a: 0, h: 152 },
+  { t: 'card', h: 319, list: false },
+  {
+    t: 'grid',
+    cls: 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4',
+    cols: [{ h: [128] }, { h: [128] }, { h: [128] }, { h: [128] }],
+  },
+  {
+    t: 'grid',
+    cls: 'grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6',
+    cols: [{ s: 'lg:col-span-2', h: [560] }, { h: [359, 269] }],
+  },
+];
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-2xl" />
-        ))}
-      </div>
-
-      <Skeleton className="h-16 rounded-2xl" />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Skeleton className="h-96 rounded-2xl lg:col-span-2" />
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-64 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Skeleton className="h-52 rounded-2xl" />
-        <Skeleton className="h-52 rounded-2xl" />
-      </div>
-    </div>
-  );
+export default function Loading() {
+  return <PageSkeleton parts={PARTS} />;
 }
