@@ -15,7 +15,7 @@ export async function setSessionCookies(result: AuthResult) {
   c.set('refresh_token', result.tokens.refreshToken, {
     httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * 30,
   });
-  c.set('user', JSON.stringify({ id: result.user.id, role: result.user.role, fullName: result.user.fullName }), {
+  c.set('user', JSON.stringify({ id: result.user.id, role: result.user.role, fullName: result.user.fullName, companyType: result.user.companyType ?? null }), {
     httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30,
   });
   c.delete(CHALLENGE_COOKIE);

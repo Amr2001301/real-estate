@@ -44,7 +44,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { SessionRole } from './session';
+import type { CompanyType, SessionRole } from './session';
+import { isBrokerageDashboardPath } from './brokerage';
 import type { NavItemKey, NavSectionKey } from '@/messages/ui';
 
 /**
@@ -329,12 +330,14 @@ export function filterNavForRole(
   role: SessionRole,
   disabledFeatures: ReadonlySet<string> = new Set(),
   codes: ReadonlySet<string> = new Set(),
+  companyType: CompanyType | null = null,
 ): NavSection[] {
   if (role === 'SUPER_ADMIN') return SUPER_ADMIN_NAV_SECTIONS;
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
   if (role === 'BROKER') return [];
-  const visible = navItemVisible(role, disabledFeatures, codes);
-  const hub = filterSettingsHub(role, disabledFeatures, codes);
+  const roleVisible = navItemVisible(role, disabledFeatures, codes);
+  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : roleVisible;
+  const hub = filterSettingsHub(role, disabledFeatures, codes, companyType);
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: [
@@ -350,9 +353,11 @@ export function filterSettingsHub(
   role: SessionRole,
   disabledFeatures: ReadonlySet<string> = new Set(),
   codes: ReadonlySet<string> = new Set(),
+  companyType: CompanyType | null = null,
 ) {
   if (role === 'SUPER_ADMIN' || role === 'BROKER') return [];
-  const visible = navItemVisible(role, disabledFeatures, codes);
+  const roleVisible = navItemVisible(role, disabledFeatures, codes);
+  const visible = companyType === 'BROKERAGE' ? (i: NavItem) => roleVisible(i) && isBrokerageDashboardPath(i.href) : roleVisible;
   return SETTINGS_HUB.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length > 0);
 }
 

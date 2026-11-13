@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsHubPage() {
   const user = await requireAdmin();
   const [locale, disabled, codes] = await Promise.all([getLocale(), getDisabledFeatures(user.role), getMyCodes()]);
-  const groups = filterSettingsHub(user.role, disabled, codes);
+  const groups = filterSettingsHub(user.role, disabled, codes, user.companyType ?? null);
   if (groups.length === 0) redirect('/dashboard');
   const t = uiT(locale);
   const m = t.nav;

@@ -25,7 +25,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { companyAccessAllowed } from '../tenant/company-access';
-import type { CompanyLifecycleStatus } from '@prisma/client';
+import type { CompanyLifecycleStatus, CompanyType } from '@prisma/client';
 
 const ALLOWED_STATUSES: CompanyLifecycleStatus[] = ['ACTIVE'];
 const FALLBACK_ELIGIBLE_ROLES = new Set(['CLIENT', 'CUSTOMER']);
@@ -62,7 +62,7 @@ export class CompanyLifecycleGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<{ user?: AuthUser }>();
+    const req = context.switchToHttp().getRequest<{ user?: AuthUser; companyType?: CompanyType }>();
     const user = req.user;
 
     // No authenticated user: @Public / @PlatformPublic / @OptionalAuth without token.
@@ -80,7 +80,7 @@ export class CompanyLifecycleGuard implements CanActivate {
 
     const company = await this.prisma.company.findUnique({
       where: { id: effectiveCompanyId },
-      select: { lifecycleStatus: true, subscriptionStatus: true },
+      select: { lifecycleStatus: true, subscriptionStatus: true, type: true },
     });
 
     // Lifecycle (admin switch) and subscription (billing) both gate every
@@ -92,6 +92,8 @@ export class CompanyLifecycleGuard implements CanActivate {
       });
     }
 
+    // Read once here for CompanyTypeGuard, which runs next (BRK-1).
+    req.companyType = company.type;
     return true;
   }
 }

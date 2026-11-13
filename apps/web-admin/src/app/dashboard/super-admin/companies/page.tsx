@@ -13,6 +13,8 @@ export const metadata = { title: 'Companies — Platform Admin' };
 interface CompanySummary {
   id: string;
   name: string;
+  /** BRK-1: DEVELOPER or BROKERAGE. */
+  type?: 'DEVELOPER' | 'BROKERAGE';
   slug: string;
   country: string | null;
   currency: string;
@@ -117,7 +119,7 @@ export default async function CompaniesPage() {
                 {companies.map((c) => (
                   <tr key={c.id} className="border-b border-hairline hover:bg-canvas/40 transition-colors">
                     <td className="px-5 py-3.5">
-                      <p className="font-semibold text-slate-900">{c.name}</p>
+                      <p className="font-semibold text-slate-900">{c.name}{c.type === 'BROKERAGE' && <span className="ms-2 rounded-full bg-sky-100 px-2 py-0.5 align-middle text-[10.5px] font-bold text-sky-700" data-testid="brokerage-badge">{m.newCompany.typeOptions.BROKERAGE}</span>}</p>
                       <p className="text-[11px] text-slate-400 font-mono">{c.slug}</p>
                     </td>
                     <td className="px-4 py-3.5 text-slate-600 text-[13px]">

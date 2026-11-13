@@ -62,15 +62,19 @@ export function NeedsActionPanel({ title, allClear, items }: { title: string; al
         )}
       </header>
       <div className={cn('grid grid-cols-2 gap-px border-t border-hairline bg-hairline', items.length > 4 ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
-        {items.map((it) => (
+        {items.map((it, i) => (
           <Link
             key={it.key}
             href={it.href as never}
-            className="flex items-center gap-4 bg-surface px-6 py-5 transition-colors hover:bg-surface-muted"
+            className={cn(
+              'flex items-start gap-3 bg-surface px-4 py-4 transition-colors hover:bg-surface-muted sm:items-center sm:gap-4 sm:px-6 sm:py-5',
+              // An odd count: the last one spans the phone row, no empty cell.
+              i === items.length - 1 && items.length % 2 === 1 && 'max-lg:col-span-2',
+            )}
           >
             <span
               className={cn(
-                'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:h-4 [&_svg]:w-4',
+                'inline-flex h-10 w-10 shrink-0 items-center sm:h-11 sm:w-11 justify-center rounded-xl border [&_svg]:h-4 [&_svg]:w-4',
                 it.note
                   ? 'border-amber-500/60 bg-amber-500/12 text-amber-600'
                   : it.value > 0
@@ -84,9 +88,9 @@ export function NeedsActionPanel({ title, allClear, items }: { title: string; al
               <span className={cn('num block text-[30px] font-semibold leading-none', it.value > 0 ? 'text-slate-900' : 'text-slate-500')}>
                 {it.value}
               </span>
-              <span className="mt-1 block truncate text-[13px] text-slate-600">{it.label}</span>
+              <span className="mt-1.5 block text-[13px] leading-snug text-slate-600">{it.label}</span>
               {it.note && (
-                <span className="mt-0.5 block whitespace-nowrap text-[11.5px] font-semibold text-amber-600" title={it.note} data-testid={`action-note-${it.key}`}>
+                <span className="mt-1 block text-[11.5px] font-semibold leading-snug text-amber-600" title={it.note} data-testid={`action-note-${it.key}`}>
                   {it.note}
                 </span>
               )}
@@ -242,7 +246,7 @@ export function LeaderboardPanel({
                 {i + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-bold text-slate-900">{r.name}</span>
+                <span className="block line-clamp-2 text-[14px] font-bold leading-snug text-slate-900">{r.name}</span>
                 <span className="block text-[12px] text-slate-500">{r.sub}</span>
               </span>
               <Money value={r.value} money={money} />
