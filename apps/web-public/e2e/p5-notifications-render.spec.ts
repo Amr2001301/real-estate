@@ -32,10 +32,12 @@ test.describe('P5 — customer notifications page', () => {
     // "تم جدولة زيارتك") OR the empty-state copy. Both are acceptable;
     // what's NOT acceptable is the page rendering only the header (which is
     // what the crash produced before the fix).
-    const hasCardTitle =
-      (await page.getByText(/تم جدولة زيارتك/).count()) +
-      (await page.getByText(/إشعار جديد/).count());
-    const hasEmpty = await page.getByText('لا توجد إشعارات بعد').count();
-    expect(hasCardTitle + hasEmpty).toBeGreaterThan(0);
+    // The loading screen shows the same heading, so wait for the list itself
+    // (a one-off count can run while the skeleton is still on screen).
+    const loaded = page
+      .getByText(/تم جدولة زيارتك/)
+      .or(page.getByText(/إشعار جديد/))
+      .or(page.getByText('لا توجد إشعارات بعد'));
+    await expect(loaded.first()).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -1,5 +1,13 @@
-import { BrokerCommissionsPageSkeleton } from '@/components/ui/skeletons';
+import { PageSkeleton, type SkeletonPart } from '@/components/ui/skeletons';
 
-export default function BrokerCommissionsLoading() {
-  return <BrokerCommissionsPageSkeleton />;
+/** /dashboard/broker-commissions while it loads — its own layout, read off the page (see PageSkeleton). */
+const PARTS: SkeletonPart[] = [
+  { t: 'hero', a: 0, h: 114 },
+  { t: 'figures', n: 4 },
+  { t: 'filter' },
+  { t: 'card', h: 531, list: true },
+];
+
+export default function Loading() {
+  return <PageSkeleton parts={PARTS} />;
 }

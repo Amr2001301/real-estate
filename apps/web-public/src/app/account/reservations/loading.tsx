@@ -1,17 +1,22 @@
-import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
+import { AccountLoadingPage, RecordCardSkeleton } from '@/components/account/AccountLoading';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
-export default async function ReservationsLoading() {
-  const t = accountT(await getLocale());
+/** «الحجوزات» while it loads: its heading, then reservation cards. */
+export default async function Loading() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.reservations;
   return (
-    <div className="space-y-6">
-      <span className="sr-only">{t.loading}</span>
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-40 rounded-full" />
-        <Skeleton className="h-4 w-72 rounded-full" />
+    <AccountLoadingPage
+      title={m.title}
+      description={m.description}
+      loadingLabel={accountT(locale).loading}
+    >
+      <div className="space-y-4">
+        <RecordCardSkeleton />
+        <RecordCardSkeleton />
       </div>
-      <SkeletonList count={4} />
-    </div>
+    </AccountLoadingPage>
   );
 }

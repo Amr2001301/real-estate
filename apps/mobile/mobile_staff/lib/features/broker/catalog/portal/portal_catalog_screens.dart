@@ -877,7 +877,7 @@ class PortalProjectLoader extends StatelessWidget {
               const HomeListHero(title: '', back: true),
               Expanded(
                 child: snap.connectionState != ConnectionState.done
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const KitDetailSkeleton(heroHeight: 260, facts: 6)
                     : EmptyState(icon: Icons.apartment_rounded, title: context.l10n.bcEmpty),
               ),
             ]),

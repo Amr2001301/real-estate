@@ -1351,20 +1351,9 @@ class _EmptyState extends StatelessWidget {
 class _Skeleton extends StatelessWidget {
   const _Skeleton();
 
+  /// The unit page in its own shape: the counts band, then its cards.
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AppSkeletonizer(
-      enabled: true,
-      child: Container(
-        height: 280,
-        decoration: BoxDecoration(
-          color: colors.surfaceSoft,
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const KitSectionsSkeleton(cards: [150, 260]);
 }
 
 // ── Donut painter ─────────────────────────────────────────────────────────────

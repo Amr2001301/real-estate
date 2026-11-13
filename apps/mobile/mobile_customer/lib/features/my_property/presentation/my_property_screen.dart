@@ -298,25 +298,9 @@ class _StatusMiniChip extends StatelessWidget {
 class _PropertySkeleton extends StatelessWidget {
   const _PropertySkeleton();
 
+  /// «وحدتي» in its own shape: the counts band, the construction progress, the unit value.
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return AppSkeletonizer(
-      enabled: true,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: 2,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
-        itemBuilder: (_, _) => Container(
-          height: 270,
-          decoration: BoxDecoration(
-            color: colors.surfaceSoft,
-            borderRadius: BorderRadius.circular(20),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const KitSectionsSkeleton(cards: [150, 260]);
 }
 
 // ── Property card ─────────────────────────────────────────────────────────────

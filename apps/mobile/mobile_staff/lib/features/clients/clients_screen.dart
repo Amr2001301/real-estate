@@ -113,7 +113,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   ),
                   ...switch (state.status) {
                     DataStatus.initial || DataStatus.loading => const [
-                        SliverToBoxAdapter(child: Padding(padding: EdgeInsets.only(top: 80), child: Center(child: CircularProgressIndicator()))),
+                        SliverToBoxAdapter(child: KitCardsSkeleton(count: 5)),
                       ],
                     DataStatus.failure => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
                     DataStatus.empty => [

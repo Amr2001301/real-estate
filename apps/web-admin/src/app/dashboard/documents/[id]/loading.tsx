@@ -1,5 +1,15 @@
-import { DetailPageSkeleton } from '@/components/ui/skeletons';
+import { PageSkeleton, type SkeletonPart } from '@/components/ui/skeletons';
 
-export default function DocumentsIdLoading() {
-  return <DetailPageSkeleton />;
+/** /dashboard/documents/[id] while it loads — its own layout, read off the page (see PageSkeleton). */
+const PARTS: SkeletonPart[] = [
+  { t: 'hero', a: 0, h: 84 },
+  {
+    t: 'grid',
+    cls: 'grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start',
+    cols: [{ s: 'xl:col-span-2', h: [130, 243] }, { h: [139, 150] }],
+  },
+];
+
+export default function Loading() {
+  return <PageSkeleton parts={PARTS} />;
 }

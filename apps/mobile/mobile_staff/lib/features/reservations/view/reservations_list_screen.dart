@@ -192,7 +192,7 @@ class _ReservationsListScreenState extends State<ReservationsListScreen> {
     switch (state.status) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))];
       case DataStatus.failure:
         return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<ReservationsListCubit>().load))];
       case DataStatus.empty:

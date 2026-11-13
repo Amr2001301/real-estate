@@ -51,7 +51,7 @@ class _ContractStatementScreenState extends State<ContractStatementScreen> {
           ),
           Expanded(
             child: switch (r) {
-              null => const Center(child: CircularProgressIndicator()),
+              null => const KitDetailSkeleton(heroHeight: 0, facts: 5),
               Err(:final failure) => ErrorState(failure: failure, onRetry: _load),
               Ok(:final data) => RefreshIndicator(onRefresh: _load, child: _StatementBody(statement: data)),
             },

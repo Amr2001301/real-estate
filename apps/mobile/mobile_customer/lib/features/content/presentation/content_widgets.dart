@@ -281,7 +281,7 @@ class ContentPageScreen extends StatelessWidget {
               DataStatus.initial || DataStatus.loading => Column(
                   children: [
                     AppNavHeader(title: '', compact: true, leadingAction: back),
-                    const Expanded(child: Center(child: CircularProgressIndicator())),
+                    const Expanded(child: KitDetailSkeleton(heroHeight: 0, facts: 0)),
                   ],
                 ),
               DataStatus.failure => Column(

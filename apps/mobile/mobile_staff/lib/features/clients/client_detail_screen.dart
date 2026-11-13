@@ -57,7 +57,7 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: () => context.read<ClientDetailCubit>().load())
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 5),
                 ),
               ]);
             }

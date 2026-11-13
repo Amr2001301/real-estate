@@ -186,7 +186,7 @@ class _ContractsListScreenState extends State<ContractsListScreen> {
     switch (state.status) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))];
       case DataStatus.failure:
         return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<ContractsListCubit>().load))];
       case DataStatus.empty:

@@ -31,9 +31,10 @@ class UnitDetailsScreen extends StatelessWidget {
         switch (state.status) {
           case DataStatus.initial:
           case DataStatus.loading:
+            // The unit page's own shape: its photo hero, the name, specs and text.
             return Scaffold(
-              appBar: AppBar(),
-              body: const Center(child: CircularProgressIndicator()),
+              backgroundColor: context.appColors.canvas,
+              body: const SafeArea(bottom: false, child: KitDetailSkeleton(heroHeight: 260, facts: 6)),
             );
           case DataStatus.failure:
           case DataStatus.empty:

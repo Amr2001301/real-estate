@@ -232,7 +232,7 @@ class _PaymentsListScreenState extends State<PaymentsListScreen> {
                     ),
                   ],
                   ...switch (state.data.status) {
-                    DataStatus.initial || DataStatus.loading when state.all.isEmpty => [const SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))],
+                    DataStatus.initial || DataStatus.loading when state.all.isEmpty => [const SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))],
                     DataStatus.failure when state.all.isEmpty => [SliverToBoxAdapter(child: ErrorState(failure: state.data.failure, onRetry: cubit.load))],
                     DataStatus.empty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.receipt_long_rounded, title: l10n.pmEmpty, message: l10n.pmEmptyMessage))],
                     _ when shown.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.filter_list_off_rounded, title: l10n.pmNoMatch))],
@@ -484,7 +484,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<PaymentCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 5),
                 ),
               ]);
             }

@@ -117,7 +117,17 @@ class _DepositsScreenState extends State<DepositsScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones: its summary card and a few cards.
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+                        itemCount: _skeletonDeposits.length + 1,
+                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, i) => i == 0 ? _DepositsSummary(deposits: _skeletonDeposits, l10n: l10n) : _DepositCard(deposit: _skeletonDeposits[i - 1], l10n: l10n),
+                      ),
+                    );
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
@@ -166,6 +176,20 @@ class _DepositsScreenState extends State<DepositsScreen> {
     );
   }
 }
+
+/// Placeholder payments the loading screen lays out (never shown as data).
+final _skeletonDeposits = [
+  for (var i = 1; i <= 3; i++)
+    Deposit(
+      id: 'skeleton-$i',
+      amount: '100000',
+      type: DepositType.installment,
+      verified: true,
+      paidAt: DateTime(2026, i),
+      contractNumber: 'CON-2026-0001',
+      unitCode: 'DF-NG-B01-101',
+    ),
+];
 
 // ── Header ────────────────────────────────────────────────────────────────────
 

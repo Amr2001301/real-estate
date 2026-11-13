@@ -119,7 +119,17 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const Center(child: CircularProgressIndicator());
+                    // The list itself, as bones: its summary card and a few cards.
+                    return AppSkeletonizer(
+                      enabled: true,
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
+                        itemCount: _skeletonInstallments.length + 1,
+                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, i) => i == 0 ? _InstallmentsSummary(installments: _skeletonInstallments, l10n: l10n) : InstallmentCard(installment: _skeletonInstallments[i - 1]),
+                      ),
+                    );
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
@@ -168,6 +178,22 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
     );
   }
 }
+
+/// Placeholder rows the loading screen lays out (never shown as data).
+final _skeletonInstallments = [
+  for (var i = 1; i <= 3; i++)
+    Installment(
+      id: 'skeleton-$i',
+      amount: '97589.33',
+      dueDate: DateTime(2026, i),
+      status: InstallmentStatus.pending,
+      type: InstallmentPaymentType.installment,
+      contractNumber: 'CON-2026-0001',
+      unitCode: 'DF-NG-B01-101',
+      projectNameAr: 'اسم المشروع',
+      projectNameEn: 'Project name',
+    ),
+];
 
 // ── Header ────────────────────────────────────────────────────────────────────
 

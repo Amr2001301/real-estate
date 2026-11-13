@@ -187,7 +187,7 @@ class _BrokerContractScreenState extends State<BrokerContractScreen> {
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: context.read<BrokerContractCubit>().load)
-                      : const Center(child: CircularProgressIndicator()),
+                      : const KitDetailSkeleton(heroHeight: 0, facts: 6),
                 ),
               ]);
             }

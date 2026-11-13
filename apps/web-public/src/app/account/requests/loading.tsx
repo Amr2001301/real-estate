@@ -1,17 +1,19 @@
-import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
+import { AccountLoadingPage, RowCardsSkeleton } from '@/components/account/AccountLoading';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
-export default async function RequestsLoading() {
-  const t = accountT(await getLocale());
+/** «الطلبات» while it loads. */
+export default async function Loading() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.requests;
   return (
-    <div className="space-y-6">
-      <span className="sr-only">{t.loading}</span>
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-40 rounded-full" />
-        <Skeleton className="h-4 w-72 rounded-full" />
-      </div>
-      <SkeletonList count={4} />
-    </div>
+    <AccountLoadingPage
+      title={m.title}
+      description={undefined}
+      loadingLabel={accountT(locale).loading}
+    >
+      <RowCardsSkeleton count={3} />
+    </AccountLoadingPage>
   );
 }

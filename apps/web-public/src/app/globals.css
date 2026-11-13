@@ -155,6 +155,13 @@
     );
     animation: skeleton-shimmer 1.6s ease-in-out infinite;
   }
+  /* On the deep hero panels (ListHero, home and detail heroes): a faint light block. */
+  .skeleton.skeleton-dark {
+    background-color: rgb(255 255 255 / 0.1);
+  }
+  .skeleton.skeleton-dark::after {
+    background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.08) 50%, transparent 100%);
+  }
   @media (prefers-reduced-motion: reduce) {
     .skeleton::after {
       display: none;

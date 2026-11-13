@@ -101,7 +101,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                     ),
                   ],
                   ...switch (state.status) {
-                    DataStatus.initial || DataStatus.loading => [const SliverToBoxAdapter(child: SizedBox(height: 520, child: StaffListSkeleton()))],
+                    DataStatus.initial || DataStatus.loading => [const SliverToBoxAdapter(child: SizedBox(height: 520, child: StaffListSkeleton(band: true)))],
                     DataStatus.failure => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
                     DataStatus.empty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.event_available_rounded, title: _emptyLabel(l10n, state.bucket), message: l10n.followUpsEmptyHint))],
                     DataStatus.success => [

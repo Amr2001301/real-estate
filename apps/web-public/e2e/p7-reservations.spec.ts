@@ -36,9 +36,10 @@ test.describe('P7 — customer reservations page', () => {
     // (whose title reads "حجز رقم …") OR the empty-state copy. What's NOT
     // acceptable is the page rendering only the header (which is what an
     // unhandled paginated/array shape mismatch would produce).
-    const hasCard = await page.getByText(/^حجز رقم/).count();
-    const hasEmpty = await page.getByText('لا توجد حجوزات بعد').count();
-    expect(hasCard + hasEmpty).toBeGreaterThan(0);
+    // The loading screen shows the same heading, so wait for the list itself
+    // (a one-off count can run while the skeleton is still on screen).
+    const loaded = page.getByText(/^حجز رقم/).or(page.getByText('لا توجد حجوزات بعد'));
+    await expect(loaded.first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('sidebar entry "الحجوزات" is visible and navigates to /account/reservations', async ({

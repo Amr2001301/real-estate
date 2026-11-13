@@ -515,10 +515,7 @@ class _AttachmentsSection extends StatelessWidget {
               ),
               BlocBuilder<DocumentsListCubit, DocumentsListState>(
                 builder: (context, state) => switch (state.status) {
-                  DataStatus.initial || DataStatus.loading => const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                    ),
+                  DataStatus.initial || DataStatus.loading => const KitCardsSkeleton(count: 2, padding: EdgeInsets.fromLTRB(16, 14, 16, 14)),
                   DataStatus.failure => Padding(
                       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                       child: Row(

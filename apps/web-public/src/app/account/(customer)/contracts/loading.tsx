@@ -1,17 +1,22 @@
-import { Skeleton, SkeletonList } from '@/components/ui/skeleton';
+import { AccountLoadingPage, RecordCardSkeleton } from '@/components/account/AccountLoading';
 import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { accountT } from '@/messages/account';
 
-export default async function ContractsLoading() {
-  const t = accountT(await getLocale());
+/** «العقود» while it loads: its heading, then contract cards. */
+export default async function Loading() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.contracts;
   return (
-    <div className="space-y-6">
-      <span className="sr-only">{t.loading}</span>
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-40 rounded-full" />
-        <Skeleton className="h-4 w-72 rounded-full" />
+    <AccountLoadingPage
+      title={m.title}
+      description={m.description}
+      loadingLabel={accountT(locale).loading}
+    >
+      <div className="space-y-4">
+        <RecordCardSkeleton />
+        <RecordCardSkeleton />
       </div>
-      <SkeletonList count={3} />
-    </div>
+    </AccountLoadingPage>
   );
 }

@@ -114,6 +114,7 @@ export 'src/widgets/app_card.dart';
 export 'src/widgets/app_filter_pills.dart';
 export 'src/widgets/app_network_image.dart';
 export 'src/widgets/app_skeleton.dart';
+export 'src/widgets/kit_skeletons.dart';
 export 'src/widgets/app_text_field.dart';
 export 'src/widgets/app_tone.dart';
 export 'src/widgets/empty_state.dart';

@@ -160,7 +160,7 @@ class _UnitsListScreenState extends State<UnitsListScreen> {
     switch (state.status) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))];
       case DataStatus.failure:
         return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<UnitsListCubit>().load))];
       case DataStatus.empty:

@@ -137,7 +137,7 @@ class _ProjectsListScreenState extends State<ProjectsListScreen> {
     if (state.data == null) {
       return state.status == DataStatus.failure
           ? [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: context.read<ProjectsListCubit>().load))]
-          : const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+          : const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))];
     }
     final rows = state.visible;
     if (rows.isEmpty) {

@@ -248,7 +248,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
     switch (state.status) {
       case DataStatus.initial:
       case DataStatus.loading:
-        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton()))];
+        return const [SliverToBoxAdapter(child: SizedBox(height: 600, child: StaffListSkeleton(band: true)))];
       case DataStatus.failure:
         return [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))];
       case DataStatus.empty:

@@ -71,7 +71,7 @@ class HomeFollowUps extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (state.followUpsLoading)
-            const Padding(padding: EdgeInsets.all(AppSpacing.md), child: Center(child: CircularProgressIndicator()))
+            const KitCardsSkeleton(count: 2, padding: EdgeInsets.zero)
           else if (state.followUps.isEmpty)
             Container(
               width: double.infinity,
