@@ -9,6 +9,7 @@
 import request from 'supertest';
 import {
   InstallmentStatus,
+  LeadStage,
   MaintenanceStatus,
   ReservationStatus,
   UnitStatus,
@@ -20,9 +21,7 @@ import { bearer, loginAs } from '../helpers/login';
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function collectIds(body: unknown): string[] {
-  const list: unknown = Array.isArray(body)
-    ? body
-    : (body as { data?: unknown })?.data;
+  const list: unknown = Array.isArray(body) ? body : (body as { data?: unknown })?.data;
   if (!Array.isArray(list)) return [];
   return list
     .map((row) =>
@@ -75,8 +74,18 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
       loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
       loginAs(testApp.app, fixtures.users.BROKER_1.email, fixtures.users.BROKER_1.password),
-      loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
-      loginAs(testApp.app, fixtures.users.CUSTOMER_2.email, fixtures.users.CUSTOMER_2.password, 'customer'),
+      loginAs(
+        testApp.app,
+        fixtures.users.CUSTOMER_1.email,
+        fixtures.users.CUSTOMER_1.password,
+        'customer',
+      ),
+      loginAs(
+        testApp.app,
+        fixtures.users.CUSTOMER_2.email,
+        fixtures.users.CUSTOMER_2.password,
+        'customer',
+      ),
     ]);
   });
 
@@ -117,7 +126,7 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
       expect(ids).toContain(fixtures.flowF.customer1MaintenanceRequestId);
     });
 
-    it('F2b: customer2 GET /v1/me/maintenance-requests does NOT include customer1\'s', async () => {
+    it("F2b: customer2 GET /v1/me/maintenance-requests does NOT include customer1's", async () => {
       const res = await http()
         .get('/v1/me/maintenance-requests')
         .set('Authorization', bearer(customer2Token));
@@ -135,7 +144,7 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('F4: admin GET /v1/maintenance-requests includes customer1\'s seeded request', async () => {
+  it("F4: admin GET /v1/maintenance-requests includes customer1's seeded request", async () => {
     const res = await http()
       .get('/v1/maintenance-requests')
       .set('Authorization', bearer(adminToken));
@@ -159,7 +168,7 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
     }
   });
 
-  it('F6: signed-download for customer1\'s seeded photo returns {url, expiresIn} OR 503 when R2 unset', async () => {
+  it("F6: signed-download for customer1's seeded photo returns {url, expiresIn} OR 503 when R2 unset", async () => {
     const res = await http()
       .get(`/v1/me/documents/${fixtures.flowF.customer1MaintenancePhotoDocId}/download`)
       .set('Authorization', bearer(customer1Token));
@@ -220,20 +229,14 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
     });
     it('GET /v1/maintenance-requests as BROKER → 403', async () => {
       expect(
-        (
-          await http()
-            .get('/v1/maintenance-requests')
-            .set('Authorization', bearer(broker1Token))
-        ).status,
+        (await http().get('/v1/maintenance-requests').set('Authorization', bearer(broker1Token)))
+          .status,
       ).toBe(403);
     });
     it('GET /v1/maintenance-requests as CUSTOMER → 403 (admin-only)', async () => {
       expect(
-        (
-          await http()
-            .get('/v1/maintenance-requests')
-            .set('Authorization', bearer(customer1Token))
-        ).status,
+        (await http().get('/v1/maintenance-requests').set('Authorization', bearer(customer1Token)))
+          .status,
       ).toBe(403);
     });
   });
@@ -257,7 +260,12 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
 
     [supervisorToken, customer1Token, salesToken] = await Promise.all([
       loginAs(testApp.app, 'maintenance@example.com', 'MaintenancePass123!'),
-      loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
+      loginAs(
+        testApp.app,
+        fixtures.users.CUSTOMER_1.email,
+        fixtures.users.CUSTOMER_1.password,
+        'customer',
+      ),
       loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
     ]);
   });
@@ -270,7 +278,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
       .get('/v1/me/maintenance-requests')
       .set('Authorization', bearer(supervisorToken));
     expect(res.status).toBe(200);
-    const list = Array.isArray(res.body) ? res.body : res.body?.data ?? [];
+    const list = Array.isArray(res.body) ? res.body : (res.body?.data ?? []);
     const ids = list
       .map((r: { id?: string }) => r.id)
       .filter((x: unknown): x is string => typeof x === 'string');
@@ -715,35 +723,36 @@ describe('Deposit installment race condition — real Postgres concurrency proof
 
   for (let i = 0; i < DEPOSIT_RACE_ITERATIONS; i++) {
     const iteration = i + 1;
-    it(
-      `[${iteration}/${DEPOSIT_RACE_ITERATIONS}] concurrent deposits: one 201 + one 409, one deposit row`,
-      async () => {
-        const installmentId = await createFreshInstallment(i);
+    it(`[${iteration}/${DEPOSIT_RACE_ITERATIONS}] concurrent deposits: one 201 + one 409, one deposit row`, async () => {
+      const installmentId = await createFreshInstallment(i);
 
-        const body = { contractId, installmentId, amount: INSTALLMENT_AMOUNT, paidAt: '2026-01-15T10:00:00Z' };
+      const body = {
+        contractId,
+        installmentId,
+        amount: INSTALLMENT_AMOUNT,
+        paidAt: '2026-01-15T10:00:00Z',
+      };
 
-        const [r1, r2] = await Promise.allSettled([
-          http().post('/v1/deposits').set('Authorization', bearer(adminToken)).send(body),
-          http().post('/v1/deposits').set('Authorization', bearer(adminToken)).send(body),
-        ]);
+      const [r1, r2] = await Promise.allSettled([
+        http().post('/v1/deposits').set('Authorization', bearer(adminToken)).send(body),
+        http().post('/v1/deposits').set('Authorization', bearer(adminToken)).send(body),
+      ]);
 
-        const s1 = r1.status === 'fulfilled' ? r1.value.status : 500;
-        const s2 = r2.status === 'fulfilled' ? r2.value.status : 500;
-        expect([s1, s2].sort()).toEqual([201, 409]);
+      const s1 = r1.status === 'fulfilled' ? r1.value.status : 500;
+      const s2 = r2.status === 'fulfilled' ? r2.value.status : 500;
+      expect([s1, s2].sort()).toEqual([201, 409]);
 
-        const [installment, deposits] = await Promise.all([
-          testApp.rawPrisma.installment.findUniqueOrThrow({
-            where: { id: installmentId },
-            select: { status: true },
-          }),
-          testApp.rawPrisma.deposit.findMany({ where: { installmentId }, select: { id: true } }),
-        ]);
+      const [installment, deposits] = await Promise.all([
+        testApp.rawPrisma.installment.findUniqueOrThrow({
+          where: { id: installmentId },
+          select: { status: true },
+        }),
+        testApp.rawPrisma.deposit.findMany({ where: { installmentId }, select: { id: true } }),
+      ]);
 
-        expect(installment.status).toBe(InstallmentStatus.PAID);
-        expect(deposits).toHaveLength(1);
-      },
-      30_000,
-    );
+      expect(installment.status).toBe(InstallmentStatus.PAID);
+      expect(deposits).toHaveLength(1);
+    }, 30_000);
   }
 });
 
@@ -772,6 +781,25 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
     });
     testCompanyId = company.id;
 
+    // A rep books only for a client in their scope (a lead or a reservation of
+    // theirs). Give the rep that lead here rather than relying on a spec that
+    // happened to run first: alone, or in another order, the race tests got
+    // 400 "Client not found" on both requests.
+    const sales = await testApp.rawPrisma.user.findFirstOrThrow({
+      where: { email: 'sales@example.com', companyId: testCompanyId },
+      select: { id: true },
+    });
+    await testApp.rawPrisma.lead.create({
+      data: {
+        companyId: testCompanyId,
+        clientId: fixtures.userIds.customer1UserId,
+        fullName: 'Race test client',
+        phone: `+2010${Date.now().toString().slice(-8)}`,
+        stage: LeadStage.NEW,
+        assignedSalesId: sales.id,
+      },
+    });
+
     const building = await testApp.rawPrisma.building.findFirstOrThrow({
       where: { phase: { projectId: fixtures.projects.p1Id } },
       select: { id: true },
@@ -799,43 +827,45 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
 
   for (let i = 0; i < RESERVATION_RACE_ITERATIONS; i++) {
     const iteration = i + 1;
-    it(
-      `[${iteration}/${RESERVATION_RACE_ITERATIONS}] concurrent claims: one 201 + one 409, one reservation row`,
-      async () => {
-        const unitId = await createFreshUnit(i);
+    it(`[${iteration}/${RESERVATION_RACE_ITERATIONS}] concurrent claims: one 201 + one 409, one reservation row`, async () => {
+      const unitId = await createFreshUnit(i);
 
-        const body = {
-          unitId,
-          clientId: fixtures.userIds.customer1UserId,
-          expiresInHours: 72,
-        };
+      const body = {
+        unitId,
+        clientId: fixtures.userIds.customer1UserId,
+        expiresInHours: 72,
+      };
 
-        const [r1, r2] = await Promise.allSettled([
-          http().post('/v1/reservations').set('Authorization', bearer(salesToken)).send(body),
-          http().post('/v1/reservations').set('Authorization', bearer(salesToken)).send(body),
-        ]);
+      const [r1, r2] = await Promise.allSettled([
+        http().post('/v1/reservations').set('Authorization', bearer(salesToken)).send(body),
+        http().post('/v1/reservations').set('Authorization', bearer(salesToken)).send(body),
+      ]);
 
-        const s1 = r1.status === 'fulfilled' ? r1.value.status : 500;
-        const s2 = r2.status === 'fulfilled' ? r2.value.status : 500;
-        expect([s1, s2].sort()).toEqual([201, 409]);
+      const s1 = r1.status === 'fulfilled' ? r1.value.status : 500;
+      const s2 = r2.status === 'fulfilled' ? r2.value.status : 500;
+      expect([s1, s2].sort()).toEqual([201, 409]);
 
-        const [unit, reservations, statusHistory] = await Promise.all([
-          testApp.rawPrisma.unit.findUniqueOrThrow({ where: { id: unitId }, select: { status: true } }),
-          testApp.rawPrisma.reservation.findMany({ where: { unitId }, select: { id: true, status: true } }),
-          testApp.rawPrisma.unitStatusHistory.findMany({
-            where: { unitId },
-            select: { id: true, oldStatus: true, newStatus: true },
-          }),
-        ]);
+      const [unit, reservations, statusHistory] = await Promise.all([
+        testApp.rawPrisma.unit.findUniqueOrThrow({
+          where: { id: unitId },
+          select: { status: true },
+        }),
+        testApp.rawPrisma.reservation.findMany({
+          where: { unitId },
+          select: { id: true, status: true },
+        }),
+        testApp.rawPrisma.unitStatusHistory.findMany({
+          where: { unitId },
+          select: { id: true, oldStatus: true, newStatus: true },
+        }),
+      ]);
 
-        expect(unit.status).toBe(UnitStatus.RESERVED);
-        expect(reservations).toHaveLength(1);
-        expect(reservations[0]!.status).toBe(ReservationStatus.PENDING);
-        expect(statusHistory).toHaveLength(1);
-        expect(statusHistory[0]!.oldStatus).toBe(UnitStatus.AVAILABLE);
-        expect(statusHistory[0]!.newStatus).toBe(UnitStatus.RESERVED);
-      },
-      30_000,
-    );
+      expect(unit.status).toBe(UnitStatus.RESERVED);
+      expect(reservations).toHaveLength(1);
+      expect(reservations[0]!.status).toBe(ReservationStatus.PENDING);
+      expect(statusHistory).toHaveLength(1);
+      expect(statusHistory[0]!.oldStatus).toBe(UnitStatus.AVAILABLE);
+      expect(statusHistory[0]!.newStatus).toBe(UnitStatus.RESERVED);
+    }, 30_000);
   }
 });
