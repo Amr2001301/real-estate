@@ -1506,6 +1506,13 @@ model Deal {
   agentId            String?         @db.Uuid
   agent              User?           @relation("DealAgent", fields: [agentId], references: [id], onDelete: SetNull)
   notes              String?
+  /// BRK-6b — an outside broker who shares the deal: their share of the
+  /// commission, worked out on the deal and paid out once it is collected.
+  coBrokerName       String?
+  coBrokerPhone      String?
+  coBrokerPct        Decimal?        @db.Decimal(5, 2)
+  coBrokerAmount     Decimal         @default(0) @db.Decimal(14, 2)
+  coBrokerPaidAt     DateTime?
   cancelledAt        DateTime?
   cancelReason       String?
   createdById        String?         @db.Uuid

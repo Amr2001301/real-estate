@@ -39,6 +39,10 @@ export class CreateDealDto {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(120) developerName?: string;
   @IsOptional() @IsUUID() agentId?: string;
   @IsOptional() @IsString() @MaxLength(2000) notes?: string;
+  /** BRK-6b — an outside broker sharing the deal, and their % of the commission. */
+  @IsOptional() @IsString() @MinLength(2) @MaxLength(120) coBrokerName?: string;
+  @IsOptional() @IsString() @Matches(/^\+?[0-9 ()-]{6,20}$/, { message: 'رقم هاتف الوسيط غير صحيح' }) coBrokerPhone?: string;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) @Max(100) coBrokerPct?: number;
 }
 
 export class CancelDealDto {

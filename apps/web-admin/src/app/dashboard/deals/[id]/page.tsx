@@ -12,7 +12,7 @@ import { KindTag } from '@/components/listings/listing-card';
 import { listingsT } from '@/components/listings/messages';
 import { dealsT, type Deal } from '@/components/deals/messages';
 import { DEAL_TONE, Pill } from '../_components/ui';
-import { CancelDealButton, ClaimPanel, MoneyBand, SplitsPanel } from '../_components/deal-panels';
+import { CancelDealButton, ClaimPanel, CoBrokerPanel, MoneyBand, SplitsPanel } from '../_components/deal-panels';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -103,6 +103,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <div className="flex flex-col gap-6 lg:col-span-2">
           {d.claim && <ClaimPanel deal={d} locale={locale} currency={currency} today={todayIn(timeZone)} canFinance={isAdmin} />}
+          {d.coBrokerName && <CoBrokerPanel deal={d} locale={locale} currency={currency} canFinance={isAdmin} />}
           <SplitsPanel deal={d} locale={locale} currency={currency} canFinance={isAdmin} />
         </div>
 

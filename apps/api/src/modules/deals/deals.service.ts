@@ -285,7 +285,10 @@ export class DealsService {
     const rule = ruleRow
       ? { agentPct: num(ruleRow.agentPct), managerPct: num(ruleRow.managerPct) }
       : null;
-    const splits = planSplits(dto.commissionTotal, rule, agentId, agent?.managerId ?? null);
+    // BRK-6b: an outside broker's share comes off the top; the team shares what is left.
+    if (dto.coBrokerPct !== undefined && !dto.coBrokerName?.trim()) throw new BadRequestException('اسم الوسيط الشريك مطلوب');
+    const coBrokerAmount = dto.coBrokerPct ? round2((dto.commissionTotal * dto.coBrokerPct) / 100) : 0;
+    const splits = planSplits(round2(dto.commissionTotal - coBrokerAmount), rule, agentId, agent?.managerId ?? null);
 
     const companyId = getRequiredCompanyId();
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -304,6 +307,10 @@ export class DealsService {
               dealValue: dto.dealValue,
               closedOn,
               commissionTotal: dto.commissionTotal,
+              coBrokerName: dto.coBrokerPct ? dto.coBrokerName!.trim() : null,
+              coBrokerPhone: dto.coBrokerPct ? dto.coBrokerPhone?.trim() || null : null,
+              coBrokerPct: dto.coBrokerPct ?? null,
+              coBrokerAmount,
               agentId,
               notes: dto.notes?.trim() || null,
               createdById: user.sub,
@@ -423,7 +430,7 @@ export class DealsService {
       throw new BadRequestException('عمولة البيع الأولي تُحصَّل من مطالبة المطوّر');
     if (dto.commissionReceived > num(deal.commissionTotal))
       throw new BadRequestException('المحصَّل أكبر من العمولة');
-    if (dto.commissionReceived < num(deal.commissionTotal) && deal.splits.some((s) => s.paidAt)) {
+    if (dto.commissionReceived < num(deal.commissionTotal) && (deal.splits.some((s) => s.paidAt) || deal.coBrokerPaidAt)) {
       throw new ConflictException('تم صرف عمولات على هذه الصفقة بعد تحصيلها بالكامل');
     }
     await this.prisma.deal.updateMany({
@@ -572,9 +579,9 @@ export class DealsService {
     const claim = await this.claim(payment.claimId);
     const deal = await this.prisma.deal.findFirst({
       where: { id: claim.dealId },
-      select: { splits: { select: { paidAt: true } } },
+      select: { coBrokerPaidAt: true, splits: { select: { paidAt: true } } },
     });
-    if (deal?.splits.some((s) => s.paidAt))
+    if (deal?.coBrokerPaidAt || deal?.splits.some((s) => s.paidAt))
       throw new ConflictException('تم صرف عمولات على هذه الصفقة بعد تحصيلها');
     await this.prisma.$transaction(async (tx) => {
       await tx.claimPayment.deleteMany({ where: { id: paymentId } });
@@ -673,6 +680,24 @@ export class DealsService {
       amount: num(split.amount),
     });
     return { ok: true };
+  }
+
+  /** BRK-6b — pay the outside broker their share, once the deal's commission is collected. */
+  async payCoBroker(user: AuthUser, id: string) {
+    const deal = await this.get(user, id);
+    if (deal.status !== DealStatus.CLOSED) throw new ConflictException('الصفقة ملغاة');
+    if (!deal.coBrokerName || num(deal.coBrokerAmount) <= 0) throw new BadRequestException('لا وسيط شريك على هذه الصفقة');
+    if (num(deal.commissionReceived) < num(deal.commissionTotal)) throw new ConflictException('لم تُحصَّل عمولة الصفقة بالكامل بعد');
+    const done = await this.prisma.deal.updateMany({ where: { id, coBrokerPaidAt: null }, data: { coBrokerPaidAt: new Date() } });
+    if (done.count === 0) throw new ConflictException('تم صرف نصيب الوسيط بالفعل');
+    return this.get(user, id);
+  }
+
+  async unpayCoBroker(user: AuthUser, id: string) {
+    await this.get(user, id);
+    const done = await this.prisma.deal.updateMany({ where: { id, coBrokerPaidAt: { not: null } }, data: { coBrokerPaidAt: null } });
+    if (done.count === 0) throw new NotFoundException('نصيب الوسيط غير مصروف');
+    return this.get(user, id);
   }
 
   async unpaySplit(id: string) {

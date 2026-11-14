@@ -63,8 +63,14 @@ describe('buildReport', () => {
       outstanding: 92_000,
       staffShares: 87_200,
       staffSharesPaid: 20_000,
+      coBrokerShares: 0,
       companyNet: 154_800,
     });
+  });
+
+  it('takes an outside broker\'s share off what the company keeps', () => {
+    const withCoBroker = buildReport([{ ...deals[0]!, coBrokerAmount: 38_400 }], [], '2026-11', '2026-11', ['2026-11']);
+    expect(withCoBroker.totals).toMatchObject({ commission: 192_000, coBrokerShares: 38_400, companyNet: 153_600 });
   });
 
   it('splits by kind and by agent, the best first; a manager shows by their shares', () => {

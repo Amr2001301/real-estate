@@ -84,6 +84,10 @@ const ar = {
     previewNone: 'لا توجد نسب لهذا النوع — حدّدها من «نسب العمولة».',
     previewCompany: 'صافي الشركة',
     previewManager: 'المدير',
+    coBroker: 'صفقة مشتركة مع وسيط آخر',
+    coBrokerName: 'اسم الوسيط الشريك',
+    coBrokerPhone: 'هاتفه',
+    coBrokerPct: 'نصيبه من العمولة %',
     save: 'تسجيل الصفقة',
     cancel: 'إلغاء',
     picked: 'الوحدة المختارة',
@@ -105,6 +109,8 @@ const ar = {
     recordReceived: 'تسجيل المحصّل',
     receivedTotal: 'إجمالي المحصّل حتى الآن',
     saveReceived: 'حفظ',
+    coBroker: 'الوسيط الشريك',
+    coBrokerSub: (pct: number) => `نصيبه ${pct}% من العمولة — يُصرف بعد تحصيلها بالكامل.`,
     splits: 'نصيب الفريق',
     splitsSub: 'يُصرف بعد تحصيل عمولة الصفقة بالكامل.',
     noSplits: 'لا نصيب للفريق على هذه الصفقة (لا نسب لهذا النوع عند تسجيلها).',
@@ -227,6 +233,7 @@ const ar = {
     bOutstanding: 'لم يُحصَّل بعد',
     bShares: 'نصيب الفريق',
     bBonuses: 'مكافآت الأهداف',
+    bCoBrokers: 'الوسطاء الشركاء',
     bNet: 'صافي الشركة',
   },
   targets: {
@@ -333,6 +340,10 @@ const en: typeof ar = {
     previewNone: 'No rates for this type — set them under “Commission rates”.',
     previewCompany: 'Company keeps',
     previewManager: 'Manager',
+    coBroker: 'Shared with another broker',
+    coBrokerName: 'Partner broker',
+    coBrokerPhone: 'Phone',
+    coBrokerPct: 'Their share of the commission %',
     save: 'Record the deal',
     cancel: 'Cancel',
     picked: 'Selected listing',
@@ -354,6 +365,8 @@ const en: typeof ar = {
     recordReceived: 'Record collected',
     receivedTotal: 'Total collected so far',
     saveReceived: 'Save',
+    coBroker: 'Partner broker',
+    coBrokerSub: (pct: number) => `Their ${pct}% of the commission — paid once it is fully collected.`,
     splits: 'Team shares',
     splitsSub: 'Paid out once the deal’s commission is fully collected.',
     noSplits: 'No team shares on this deal (no rates for its type when recorded).',
@@ -476,6 +489,7 @@ const en: typeof ar = {
     bOutstanding: 'Not collected yet',
     bShares: 'Team shares',
     bBonuses: 'Target bonuses',
+    bCoBrokers: 'Partner brokers',
     bNet: 'Company net',
   },
   targets: {
@@ -580,6 +594,11 @@ export interface Deal extends Omit<DealRow, 'claim'> {
   cancelledAt: string | null;
   cancelReason: string | null;
   createdAt: string;
+  coBrokerName: string | null;
+  coBrokerPhone: string | null;
+  coBrokerPct: string | null;
+  coBrokerAmount: string;
+  coBrokerPaidAt: string | null;
   lead: { id: string; fullName: string; phone: string; stage: string } | null;
   splits: DealSplit[];
   claim: DeveloperClaim | null;
@@ -648,7 +667,7 @@ interface ReportFigures {
 export interface ReportPayload {
   from: string;
   to: string;
-  totals: ReportFigures & { outstanding: number; staffShares: number; staffSharesPaid: number; bonuses: number; bonusesPaid: number; companyNet: number };
+  totals: ReportFigures & { outstanding: number; staffShares: number; staffSharesPaid: number; coBrokerShares: number; bonuses: number; bonusesPaid: number; companyNet: number };
   byKind: Array<ReportFigures & { kind: ListingKind }>;
   byAgent: Array<ReportFigures & { userId: string; fullName: string; shares: number; sharesPaid: number }>;
   trend: Array<ReportFigures & { month: string }>;

@@ -172,6 +172,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                   [t.kpiCommission, tot.commission, 'text-slate-900'],
                   [t.bShares, -tot.staffShares, 'text-slate-600'],
                   [t.bBonuses, -tot.bonuses, 'text-slate-600'],
+                  ...(tot.coBrokerShares ? [[t.bCoBrokers, -tot.coBrokerShares, 'text-slate-600'] as const] : []),
                 ].map(([k, v, cls]) => (
                   <div key={String(k)} className="flex items-baseline justify-between gap-3">
                     <dt className="text-slate-500">{k}</dt>

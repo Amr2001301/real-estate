@@ -77,6 +77,7 @@ export class DealTargetsService {
           dealValue: true,
           commissionTotal: true,
           commissionReceived: true,
+          coBrokerAmount: true,
         },
       }),
       this.prisma.dealSplit.findMany({
@@ -91,6 +92,7 @@ export class DealTargetsService {
         dealValue: num(d.dealValue),
         commissionTotal: num(d.commissionTotal),
         commissionReceived: num(d.commissionReceived),
+        coBrokerAmount: num(d.coBrokerAmount),
       })),
       splits.map((s) => ({
         userId: s.userId,
