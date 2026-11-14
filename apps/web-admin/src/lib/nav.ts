@@ -41,6 +41,7 @@ import {
   HardDriveDownload,
   Upload,
   Scale,
+  Handshake,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -56,6 +57,7 @@ import type { NavItemKey, NavSectionKey } from '@/messages/ui';
  * maps the key back to the Lucide component via this registry.
  */
 export const NAV_ICONS = {
+  Handshake,
   Globe,
   Printer,
   ListPlus,
@@ -177,6 +179,7 @@ export const NAV_SECTIONS: NavSection[] = [
     titleKey: 'sales',
     items: [
       { href: '/dashboard/listings', label: 'الوحدات المعروضة', labelKey: 'listings', iconKey: 'Building2', brokerageOnly: true },
+      { href: '/dashboard/deals', label: 'الصفقات والعمولات', labelKey: 'deals', iconKey: 'Handshake', brokerageOnly: true },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },

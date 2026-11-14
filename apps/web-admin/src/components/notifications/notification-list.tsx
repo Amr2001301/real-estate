@@ -1,6 +1,6 @@
 import {
   Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users,
-  MessageSquareText, Wrench, CalendarClock, Building2, type LucideIcon,
+  MessageSquareText, Wrench, CalendarClock, Building2, Handshake, type LucideIcon,
 } from 'lucide-react';
 import type { NotificationItem, NotificationChannel } from '@/lib/types';
 import { Card } from '@/components/ui/card';
@@ -65,6 +65,10 @@ function relatedLink(
     // BRK-2 — a brokerage's mandate, tenancy and rent notices open the listing.
     if (entityType === 'listing' && entityId) {
       return { href: `/dashboard/listings/${entityId}`, icon: Building2, label: rl.listing };
+    }
+    // BRK-3 — a commission paid out opens its deal.
+    if (entityType === 'deal' && entityId) {
+      return { href: `/dashboard/deals/${entityId}`, icon: Handshake, label: rl.deal };
     }
     if (entityType === 'reservation' && entityId) {
       return { href: `/dashboard/reservations/${entityId}`, icon: BookmarkCheck, label: rl.reservation };

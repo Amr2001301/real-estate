@@ -42,6 +42,9 @@ export const SALES_DEFAULT_PERMISSIONS = [
   // BRK-2 — a brokerage's agents capture and update listings
   'listings:read',
   'listings:manage',
+  // BRK-3 — a rep records the deals they close (and sees only theirs)
+  'deals:read',
+  'deals:manage',
   'installments:read',
   'deposits:read',
   // Compensation self-read (API self-scopes SALES to their own rows)

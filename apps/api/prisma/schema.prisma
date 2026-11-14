@@ -167,6 +167,11 @@ model Company {
   listingMandates   ListingMandate[]
   tenancies         Tenancy[]
   rentPayments      RentPayment[]
+  deals             Deal[]
+  dealSplits        DealSplit[]
+  commissionRules   CommissionRule[]
+  developerClaims   DeveloperClaim[]
+  claimPayments     ClaimPayment[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
   migrationRuns     MigrationRun[]
@@ -634,6 +639,8 @@ model User {
   infoRequests            InfoRequest[]             @relation("InfoRequestUser")
   assignedLeads           Lead[]                    @relation("LeadAssignedSales")
   assignedListings        Listing[]                 @relation("ListingAgent")
+  agentDeals              Deal[]                    @relation("DealAgent")
+  dealSplits              DealSplit[]               @relation("DealSplitUser")
   leads                   Lead[]                    @relation("LeadClient")
   leadNotes               LeadNote[]
   reservations            Reservation[]             @relation("ReservationSales")
@@ -1246,6 +1253,7 @@ model Lead {
   // ── Marketing campaign that brought the lead (first touch) ─────────────
   campaignId String?   @db.Uuid
   campaign   Campaign? @relation(fields: [campaignId], references: [id])
+  deals      Deal[]
 
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
@@ -1347,6 +1355,7 @@ model Listing {
   agentId       String?            @db.Uuid
   agent         User?              @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
   mandates      ListingMandate[]
+  deals         Deal[]
   tenancies     Tenancy[]
   appointments  VisitAppointment[]
   createdById   String?            @db.Uuid
@@ -1449,6 +1458,143 @@ model RentPayment {
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@unique([tenancyId, period])
+  @@index([companyId])
+}
+
+// ─── Brokerage deals (BRK-3) ────────────────────────────────────────────────
+
+enum DealStatus {
+  CLOSED
+  CANCELLED
+}
+
+/// A closed brokerage deal (BRK-3): a listing sold or let to a customer.
+/// `commissionTotal` is what the company earns on it — from the developer
+/// for a primary sale (a DeveloperClaim), from the parties otherwise
+/// (`commissionReceived`). Its agents' shares are DealSplits.
+model Deal {
+  id                 String          @id @default(uuid()) @db.Uuid
+  code               String
+  kind               ListingKind
+  status             DealStatus      @default(CLOSED)
+  listingId          String?         @db.Uuid
+  listing            Listing?        @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  leadId             String?         @db.Uuid
+  lead               Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerName       String
+  customerPhone      String?
+  /// The sale price, or for a rent the contract's value.
+  dealValue          Decimal         @db.Decimal(14, 2)
+  closedOn           DateTime        @db.Date
+  commissionTotal    Decimal         @db.Decimal(14, 2)
+  /// Collected from the parties (resale / rent); a primary sale's comes in through its claim.
+  commissionReceived Decimal         @default(0) @db.Decimal(14, 2)
+  agentId            String?         @db.Uuid
+  agent              User?           @relation("DealAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  notes              String?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdById        String?         @db.Uuid
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  splits             DealSplit[]
+  claim              DeveloperClaim?
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId, status, closedOn])
+  @@index([agentId])
+}
+
+enum DealSplitRole {
+  AGENT
+  MANAGER
+}
+
+/// A staff member's share of a deal's commission (BRK-3), worked out from
+/// the company's rule when the deal is recorded; `paidAt` once paid out.
+model DealSplit {
+  id        String        @id @default(uuid()) @db.Uuid
+  dealId    String        @db.Uuid
+  deal      Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  userId    String        @db.Uuid
+  user      User          @relation("DealSplitUser", fields: [userId], references: [id])
+  role      DealSplitRole
+  sharePct  Decimal       @db.Decimal(5, 2)
+  amount    Decimal       @db.Decimal(14, 2)
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([dealId, userId, role])
+  @@index([companyId, userId])
+}
+
+/// The company's commission split for a kind of deal (BRK-3): the agent's
+/// and the agent's manager's share of what the company earns.
+model CommissionRule {
+  id         String      @id @default(uuid()) @db.Uuid
+  kind       ListingKind
+  agentPct   Decimal     @db.Decimal(5, 2)
+  managerPct Decimal     @default(0) @db.Decimal(5, 2)
+  updatedAt  DateTime    @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, kind])
+}
+
+enum ClaimStatus {
+  PENDING
+  SUBMITTED
+  PARTIALLY_PAID
+  PAID
+  REJECTED
+}
+
+/// What a developer owes the brokerage on a primary sale (BRK-3): the
+/// deal's commission, claimed (`submittedOn`) and paid in one or more
+/// ClaimPayments.
+model DeveloperClaim {
+  id            String         @id @default(uuid()) @db.Uuid
+  code          String
+  dealId        String         @unique @db.Uuid
+  deal          Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  developerName String
+  amount        Decimal        @db.Decimal(14, 2)
+  status        ClaimStatus    @default(PENDING)
+  submittedOn   DateTime?      @db.Date
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  payments      ClaimPayment[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, code])
+  @@index([companyId, status])
+}
+
+model ClaimPayment {
+  id          String         @id @default(uuid()) @db.Uuid
+  claimId     String         @db.Uuid
+  claim       DeveloperClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  amount      Decimal        @db.Decimal(14, 2)
+  receivedOn  DateTime       @db.Date
+  note        String?
+  createdById String?        @db.Uuid
+  createdAt   DateTime       @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([claimId])
   @@index([companyId])
 }
 

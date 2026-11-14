@@ -636,6 +636,15 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'فريقك لديه {{today}} متابعة اليوم و{{overdue}} متأخرة عند {{lateReps}} مندوب.',
     en_body: 'Your team has {{today}} follow-ups today and {{overdue}} overdue across {{lateReps}} reps.',
   },
+  // Brokerage deals (BRK-3): a staff member's share of a deal paid out.
+  {
+    code: 'deal_commission_paid',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تم صرف عمولتك',
+    en_subject: 'Your commission was paid',
+    ar_body: 'تم صرف عمولتك {{amount}} عن الصفقة {{dealCode}}.',
+    en_body: 'Your commission of {{amount}} on deal {{dealCode}} was paid.',
+  },
   // Brokerage listings (BRK-2): an owner's mandate ending, a tenancy ending, rent unpaid.
   {
     code: 'listing_mandate_expiring',
