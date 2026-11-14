@@ -1,7 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/dtos/lead_dtos.dart' show openLeadsOf;
+import '../open_leads.dart';
 
 import '../../../campaigns/domain/campaign.dart';
 import '../../domain/entities/lead.dart';

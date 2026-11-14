@@ -2,14 +2,14 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../data/notification_preferences_api.dart';
+import '../../domain/notification_preferences.dart';
 
 /// Per-group e-mail / phone switches (design n2). Each change is saved at once
 /// and put back if the save fails. In-app notifications are never switched off.
 class NotificationPreferencesScreen extends StatefulWidget {
   const NotificationPreferencesScreen({super.key, required this.api});
 
-  final NotificationPreferencesApi api;
+  final NotificationPreferencesRepository api;
 
   @override
   State<NotificationPreferencesScreen> createState() => _NotificationPreferencesScreenState();

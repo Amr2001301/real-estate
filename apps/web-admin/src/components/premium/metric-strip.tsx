@@ -197,8 +197,11 @@ export function PremiumMetricStrip({
                 {m.ring !== undefined ? (
                   <div className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
                     <Ring pct={m.ring}>
-                      <span className="num text-[28px] font-semibold text-[#F4ECD8]">{num}</span>
-                      {autoUnit && <span className="text-[12px] font-bold text-[#D8B66A]">{autoUnit}</span>}
+                      {/* A percent reads 40%, left to right, in both languages. */}
+                      <span dir={autoUnit === '%' ? 'ltr' : undefined} className="inline-flex items-baseline">
+                        <span className="num text-[28px] font-semibold text-[#F4ECD8]">{num}</span>
+                        {autoUnit && <span className="text-[12px] font-bold text-[#D8B66A]">{autoUnit}</span>}
+                      </span>
                     </Ring>
                     <div className="min-w-0">
                       {m.sub && <p className="text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
@@ -222,7 +225,10 @@ export function PremiumMetricStrip({
                   >
                     {num}
                   </span>
-                  {autoUnit && <span className="text-[13px] font-bold text-[#D8B66A]">{autoUnit}</span>}
+                  {autoUnit && (
+                    // A percent sits after the figure (40%), as in the apps.
+                    <span className={cn('text-[13px] font-bold text-[#D8B66A]', autoUnit === '%' && 'rtl:order-first')}>{autoUnit}</span>
+                  )}
                 </p>
                 </div>
                 {m.sub && <p className="mt-2 text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}

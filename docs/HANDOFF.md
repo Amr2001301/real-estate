@@ -1124,4 +1124,21 @@ Left for the owner, not in V1–V3:
 - **Production deploy:** also run the migrations of 2r.
 - **REL1 deferred by the owner (2026-11-12):** the owner has no domain or publisher name yet, so the app ids, the app name, the signing key and the Firebase project wait. Proposed when he is ready (he picks or says «اعتمد اقتراحاتك»): staff app name «ديفورا», Android `applicationId` and iOS bundle id `com.devora.staff` (or one built from his domain: the id is immutable after the first store upload), shared customer app `com.devora.customer` (each company's own app takes its id from `android/company.properties`), `.dev` / `.staging` suffixes for test builds, Google Play App Signing (he keeps only the upload key, outside git), one Firebase project for the platform with an Android and an iOS app per id. The accounts (Google Play, Apple Developer, Firebase) and the keys are his; the id and name edits and the docs (`docs/mobile-release-guide.md`, `docs/mobile-store-readiness.md`) are the agent's once he decides.
 - **Production environment (2026-11-12):** `docs/production-deployment.md` now has the full list of what the API requires in production and a first-deploy sequence. `DEFAULT_COMPANY_ID` is no longer required at boot (it blocked the first deploy of a platform whose companies are created in the product); the missing optional variables (`CHROMIUM_PATH`, `DISABLE_DEFAULT_COMPANY_FALLBACK`, `UNIT_VALUE_RISE_CRON`) are in `apps/api/.env.example`. P0's maintenance e2e and two-tenant tests already exist (`e2e-maintenance*.e2e-spec.ts`, `e2e-mt-security`) and the QA program covered isolation; what is left of P0 is staging QA, the device test and the host (owner's).
+- **Brokerage (2026-11-13 → 14, #409–#416, all merged):** six phases for brokerage companies:
+  - listings, mandates and rents
+  - deals, commissions and developer claims
+  - reports, targets and bonuses
+  - the developer directory, matching and distribution
+  - launches and EOIs, and co-broking
+  - the staff app's brokerage screens
+
+  The production deploy must also run their seven `…_brokerage_*` migrations.
+- **P0 release rehearsal (2026-11-14):** `docs/release-rehearsal.md`.
+  - The rehearsal:
+    - All migrations from zero, with no drift.
+    - A production-mode boot.
+    - `scripts/first-deploy-smoke.mjs`, 28/28. Run it against staging.
+    - Production builds of both web apps.
+    - `release-verify.sh`, plus the fixes it turned up.
+  - What is left of P0 needs the owner: hosting, the service accounts, a staging copy and real phones.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).

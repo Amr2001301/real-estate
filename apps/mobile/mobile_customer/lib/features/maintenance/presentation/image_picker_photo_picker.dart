@@ -38,7 +38,7 @@ class ImagePickerPhotoPicker implements PhotoPicker {
         maxHeight: _maxDimension,
         imageQuality: _quality,
       );
-      return file == null ? null : _toPickedPhoto(file);
+      return file == null ? null : await _toPickedPhoto(file);
     } on PlatformException catch (e) {
       throw PhotoPickerException(_kindFor(e));
     }
