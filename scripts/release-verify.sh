@@ -88,10 +88,11 @@ else
   halves=0
   while IFS= read -r pattern; do
     halves=$((halves + 1))
-    out=$(cd apps/api && npx jest --config ./test/jest-e2e.json --runInBand --testPathPattern="$pattern" 2>&1 | tail -8)
+    # 4 GB of heap, as a 16 GB CI runner gives node by default.
+    out=$(cd apps/api && NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" npx jest --config ./test/jest-e2e.json --runInBand --testPathPattern="$pattern" 2>&1 | tail -8)
     printf '%s\n%s\n' "--- $pattern" "$out" >> /tmp/release-2.log
     if ! grep -qE '^Tests:.*passed' <<<"$out" || grep -qE '^Tests:.*failed' <<<"$out"; then e2e_ok=0; fi
-  done < <(grep -oE -- '--testPathPattern="[^"]*"' .github/workflows/ci.yml | sed 's/--testPathPattern="//;s/"$//')
+  done < <(grep -E '^[[:space:]]+--testPathPattern="' .github/workflows/ci.yml | grep -oE -- '--testPathPattern="[^"]*"' | sed 's/--testPathPattern="//;s/"$//')
   if [[ $halves == 0 ]]; then
     fail 'backend e2e — no --testPathPattern found in .github/workflows/ci.yml'
   elif [[ $e2e_ok == 1 ]]; then
