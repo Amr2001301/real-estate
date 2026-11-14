@@ -2,7 +2,7 @@ import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile_staff/features/leads/data/dtos/lead_dtos.dart';
+import 'package:mobile_staff/features/leads/presentation/open_leads.dart';
 import 'package:mobile_staff/features/leads/domain/entities/lead.dart';
 import 'package:mobile_staff/features/leads/domain/repositories/leads_repository.dart';
 import 'package:mobile_staff/features/leads/domain/usecases/lead_use_cases.dart';

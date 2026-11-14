@@ -1,27 +1,24 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 
-/// Notification groups and channels a user can switch off. In-app
-/// notifications always arrive; only the e-mail / push copies are optional.
-const prefGroups = ['sales', 'finance', 'maintenance', 'account'];
-const prefChannels = ['email', 'push'];
+import '../domain/notification_preferences.dart';
 
-/// channel → group → on/off.
-typedef NotificationPrefs = Map<String, Map<String, bool>>;
+export '../domain/notification_preferences.dart';
 
-/// The signed-in user's own e-mail / push preferences per group.
-class NotificationPreferencesApi {
+/// The preferences over `/users/me/notification-preferences`.
+class NotificationPreferencesApi implements NotificationPreferencesRepository {
   NotificationPreferencesApi(this._dio);
   final Dio _dio;
 
   static const _path = '/users/me/notification-preferences';
 
+  @override
   Future<Result<NotificationPrefs>> load() => guardApiCall(() async {
         final res = await _dio.get<Map<String, dynamic>>(_path);
         return parse(res.data);
       });
 
-  /// Saves one switch; the server keeps every other group as it was.
+  @override
   Future<Result<NotificationPrefs>> set(String channel, String group, bool value) =>
       guardApiCall(() async {
         final res = await _dio.put<Map<String, dynamic>>(

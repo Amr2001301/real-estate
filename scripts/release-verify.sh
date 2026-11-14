@@ -81,8 +81,17 @@ section '2/8 — Backend Jest e2e (real ephemeral Postgres)'
 if [[ -z "${TEST_DATABASE_URL:-}" ]]; then
   skip 'backend e2e' 'TEST_DATABASE_URL is unset (see docs/system-qa-strategy.md §0.1)'
 else
-  if pnpm --filter @rep/api test:e2e 2>&1 | tail -6 | tee /tmp/release-2.log | grep -qE "passed.*total"; then
-    pass 'backend e2e'
+  # The same halves as CI (api-e2e-1 / api-e2e-2): one process for every spec
+  # runs out of memory. A half passes only when Jest reports no failure.
+  : > /tmp/release-2.log
+  e2e_ok=1
+  while IFS= read -r pattern; do
+    out=$(cd apps/api && npx jest --config ./test/jest-e2e.json --runInBand --testPathPattern="$pattern" 2>&1 | tail -8)
+    printf '%s\n%s\n' "--- $pattern" "$out" >> /tmp/release-2.log
+    if ! grep -qE '^Tests:.*passed' <<<"$out" || grep -qE '^Tests:.*failed' <<<"$out"; then e2e_ok=0; fi
+  done < <(grep -oE -- '--testPathPattern="[^"]*"' .github/workflows/ci.yml | sed 's/--testPathPattern="//;s/"$//')
+  if [[ $e2e_ok == 1 ]]; then
+    pass 'backend e2e (both CI halves)'
   else
     fail 'backend e2e — see /tmp/release-2.log'
   fi
