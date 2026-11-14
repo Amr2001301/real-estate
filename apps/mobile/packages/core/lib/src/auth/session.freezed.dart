@@ -15,7 +15,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Session {
 
- String get userId;@AppRoleConverter() AppRole get role; String? get email; String? get phone; String? get displayName;
+ String get userId;@AppRoleConverter() AppRole get role; String? get email; String? get phone; String? get displayName;/// BRK-6c: the company's type (`DEVELOPER` | `BROKERAGE`). A brokerage
+/// gets its own screens; null on sessions saved before this field.
+ String? get companyType;
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +30,16 @@ $SessionCopyWith<Session> get copyWith => _$SessionCopyWithImpl<Session>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Session&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Session&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.companyType, companyType) || other.companyType == companyType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,role,email,phone,displayName);
+int get hashCode => Object.hash(runtimeType,userId,role,email,phone,displayName,companyType);
 
 @override
 String toString() {
-  return 'Session(userId: $userId, role: $role, email: $email, phone: $phone, displayName: $displayName)';
+  return 'Session(userId: $userId, role: $role, email: $email, phone: $phone, displayName: $displayName, companyType: $companyType)';
 }
 
 
@@ -48,7 +50,7 @@ abstract mixin class $SessionCopyWith<$Res>  {
   factory $SessionCopyWith(Session value, $Res Function(Session) _then) = _$SessionCopyWithImpl;
 @useResult
 $Res call({
- String userId,@AppRoleConverter() AppRole role, String? email, String? phone, String? displayName
+ String userId,@AppRoleConverter() AppRole role, String? email, String? phone, String? displayName, String? companyType
 });
 
 
@@ -65,13 +67,14 @@ class _$SessionCopyWithImpl<$Res>
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? role = null,Object? email = freezed,Object? phone = freezed,Object? displayName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? role = null,Object? email = freezed,Object? phone = freezed,Object? displayName = freezed,Object? companyType = freezed,}) {
   return _then(_self.copyWith(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as AppRole,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,companyType: freezed == companyType ? _self.companyType : companyType // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -157,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName,  String? companyType)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Session() when $default != null:
-return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName);case _:
+return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName,_that.companyType);case _:
   return orElse();
 
 }
@@ -178,10 +181,10 @@ return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayNam
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName,  String? companyType)  $default,) {final _that = this;
 switch (_that) {
 case _Session():
-return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName);case _:
+return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName,_that.companyType);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +201,10 @@ return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayNam
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId, @AppRoleConverter()  AppRole role,  String? email,  String? phone,  String? displayName,  String? companyType)?  $default,) {final _that = this;
 switch (_that) {
 case _Session() when $default != null:
-return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName);case _:
+return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayName,_that.companyType);case _:
   return null;
 
 }
@@ -213,7 +216,7 @@ return $default(_that.userId,_that.role,_that.email,_that.phone,_that.displayNam
 @JsonSerializable()
 
 class _Session implements Session {
-  const _Session({required this.userId, @AppRoleConverter() required this.role, this.email, this.phone, this.displayName});
+  const _Session({required this.userId, @AppRoleConverter() required this.role, this.email, this.phone, this.displayName, this.companyType});
   factory _Session.fromJson(Map<String, dynamic> json) => _$SessionFromJson(json);
 
 @override final  String userId;
@@ -221,6 +224,9 @@ class _Session implements Session {
 @override final  String? email;
 @override final  String? phone;
 @override final  String? displayName;
+/// BRK-6c: the company's type (`DEVELOPER` | `BROKERAGE`). A brokerage
+/// gets its own screens; null on sessions saved before this field.
+@override final  String? companyType;
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +241,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Session&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Session&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.role, role) || other.role == role)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.companyType, companyType) || other.companyType == companyType));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,role,email,phone,displayName);
+int get hashCode => Object.hash(runtimeType,userId,role,email,phone,displayName,companyType);
 
 @override
 String toString() {
-  return 'Session(userId: $userId, role: $role, email: $email, phone: $phone, displayName: $displayName)';
+  return 'Session(userId: $userId, role: $role, email: $email, phone: $phone, displayName: $displayName, companyType: $companyType)';
 }
 
 
@@ -255,7 +261,7 @@ abstract mixin class _$SessionCopyWith<$Res> implements $SessionCopyWith<$Res> {
   factory _$SessionCopyWith(_Session value, $Res Function(_Session) _then) = __$SessionCopyWithImpl;
 @override @useResult
 $Res call({
- String userId,@AppRoleConverter() AppRole role, String? email, String? phone, String? displayName
+ String userId,@AppRoleConverter() AppRole role, String? email, String? phone, String? displayName, String? companyType
 });
 
 
@@ -272,13 +278,14 @@ class __$SessionCopyWithImpl<$Res>
 
 /// Create a copy of Session
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? role = null,Object? email = freezed,Object? phone = freezed,Object? displayName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? role = null,Object? email = freezed,Object? phone = freezed,Object? displayName = freezed,Object? companyType = freezed,}) {
   return _then(_Session(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as AppRole,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,companyType: freezed == companyType ? _self.companyType : companyType // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

@@ -36,6 +36,11 @@ import '../features/clients/domain/repositories/clients_repository.dart';
 import '../features/clients/domain/usecases/client_use_cases.dart';
 import '../features/clients/clients_screen.dart';
 import '../features/cheques/domain/cheque.dart';
+import '../features/brokerage/brokerage_data.dart';
+import '../features/brokerage/deals_screen.dart';
+import '../features/brokerage/launches_screen.dart';
+import '../features/brokerage/listings_screen.dart';
+import '../features/brokerage/targets_screen.dart';
 import '../features/ledger/domain/ledger.dart';
 import '../features/ledger/presentation/ledger_group_screen.dart';
 import '../features/ledger/presentation/ledger_screen.dart';
@@ -500,6 +505,63 @@ GoRouter createStaffRouter(
             ),
           );
         },
+      ),
+
+      // ── Brokerage (BRK-6c): a brokerage company's own screens ───────────
+      // The API keeps them to brokerage companies and each role to its rows.
+      GoRoute(
+        path: '/bx/listings',
+        builder: (context, state) => BxListingsScreen(repository: BrokerageRepository(context.read<Dio>())),
+      ),
+      GoRoute(
+        path: '/bx/listings/:id',
+        builder: (context, state) => BxListingScreen(
+          repository: BrokerageRepository(context.read<Dio>()),
+          id: state.pathParameters['id']!,
+          row: state.extra is BxListing ? state.extra as BxListing : null,
+        ),
+      ),
+      GoRoute(
+        path: '/bx/deals',
+        builder: (context, state) => BxDealsScreen(repository: BrokerageRepository(context.read<Dio>())),
+      ),
+      GoRoute(
+        path: '/bx/deals/:id',
+        builder: (context, state) => BxDealScreen(
+          repository: BrokerageRepository(context.read<Dio>()),
+          id: state.pathParameters['id']!,
+          row: state.extra is BxDeal ? state.extra as BxDeal : null,
+        ),
+      ),
+      GoRoute(
+        path: '/bx/commissions',
+        builder: (context, state) => BxSharesScreen(
+          repository: BrokerageRepository(context.read<Dio>()),
+          mine: context.read<SessionCubit>().state.role == AppRole.sales,
+        ),
+      ),
+      GoRoute(
+        path: '/bx/targets',
+        builder: (context, state) {
+          final session = context.read<SessionCubit>().state;
+          return BxTargetsScreen(
+            repository: BrokerageRepository(context.read<Dio>()),
+            mine: session.role == AppRole.sales,
+            userId: session.sessionOrNull?.userId ?? '',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/bx/launches',
+        builder: (context, state) => BxLaunchesScreen(repository: BrokerageRepository(context.read<Dio>())),
+      ),
+      GoRoute(
+        path: '/bx/launches/:id',
+        builder: (context, state) => BxLaunchScreen(
+          repository: BrokerageRepository(context.read<Dio>()),
+          id: state.pathParameters['id']!,
+          row: state.extra is BxLaunch ? state.extra as BxLaunch : null,
+        ),
       ),
 
       // ── Cheques (FG-01): admin and sales manager, read-only ─────────────

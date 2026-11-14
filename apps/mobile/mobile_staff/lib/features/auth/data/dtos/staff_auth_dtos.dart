@@ -8,6 +8,7 @@ class AuthUserDto {
     this.email,
     this.phone,
     this.locale,
+    this.companyType,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class AuthUserDto {
   final String? email;
   final String? phone;
   final String? locale;
+  final String? companyType;
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
         id: json['id'] as String,
@@ -24,6 +26,7 @@ class AuthUserDto {
         email: json['email'] as String?,
         phone: json['phone'] as String?,
         locale: json['locale'] as String?,
+        companyType: json['companyType'] as String?,
       );
 }
 

@@ -9619,4 +9619,449 @@ class AppLocalizationsEn extends AppLocalizations {
   String planBalloonRow(int n, int count) {
     return 'Payment every $n months ($count)';
   }
+
+  @override
+  String get bxSection => 'Brokerage';
+
+  @override
+  String get bxListingsTitle => 'Listings';
+
+  @override
+  String get bxListingsDesc => 'Developers\' units and owners\' properties';
+
+  @override
+  String get bxDealsTitle => 'Deals';
+
+  @override
+  String get bxDealsDesc => 'Closed deals and commission collected';
+
+  @override
+  String get bxSharesMine => 'My commissions';
+
+  @override
+  String get bxSharesTeam => 'Team commissions';
+
+  @override
+  String get bxSharesDesc => 'Your share of each deal\'s commission';
+
+  @override
+  String get bxTargetMine => 'My target';
+
+  @override
+  String get bxTargetTeam => 'Team targets';
+
+  @override
+  String get bxTargetDesc => 'This month\'s target and bonus';
+
+  @override
+  String get bxLaunchesTitle => 'Launches';
+
+  @override
+  String get bxLaunchesDesc =>
+      'Expressions of interest for developers\' launches';
+
+  @override
+  String get bxKindPRIMARY => 'Primary';
+
+  @override
+  String get bxKindRESALE => 'Resale';
+
+  @override
+  String get bxKindRENT => 'Rent';
+
+  @override
+  String get bxLstAVAILABLE => 'Available';
+
+  @override
+  String get bxLstUNDER_OFFER => 'Under offer';
+
+  @override
+  String get bxLstCLOSED => 'Closed';
+
+  @override
+  String get bxLstWITHDRAWN => 'Withdrawn';
+
+  @override
+  String get bxLstRented => 'Rented';
+
+  @override
+  String get bxLstSold => 'Sold';
+
+  @override
+  String get bxDealCLOSED => 'Closed';
+
+  @override
+  String get bxDealCANCELLED => 'Cancelled';
+
+  @override
+  String get bxClaimPENDING => 'Not submitted';
+
+  @override
+  String get bxClaimSUBMITTED => 'Submitted';
+
+  @override
+  String get bxClaimPARTIALLY_PAID => 'Partly paid';
+
+  @override
+  String get bxClaimPAID => 'Paid';
+
+  @override
+  String get bxClaimREJECTED => 'Rejected';
+
+  @override
+  String get bxRoleAGENT => 'Agent';
+
+  @override
+  String get bxRoleMANAGER => 'Team manager';
+
+  @override
+  String get bxBonusNONE => 'No bonus';
+
+  @override
+  String get bxBonusPENDING => 'Not met yet';
+
+  @override
+  String get bxBonusEARNED => 'Met — bonus due';
+
+  @override
+  String get bxBonusPAID => 'Bonus paid';
+
+  @override
+  String get bxLaunchUPCOMING => 'Upcoming';
+
+  @override
+  String get bxLaunchOPEN => 'Open';
+
+  @override
+  String get bxLaunchCLOSED => 'Closed';
+
+  @override
+  String get bxEoiPENDING_PAYMENT => 'Awaiting payment';
+
+  @override
+  String get bxEoiPAID => 'Paid — in the queue';
+
+  @override
+  String get bxEoiALLOCATED => 'Unit allocated';
+
+  @override
+  String get bxEoiREFUNDED => 'Refunded';
+
+  @override
+  String get bxEoiCANCELLED => 'Cancelled';
+
+  @override
+  String get bxAll => 'All';
+
+  @override
+  String bxListingsCount(int n) {
+    return '$n listings';
+  }
+
+  @override
+  String bxDealsCount(int n) {
+    return '$n deals';
+  }
+
+  @override
+  String bxSharesCount(int n) {
+    return '$n shares';
+  }
+
+  @override
+  String bxLaunchesCount(int n) {
+    return '$n launches';
+  }
+
+  @override
+  String get bxSearchListings => 'Code, title, area…';
+
+  @override
+  String get bxSearchDeals => 'Deal code, customer, phone…';
+
+  @override
+  String get bxListingsEmpty => 'No listings';
+
+  @override
+  String get bxListingsEmptyHint =>
+      'Listings are added from the web dashboard.';
+
+  @override
+  String get bxDealsEmpty => 'No deals yet';
+
+  @override
+  String get bxDealsEmptyHint =>
+      'Deals are recorded from the web dashboard when they close.';
+
+  @override
+  String get bxSharesEmpty => 'No commissions yet';
+
+  @override
+  String get bxSharesEmptyHint =>
+      'Your share of each deal you close shows here.';
+
+  @override
+  String get bxLaunchesEmpty => 'No launches yet';
+
+  @override
+  String get bxLaunchesEmptyHint =>
+      'Launches are added from the web dashboard.';
+
+  @override
+  String get bxEoisEmpty => 'No expressions of interest yet';
+
+  @override
+  String get bxArea => 'Area';
+
+  @override
+  String get bxSqm => 'm²';
+
+  @override
+  String get bxBedrooms => 'Bedrooms';
+
+  @override
+  String get bxBathrooms => 'Bathrooms';
+
+  @override
+  String get bxFloor => 'Floor';
+
+  @override
+  String get bxFinishing => 'Finishing';
+
+  @override
+  String get bxView => 'View';
+
+  @override
+  String get bxDownPayment => 'Down payment';
+
+  @override
+  String get bxDelivery => 'Delivery';
+
+  @override
+  String get bxDeveloper => 'Developer';
+
+  @override
+  String get bxProject => 'Project';
+
+  @override
+  String get bxUnitType => 'Unit type';
+
+  @override
+  String get bxOwner => 'Owner';
+
+  @override
+  String get bxAgent => 'Agent';
+
+  @override
+  String get bxPrice => 'Price';
+
+  @override
+  String get bxRentPerMonth => 'Monthly rent';
+
+  @override
+  String get bxDescription => 'Description';
+
+  @override
+  String get bxFacts => 'Details';
+
+  @override
+  String get bxCall => 'Call';
+
+  @override
+  String get bxCommission => 'Commission';
+
+  @override
+  String get bxReceived => 'Collected';
+
+  @override
+  String get bxOutstanding => 'Not collected yet';
+
+  @override
+  String get bxDealValue => 'Deal value';
+
+  @override
+  String get bxCustomer => 'Customer';
+
+  @override
+  String get bxClosedOn => 'Closed on';
+
+  @override
+  String bxCollectedPct(int p) {
+    return '$p% collected';
+  }
+
+  @override
+  String get bxClaim => 'Developer claim';
+
+  @override
+  String get bxSplits => 'Commission split';
+
+  @override
+  String get bxSplitPaid => 'Paid';
+
+  @override
+  String get bxSplitPayable => 'Due to pay';
+
+  @override
+  String get bxSplitAwaiting => 'Awaiting collection';
+
+  @override
+  String get bxCoBroker => 'Outside broker';
+
+  @override
+  String get bxCoBrokerShare => 'Broker\'s share';
+
+  @override
+  String get bxCancelReason => 'Cancellation reason';
+
+  @override
+  String get bxNotes => 'Notes';
+
+  @override
+  String get bxNoListing => 'No listing recorded';
+
+  @override
+  String bxPaidOn(String d) {
+    return 'Paid $d';
+  }
+
+  @override
+  String bxSharePct(String p) {
+    return '$p of the commission';
+  }
+
+  @override
+  String get bxTotalPayable => 'Due to pay';
+
+  @override
+  String get bxTotalAwaiting => 'Awaiting collection';
+
+  @override
+  String get bxTotalPaid => 'Paid';
+
+  @override
+  String get bxSharesHint =>
+      'Your share is paid once the developer pays the deal\'s commission in full.';
+
+  @override
+  String get bxNoTarget => 'No target set for this month';
+
+  @override
+  String get bxNoTargetHint =>
+      'Your manager sets the target from the web dashboard.';
+
+  @override
+  String bxOfTarget(String v) {
+    return 'of $v';
+  }
+
+  @override
+  String get bxDealsGoal => 'Deals';
+
+  @override
+  String get bxBonus => 'Bonus';
+
+  @override
+  String bxAchievedN(int a, int t) {
+    return '$a of $t met their target';
+  }
+
+  @override
+  String get bxPrevMonth => 'Previous month';
+
+  @override
+  String get bxNextMonth => 'Next month';
+
+  @override
+  String bxLaunchOn(String d) {
+    return 'Launch $d';
+  }
+
+  @override
+  String get bxEoiAmount => 'EOI amount';
+
+  @override
+  String get bxHeld => 'Held';
+
+  @override
+  String bxEoisN(int n) {
+    return '$n EOIs';
+  }
+
+  @override
+  String bxPaidN(int n) {
+    return '$n paid';
+  }
+
+  @override
+  String bxPendingN(int n) {
+    return '$n awaiting payment';
+  }
+
+  @override
+  String bxAllocatedN(int n) {
+    return '$n allocated';
+  }
+
+  @override
+  String get bxQueue => 'Queue';
+
+  @override
+  String bxQueueN(int n) {
+    return '#$n';
+  }
+
+  @override
+  String get bxEois => 'Expressions of interest';
+
+  @override
+  String get bxPreference => 'Wants';
+
+  @override
+  String get bxBudget => 'Budget';
+
+  @override
+  String get bxPaymentRef => 'Payment reference';
+
+  @override
+  String get bxAllocation => 'Allocated unit';
+
+  @override
+  String get bxWebOnly => 'Recording and editing are on the web dashboard.';
+
+  @override
+  String get bxHomeMonth => 'This month';
+
+  @override
+  String get bxHomeMyCommission => 'My commission';
+
+  @override
+  String get bxHomeGoalTitle => 'Company commission from your deals';
+
+  @override
+  String get bxHomeTeamGoalTitle => 'Team commission';
+
+  @override
+  String get bxHomeOpenLaunches => 'Open launches';
+
+  @override
+  String get bxHomeAvailable => 'Available listings';
+
+  @override
+  String get bxHomeShortcuts => 'Brokerage';
+
+  @override
+  String get bxListing => 'Listing';
+
+  @override
+  String get bxLaunchDate => 'Launch date';
+
+  @override
+  String get bxStatus => 'Status';
+
+  @override
+  String get bxPerMonth => '/ month';
+
+  @override
+  String get bxNoAgent => 'No agent';
 }

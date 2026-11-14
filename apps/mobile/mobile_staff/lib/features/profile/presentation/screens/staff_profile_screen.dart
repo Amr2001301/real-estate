@@ -39,8 +39,56 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
   void initState() {
     super.initState();
     context.read<StaffProfileCubit>().load();
-    context.read<TargetSummaryCubit>().load();
-    context.read<BonusSummaryCubit>().load();
+    // A brokerage has no developer targets or bonuses to read.
+    if (!_isBrokerage(context)) {
+      context.read<TargetSummaryCubit>().load();
+      context.read<BonusSummaryCubit>().load();
+    }
+  }
+
+  static bool _isBrokerage(BuildContext context) => context.read<SessionCubit>().state.sessionOrNull?.companyType == 'BROKERAGE';
+
+  /// A brokerage's shortcuts and pages (BRK-6c).
+  List<Widget> _brokerageItems(BuildContext context, AppRole? role) {
+    final l10n = context.l10n;
+    final rep = role == AppRole.sales;
+    return [
+      HomeActions(actions: [
+        HomeAction(id: 'bx-target', icon: Icons.track_changes_rounded, label: rep ? l10n.bxTargetMine : l10n.bxTargetTeam, onTap: () => context.push('/bx/targets')),
+        HomeAction(id: 'visits', icon: AppIcons.visit, label: l10n.staffShortcutVisits, onTap: () => context.push('/visits')),
+        HomeAction(id: 'bx-deals', icon: Icons.handshake_rounded, label: l10n.bxDealsTitle, onTap: () => context.push('/bx/deals')),
+        HomeAction(id: 'bx-commissions', icon: Icons.payments_rounded, label: rep ? l10n.bxSharesMine : l10n.bxSharesTeam, onTap: () => context.push('/bx/commissions')),
+      ]),
+      ProfileSection(
+        icon: Icons.work_outline_rounded,
+        title: l10n.staffSectionTools,
+        items: [
+          ProfileItem(id: 'leads', icon: Icons.people_alt_rounded, label: l10n.navLeads, subtitle: l10n.staffMyLeadsDesc, onTap: () => widget.onSwitchTab?.call(1)),
+          ProfileItem(id: 'visits', icon: AppIcons.visit, label: l10n.navVisits, subtitle: l10n.staffMyVisitsDesc, onTap: () => context.push('/visits')),
+        ],
+      ),
+      ProfileSection(
+        icon: Icons.storefront_rounded,
+        title: l10n.bxSection,
+        items: [
+          ProfileItem(id: 'bx-listings', icon: Icons.home_work_rounded, label: l10n.bxListingsTitle, subtitle: l10n.bxListingsDesc, onTap: () => context.push('/bx/listings')),
+          ProfileItem(id: 'bx-deals-item', icon: Icons.handshake_rounded, label: l10n.bxDealsTitle, subtitle: l10n.bxDealsDesc, onTap: () => context.push('/bx/deals')),
+          ProfileItem(
+              id: 'bx-commissions-item',
+              icon: Icons.payments_rounded,
+              label: rep ? l10n.bxSharesMine : l10n.bxSharesTeam,
+              subtitle: l10n.bxSharesDesc,
+              onTap: () => context.push('/bx/commissions')),
+          ProfileItem(
+              id: 'bx-targets-item',
+              icon: Icons.track_changes_rounded,
+              label: rep ? l10n.bxTargetMine : l10n.bxTargetTeam,
+              subtitle: l10n.bxTargetDesc,
+              onTap: () => context.push('/bx/targets')),
+          ProfileItem(id: 'bx-launches', icon: Icons.rocket_launch_rounded, label: l10n.bxLaunchesTitle, subtitle: l10n.bxLaunchesDesc, onTap: () => context.push('/bx/launches')),
+        ],
+      ),
+    ];
   }
 
   Future<void> _confirmLogout(BuildContext context) async {
@@ -64,6 +112,7 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
     final perms = context.watch<StaffPermissionsCubit>().state;
     final canReviewPayments = StaffAccess.paymentsReview(role, perms);
     final clients = StaffAccess.clients(role, perms);
+    final brokerage = _isBrokerage(context);
 
     return Scaffold(
       backgroundColor: context.appColors.canvas,
@@ -80,126 +129,132 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
               return ProfileHero(name: name, subtitle: roleLabel(l10n, roleVal));
             },
           ),
-          HomeActions(actions: [
-            HomeAction(id: 'targets', icon: Icons.track_changes_rounded, label: l10n.staffShortcutPerformance, onTap: () => context.push('/targets')),
-            HomeAction(id: 'visits', icon: AppIcons.visit, label: l10n.staffShortcutVisits, onTap: () => context.push('/visits')),
-            if (clients) HomeAction(id: 'clients', icon: AppIcons.profile, label: l10n.staffShortcutClients, onTap: () => context.push('/clients')),
-            HomeAction(id: 'bonus', icon: Icons.payments_rounded, label: l10n.staffShortcutCommissions, onTap: () => context.push('/bonus')),
-          ]),
-          ProfileSection(
-            icon: Icons.work_outline_rounded,
-            title: l10n.staffSectionTools,
-            items: [
-              if (clients)
+          // BRK-6c — a brokerage company has its own pages; the developer's
+          // (clients, reservations, contracts, projects…) are closed to it.
+          if (brokerage)
+            ..._brokerageItems(context, role)
+          else ...[
+            HomeActions(actions: [
+              HomeAction(id: 'targets', icon: Icons.track_changes_rounded, label: l10n.staffShortcutPerformance, onTap: () => context.push('/targets')),
+              HomeAction(id: 'visits', icon: AppIcons.visit, label: l10n.staffShortcutVisits, onTap: () => context.push('/visits')),
+              if (clients) HomeAction(id: 'clients', icon: AppIcons.profile, label: l10n.staffShortcutClients, onTap: () => context.push('/clients')),
+              HomeAction(id: 'bonus', icon: Icons.payments_rounded, label: l10n.staffShortcutCommissions, onTap: () => context.push('/bonus')),
+            ]),
+            ProfileSection(
+              icon: Icons.work_outline_rounded,
+              title: l10n.staffSectionTools,
+              items: [
+                if (clients)
+                  ProfileItem(
+                      id: 'clients', icon: AppIcons.profile, label: l10n.navClients, subtitle: l10n.staffMyClientsDesc, onTap: () => context.push('/clients')),
                 ProfileItem(
-                    id: 'clients', icon: AppIcons.profile, label: l10n.navClients, subtitle: l10n.staffMyClientsDesc, onTap: () => context.push('/clients')),
-              ProfileItem(
-                  id: 'leads',
-                  icon: Icons.people_alt_rounded,
-                  label: l10n.navLeads,
-                  subtitle: l10n.staffMyLeadsDesc,
-                  onTap: () => widget.onSwitchTab?.call(1)),
-              ProfileItem(
-                  id: 'targets',
-                  icon: Icons.track_changes_rounded,
-                  label: l10n.targetsTitle,
-                  subtitle: l10n.staffMyTargetsDesc,
-                  onTap: () => context.push('/targets')),
-              if (StaffAccess.inquiries(role, perms))
+                    id: 'leads',
+                    icon: Icons.people_alt_rounded,
+                    label: l10n.navLeads,
+                    subtitle: l10n.staffMyLeadsDesc,
+                    onTap: () => widget.onSwitchTab?.call(1)),
                 ProfileItem(
-                    id: 'inquiries',
-                    icon: Icons.question_answer_rounded,
-                    label: l10n.inqTitle,
-                    subtitle: l10n.inqProfileDesc,
-                    onTap: () => context.push('/inquiries')),
-              ProfileItem(
-                  id: 'bonus', icon: Icons.payments_rounded, label: l10n.bonusTitle, subtitle: l10n.staffMyBonusDesc, onTap: () => context.push('/bonus')),
-              ProfileItem(
-                  id: 'visits', icon: AppIcons.visit, label: l10n.navVisits, subtitle: l10n.staffMyVisitsDesc, onTap: () => context.push('/visits')),
-            ],
-          ),
-          ProfileSection(
-            icon: Icons.storefront_rounded,
-            title: l10n.staffSectionOperations,
-            items: [
-              ProfileItem(
-                  id: 'reservations',
-                  icon: Icons.bookmark_added_rounded,
-                  label: l10n.navReservations,
-                  subtitle: l10n.staffMyReservationsDesc,
-                  onTap: () => context.push('/reservations')),
-              ProfileItem(
-                  id: 'contracts',
-                  icon: Icons.description_rounded,
-                  label: l10n.navContracts,
-                  subtitle: l10n.staffMyContractsDesc,
-                  onTap: () => context.push('/contracts')),
-              ProfileItem(
-                  id: 'projects',
-                  icon: Icons.apartment_rounded,
-                  label: l10n.navProjects,
-                  subtitle: l10n.staffMyInventoryDesc,
-                  onTap: () => context.push('/projects')),
-              ProfileItem(
-                  id: 'units',
-                  icon: Icons.door_front_door_rounded,
-                  label: l10n.navUnits,
-                  subtitle: l10n.cuProfileDesc,
-                  onTap: () => context.push('/units')),
-              ProfileItem(
-                  id: 'plans',
-                  icon: Icons.calculate_rounded,
-                  label: l10n.planTemplatesTitle,
-                  subtitle: l10n.staffMyCalculatorDesc,
-                  onTap: () => context.push('/installment-plans')),
-            ],
-          ),
-          ProfileSection(
-            icon: Icons.fact_check_outlined,
-            title: l10n.profileSectionAdmin,
-            items: [
-              if (canReviewPayments)
+                    id: 'targets',
+                    icon: Icons.track_changes_rounded,
+                    label: l10n.targetsTitle,
+                    subtitle: l10n.staffMyTargetsDesc,
+                    onTap: () => context.push('/targets')),
+                if (StaffAccess.inquiries(role, perms))
+                  ProfileItem(
+                      id: 'inquiries',
+                      icon: Icons.question_answer_rounded,
+                      label: l10n.inqTitle,
+                      subtitle: l10n.inqProfileDesc,
+                      onTap: () => context.push('/inquiries')),
                 ProfileItem(
-                    id: 'payments-review',
-                    icon: Icons.receipt_long_rounded,
-                    label: l10n.paymentReviewTitle,
-                    onTap: () => context.push('/payments-review')),
-              // The brokers' performance report is the admin's.
-              if (StaffAccess.reports(role, perms))
+                    id: 'bonus', icon: Icons.payments_rounded, label: l10n.bonusTitle, subtitle: l10n.staffMyBonusDesc, onTap: () => context.push('/bonus')),
                 ProfileItem(
-                    id: 'reports',
-                    icon: Icons.bar_chart_rounded,
-                    label: l10n.rpTitle,
-                    subtitle: l10n.rpProfileDesc,
-                    onTap: () => context.push('/reports')),
-              if (StaffAccess.financialReport(role, perms))
+                    id: 'visits', icon: AppIcons.visit, label: l10n.navVisits, subtitle: l10n.staffMyVisitsDesc, onTap: () => context.push('/visits')),
+              ],
+            ),
+            ProfileSection(
+              icon: Icons.storefront_rounded,
+              title: l10n.staffSectionOperations,
+              items: [
                 ProfileItem(
-                    id: 'financial-report',
-                    icon: Icons.account_balance_wallet_rounded,
-                    label: l10n.frTitle,
-                    subtitle: l10n.frProfileDesc,
-                    onTap: () => context.push('/reports/financial')),
-              if (StaffAccess.brokers(role, perms))
+                    id: 'reservations',
+                    icon: Icons.bookmark_added_rounded,
+                    label: l10n.navReservations,
+                    subtitle: l10n.staffMyReservationsDesc,
+                    onTap: () => context.push('/reservations')),
                 ProfileItem(
-                    id: 'brokers-hub',
-                    icon: Icons.storefront_rounded,
-                    label: l10n.brkTitle,
-                    subtitle: l10n.brkProfileDesc,
-                    onTap: () => context.push('/company-brokers')),
-              if (role == AppRole.admin)
-                ProfileItem(id: 'brokers', icon: Icons.handshake_rounded, label: l10n.bpTitle, onTap: () => context.push('/performance/brokers')),
-            ],
-          ),
-          BlocBuilder<TargetSummaryCubit, TargetSummaryState>(
-            builder: (context, target) {
-              if (target.status != TargetSummaryStatus.ready || target.performance == null) return const SizedBox.shrink();
-              return HomeSection(
-                icon: Icons.insights_rounded,
-                title: l10n.profilePerformance,
-                child: _Kpis(perf: target.performance!),
-              );
-            },
-          ),
+                    id: 'contracts',
+                    icon: Icons.description_rounded,
+                    label: l10n.navContracts,
+                    subtitle: l10n.staffMyContractsDesc,
+                    onTap: () => context.push('/contracts')),
+                ProfileItem(
+                    id: 'projects',
+                    icon: Icons.apartment_rounded,
+                    label: l10n.navProjects,
+                    subtitle: l10n.staffMyInventoryDesc,
+                    onTap: () => context.push('/projects')),
+                ProfileItem(
+                    id: 'units',
+                    icon: Icons.door_front_door_rounded,
+                    label: l10n.navUnits,
+                    subtitle: l10n.cuProfileDesc,
+                    onTap: () => context.push('/units')),
+                ProfileItem(
+                    id: 'plans',
+                    icon: Icons.calculate_rounded,
+                    label: l10n.planTemplatesTitle,
+                    subtitle: l10n.staffMyCalculatorDesc,
+                    onTap: () => context.push('/installment-plans')),
+              ],
+            ),
+            ProfileSection(
+              icon: Icons.fact_check_outlined,
+              title: l10n.profileSectionAdmin,
+              items: [
+                if (canReviewPayments)
+                  ProfileItem(
+                      id: 'payments-review',
+                      icon: Icons.receipt_long_rounded,
+                      label: l10n.paymentReviewTitle,
+                      onTap: () => context.push('/payments-review')),
+                // The brokers' performance report is the admin's.
+                if (StaffAccess.reports(role, perms))
+                  ProfileItem(
+                      id: 'reports',
+                      icon: Icons.bar_chart_rounded,
+                      label: l10n.rpTitle,
+                      subtitle: l10n.rpProfileDesc,
+                      onTap: () => context.push('/reports')),
+                if (StaffAccess.financialReport(role, perms))
+                  ProfileItem(
+                      id: 'financial-report',
+                      icon: Icons.account_balance_wallet_rounded,
+                      label: l10n.frTitle,
+                      subtitle: l10n.frProfileDesc,
+                      onTap: () => context.push('/reports/financial')),
+                if (StaffAccess.brokers(role, perms))
+                  ProfileItem(
+                      id: 'brokers-hub',
+                      icon: Icons.storefront_rounded,
+                      label: l10n.brkTitle,
+                      subtitle: l10n.brkProfileDesc,
+                      onTap: () => context.push('/company-brokers')),
+                if (role == AppRole.admin)
+                  ProfileItem(id: 'brokers', icon: Icons.handshake_rounded, label: l10n.bpTitle, onTap: () => context.push('/performance/brokers')),
+              ],
+            ),
+            BlocBuilder<TargetSummaryCubit, TargetSummaryState>(
+              builder: (context, target) {
+                if (target.status != TargetSummaryStatus.ready || target.performance == null) return const SizedBox.shrink();
+                return HomeSection(
+                  icon: Icons.insights_rounded,
+                  title: l10n.profilePerformance,
+                  child: _Kpis(perf: target.performance!),
+                );
+              },
+            ),
+          ],
           ProfileSection(
             icon: Icons.shield_outlined,
             title: l10n.profileSectionAccount,

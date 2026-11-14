@@ -44,6 +44,11 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
   '/developers',
   // BRK-6 — launches and expressions of interest
   '/launches',
+  // The staff member's own permissions, notifications and push devices
+  // (BRK-6c: the staff app reads them; the customer's /me/* stay closed)
+  '/me/permissions',
+  '/me/notifications',
+  '/me/devices',
   // Tools
   '/notifications',
   '/ai',
