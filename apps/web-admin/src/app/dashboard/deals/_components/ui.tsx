@@ -68,15 +68,17 @@ export function CollectedBar({ value, total, className }: { value: number; total
   );
 }
 
-export type DealsTab = 'deals' | 'claims' | 'payouts' | 'rules';
+export type DealsTab = 'deals' | 'targets' | 'claims' | 'payouts' | 'reports' | 'rules';
 
 /** The section's tabs: deals, then the money pages (claims for the admin only). */
 export function DealsTabs({ active, locale, isAdmin }: { active: DealsTab; locale: Locale; isAdmin: boolean }) {
   const t = dealsT(locale).tabs;
   const tabs: Array<{ key: DealsTab; href: string; label: string }> = [
     { key: 'deals', href: '/dashboard/deals', label: t.deals },
-    ...(isAdmin ? [{ key: 'claims' as const, href: '/dashboard/deals/claims', label: t.claims }] : []),
+    ...(isAdmin ? [{ key: 'reports' as const, href: '/dashboard/deals/reports', label: t.reports }] : []),
+    { key: 'targets', href: '/dashboard/deals/targets', label: isAdmin ? t.targets : t.myTarget },
     { key: 'payouts', href: '/dashboard/deals/payouts', label: isAdmin ? t.payouts : t.myPayouts },
+    ...(isAdmin ? [{ key: 'claims' as const, href: '/dashboard/deals/claims', label: t.claims }] : []),
     { key: 'rules', href: '/dashboard/deals/rules', label: t.rules },
   ];
   return (

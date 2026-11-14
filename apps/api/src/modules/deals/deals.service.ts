@@ -23,6 +23,8 @@ import { paginate, takeSkip, toCounts } from '../../common/utils/pagination';
 import { day } from '../listings/brokerage-terms';
 import { NotificationsService } from '../notifications/notifications.module';
 import { claimStatus, planSplits, round2 } from './deal-math';
+import { monthKey } from './deal-report';
+import { DealTargetsService } from './deal-targets.service';
 import {
   CancelDealDto,
   CreateDealDto,
@@ -72,6 +74,7 @@ export class DealsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly targets: DealTargetsService,
   ) {}
 
   private async today(): Promise<Date> {
@@ -342,6 +345,8 @@ export class DealsService {
           }
           return deal.id;
         });
+        // BRK-4: the deal may complete the agent's month.
+        await this.targets.checkAchieved(agentId, monthKey(closedOn));
         return this.get(user, id);
       } catch (err) {
         if (

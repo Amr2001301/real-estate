@@ -171,6 +171,7 @@ model Company {
   dealSplits        DealSplit[]
   commissionRules   CommissionRule[]
   developerClaims   DeveloperClaim[]
+  brokerageTargets  BrokerageTarget[]
   claimPayments     ClaimPayment[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
@@ -641,6 +642,7 @@ model User {
   assignedListings        Listing[]                 @relation("ListingAgent")
   agentDeals              Deal[]                    @relation("DealAgent")
   dealSplits              DealSplit[]               @relation("DealSplitUser")
+  brokerageTargets        BrokerageTarget[]         @relation("BrokerageTargetUser")
   leads                   Lead[]                    @relation("LeadClient")
   leadNotes               LeadNote[]
   reservations            Reservation[]             @relation("ReservationSales")
@@ -1547,6 +1549,31 @@ model CommissionRule {
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, kind])
+}
+
+/// A brokerage agent's monthly target (BRK-4): the company commission their
+/// closed deals should bring in that month, and how many deals; reaching both
+/// earns `bonusAmount`. `achievedNotifiedAt` marks the one notice sent;
+/// `bonusPaidAt` the payout.
+model BrokerageTarget {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @db.Uuid
+  user               User      @relation("BrokerageTargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  /// "YYYY-MM"
+  period             String
+  commissionTarget   Decimal   @db.Decimal(14, 2)
+  dealsTarget        Int       @default(0)
+  bonusAmount        Decimal   @default(0) @db.Decimal(14, 2)
+  achievedNotifiedAt DateTime?
+  bonusPaidAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, userId, period])
+  @@index([companyId, period])
 }
 
 enum ClaimStatus {

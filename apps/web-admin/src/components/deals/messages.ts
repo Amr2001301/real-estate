@@ -7,7 +7,7 @@ export type SplitRole = 'AGENT' | 'MANAGER';
 
 /* BRK-3 «الصفقات والعمولات» — a brokerage's deals and its money. Strings only. */
 const ar = {
-  tabs: { deals: 'الصفقات', claims: 'مطالبات المطوّرين', payouts: 'عمولات الفريق', myPayouts: 'عمولاتي', rules: 'نسب العمولة' },
+  tabs: { deals: 'الصفقات', claims: 'مطالبات المطوّرين', payouts: 'عمولات الفريق', myPayouts: 'عمولاتي', rules: 'نسب العمولة', targets: 'الأهداف', myTarget: 'هدفي', reports: 'التقارير' },
   status: { CLOSED: 'مُغلقة', CANCELLED: 'ملغاة' } satisfies Record<DealStatus, string>,
   claimStatus: {
     PENDING: 'لم تُقدَّم',
@@ -192,10 +192,76 @@ const ar = {
     updated: (d: string) => `آخر تعديل ${d}`,
     never: 'لم تُحدَّد بعد',
   },
+  reports: {
+    title: 'التقارير المالية',
+    desc: 'ما كسبته الشركة من الصفقات: العمولة، المحصّل، نصيب الفريق والمكافآت، وما يتبقى للشركة.',
+    thisMonth: 'هذا الشهر',
+    lastMonth: 'الشهر الماضي',
+    thisQuarter: 'هذا الربع',
+    thisYear: 'هذا العام',
+    from: 'من شهر',
+    to: 'إلى شهر',
+    show: 'عرض',
+    kpiCommission: 'عمولة الشركة',
+    kpiReceived: 'المحصّل',
+    kpiShares: 'نصيب الفريق والمكافآت',
+    kpiNet: 'صافي الشركة',
+    netSub: 'بعد نصيب الفريق والمكافآت',
+    dealsSub: (n: number) => `${n} صفقة`,
+    collectedSub: (p: number) => `${p}% من العمولة`,
+    sharesSub: (paid: string) => `صُرف منها ${paid}`,
+    trend: 'آخر 12 شهرًا',
+    trendSub: 'العمولة والمحصّل شهرًا بشهر.',
+    legendCommission: 'العمولة',
+    legendReceived: 'المحصّل',
+    byKind: 'حسب نوع الصفقة',
+    byAgent: 'أداء الفريق',
+    byAgentSub: 'العمولة التي جاء بها كل موظف ونصيبه منها.',
+    colPerson: 'الموظف',
+    colDeals: 'الصفقات',
+    colCommission: 'العمولة',
+    colShares: 'نصيبه',
+    empty: 'لا صفقات في هذه الفترة',
+    breakdown: 'من أين جاء صافي الشركة',
+    bOutstanding: 'لم يُحصَّل بعد',
+    bShares: 'نصيب الفريق',
+    bBonuses: 'مكافآت الأهداف',
+    bNet: 'صافي الشركة',
+  },
+  targets: {
+    title: 'الأهداف الشهرية',
+    myTitle: 'هدفي الشهري',
+    desc: 'هدف كل موظف من عمولة الشركة وعدد الصفقات في الشهر، ومكافأته عند تحقيقه.',
+    myDesc: 'هدفك هذا الشهر: العمولة التي تأتي بها صفقاتك، وعددها، ومكافأتك عند تحقيقه.',
+    kpiTarget: 'المستهدف',
+    kpiActual: 'المحقّق',
+    ofTarget: (p: number) => `${p}% من المستهدف`,
+    kpiAchieved: 'حقّقوا الهدف',
+    kpiAchievedSub: (n: number) => `من ${n} لهم أهداف`,
+    commission: 'العمولة',
+    deals: 'الصفقات',
+    of: 'من',
+    noTarget: 'لا هدف لهذا الشهر',
+    setTarget: 'تحديد هدف',
+    edit: 'تعديل',
+    commissionTarget: 'العمولة المستهدفة',
+    dealsTarget: 'عدد الصفقات',
+    bonusAmount: 'المكافأة عند التحقيق',
+    save: 'حفظ',
+    cancel: 'إلغاء',
+    remove: 'حذف الهدف',
+    bonus: { NONE: 'بدون مكافأة', PENDING: 'لم يتحقق بعد', EARNED: 'تحقّق — المكافأة مستحقة', PAID: 'صُرفت المكافأة' },
+    payBonus: 'صرف المكافأة',
+    unpay: 'تراجع',
+    achieved: 'تحقّق',
+    prev: 'الشهر السابق',
+    next: 'الشهر التالي',
+    empty: 'لا يوجد موظفو مبيعات بعد',
+  },
 };
 
 const en: typeof ar = {
-  tabs: { deals: 'Deals', claims: 'Developer claims', payouts: 'Team commissions', myPayouts: 'My commissions', rules: 'Commission rates' },
+  tabs: { deals: 'Deals', claims: 'Developer claims', payouts: 'Team commissions', myPayouts: 'My commissions', rules: 'Commission rates', targets: 'Targets', myTarget: 'My target', reports: 'Reports' },
   status: { CLOSED: 'Closed', CANCELLED: 'Cancelled' },
   claimStatus: { PENDING: 'Not submitted', SUBMITTED: 'Submitted', PARTIALLY_PAID: 'Partly paid', PAID: 'Paid', REJECTED: 'Rejected' },
   role: { AGENT: 'Agent', MANAGER: 'Team manager' },
@@ -374,6 +440,72 @@ const en: typeof ar = {
     updated: (d: string) => `Updated ${d}`,
     never: 'Not set yet',
   },
+  reports: {
+    title: 'Financial reports',
+    desc: 'What the company earned from deals: commission, collected, team shares and bonuses, and what it keeps.',
+    thisMonth: 'This month',
+    lastMonth: 'Last month',
+    thisQuarter: 'This quarter',
+    thisYear: 'This year',
+    from: 'From',
+    to: 'To',
+    show: 'Show',
+    kpiCommission: 'Company commission',
+    kpiReceived: 'Collected',
+    kpiShares: 'Team shares & bonuses',
+    kpiNet: 'Company net',
+    netSub: 'after team shares and bonuses',
+    dealsSub: (n: number) => `${n} deals`,
+    collectedSub: (p: number) => `${p}% of commission`,
+    sharesSub: (paid: string) => `${paid} paid out`,
+    trend: 'Last 12 months',
+    trendSub: 'Commission and collected, month by month.',
+    legendCommission: 'Commission',
+    legendReceived: 'Collected',
+    byKind: 'By deal type',
+    byAgent: 'Team performance',
+    byAgentSub: 'The commission each person brought in and their share of it.',
+    colPerson: 'Person',
+    colDeals: 'Deals',
+    colCommission: 'Commission',
+    colShares: 'Share',
+    empty: 'No deals in this period',
+    breakdown: 'Where the company net comes from',
+    bOutstanding: 'Not collected yet',
+    bShares: 'Team shares',
+    bBonuses: 'Target bonuses',
+    bNet: 'Company net',
+  },
+  targets: {
+    title: 'Monthly targets',
+    myTitle: 'My monthly target',
+    desc: 'Each person’s monthly target for company commission and deals, and the bonus for meeting it.',
+    myDesc: 'Your target this month: the commission your deals bring in, how many, and your bonus for meeting it.',
+    kpiTarget: 'Target',
+    kpiActual: 'Achieved',
+    ofTarget: (p: number) => `${p}% of target`,
+    kpiAchieved: 'Met their target',
+    kpiAchievedSub: (n: number) => `of ${n} with targets`,
+    commission: 'Commission',
+    deals: 'Deals',
+    of: 'of',
+    noTarget: 'No target this month',
+    setTarget: 'Set target',
+    edit: 'Edit',
+    commissionTarget: 'Commission target',
+    dealsTarget: 'Deals',
+    bonusAmount: 'Bonus when met',
+    save: 'Save',
+    cancel: 'Cancel',
+    remove: 'Remove target',
+    bonus: { NONE: 'No bonus', PENDING: 'Not met yet', EARNED: 'Met — bonus due', PAID: 'Bonus paid' },
+    payBonus: 'Pay bonus',
+    unpay: 'Undo',
+    achieved: 'Met',
+    prev: 'Previous month',
+    next: 'Next month',
+    empty: 'No sales staff yet',
+  },
 };
 
 export function dealsT(locale: Locale) {
@@ -486,4 +618,36 @@ export interface SplitRow extends DealSplit {
 export interface SplitsPayload {
   data: SplitRow[];
   totals: { payable: number; awaitingCollection: number; paid: number };
+}
+
+export type BonusState = 'NONE' | 'PENDING' | 'EARNED' | 'PAID';
+
+export interface TargetRow {
+  user: { id: string; fullName: string; role: string };
+  target: { id: string; period: string; commissionTarget: string; dealsTarget: number; bonusAmount: string; bonusPaidAt: string | null } | null;
+  actual: { commission: number; deals: number };
+  progress: { commissionPct: number; dealsPct: number; achieved: boolean } | null;
+  bonus: BonusState;
+}
+
+export interface TargetsPayload {
+  period: string;
+  rows: TargetRow[];
+  totals: { commissionTarget: number; commission: number; achieved: number; withTarget: number };
+}
+
+interface ReportFigures {
+  deals: number;
+  dealValue: number;
+  commission: number;
+  received: number;
+}
+
+export interface ReportPayload {
+  from: string;
+  to: string;
+  totals: ReportFigures & { outstanding: number; staffShares: number; staffSharesPaid: number; bonuses: number; bonusesPaid: number; companyNet: number };
+  byKind: Array<ReportFigures & { kind: ListingKind }>;
+  byAgent: Array<ReportFigures & { userId: string; fullName: string; shares: number; sharesPaid: number }>;
+  trend: Array<ReportFigures & { month: string }>;
 }

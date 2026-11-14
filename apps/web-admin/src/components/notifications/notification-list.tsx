@@ -67,6 +67,10 @@ function relatedLink(
       return { href: `/dashboard/listings/${entityId}`, icon: Building2, label: rl.listing };
     }
     // BRK-3 — a commission paid out opens its deal.
+    // BRK-4 — a target met or its bonus paid opens the month's targets.
+    if (entityType === 'brokerage_target') {
+      return { href: '/dashboard/deals/targets', icon: Handshake, label: rl.deal };
+    }
     if (entityType === 'deal' && entityId) {
       return { href: `/dashboard/deals/${entityId}`, icon: Handshake, label: rl.deal };
     }

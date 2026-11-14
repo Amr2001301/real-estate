@@ -98,3 +98,25 @@ export async function unpaySplitAction(dealId: string, splitId: string): Promise
 export async function setRuleAction(kind: string, _prev: DealFormState, f: FormData): Promise<DealFormState> {
   return attempt(() => api.put(`/deals/rules/${kind}`, { agentPct: Number(str(f, 'agentPct')), managerPct: Number(str(f, 'managerPct')) }));
 }
+
+export async function setTargetAction(period: string, userId: string, _prev: DealFormState, f: FormData): Promise<DealFormState> {
+  return attempt(() =>
+    api.put(`/deals/targets/${period}/${userId}`, {
+      commissionTarget: Number(str(f, 'commissionTarget') || 0),
+      dealsTarget: Number(str(f, 'dealsTarget') || 0),
+      bonusAmount: Number(str(f, 'bonusAmount') || 0),
+    }),
+  );
+}
+
+export async function removeTargetAction(id: string): Promise<DealFormState> {
+  return attempt(() => api.delete(`/deals/targets/${id}`));
+}
+
+export async function payBonusAction(id: string): Promise<DealFormState> {
+  return attempt(() => api.post(`/deals/targets/${id}/pay-bonus`, {}));
+}
+
+export async function unpayBonusAction(id: string): Promise<DealFormState> {
+  return attempt(() => api.post(`/deals/targets/${id}/unpay-bonus`, {}));
+}
