@@ -85,12 +85,16 @@ else
   # runs out of memory. A half passes only when Jest reports no failure.
   : > /tmp/release-2.log
   e2e_ok=1
+  halves=0
   while IFS= read -r pattern; do
+    halves=$((halves + 1))
     out=$(cd apps/api && npx jest --config ./test/jest-e2e.json --runInBand --testPathPattern="$pattern" 2>&1 | tail -8)
     printf '%s\n%s\n' "--- $pattern" "$out" >> /tmp/release-2.log
     if ! grep -qE '^Tests:.*passed' <<<"$out" || grep -qE '^Tests:.*failed' <<<"$out"; then e2e_ok=0; fi
   done < <(grep -oE -- '--testPathPattern="[^"]*"' .github/workflows/ci.yml | sed 's/--testPathPattern="//;s/"$//')
-  if [[ $e2e_ok == 1 ]]; then
+  if [[ $halves == 0 ]]; then
+    fail 'backend e2e — no --testPathPattern found in .github/workflows/ci.yml'
+  elif [[ $e2e_ok == 1 ]]; then
     pass 'backend e2e (both CI halves)'
   else
     fail 'backend e2e — see /tmp/release-2.log'
