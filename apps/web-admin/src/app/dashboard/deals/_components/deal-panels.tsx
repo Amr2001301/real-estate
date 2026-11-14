@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
-import { Ban, Coins, FileClock, Plus, Trash2, Undo2, Users, X } from 'lucide-react';
+import { Ban, Coins, FileClock, Handshake, Plus, Trash2, Undo2, Users, X } from 'lucide-react';
 import type { Locale } from '@/lib/locale';
 import { cn } from '@/lib/cn';
 import { formatDate, formatExactCurrency } from '@/lib/format';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { dealsT, type Deal } from '@/components/deals/messages';
 import {
   cancelDealAction,
+  payCoBrokerAction,
+  unpayCoBrokerAction,
   paySplitAction,
   recordClaimPaymentAction,
   recordCommissionAction,
@@ -303,6 +305,51 @@ export function SplitsPanel({ deal, locale, currency, canFinance }: { deal: Deal
           ))}
         </ul>
       )}
+    </Panel>
+  );
+}
+
+/** BRK-6b — the outside broker sharing the deal, and paying them their share. */
+export function CoBrokerPanel({ deal, locale, currency, canFinance }: { deal: Deal; locale: Locale; currency: string; canFinance: boolean }) {
+  const t = dealsT(locale).detail;
+  const money: Money = (v) => formatExactCurrency(v, currency, locale);
+  const collected = Number(deal.commissionReceived) >= Number(deal.commissionTotal);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string>();
+  const run = (fn: () => Promise<DealFormState>) => start(async () => setError((await fn()).error));
+  const phone = deal.coBrokerPhone?.replace(/[^\d+]/g, '');
+  return (
+    <Panel icon={<Handshake />} title={t.coBroker} sub={t.coBrokerSub(Number(deal.coBrokerPct))} testId="deal-cobroker">
+      <ErrorLine error={error} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[14.5px] font-bold text-slate-900">{deal.coBrokerName}</p>
+          {phone && (
+            <a href={`tel:${phone}`} dir="ltr" className="num text-[12.5px] text-brand-700 hover:underline">{deal.coBrokerPhone}</a>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-end">
+            <p className="num text-[15px] font-bold text-slate-900">{money(deal.coBrokerAmount)}</p>
+            {deal.coBrokerPaidAt ? (
+              <Pill tone="green">{t.paidOn(formatDate(deal.coBrokerPaidAt, locale))}</Pill>
+            ) : deal.status === 'CLOSED' ? (
+              <Pill tone={collected ? 'gold' : 'slate'}>{collected ? t.payable : t.awaiting}</Pill>
+            ) : null}
+          </div>
+          {canFinance && deal.status === 'CLOSED' && !deal.coBrokerPaidAt && collected && (
+            <Button type="button" variant="primary" size="sm" disabled={pending} onClick={() => run(() => payCoBrokerAction(deal.id))} data-testid="cobroker-pay">
+              {t.pay}
+            </Button>
+          )}
+          {canFinance && deal.coBrokerPaidAt && (
+            <button type="button" disabled={pending} onClick={() => run(() => unpayCoBrokerAction(deal.id))} title={t.unpay} className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-500/10 hover:text-slate-700">
+              <Undo2 className="h-4 w-4" />
+              <span className="sr-only">{t.unpay}</span>
+            </button>
+          )}
+        </div>
+      </div>
     </Panel>
   );
 }

@@ -42,6 +42,8 @@ export interface ReportDeal {
   dealValue: number;
   commissionTotal: number;
   commissionReceived: number;
+  /** BRK-6b: what an outside broker takes of the commission. */
+  coBrokerAmount?: number;
 }
 
 export interface ReportSplit {
@@ -84,6 +86,7 @@ export function buildReport(
     return k >= from && k <= to;
   };
   const totals = zero();
+  let coBrokerShares = 0;
   const byKind = new Map<ListingKind, Figures>();
   const byAgent = new Map<string, Figures & { shares: number; sharesPaid: number }>();
   const trend = new Map(trendMonths.map((m) => [m, zero()]));
@@ -93,6 +96,7 @@ export function buildReport(
     if (month) add(month, d);
     if (!inRange(d.closedOn)) continue;
     add(totals, d);
+    coBrokerShares = round2(coBrokerShares + (d.coBrokerAmount ?? 0));
     if (!byKind.has(d.kind)) byKind.set(d.kind, zero());
     add(byKind.get(d.kind)!, d);
     if (d.agentId) {
@@ -117,7 +121,8 @@ export function buildReport(
       outstanding: round2(totals.commission - totals.received),
       staffShares: shares,
       staffSharesPaid: sharesPaid,
-      companyNet: round2(totals.commission - shares),
+      coBrokerShares,
+      companyNet: round2(totals.commission - shares - coBrokerShares),
     },
     byKind: [ListingKind.PRIMARY, ListingKind.RESALE, ListingKind.RENT].map((kind) => ({
       kind,

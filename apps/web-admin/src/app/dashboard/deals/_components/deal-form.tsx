@@ -101,12 +101,17 @@ export function DealForm({
   const rule = rules.find((r) => r.kind === kind);
   const total = Number(commission) || 0;
   const money = (n: number) => formatExactCurrency(n, currency, locale);
+  // BRK-6b: an outside broker's share comes off the top; the team shares the rest.
+  const [coBroker, setCoBroker] = useState(false);
+  const [coPct, setCoPct] = useState('');
+  const coAmount = coBroker && Number(coPct) > 0 ? round2((total * Number(coPct)) / 100) : 0;
   const preview = useMemo(() => {
     if (!rule || (rule.agentPct === 0 && rule.managerPct === 0)) return null;
-    const agent = round2((total * rule.agentPct) / 100);
-    const manager = round2((total * rule.managerPct) / 100);
-    return { agent, manager, company: round2(total - agent - manager) };
-  }, [rule, total]);
+    const base = total - coAmount;
+    const agent = round2((base * rule.agentPct) / 100);
+    const manager = round2((base * rule.managerPct) / 100);
+    return { agent, manager, company: round2(base - agent - manager) };
+  }, [rule, total, coAmount]);
 
   const nav = [
     { id: 'listing', num: '01', label: f.sListing, sub: listing ? listing.code : lm.kind[kind] },
@@ -287,11 +292,12 @@ export function DealForm({
           <div className="mt-6 overflow-hidden rounded-2xl border border-[#D8B66A]/[0.28] bg-navy-band p-5 text-[#F4ECD8]" data-testid="deal-preview">
             <p className="text-[12.5px] font-semibold text-[#A9B0BD]">{f.preview}</p>
             {preview ? (
-              <dl className="mt-3 grid grid-cols-3 gap-3">
+              <dl className={cn('mt-3 grid gap-3', coAmount > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
                 {[
                   [m.role.AGENT, preview.agent, rule!.agentPct],
                   [f.previewManager, preview.manager, rule!.managerPct],
                   [f.previewCompany, preview.company, round2(100 - rule!.agentPct - rule!.managerPct)],
+                  ...(coAmount > 0 ? [[m.detail.coBroker, coAmount, Number(coPct)] as [string, number, number]] : []),
                 ].map(([k, v, p]) => (
                   <div key={String(k)} className="min-w-0">
                     <dt className="truncate text-[11.5px] text-[#A9B0BD]">{k}</dt>
@@ -333,6 +339,29 @@ export function DealForm({
                 </p>
               </div>
             )}
+            <div className="md:col-span-2">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-[13px] font-bold text-slate-700">
+                <input type="checkbox" checked={coBroker} onChange={(e) => setCoBroker(e.target.checked)} className="h-4 w-4 accent-[#B38B3A]" data-testid="deal-cobroker" />
+                {f.coBroker}
+              </label>
+              {coBroker && (
+                <div className="mt-3 grid grid-cols-1 gap-4 rounded-2xl border border-[#D8B66A]/40 bg-[#D8B66A]/[0.05] p-4 sm:grid-cols-3">
+                  <label className={label}>
+                    {f.coBrokerName}
+                    <Input name="coBrokerName" required minLength={2} maxLength={120} className="mt-1.5" data-testid="deal-cobroker-name" />
+                  </label>
+                  <label className={label}>
+                    {f.coBrokerPhone}
+                    <Input name="coBrokerPhone" type="tel" dir="ltr" className="mt-1.5" />
+                  </label>
+                  <label className={label}>
+                    {f.coBrokerPct}
+                    <Input name="coBrokerPct" type="number" required min={0.01} max={100} step="0.01" dir="ltr" value={coPct} onChange={(e) => setCoPct(e.target.value)} className="mt-1.5" data-testid="deal-cobroker-pct" />
+                    {coAmount > 0 && <span className="mt-1 block text-[11.5px] font-normal text-slate-500">{money(coAmount)}</span>}
+                  </label>
+                </div>
+              )}
+            </div>
             <label className={cn(label, 'md:col-span-2')}>
               {f.notes}
               <Textarea name="notes" rows={3} maxLength={2000} className="mt-1.5" />

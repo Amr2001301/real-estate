@@ -226,6 +226,20 @@ export class DealsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('deals:finance')
+  @Post(':id/co-broker/pay')
+  payCoBroker(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.deals.payCoBroker(user, id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Post(':id/co-broker/unpay')
+  unpayCoBroker(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.deals.unpayCoBroker(user, id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
   @Patch(':id/commission')
   recordCommission(
     @CurrentUser() user: AuthUser,

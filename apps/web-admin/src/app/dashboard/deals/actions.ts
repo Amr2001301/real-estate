@@ -47,6 +47,7 @@ export async function createDealAction(_prev: DealFormState, f: FormData): Promi
         developerName: opt(f, 'developerName'),
         agentId: opt(f, 'agentId'),
         notes: opt(f, 'notes'),
+        ...(opt(f, 'coBrokerPct') ? { coBrokerName: opt(f, 'coBrokerName'), coBrokerPhone: opt(f, 'coBrokerPhone'), coBrokerPct: Number(str(f, 'coBrokerPct')) } : {}),
       })
     ).id;
   } catch (e) {
@@ -119,4 +120,12 @@ export async function payBonusAction(id: string): Promise<DealFormState> {
 
 export async function unpayBonusAction(id: string): Promise<DealFormState> {
   return attempt(() => api.post(`/deals/targets/${id}/unpay-bonus`, {}));
+}
+
+export async function payCoBrokerAction(dealId: string): Promise<DealFormState> {
+  return attempt(() => api.post(`/deals/${dealId}/co-broker/pay`, {}), dealId);
+}
+
+export async function unpayCoBrokerAction(dealId: string): Promise<DealFormState> {
+  return attempt(() => api.post(`/deals/${dealId}/co-broker/unpay`, {}), dealId);
 }
