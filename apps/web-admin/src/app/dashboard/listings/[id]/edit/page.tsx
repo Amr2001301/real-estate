@@ -6,17 +6,18 @@ import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero } from '@/components/premium';
 import { listingsT, type Listing } from '@/components/listings/messages';
-import { ListingForm } from '../../_components/listing-form';
+import { ListingForm, type ProjectOption } from '../../_components/listing-form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, locale] = await Promise.all([params, getLocale()]);
   const m = listingsT(locale);
-  const [listingRes, typesRes, agentsRes] = await Promise.all([
+  const [listingRes, typesRes, agentsRes, projectsRes] = await Promise.all([
     safe(api.get<Listing>(`/listings/${id}`)),
     safe(api.get<UnitTypeOption[]>('/unit-types')),
     safe(staffOptions(['ADMIN', 'SALES_MANAGER', 'SALES'], { active: true })),
+    safe(api.get<ProjectOption[]>('/developers/projects/options')),
   ]);
   const listing = listingRes.data;
   if (!listing) notFound();
@@ -33,7 +34,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           { label: m.form.editTitle },
         ]}
       />
-      <ListingForm locale={locale} listing={listing} unitTypes={typesRes.data ?? []} agents={agentsRes.data?.data ?? []} />
+      <ListingForm locale={locale} listing={listing} unitTypes={typesRes.data ?? []} agents={agentsRes.data?.data ?? []} projects={projectsRes.data ?? []} />
     </div>
   );
 }

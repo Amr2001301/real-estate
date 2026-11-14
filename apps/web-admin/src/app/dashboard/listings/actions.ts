@@ -42,6 +42,8 @@ function payload(f: FormData, editing: boolean) {
     ownerName: text('ownerName'),
     ownerPhone: text('ownerPhone'),
     agentId: text('agentId'),
+    // BRK-5: only a primary sale's form has the project picker.
+    ...(f.has('developerProjectId') ? { developerProjectId: text('developerProjectId') } : {}),
     photos: f.getAll('photos').map(String).filter(Boolean),
   };
 }

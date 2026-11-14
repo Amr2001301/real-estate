@@ -13,6 +13,7 @@ import { PremiumPageHero } from '@/components/premium';
 import { KindTag, StatusTag, ListingPhotoPlaceholder, ListingPrice, placeLine } from '@/components/listings/listing-card';
 import { listingsT, LISTING_STATUSES, type Listing, type ListingTerms } from '@/components/listings/messages';
 import { ListingTermsPanels } from '../_components/listing-terms';
+import { ListingLeads } from '@/app/dashboard/leads/_brokerage/listing-leads';
 import { ListingStatusSelect, DeleteListingButton } from '../_components/listing-actions';
 
 export const dynamic = 'force-dynamic';
@@ -153,6 +154,9 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
               canUndo={canDelete}
             />
           )}
+
+          {/* BRK-5: the rep's open leads this listing fits. */}
+          {l.status !== 'CLOSED' && l.status !== 'WITHDRAWN' && <ListingLeads listingId={l.id} locale={locale} />}
 
           {l.description && (
             <Card title={m.detail.description}>

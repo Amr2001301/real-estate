@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, DefaultValuePipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Put, Query, DefaultValuePipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ListingKind, ListingStatus, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -7,6 +7,7 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { parseEnumList } from '../../common/utils/query-filters';
 import { ListingsService } from './listings.service';
 import { ListingTermsService } from './listing-terms.service';
+import { ListingMatchingService } from './listing-matching.service';
 import {
   CreateListingDto,
   CreateMandateDto,
@@ -14,6 +15,7 @@ import {
   ListingPhotoPresignDto,
   RecordRentPaymentDto,
   SetListingStatusDto,
+  SetRequirementDto,
   UpdateListingDto,
 } from './dto/listing.dto';
 
@@ -28,6 +30,7 @@ export class ListingsController {
   constructor(
     private readonly listings: ListingsService,
     private readonly terms: ListingTermsService,
+    private readonly matching: ListingMatchingService,
   ) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
@@ -76,8 +79,42 @@ export class ListingsController {
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
   @Permissions('listings:manage')
   @Post()
-  create(@Body() dto: CreateListingDto, @CurrentUser() user: AuthUser) {
-    return this.listings.create(dto, user.sub);
+  async create(@Body() dto: CreateListingDto, @CurrentUser() user: AuthUser) {
+    const listing = await this.listings.create(dto, user.sub);
+    // BRK-5: tell the reps whose open leads it fits.
+    await this.matching.announceListing(listing.id);
+    return listing;
+  }
+
+  /** BRK-5 — what a lead is looking for (a rep: their own leads). */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Permissions('listings:read')
+  @Get('requirements/:leadId')
+  getRequirement(@CurrentUser() user: AuthUser, @Param('leadId', ParseUUIDPipe) leadId: string) {
+    return this.matching.getRequirement(user, leadId);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Permissions('listings:read')
+  @Put('requirements/:leadId')
+  setRequirement(@CurrentUser() user: AuthUser, @Param('leadId', ParseUUIDPipe) leadId: string, @Body() dto: SetRequirementDto) {
+    return this.matching.setRequirement(user, leadId, dto);
+  }
+
+  /** The listings that fit a lead's requirements, best first. */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Permissions('listings:read')
+  @Get('matches/:leadId')
+  matches(@CurrentUser() user: AuthUser, @Param('leadId', ParseUUIDPipe) leadId: string) {
+    return this.matching.matchesForLead(user, leadId);
+  }
+
+  /** The caller's open leads a listing fits, best first. */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Permissions('listings:read')
+  @Get(':id/matching-leads')
+  matchingLeads(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.matching.leadsForListing(user, id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)

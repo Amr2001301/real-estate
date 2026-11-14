@@ -20,7 +20,9 @@ import type { Lead, Paged, Reservation, LeadStage, VisitRequest, VisitAppointmen
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { getSession } from '@/lib/session';
+import { getSession, isBrokerage } from '@/lib/session';
+import { getReportsCurrency } from '@/lib/currency';
+import { LeadMatches } from '../_brokerage/lead-matches';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import {
@@ -305,6 +307,9 @@ export default async function LeadDetailPage({
           </div>
         </div>
       </section>
+
+      {/* BRK-5: a brokerage's lead — what they want and the listings that fit. */}
+      {isBrokerage(session) && <LeadMatches leadId={lead.id} locale={locale} currency={await getReportsCurrency()} />}
 
       <PremiumDetailLayout
         main={

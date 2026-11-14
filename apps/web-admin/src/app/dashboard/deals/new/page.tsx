@@ -18,11 +18,12 @@ export default async function NewDealPage({ searchParams }: { searchParams: Prom
   const [sp, locale, session, currency, timeZone] = await Promise.all([searchParams, getLocale(), getSession(), getReportsCurrency(), getCompanyTimeZone()]);
   const m = dealsT(locale);
   const canPickAgent = session?.role === 'ADMIN' || session?.role === 'SALES_MANAGER';
-  const [listingsRes, rulesRes, agentsRes, termsRes] = await Promise.all([
+  const [listingsRes, rulesRes, agentsRes, termsRes, projectsRes] = await Promise.all([
     safe(api.get<Paged<Listing>>('/listings?status=AVAILABLE,UNDER_OFFER,CLOSED&pageSize=200')),
     safe(api.get<CommissionRule[]>('/deals/rules')),
     canPickAgent ? safe(staffOptions(['SALES_MANAGER', 'SALES'], { active: true })) : Promise.resolve(null),
     sp.listingId ? safe(api.get<ListingTerms>(`/listings/${sp.listingId}/terms`)) : Promise.resolve(null),
+    safe(api.get<Array<{ id: string; commissionPct: number | null }>>('/developers/projects/options')),
   ]);
   const listings = listingsRes.data?.data ?? [];
   const mandate = termsRes?.data?.mandates.find((x) => x.state === 'ACTIVE');
@@ -48,6 +49,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: Prom
         selfName={session?.fullName ?? ''}
         initialListingId={listings.some((l) => l.id === sp.listingId) ? sp.listingId! : ''}
         mandatePct={mandate?.commissionPct ? Number(mandate.commissionPct) : null}
+        projectPct={Object.fromEntries((projectsRes.data ?? []).filter((p) => p.commissionPct !== null).map((p) => [p.id, p.commissionPct!]))}
       />
     </div>
   );

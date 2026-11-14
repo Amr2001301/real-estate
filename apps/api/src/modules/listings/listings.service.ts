@@ -19,6 +19,7 @@ export interface ListingQuery {
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const AGENT = { select: { id: true, fullName: true, phone: true } } as const;
+const PROJECT = { select: { id: true, name: true, developer: { select: { id: true, name: true } } } } as const;
 
 /**
  * BRK-2 — a brokerage company's listings: what it sells for developers
@@ -86,7 +87,7 @@ export class ListingsService {
   }
 
   async get(id: string) {
-    const listing = await this.prisma.listing.findFirst({ where: { id }, include: { agent: AGENT } });
+    const listing = await this.prisma.listing.findFirst({ where: { id }, include: { agent: AGENT, developerProject: PROJECT } });
     if (!listing) throw new NotFoundException('الوحدة غير موجودة');
     return listing;
   }
@@ -95,6 +96,10 @@ export class ListingsService {
     const type = await this.unitTypes.resolveActive(dto.unitType);
     if (dto.agentId) await this.assertAgent(dto.agentId);
     this.assertMoney(dto.kind, dto.price, dto.downPayment);
+    const project = dto.developerProjectId ? await this.resolveProject(dto.developerProjectId, dto.kind) : null;
+    if (dto.kind === ListingKind.PRIMARY && !clean(dto.developerName) && !project) {
+      throw new BadRequestException('اسم المطوّر مطلوب لوحدة البيع الأولي');
+    }
 
     const data = {
       kind: dto.kind,
@@ -105,8 +110,9 @@ export class ListingsService {
       district: clean(dto.district),
       compound: clean(dto.compound),
       address: clean(dto.address),
-      developerName: clean(dto.developerName),
-      projectName: clean(dto.projectName),
+      developerName: clean(dto.developerName) ?? project?.developer.name ?? null,
+      projectName: clean(dto.projectName) ?? project?.name ?? null,
+      developerProjectId: project?.id ?? null,
       area: dto.area,
       bedrooms: dto.bedrooms ?? null,
       bathrooms: dto.bathrooms ?? null,
@@ -145,7 +151,8 @@ export class ListingsService {
     const price = dto.price ?? Number(current.price);
     const down = dto.downPayment === undefined ? (current.downPayment === null ? undefined : Number(current.downPayment)) : dto.downPayment ?? undefined;
     this.assertMoney(current.kind, price, down);
-    if (current.kind === ListingKind.PRIMARY && dto.developerName !== undefined && !clean(dto.developerName)) {
+    const project = dto.developerProjectId ? await this.resolveProject(dto.developerProjectId, current.kind) : null;
+    if (current.kind === ListingKind.PRIMARY && dto.developerName !== undefined && !clean(dto.developerName) && !project) {
       throw new BadRequestException('اسم المطوّر مطلوب لوحدة البيع الأولي');
     }
 
@@ -172,6 +179,10 @@ export class ListingsService {
       ...(dto.deliveryDate !== undefined ? { deliveryDate: dto.deliveryDate ? new Date(dto.deliveryDate) : null } : {}),
       ...(dto.photos !== undefined ? { photos: dto.photos } : {}),
       ...(dto.agentId !== undefined ? { agentId: dto.agentId } : {}),
+      ...(dto.developerProjectId !== undefined ? { developerProjectId: project?.id ?? null } : {}),
+      // A project picked without names typed fills them in.
+      ...(project && !clean(dto.developerName) ? { developerName: project.developer.name } : {}),
+      ...(project && !clean(dto.projectName) ? { projectName: project.name } : {}),
     };
     // updateMany keeps the company scope on the write itself.
     await this.prisma.listing.updateMany({ where: { id }, data });
@@ -201,6 +212,14 @@ export class ListingsService {
   }
 
   /** The agent must be a sales-side staff member of this company. */
+  /** A project in the company's developer directory; only a primary sale is filed under one. */
+  private async resolveProject(id: string, kind: ListingKind) {
+    if (kind !== ListingKind.PRIMARY) throw new BadRequestException('ربط المشروع لوحدات البيع الأولي فقط');
+    const project = await this.prisma.developerProject.findFirst({ where: { id }, select: { id: true, name: true, developer: { select: { name: true } } } });
+    if (!project) throw new BadRequestException('المشروع غير موجود');
+    return project;
+  }
+
   private async assertAgent(agentId: string) {
     const agent = await findTenantUser(this.prisma, agentId, { id: true, role: true });
     const staff: UserRole[] = [UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES];

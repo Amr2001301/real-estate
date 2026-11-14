@@ -28,6 +28,7 @@ import { LeadsModule } from './modules/leads/leads.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { DealsModule } from './modules/deals/deals.module';
+import { DevelopersModule } from './modules/developers/developers.module';
 import { LeadIntakeModule } from './modules/lead-intake/lead-intake.module';
 import { MetaLeadsModule } from './modules/meta-leads/meta-leads.module';
 import { DataMigrationModule } from './modules/data-migration/data-migration.module';
@@ -110,6 +111,7 @@ import { PermissionCatalogBootstrap } from './modules/permissions/permission-cat
     CampaignsModule,
     ListingsModule,
     DealsModule,
+    DevelopersModule,
     LeadIntakeModule,
     MetaLeadsModule,
     DataMigrationModule,

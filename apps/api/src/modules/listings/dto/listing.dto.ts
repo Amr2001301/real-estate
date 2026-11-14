@@ -32,7 +32,8 @@ export class CreateListingDto {
   @IsOptional() @IsString() @MaxLength(120) compound?: string;
   @IsOptional() @IsString() @MaxLength(240) address?: string;
   /** A primary sale is a developer's unit: the developer is required. */
-  @ValidateIf((o: CreateListingDto) => o.kind === ListingKind.PRIMARY || o.developerName !== undefined)
+  // A primary sale names its developer — typed, or from the project picked in the directory.
+  @ValidateIf((o: CreateListingDto) => (o.kind === ListingKind.PRIMARY && !o.developerProjectId) || o.developerName !== undefined)
   @IsString() @MinLength(2) @MaxLength(120) developerName?: string;
   @IsOptional() @IsString() @MaxLength(120) projectName?: string;
 
@@ -54,6 +55,8 @@ export class CreateListingDto {
 
   @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) @Matches(PHOTO_URL, { each: true }) photos?: string[];
   @IsOptional() @IsUUID() agentId?: string;
+  /** BRK-5: the project in the developer directory (primary sales). */
+  @IsOptional() @IsUUID() developerProjectId?: string;
 }
 
 /** Every field may change; the kind stays (a rent is never re-filed as a sale). */
@@ -81,6 +84,7 @@ export class UpdateListingDto {
   @IsOptional() @IsString() @Matches(/^\+?[0-9 ()-]{6,20}$/, { message: 'رقم هاتف المالك غير صحيح' }) ownerPhone?: string | null;
   @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) @Matches(PHOTO_URL, { each: true }) photos?: string[];
   @IsOptional() @IsUUID() agentId?: string | null;
+  @IsOptional() @IsUUID() developerProjectId?: string | null;
 }
 
 export class SetListingStatusDto {
@@ -121,4 +125,16 @@ export class RecordRentPaymentDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) amount!: number;
   @IsDateString() paidOn!: string;
   @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+/** BRK-5 — what a lead is looking for; every field optional, a list may be empty. */
+export class SetRequirementDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(3) @IsEnum(ListingKind, { each: true }) kinds?: ListingKind[];
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) budgetMin?: number | null;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(1) budgetMax?: number | null;
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @IsString({ each: true }) @MaxLength(80, { each: true }) cities?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @IsString({ each: true }) @MaxLength(60, { each: true }) unitTypes?: string[];
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(20) bedroomsMin?: number | null;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(1) areaMin?: number | null;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
 }

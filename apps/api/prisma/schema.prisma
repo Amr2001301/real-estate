@@ -172,6 +172,10 @@ model Company {
   commissionRules   CommissionRule[]
   developerClaims   DeveloperClaim[]
   brokerageTargets  BrokerageTarget[]
+  brokerDevelopers  BrokerDeveloper[]
+  developerProjects DeveloperProject[]
+  developerPlans    DeveloperPlan[]
+  leadRequirements  LeadRequirement[]
   claimPayments     ClaimPayment[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
@@ -1253,9 +1257,10 @@ model Lead {
   lostAt       DateTime?
 
   // ── Marketing campaign that brought the lead (first touch) ─────────────
-  campaignId String?   @db.Uuid
-  campaign   Campaign? @relation(fields: [campaignId], references: [id])
-  deals      Deal[]
+  campaignId  String?          @db.Uuid
+  campaign    Campaign?        @relation(fields: [campaignId], references: [id])
+  deals       Deal[]
+  requirement LeadRequirement?
 
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
@@ -1324,45 +1329,48 @@ enum ListingStatus {
 /// monthly rent; otherwise the asking price. The owner's name and phone are
 /// staff-only. Photos are public-bucket URLs, in order.
 model Listing {
-  id            String             @id @default(uuid()) @db.Uuid
-  code          String
-  kind          ListingKind
-  status        ListingStatus      @default(AVAILABLE)
-  title         String
+  id                 String             @id @default(uuid()) @db.Uuid
+  code               String
+  kind               ListingKind
+  status             ListingStatus      @default(AVAILABLE)
+  title              String
   /// A UnitType code of the company (apartment, villa, office…).
-  unitType      String
-  usage         UnitUsage          @default(RESIDENTIAL)
-  city          String
-  district      String?
-  compound      String?
-  address       String?
+  unitType           String
+  usage              UnitUsage          @default(RESIDENTIAL)
+  city               String
+  district           String?
+  compound           String?
+  address            String?
   /// The developer and project, when known (always for PRIMARY).
-  developerName String?
-  projectName   String?
-  area          Float
-  bedrooms      Int?
-  bathrooms     Int?
-  floor         Int?
-  finishing     UnitFinishing?
-  view          UnitView?
-  price         Decimal            @db.Decimal(14, 2)
+  developerName      String?
+  projectName        String?
+  area               Float
+  bedrooms           Int?
+  bathrooms          Int?
+  floor              Int?
+  finishing          UnitFinishing?
+  view               UnitView?
+  price              Decimal            @db.Decimal(14, 2)
   /// The down payment asked, for a sale on instalments.
-  downPayment   Decimal?           @db.Decimal(14, 2)
+  downPayment        Decimal?           @db.Decimal(14, 2)
   /// Handover / availability date, when known.
-  deliveryDate  DateTime?          @db.Date
-  description   String?
-  ownerName     String?
-  ownerPhone    String?
-  photos        String[]           @default([])
-  agentId       String?            @db.Uuid
-  agent         User?              @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
-  mandates      ListingMandate[]
-  deals         Deal[]
-  tenancies     Tenancy[]
-  appointments  VisitAppointment[]
-  createdById   String?            @db.Uuid
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  deliveryDate       DateTime?          @db.Date
+  description        String?
+  ownerName          String?
+  ownerPhone         String?
+  photos             String[]           @default([])
+  agentId            String?            @db.Uuid
+  agent              User?              @relation("ListingAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  mandates           ListingMandate[]
+  deals              Deal[]
+  /// BRK-5: a primary listing's project in the developer directory.
+  developerProjectId String?            @db.Uuid
+  developerProject   DeveloperProject?  @relation(fields: [developerProjectId], references: [id], onDelete: SetNull)
+  tenancies          Tenancy[]
+  appointments       VisitAppointment[]
+  createdById        String?            @db.Uuid
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1574,6 +1582,105 @@ model BrokerageTarget {
 
   @@unique([companyId, userId, period])
   @@index([companyId, period])
+}
+
+/// BRK-5 — a developer the brokerage sells for, in its own directory (not a
+/// developer company on the platform): who to call, and the commission
+/// agreed with them.
+model BrokerDeveloper {
+  id                   String             @id @default(uuid()) @db.Uuid
+  name                 String
+  contactName          String?
+  phone                String?
+  email                String?
+  website              String?
+  /// The commission agreed for the developer's projects, unless a project says otherwise.
+  defaultCommissionPct Decimal?           @db.Decimal(5, 2)
+  notes                String?
+  active               Boolean            @default(true)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  projects             DeveloperProject[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, name])
+}
+
+model DeveloperProject {
+  id            String          @id @default(uuid()) @db.Uuid
+  developerId   String          @db.Uuid
+  developer     BrokerDeveloper @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  name          String
+  city          String?
+  district      String?
+  commissionPct Decimal?        @db.Decimal(5, 2)
+  deliveryDate  DateTime?       @db.Date
+  notes         String?
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  plans         DeveloperPlan[]
+  listings      Listing[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([developerId, name])
+  @@index([companyId])
+}
+
+enum PlanFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+}
+
+/// A payment plan a developer offers on a project: a down payment, the rest
+/// over `years` (0 = cash, with its discount), and a share due at delivery.
+model DeveloperPlan {
+  id              String           @id @default(uuid()) @db.Uuid
+  projectId       String           @db.Uuid
+  project         DeveloperProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name            String
+  downPaymentPct  Decimal          @db.Decimal(5, 2)
+  years           Int
+  frequency       PlanFrequency    @default(QUARTERLY)
+  deliveryPct     Decimal          @default(0) @db.Decimal(5, 2)
+  cashDiscountPct Decimal          @default(0) @db.Decimal(5, 2)
+  notes           String?
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([companyId])
+}
+
+/// BRK-5 — what a brokerage lead is looking for; matched against listings.
+model LeadRequirement {
+  id          String        @id @default(uuid()) @db.Uuid
+  leadId      String        @unique @db.Uuid
+  lead        Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  kinds       ListingKind[]
+  budgetMin   Decimal?      @db.Decimal(14, 2)
+  budgetMax   Decimal?      @db.Decimal(14, 2)
+  cities      String[]
+  unitTypes   String[]
+  bedroomsMin Int?
+  areaMin     Float?
+  notes       String?
+  updatedAt   DateTime      @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 enum ClaimStatus {

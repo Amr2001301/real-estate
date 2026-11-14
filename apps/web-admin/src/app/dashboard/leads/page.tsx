@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban, Radio, CopyCheck } from 'lucide-react';
+import { developersT } from '@/components/developers/messages';
+import { Plus, AlertCircle, Upload, Users, TrendingUp, UserX, Kanban, Radio, CopyCheck, Shuffle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadSource, LeadStage } from '@/lib/types';
 import { getLocale } from '@/lib/locale';
@@ -93,6 +94,13 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               <Link href={'/dashboard/leads/sources' as never}>
                 <Button variant="outline" size="md" leftIcon={<Radio className="h-4 w-4" />}>
                   {m.manageSources}
+                </Button>
+              </Link>
+            )}
+            {canRoute && (unassignedRes.data?.meta.total ?? 0) > 0 && (
+              <Link href={'/dashboard/leads/distribute' as never}>
+                <Button variant="outline" size="md" leftIcon={<Shuffle className="h-4 w-4" />} data-testid="leads-distribute">
+                  {developersT(locale).distribute.button}
                 </Button>
               </Link>
             )}

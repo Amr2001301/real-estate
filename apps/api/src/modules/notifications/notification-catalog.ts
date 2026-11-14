@@ -662,6 +662,23 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'تم صرف مكافأتك {{amount}} عن هدف شهر {{period}}.',
     en_body: 'Your {{amount}} bonus for the {{period}} target was paid.',
   },
+  {
+    code: 'leads_distributed',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'عملاء جدد لك',
+    en_subject: 'New leads for you',
+    ar_body: 'وُزِّع عليك {{count}} عميل جديد — ابدأ التواصل معهم.',
+    en_body: '{{count}} new leads were assigned to you — start reaching out.',
+  },
+  // BRK-5: a new listing that fits the rep's open leads.
+  {
+    code: 'listing_matches_leads',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'وحدة جديدة تناسب عملاءك',
+    en_subject: 'A new listing fits your leads',
+    ar_body: 'الوحدة {{listingCode}} «{{title}}» تناسب {{count}} من عملائك — راجعها معهم.',
+    en_body: 'Listing {{listingCode}} "{{title}}" fits {{count}} of your leads — go over it with them.',
+  },
   // Brokerage listings (BRK-2): an owner's mandate ending, a tenancy ending, rent unpaid.
   {
     code: 'listing_mandate_expiring',

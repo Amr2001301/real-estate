@@ -18,6 +18,13 @@ import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { listingsT, LISTING_KINDS, type Listing, type ListingKind } from '@/components/listings/messages';
 import { createListingAction, updateListingAction, type ListingFormState } from '../actions';
 
+export interface ProjectOption {
+  id: string;
+  name: string;
+  developer: { id: string; name: string };
+  commissionPct: number | null;
+}
+
 const KIND_ICON: Record<ListingKind, typeof Building> = { PRIMARY: Building, RESALE: Home, RENT: KeyRound };
 const FINISHING = ['CORE_AND_SHELL', 'SEMI_FINISHED', 'FULLY_FINISHED', 'FURNISHED'] as const;
 const VIEWS = ['GARDEN', 'POOL', 'LAGOON', 'SEA', 'NILE', 'CLUB', 'LANDSCAPE', 'MAIN_STREET', 'SIDE_STREET'] as const;
@@ -48,11 +55,14 @@ export function ListingForm({
   listing,
   unitTypes,
   agents,
+  projects = [],
 }: {
   locale: Locale;
   listing?: Listing;
   unitTypes: UnitTypeOption[];
   agents: StaffOption[];
+  /** BRK-5: the projects in the developer directory, for a primary sale. */
+  projects?: ProjectOption[];
 }) {
   const m = listingsT(locale);
   const f = m.form;
@@ -60,6 +70,17 @@ export function ListingForm({
   const action = listing ? updateListingAction.bind(null, listing.id) : createListingAction;
   const [state, formAction, pending] = useActionState<ListingFormState, FormData>(action, {});
   const [kind, setKind] = useState<ListingKind>(listing?.kind ?? 'RESALE');
+  const [projectId, setProjectId] = useState(listing?.developerProjectId ?? '');
+  const [developerName, setDeveloperName] = useState(listing?.developerName ?? '');
+  const [projectName, setProjectName] = useState(listing?.projectName ?? '');
+  function pickProject(id: string) {
+    setProjectId(id);
+    const p = projects.find((x) => x.id === id);
+    if (p) {
+      setDeveloperName(p.developer.name);
+      setProjectName(p.name);
+    }
+  }
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? []);
   const [uploading, setUploading] = useState(0);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -184,14 +205,26 @@ export function ListingForm({
               {f.address}
               <Input name="address" defaultValue={listing?.address ?? ''} className="mt-1.5" />
             </label>
+            {kind === 'PRIMARY' && projects.length > 0 && (
+              <label className={cn(label, 'md:col-span-2')}>
+                {f.directoryProject}
+                <Select name="developerProjectId" value={projectId} onChange={(e) => pickProject(e.target.value)} className="mt-1.5" data-testid="listing-project">
+                  <option value="">{f.noDirectoryProject}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.developer.name} — {p.name}</option>
+                  ))}
+                </Select>
+                <span className={hint}>{f.directoryHint}</span>
+              </label>
+            )}
             <label className={label}>
               {f.developer}
-              <Input name="developerName" required={kind === 'PRIMARY'} defaultValue={listing?.developerName ?? ''} className="mt-1.5" data-testid="listing-developer" />
+              <Input name="developerName" required={kind === 'PRIMARY' && !projectId} value={developerName} onChange={(e) => setDeveloperName(e.target.value)} className="mt-1.5" data-testid="listing-developer" />
               {kind === 'PRIMARY' && <span className={hint}>{f.developerRequired}</span>}
             </label>
             <label className={label}>
               {f.project}
-              <Input name="projectName" defaultValue={listing?.projectName ?? ''} className="mt-1.5" />
+              <Input name="projectName" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="mt-1.5" />
             </label>
           </div>
         </PremiumFormPanel>
