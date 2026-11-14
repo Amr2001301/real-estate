@@ -10,6 +10,7 @@ extension AuthUserDtoMapper on AuthUserDto {
         email: email,
         phone: phone,
         displayName: fullName,
+        companyType: companyType,
       );
 }
 

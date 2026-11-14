@@ -15,6 +15,9 @@ abstract class Session with _$Session {
     String? email,
     String? phone,
     String? displayName,
+    /// BRK-6c: the company's type (`DEVELOPER` | `BROKERAGE`). A brokerage
+    /// gets its own screens; null on sessions saved before this field.
+    String? companyType,
   }) = _Session;
 
   factory Session.fromJson(Map<String, dynamic> json) => _$SessionFromJson(json);

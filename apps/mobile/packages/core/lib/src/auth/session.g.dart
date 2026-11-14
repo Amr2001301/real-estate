@@ -12,6 +12,7 @@ _Session _$SessionFromJson(Map<String, dynamic> json) => _Session(
   email: json['email'] as String?,
   phone: json['phone'] as String?,
   displayName: json['displayName'] as String?,
+  companyType: json['companyType'] as String?,
 );
 
 Map<String, dynamic> _$SessionToJson(_Session instance) => <String, dynamic>{
@@ -20,4 +21,5 @@ Map<String, dynamic> _$SessionToJson(_Session instance) => <String, dynamic>{
   'email': instance.email,
   'phone': instance.phone,
   'displayName': instance.displayName,
+  'companyType': instance.companyType,
 };

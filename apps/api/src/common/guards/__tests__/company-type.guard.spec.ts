@@ -37,13 +37,13 @@ describe('CompanyTypeGuard (BRK-1)', () => {
   });
 
   it('lets a brokerage reach its own groups', () => {
-    for (const url of ['/v1/leads', '/v1/leads/123/stage', '/v1/visits/appointments?page=1', '/v1/campaigns', '/v1/users/me', '/v1/auth/logout', '/v1/listings', '/v1/listings/abc/status', '/v1/unit-types']) {
+    for (const url of ['/v1/leads', '/v1/leads/123/stage', '/v1/visits/appointments?page=1', '/v1/campaigns', '/v1/users/me', '/v1/auth/logout', '/v1/listings', '/v1/listings/abc/status', '/v1/unit-types', '/v1/me/permissions', '/v1/me/notifications/unread-count', '/v1/me/devices/unregister']) {
       expect(guard.canActivate(ctx('BROKERAGE', url))).toBe(true);
     }
   });
 
   it('refuses a brokerage the developer workflows with NOT_FOR_BROKERAGE', () => {
-    for (const url of ['/v1/contracts', '/v1/installment-plan-templates', '/v1/deposits/review-queue', '/v1/maintenance-requests', '/v1/phases', '/v1/brokers', '/v1/portal/leads', '/v1/reports/financial', '/v1/me/installments']) {
+    for (const url of ['/v1/contracts', '/v1/installment-plan-templates', '/v1/deposits/review-queue', '/v1/maintenance-requests', '/v1/phases', '/v1/brokers', '/v1/portal/leads', '/v1/reports/financial', '/v1/me/installments', '/v1/me/reservations', '/v1/me/home-summary']) {
       try {
         guard.canActivate(ctx('BROKERAGE', url));
         throw new Error(`expected ${url} to be refused`);

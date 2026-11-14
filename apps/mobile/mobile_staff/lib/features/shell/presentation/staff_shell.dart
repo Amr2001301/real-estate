@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../bonus/domain/repositories/bonus_repository.dart';
+import '../../brokerage/brokerage_data.dart';
+import '../../brokerage/brokerage_home_screen.dart';
 import '../../bonus/domain/usecases/get_bonus_entries.dart';
 import '../../bonus/presentation/cubit/bonus_summary_cubit.dart';
 import '../../dashboard/admin_home/admin_home_data.dart';
@@ -44,9 +46,16 @@ class _StaffShellState extends State<StaffShell> {
   late final AppRole _role = context.read<SessionCubit>().state.role;
   late final bool _adminHome = _role == AppRole.admin;
 
+  /// BRK-6c — a brokerage company's staff get the brokerage home: the
+  /// developer's homes read reservations, contracts and instalments, which a
+  /// brokerage does not have.
+  late final bool _brokerage = context.read<SessionCubit>().state.sessionOrNull?.companyType == 'BROKERAGE';
+
   late final List<Widget> _tabs = [
     // 0 — Dashboard
-    if (_adminHome)
+    if (_brokerage)
+      Builder(builder: (ctx) => BrokerageHomeScreen(repository: BrokerageRepository(ctx.read<Dio>()), onSwitchTab: _switchTab))
+    else if (_adminHome)
       BlocProvider(
         create: (ctx) => AdminHomeCubit(
           AdminHomeRepository(ctx.read<Dio>(), ctx.read<TokenStorage>(), ctx.read<LeadsRepository>()),

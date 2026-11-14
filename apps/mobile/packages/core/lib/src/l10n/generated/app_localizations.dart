@@ -17047,6 +17047,822 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payment every {n} months ({count})'**
   String planBalloonRow(int n, int count);
+
+  /// No description provided for @bxSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokerage'**
+  String get bxSection;
+
+  /// No description provided for @bxListingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings'**
+  String get bxListingsTitle;
+
+  /// No description provided for @bxListingsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Developers\' units and owners\' properties'**
+  String get bxListingsDesc;
+
+  /// No description provided for @bxDealsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deals'**
+  String get bxDealsTitle;
+
+  /// No description provided for @bxDealsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed deals and commission collected'**
+  String get bxDealsDesc;
+
+  /// No description provided for @bxSharesMine.
+  ///
+  /// In en, this message translates to:
+  /// **'My commissions'**
+  String get bxSharesMine;
+
+  /// No description provided for @bxSharesTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Team commissions'**
+  String get bxSharesTeam;
+
+  /// No description provided for @bxSharesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your share of each deal\'s commission'**
+  String get bxSharesDesc;
+
+  /// No description provided for @bxTargetMine.
+  ///
+  /// In en, this message translates to:
+  /// **'My target'**
+  String get bxTargetMine;
+
+  /// No description provided for @bxTargetTeam.
+  ///
+  /// In en, this message translates to:
+  /// **'Team targets'**
+  String get bxTargetTeam;
+
+  /// No description provided for @bxTargetDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'This month\'s target and bonus'**
+  String get bxTargetDesc;
+
+  /// No description provided for @bxLaunchesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Launches'**
+  String get bxLaunchesTitle;
+
+  /// No description provided for @bxLaunchesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Expressions of interest for developers\' launches'**
+  String get bxLaunchesDesc;
+
+  /// No description provided for @bxKindPRIMARY.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary'**
+  String get bxKindPRIMARY;
+
+  /// No description provided for @bxKindRESALE.
+  ///
+  /// In en, this message translates to:
+  /// **'Resale'**
+  String get bxKindRESALE;
+
+  /// No description provided for @bxKindRENT.
+  ///
+  /// In en, this message translates to:
+  /// **'Rent'**
+  String get bxKindRENT;
+
+  /// No description provided for @bxLstAVAILABLE.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get bxLstAVAILABLE;
+
+  /// No description provided for @bxLstUNDER_OFFER.
+  ///
+  /// In en, this message translates to:
+  /// **'Under offer'**
+  String get bxLstUNDER_OFFER;
+
+  /// No description provided for @bxLstCLOSED.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get bxLstCLOSED;
+
+  /// No description provided for @bxLstWITHDRAWN.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdrawn'**
+  String get bxLstWITHDRAWN;
+
+  /// No description provided for @bxLstRented.
+  ///
+  /// In en, this message translates to:
+  /// **'Rented'**
+  String get bxLstRented;
+
+  /// No description provided for @bxLstSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get bxLstSold;
+
+  /// No description provided for @bxDealCLOSED.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get bxDealCLOSED;
+
+  /// No description provided for @bxDealCANCELLED.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bxDealCANCELLED;
+
+  /// No description provided for @bxClaimPENDING.
+  ///
+  /// In en, this message translates to:
+  /// **'Not submitted'**
+  String get bxClaimPENDING;
+
+  /// No description provided for @bxClaimSUBMITTED.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get bxClaimSUBMITTED;
+
+  /// No description provided for @bxClaimPARTIALLY_PAID.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly paid'**
+  String get bxClaimPARTIALLY_PAID;
+
+  /// No description provided for @bxClaimPAID.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bxClaimPAID;
+
+  /// No description provided for @bxClaimREJECTED.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get bxClaimREJECTED;
+
+  /// No description provided for @bxRoleAGENT.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get bxRoleAGENT;
+
+  /// No description provided for @bxRoleMANAGER.
+  ///
+  /// In en, this message translates to:
+  /// **'Team manager'**
+  String get bxRoleMANAGER;
+
+  /// No description provided for @bxBonusNONE.
+  ///
+  /// In en, this message translates to:
+  /// **'No bonus'**
+  String get bxBonusNONE;
+
+  /// No description provided for @bxBonusPENDING.
+  ///
+  /// In en, this message translates to:
+  /// **'Not met yet'**
+  String get bxBonusPENDING;
+
+  /// No description provided for @bxBonusEARNED.
+  ///
+  /// In en, this message translates to:
+  /// **'Met — bonus due'**
+  String get bxBonusEARNED;
+
+  /// No description provided for @bxBonusPAID.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus paid'**
+  String get bxBonusPAID;
+
+  /// No description provided for @bxLaunchUPCOMING.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get bxLaunchUPCOMING;
+
+  /// No description provided for @bxLaunchOPEN.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get bxLaunchOPEN;
+
+  /// No description provided for @bxLaunchCLOSED.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get bxLaunchCLOSED;
+
+  /// No description provided for @bxEoiPENDING_PAYMENT.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting payment'**
+  String get bxEoiPENDING_PAYMENT;
+
+  /// No description provided for @bxEoiPAID.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid — in the queue'**
+  String get bxEoiPAID;
+
+  /// No description provided for @bxEoiALLOCATED.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit allocated'**
+  String get bxEoiALLOCATED;
+
+  /// No description provided for @bxEoiREFUNDED.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunded'**
+  String get bxEoiREFUNDED;
+
+  /// No description provided for @bxEoiCANCELLED.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get bxEoiCANCELLED;
+
+  /// No description provided for @bxAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get bxAll;
+
+  /// No description provided for @bxListingsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} listings'**
+  String bxListingsCount(int n);
+
+  /// No description provided for @bxDealsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} deals'**
+  String bxDealsCount(int n);
+
+  /// No description provided for @bxSharesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} shares'**
+  String bxSharesCount(int n);
+
+  /// No description provided for @bxLaunchesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} launches'**
+  String bxLaunchesCount(int n);
+
+  /// No description provided for @bxSearchListings.
+  ///
+  /// In en, this message translates to:
+  /// **'Code, title, area…'**
+  String get bxSearchListings;
+
+  /// No description provided for @bxSearchDeals.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal code, customer, phone…'**
+  String get bxSearchDeals;
+
+  /// No description provided for @bxListingsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No listings'**
+  String get bxListingsEmpty;
+
+  /// No description provided for @bxListingsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings are added from the web dashboard.'**
+  String get bxListingsEmptyHint;
+
+  /// No description provided for @bxDealsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No deals yet'**
+  String get bxDealsEmpty;
+
+  /// No description provided for @bxDealsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Deals are recorded from the web dashboard when they close.'**
+  String get bxDealsEmptyHint;
+
+  /// No description provided for @bxSharesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No commissions yet'**
+  String get bxSharesEmpty;
+
+  /// No description provided for @bxSharesEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your share of each deal you close shows here.'**
+  String get bxSharesEmptyHint;
+
+  /// No description provided for @bxLaunchesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No launches yet'**
+  String get bxLaunchesEmpty;
+
+  /// No description provided for @bxLaunchesEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Launches are added from the web dashboard.'**
+  String get bxLaunchesEmptyHint;
+
+  /// No description provided for @bxEoisEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No expressions of interest yet'**
+  String get bxEoisEmpty;
+
+  /// No description provided for @bxArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get bxArea;
+
+  /// No description provided for @bxSqm.
+  ///
+  /// In en, this message translates to:
+  /// **'m²'**
+  String get bxSqm;
+
+  /// No description provided for @bxBedrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedrooms'**
+  String get bxBedrooms;
+
+  /// No description provided for @bxBathrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bathrooms'**
+  String get bxBathrooms;
+
+  /// No description provided for @bxFloor.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor'**
+  String get bxFloor;
+
+  /// No description provided for @bxFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing'**
+  String get bxFinishing;
+
+  /// No description provided for @bxView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get bxView;
+
+  /// No description provided for @bxDownPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get bxDownPayment;
+
+  /// No description provided for @bxDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery'**
+  String get bxDelivery;
+
+  /// No description provided for @bxDeveloper.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer'**
+  String get bxDeveloper;
+
+  /// No description provided for @bxProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get bxProject;
+
+  /// No description provided for @bxUnitType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit type'**
+  String get bxUnitType;
+
+  /// No description provided for @bxOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get bxOwner;
+
+  /// No description provided for @bxAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get bxAgent;
+
+  /// No description provided for @bxPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get bxPrice;
+
+  /// No description provided for @bxRentPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly rent'**
+  String get bxRentPerMonth;
+
+  /// No description provided for @bxDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get bxDescription;
+
+  /// No description provided for @bxFacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get bxFacts;
+
+  /// No description provided for @bxCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get bxCall;
+
+  /// No description provided for @bxCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get bxCommission;
+
+  /// No description provided for @bxReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected'**
+  String get bxReceived;
+
+  /// No description provided for @bxOutstanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Not collected yet'**
+  String get bxOutstanding;
+
+  /// No description provided for @bxDealValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Deal value'**
+  String get bxDealValue;
+
+  /// No description provided for @bxCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get bxCustomer;
+
+  /// No description provided for @bxClosedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed on'**
+  String get bxClosedOn;
+
+  /// No description provided for @bxCollectedPct.
+  ///
+  /// In en, this message translates to:
+  /// **'{p}% collected'**
+  String bxCollectedPct(int p);
+
+  /// No description provided for @bxClaim.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer claim'**
+  String get bxClaim;
+
+  /// No description provided for @bxSplits.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission split'**
+  String get bxSplits;
+
+  /// No description provided for @bxSplitPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bxSplitPaid;
+
+  /// No description provided for @bxSplitPayable.
+  ///
+  /// In en, this message translates to:
+  /// **'Due to pay'**
+  String get bxSplitPayable;
+
+  /// No description provided for @bxSplitAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting collection'**
+  String get bxSplitAwaiting;
+
+  /// No description provided for @bxCoBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside broker'**
+  String get bxCoBroker;
+
+  /// No description provided for @bxCoBrokerShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker\'s share'**
+  String get bxCoBrokerShare;
+
+  /// No description provided for @bxCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancellation reason'**
+  String get bxCancelReason;
+
+  /// No description provided for @bxNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get bxNotes;
+
+  /// No description provided for @bxNoListing.
+  ///
+  /// In en, this message translates to:
+  /// **'No listing recorded'**
+  String get bxNoListing;
+
+  /// No description provided for @bxPaidOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {d}'**
+  String bxPaidOn(String d);
+
+  /// No description provided for @bxSharePct.
+  ///
+  /// In en, this message translates to:
+  /// **'{p} of the commission'**
+  String bxSharePct(String p);
+
+  /// No description provided for @bxTotalPayable.
+  ///
+  /// In en, this message translates to:
+  /// **'Due to pay'**
+  String get bxTotalPayable;
+
+  /// No description provided for @bxTotalAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting collection'**
+  String get bxTotalAwaiting;
+
+  /// No description provided for @bxTotalPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bxTotalPaid;
+
+  /// No description provided for @bxSharesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your share is paid once the developer pays the deal\'s commission in full.'**
+  String get bxSharesHint;
+
+  /// No description provided for @bxNoTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'No target set for this month'**
+  String get bxNoTarget;
+
+  /// No description provided for @bxNoTargetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your manager sets the target from the web dashboard.'**
+  String get bxNoTargetHint;
+
+  /// No description provided for @bxOfTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'of {v}'**
+  String bxOfTarget(String v);
+
+  /// No description provided for @bxDealsGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Deals'**
+  String get bxDealsGoal;
+
+  /// No description provided for @bxBonus.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus'**
+  String get bxBonus;
+
+  /// No description provided for @bxAchievedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{a} of {t} met their target'**
+  String bxAchievedN(int a, int t);
+
+  /// No description provided for @bxPrevMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get bxPrevMonth;
+
+  /// No description provided for @bxNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get bxNextMonth;
+
+  /// No description provided for @bxLaunchOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Launch {d}'**
+  String bxLaunchOn(String d);
+
+  /// No description provided for @bxEoiAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'EOI amount'**
+  String get bxEoiAmount;
+
+  /// No description provided for @bxHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Held'**
+  String get bxHeld;
+
+  /// No description provided for @bxEoisN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} EOIs'**
+  String bxEoisN(int n);
+
+  /// No description provided for @bxPaidN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} paid'**
+  String bxPaidN(int n);
+
+  /// No description provided for @bxPendingN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} awaiting payment'**
+  String bxPendingN(int n);
+
+  /// No description provided for @bxAllocatedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} allocated'**
+  String bxAllocatedN(int n);
+
+  /// No description provided for @bxQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get bxQueue;
+
+  /// No description provided for @bxQueueN.
+  ///
+  /// In en, this message translates to:
+  /// **'#{n}'**
+  String bxQueueN(int n);
+
+  /// No description provided for @bxEois.
+  ///
+  /// In en, this message translates to:
+  /// **'Expressions of interest'**
+  String get bxEois;
+
+  /// No description provided for @bxPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Wants'**
+  String get bxPreference;
+
+  /// No description provided for @bxBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget'**
+  String get bxBudget;
+
+  /// No description provided for @bxPaymentRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment reference'**
+  String get bxPaymentRef;
+
+  /// No description provided for @bxAllocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Allocated unit'**
+  String get bxAllocation;
+
+  /// No description provided for @bxWebOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording and editing are on the web dashboard.'**
+  String get bxWebOnly;
+
+  /// No description provided for @bxHomeMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get bxHomeMonth;
+
+  /// No description provided for @bxHomeMyCommission.
+  ///
+  /// In en, this message translates to:
+  /// **'My commission'**
+  String get bxHomeMyCommission;
+
+  /// No description provided for @bxHomeGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Company commission from your deals'**
+  String get bxHomeGoalTitle;
+
+  /// No description provided for @bxHomeTeamGoalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Team commission'**
+  String get bxHomeTeamGoalTitle;
+
+  /// No description provided for @bxHomeOpenLaunches.
+  ///
+  /// In en, this message translates to:
+  /// **'Open launches'**
+  String get bxHomeOpenLaunches;
+
+  /// No description provided for @bxHomeAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available listings'**
+  String get bxHomeAvailable;
+
+  /// No description provided for @bxHomeShortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Brokerage'**
+  String get bxHomeShortcuts;
+
+  /// No description provided for @bxListing.
+  ///
+  /// In en, this message translates to:
+  /// **'Listing'**
+  String get bxListing;
+
+  /// No description provided for @bxLaunchDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Launch date'**
+  String get bxLaunchDate;
+
+  /// No description provided for @bxStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get bxStatus;
+
+  /// No description provided for @bxPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'/ month'**
+  String get bxPerMonth;
+
+  /// No description provided for @bxNoAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'No agent'**
+  String get bxNoAgent;
 }
 
 class _AppLocalizationsDelegate

@@ -9661,4 +9661,444 @@ class AppLocalizationsAr extends AppLocalizations {
   String planBalloonRow(int n, int count) {
     return 'دفعة كل $n شهور ($count)';
   }
+
+  @override
+  String get bxSection => 'الوساطة';
+
+  @override
+  String get bxListingsTitle => 'الوحدات المعروضة';
+
+  @override
+  String get bxListingsDesc => 'وحدات المطوّرين وعقارات الملاك';
+
+  @override
+  String get bxDealsTitle => 'الصفقات';
+
+  @override
+  String get bxDealsDesc => 'الصفقات المُغلقة وتحصيل العمولة';
+
+  @override
+  String get bxSharesMine => 'عمولاتي';
+
+  @override
+  String get bxSharesTeam => 'عمولات الفريق';
+
+  @override
+  String get bxSharesDesc => 'نصيبك من عمولة كل صفقة';
+
+  @override
+  String get bxTargetMine => 'هدفي';
+
+  @override
+  String get bxTargetTeam => 'أهداف الفريق';
+
+  @override
+  String get bxTargetDesc => 'هدف الشهر والمكافأة';
+
+  @override
+  String get bxLaunchesTitle => 'الإطلاقات';
+
+  @override
+  String get bxLaunchesDesc => 'طلبات الاهتمام (EOI) على إطلاقات المطوّرين';
+
+  @override
+  String get bxKindPRIMARY => 'بيع أولي';
+
+  @override
+  String get bxKindRESALE => 'إعادة بيع';
+
+  @override
+  String get bxKindRENT => 'إيجار';
+
+  @override
+  String get bxLstAVAILABLE => 'متاحة';
+
+  @override
+  String get bxLstUNDER_OFFER => 'قيد التفاوض';
+
+  @override
+  String get bxLstCLOSED => 'أُغلقت';
+
+  @override
+  String get bxLstWITHDRAWN => 'مسحوبة';
+
+  @override
+  String get bxLstRented => 'تم التأجير';
+
+  @override
+  String get bxLstSold => 'تم البيع';
+
+  @override
+  String get bxDealCLOSED => 'مُغلقة';
+
+  @override
+  String get bxDealCANCELLED => 'ملغاة';
+
+  @override
+  String get bxClaimPENDING => 'لم تُقدَّم';
+
+  @override
+  String get bxClaimSUBMITTED => 'مُقدَّمة';
+
+  @override
+  String get bxClaimPARTIALLY_PAID => 'مدفوعة جزئيًا';
+
+  @override
+  String get bxClaimPAID => 'مدفوعة';
+
+  @override
+  String get bxClaimREJECTED => 'مرفوضة';
+
+  @override
+  String get bxRoleAGENT => 'المندوب';
+
+  @override
+  String get bxRoleMANAGER => 'مدير الفريق';
+
+  @override
+  String get bxBonusNONE => 'بدون مكافأة';
+
+  @override
+  String get bxBonusPENDING => 'لم يتحقق بعد';
+
+  @override
+  String get bxBonusEARNED => 'تحقّق — المكافأة مستحقة';
+
+  @override
+  String get bxBonusPAID => 'صُرفت المكافأة';
+
+  @override
+  String get bxLaunchUPCOMING => 'قريبًا';
+
+  @override
+  String get bxLaunchOPEN => 'مفتوح';
+
+  @override
+  String get bxLaunchCLOSED => 'مغلق';
+
+  @override
+  String get bxEoiPENDING_PAYMENT => 'بانتظار الدفع';
+
+  @override
+  String get bxEoiPAID => 'مدفوع — في الطابور';
+
+  @override
+  String get bxEoiALLOCATED => 'خُصّصت وحدة';
+
+  @override
+  String get bxEoiREFUNDED => 'تم الرد';
+
+  @override
+  String get bxEoiCANCELLED => 'ملغي';
+
+  @override
+  String get bxAll => 'الكل';
+
+  @override
+  String bxListingsCount(int n) {
+    return '$n وحدة';
+  }
+
+  @override
+  String bxDealsCount(int n) {
+    return '$n صفقة';
+  }
+
+  @override
+  String bxSharesCount(int n) {
+    return '$n نصيب';
+  }
+
+  @override
+  String bxLaunchesCount(int n) {
+    return '$n إطلاق';
+  }
+
+  @override
+  String get bxSearchListings => 'الكود، العنوان، المنطقة…';
+
+  @override
+  String get bxSearchDeals => 'كود الصفقة، العميل، الهاتف…';
+
+  @override
+  String get bxListingsEmpty => 'لا وحدات معروضة';
+
+  @override
+  String get bxListingsEmptyHint => 'الوحدات تُضاف من لوحة التحكم على الموقع.';
+
+  @override
+  String get bxDealsEmpty => 'لا صفقات بعد';
+
+  @override
+  String get bxDealsEmptyHint => 'الصفقات تُسجَّل من لوحة التحكم عند إغلاقها.';
+
+  @override
+  String get bxSharesEmpty => 'لا عمولات بعد';
+
+  @override
+  String get bxSharesEmptyHint => 'يظهر هنا نصيبك من كل صفقة تُغلقها.';
+
+  @override
+  String get bxLaunchesEmpty => 'لا إطلاقات بعد';
+
+  @override
+  String get bxLaunchesEmptyHint =>
+      'الإطلاقات تُضاف من لوحة التحكم على الموقع.';
+
+  @override
+  String get bxEoisEmpty => 'لا طلبات اهتمام بعد';
+
+  @override
+  String get bxArea => 'المساحة';
+
+  @override
+  String get bxSqm => 'م²';
+
+  @override
+  String get bxBedrooms => 'غرف';
+
+  @override
+  String get bxBathrooms => 'حمّامات';
+
+  @override
+  String get bxFloor => 'الدور';
+
+  @override
+  String get bxFinishing => 'التشطيب';
+
+  @override
+  String get bxView => 'الإطلالة';
+
+  @override
+  String get bxDownPayment => 'المقدّم';
+
+  @override
+  String get bxDelivery => 'الاستلام';
+
+  @override
+  String get bxDeveloper => 'المطوّر';
+
+  @override
+  String get bxProject => 'المشروع';
+
+  @override
+  String get bxUnitType => 'نوع الوحدة';
+
+  @override
+  String get bxOwner => 'المالك';
+
+  @override
+  String get bxAgent => 'المندوب';
+
+  @override
+  String get bxPrice => 'السعر';
+
+  @override
+  String get bxRentPerMonth => 'الإيجار شهريًا';
+
+  @override
+  String get bxDescription => 'الوصف';
+
+  @override
+  String get bxFacts => 'البيانات';
+
+  @override
+  String get bxCall => 'اتصال';
+
+  @override
+  String get bxCommission => 'العمولة';
+
+  @override
+  String get bxReceived => 'تم تحصيله';
+
+  @override
+  String get bxOutstanding => 'لم يُحصَّل بعد';
+
+  @override
+  String get bxDealValue => 'قيمة الصفقة';
+
+  @override
+  String get bxCustomer => 'العميل';
+
+  @override
+  String get bxClosedOn => 'أُغلقت';
+
+  @override
+  String bxCollectedPct(int p) {
+    return '$p% محصّل';
+  }
+
+  @override
+  String get bxClaim => 'مطالبة المطوّر';
+
+  @override
+  String get bxSplits => 'توزيع العمولة';
+
+  @override
+  String get bxSplitPaid => 'صُرف';
+
+  @override
+  String get bxSplitPayable => 'مستحق الصرف';
+
+  @override
+  String get bxSplitAwaiting => 'بانتظار التحصيل';
+
+  @override
+  String get bxCoBroker => 'الوسيط الخارجي';
+
+  @override
+  String get bxCoBrokerShare => 'نصيب الوسيط';
+
+  @override
+  String get bxCancelReason => 'سبب الإلغاء';
+
+  @override
+  String get bxNotes => 'ملاحظات';
+
+  @override
+  String get bxNoListing => 'بدون وحدة مسجّلة';
+
+  @override
+  String bxPaidOn(String d) {
+    return 'صُرف $d';
+  }
+
+  @override
+  String bxSharePct(String p) {
+    return '$p من العمولة';
+  }
+
+  @override
+  String get bxTotalPayable => 'مستحق الصرف';
+
+  @override
+  String get bxTotalAwaiting => 'بانتظار التحصيل';
+
+  @override
+  String get bxTotalPaid => 'صُرف';
+
+  @override
+  String get bxSharesHint =>
+      'يُصرف نصيبك بعد أن يدفع المطوّر عمولة الصفقة كاملة.';
+
+  @override
+  String get bxNoTarget => 'لم يُحدَّد هدف لهذا الشهر';
+
+  @override
+  String get bxNoTargetHint => 'يحدّد المدير الهدف من لوحة التحكم.';
+
+  @override
+  String bxOfTarget(String v) {
+    return 'من $v';
+  }
+
+  @override
+  String get bxDealsGoal => 'الصفقات';
+
+  @override
+  String get bxBonus => 'المكافأة';
+
+  @override
+  String bxAchievedN(int a, int t) {
+    return '$a من $t حقّقوا الهدف';
+  }
+
+  @override
+  String get bxPrevMonth => 'الشهر السابق';
+
+  @override
+  String get bxNextMonth => 'الشهر التالي';
+
+  @override
+  String bxLaunchOn(String d) {
+    return 'الإطلاق $d';
+  }
+
+  @override
+  String get bxEoiAmount => 'مبلغ الطلب';
+
+  @override
+  String get bxHeld => 'مبالغ محتجزة';
+
+  @override
+  String bxEoisN(int n) {
+    return '$n طلب';
+  }
+
+  @override
+  String bxPaidN(int n) {
+    return '$n مدفوع';
+  }
+
+  @override
+  String bxPendingN(int n) {
+    return '$n بانتظار الدفع';
+  }
+
+  @override
+  String bxAllocatedN(int n) {
+    return '$n مخصّص';
+  }
+
+  @override
+  String get bxQueue => 'الطابور';
+
+  @override
+  String bxQueueN(int n) {
+    return '#$n';
+  }
+
+  @override
+  String get bxEois => 'طلبات الاهتمام';
+
+  @override
+  String get bxPreference => 'المطلوب';
+
+  @override
+  String get bxBudget => 'الميزانية';
+
+  @override
+  String get bxPaymentRef => 'مرجع الدفع';
+
+  @override
+  String get bxAllocation => 'الوحدة المخصّصة';
+
+  @override
+  String get bxWebOnly => 'التسجيل والتعديل من لوحة التحكم على الموقع.';
+
+  @override
+  String get bxHomeMonth => 'هذا الشهر';
+
+  @override
+  String get bxHomeMyCommission => 'عمولتي';
+
+  @override
+  String get bxHomeGoalTitle => 'عمولة الشركة من صفقاتك';
+
+  @override
+  String get bxHomeTeamGoalTitle => 'عمولة الفريق';
+
+  @override
+  String get bxHomeOpenLaunches => 'إطلاقات مفتوحة';
+
+  @override
+  String get bxHomeAvailable => 'وحدات متاحة';
+
+  @override
+  String get bxHomeShortcuts => 'الوساطة';
+
+  @override
+  String get bxListing => 'الوحدة';
+
+  @override
+  String get bxLaunchDate => 'تاريخ الإطلاق';
+
+  @override
+  String get bxStatus => 'الحالة';
+
+  @override
+  String get bxPerMonth => 'شهريًا';
+
+  @override
+  String get bxNoAgent => 'بدون مندوب';
 }
