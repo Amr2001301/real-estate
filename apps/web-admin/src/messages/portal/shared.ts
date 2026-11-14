@@ -197,6 +197,7 @@ const ar = {
       contract: 'العقد',
       reservation: 'الحجز',
       listing: 'الوحدة',
+      deal: 'الصفقة',
       inquiry: 'الاستفسار',
     },
     // Fallback titles by template code. Preferred over the API `title` so old
@@ -477,6 +478,7 @@ const en: typeof ar = {
       contract: 'contract',
       reservation: 'reservation',
       listing: 'listing',
+      deal: 'deal',
       inquiry: 'inquiry',
     },
     templates: {

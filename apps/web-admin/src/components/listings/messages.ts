@@ -148,6 +148,7 @@ const ar = {
     scheduleVisit: 'جدولة زيارة',
   },
   detail: {
+    recordDeal: 'تسجيل صفقة',
     edit: 'تعديل',
     setStatus: 'تغيير الحالة',
     delete: 'حذف',
@@ -309,6 +310,7 @@ const en: typeof ar = {
     scheduleVisit: 'Schedule a visit',
   },
   detail: {
+    recordDeal: 'Record a deal',
     edit: 'Edit',
     setStatus: 'Change status',
     delete: 'Delete',

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Pencil, MapPin, Phone, MessageCircle, UserRound, CalendarPlus } from 'lucide-react';
+import { Pencil, MapPin, Phone, MessageCircle, UserRound, CalendarPlus, Handshake } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { UnitTypeOption } from '@/lib/types';
 import { tx, compactParts, formatDate } from '@/lib/format';
@@ -94,6 +94,11 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
             {l.status !== 'CLOSED' && l.status !== 'WITHDRAWN' && (
               <Link href={`/dashboard/visits/new?listingId=${l.id}` as never}>
                 <Button variant="outline" size="md" leftIcon={<CalendarPlus className="h-4 w-4" />}>{m.terms.scheduleVisit}</Button>
+              </Link>
+            )}
+            {l.status !== 'WITHDRAWN' && (
+              <Link href={`/dashboard/deals/new?listingId=${l.id}` as never}>
+                <Button variant="outline" size="md" leftIcon={<Handshake className="h-4 w-4" />} data-testid="listing-record-deal">{m.detail.recordDeal}</Button>
               </Link>
             )}
             <Link href={`/dashboard/listings/${l.id}/edit` as never}>

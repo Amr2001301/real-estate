@@ -60,6 +60,11 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'listingmandate',
   'tenancy',
   'rentpayment',
+  'deal',
+  'dealsplit',
+  'commissionrule',
+  'developerclaim',
+  'claimpayment',
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

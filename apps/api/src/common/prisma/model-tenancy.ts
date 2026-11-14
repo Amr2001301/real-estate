@@ -121,6 +121,12 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   ListingMandate: 'TENANT_OWNED',
   Tenancy: 'TENANT_OWNED',
   RentPayment: 'TENANT_OWNED',
+  // BRK-3 — deals, their splits, the commission rules and developer claims.
+  Deal: 'TENANT_OWNED',
+  DealSplit: 'TENANT_OWNED',
+  CommissionRule: 'TENANT_OWNED',
+  DeveloperClaim: 'TENANT_OWNED',
+  ClaimPayment: 'TENANT_OWNED',
   // P4 — printed documents: the company's print settings and its wording.
   PrintSettings: 'TENANT_OWNED',
   DocumentTemplate: 'TENANT_OWNED',

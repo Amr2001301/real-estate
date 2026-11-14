@@ -38,6 +38,8 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
   // BRK-2 — its listings, and the unit types they are filed under
   '/listings',
   '/unit-types',
+  // BRK-3 — deals, commission rules and developer claims
+  '/deals',
   // Tools
   '/notifications',
   '/ai',
@@ -47,7 +49,7 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 /** The brokerage's own route groups: a developer company does not reach them. */
-export const BROKERAGE_ONLY_ROUTE_PREFIXES: readonly string[] = ['/listings'];
+export const BROKERAGE_ONLY_ROUTE_PREFIXES: readonly string[] = ['/listings', '/deals'];
 
 function bare(path: string): string {
   return (path.split('?')[0] ?? '').replace(/^\/v\d+(?=\/)/, '');
