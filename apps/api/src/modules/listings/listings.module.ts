@@ -6,11 +6,12 @@ import { ListingsController } from './listings.controller';
 import { ListingsService } from './listings.service';
 import { ListingTermsService } from './listing-terms.service';
 import { ListingRemindersCron } from './listing-reminders.cron';
+import { ListingMatchingService } from './listing-matching.service';
 
 @Module({
   imports: [UnitsModule, MediaModule, NotificationsModule],
   controllers: [ListingsController],
-  providers: [ListingsService, ListingTermsService, ListingRemindersCron],
+  providers: [ListingsService, ListingTermsService, ListingRemindersCron, ListingMatchingService],
   exports: [ListingsService, ListingTermsService],
 })
 export class ListingsModule {}

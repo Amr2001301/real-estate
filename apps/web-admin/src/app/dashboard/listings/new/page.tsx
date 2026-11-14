@@ -5,16 +5,17 @@ import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero } from '@/components/premium';
 import { listingsT } from '@/components/listings/messages';
-import { ListingForm } from '../_components/listing-form';
+import { ListingForm, type ProjectOption } from '../_components/listing-form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewListingPage() {
   const locale = await getLocale();
   const m = listingsT(locale);
-  const [typesRes, agentsRes] = await Promise.all([
+  const [typesRes, agentsRes, projectsRes] = await Promise.all([
     safe(api.get<UnitTypeOption[]>('/unit-types')),
     safe(staffOptions(['ADMIN', 'SALES_MANAGER', 'SALES'], { active: true })),
+    safe(api.get<ProjectOption[]>('/developers/projects/options')),
   ]);
   return (
     <div className="space-y-6">
@@ -28,7 +29,7 @@ export default async function NewListingPage() {
           { label: m.form.newTitle },
         ]}
       />
-      <ListingForm locale={locale} unitTypes={typesRes.data ?? []} agents={agentsRes.data?.data ?? []} />
+      <ListingForm locale={locale} unitTypes={typesRes.data ?? []} agents={agentsRes.data?.data ?? []} projects={projectsRes.data ?? []} />
     </div>
   );
 }

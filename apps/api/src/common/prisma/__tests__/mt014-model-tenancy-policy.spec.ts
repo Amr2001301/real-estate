@@ -65,9 +65,9 @@ describe('MT-014 equivalence: TENANT_SCOPED_MODELS ↔ MODEL_TENANCY TENANT_OWNE
     expect(missing).toEqual([]);
   });
 
-  it('both sets have the same cardinality (81: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey + MigrationRun + MigrationRecord + UnitPriceRate + Listing + ListingMandate + Tenancy + RentPayment + Deal + DealSplit + CommissionRule + DeveloperClaim + ClaimPayment + BrokerageTarget)', () => {
-    expect(TENANT_SCOPED_MODELS.size).toBe(81);
-    expect(ownedFromModelTenancy.size).toBe(81);
+  it('both sets have the same cardinality (85: Step A + Step C + Step D1 + Option B User − FG-26 NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey + MigrationRun + MigrationRecord + UnitPriceRate + Listing + ListingMandate + Tenancy + RentPayment + Deal + DealSplit + CommissionRule + DeveloperClaim + ClaimPayment + BrokerageTarget + BrokerDeveloper + DeveloperProject + DeveloperPlan + LeadRequirement)', () => {
+    expect(TENANT_SCOPED_MODELS.size).toBe(85);
+    expect(ownedFromModelTenancy.size).toBe(85);
   });
 
   it('MODEL_TIER_BY_LOWERCASE includes all TENANT_OWNED models with correct tier', () => {
@@ -353,9 +353,9 @@ describe('MT-014 MODEL_TIER_BY_LOWERCASE derived set', () => {
     }
   });
 
-  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (81 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp, LostReason, Campaign, CampaignSpend, LeadIntakeKey, MigrationRun, MigrationRecord, UnitPriceRate, Listing, ListingMandate, Tenancy, RentPayment, Deal, DealSplit, CommissionRule, DeveloperClaim, ClaimPayment and BrokerageTarget)', () => {
+  it('TENANT_OWNED count matches TENANT_SCOPED_MODELS count (85 after Option B User, FG-26, ContractAmendment, BrokerCommissionAdjustment, PresignedUpload, UnitHandover, UnitType, UnitModel, PrintSettings, DocumentTemplate, SignatureRequest, CustomerField, FormLayout, CompanyAiPlan, AiLedgerEntry, CompanyMobileApp, LostReason, Campaign, CampaignSpend, LeadIntakeKey, MigrationRun, MigrationRecord, UnitPriceRate, Listing, ListingMandate, Tenancy, RentPayment, Deal, DealSplit, CommissionRule, DeveloperClaim, ClaimPayment BrokerageTarget, BrokerDeveloper, DeveloperProject, DeveloperPlan and LeadRequirement)', () => {
     const ownedCount = [...MODEL_TIER_BY_LOWERCASE.values()].filter((t) => t === 'TENANT_OWNED').length;
-    expect(ownedCount).toBe(81);
+    expect(ownedCount).toBe(85);
   });
 });
 

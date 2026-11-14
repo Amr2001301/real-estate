@@ -27,6 +27,7 @@ import { LeadScopeGuard } from './guards/lead-scope.guard';
 import { LeadsService } from './leads.service';
 import {
   AssignLeadDto,
+  DistributeLeadsDto,
   CreateLeadDto,
   CreateLeadNoteDto,
   CreateLeadSourceDto,
@@ -267,6 +268,22 @@ export class LeadsController {
       lostReasonId: lostReasonId || undefined,
       campaignId: campaignId || undefined,
     });
+  }
+
+  /** BRK-5 — the reps leads can be distributed to, with their open leads. */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:assign')
+  @Get('leads/distribute')
+  distributionPreview(@CurrentUser() user: AuthUser) {
+    return this.leads.distributionPreview(user);
+  }
+
+  /** BRK-5 — distribute the unassigned leads across chosen reps, by workload. */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:assign')
+  @Post('leads/distribute')
+  distribute(@Body() dto: DistributeLeadsDto, @CurrentUser() user: AuthUser) {
+    return this.leads.distribute(dto, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

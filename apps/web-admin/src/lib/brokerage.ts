@@ -10,6 +10,7 @@ export const BROKERAGE_DASHBOARD_PATHS: readonly string[] = [
   '/dashboard/assistant',
   '/dashboard/listings',
   '/dashboard/deals',
+  '/dashboard/developers',
   '/dashboard/leads',
   '/dashboard/follow-ups',
   '/dashboard/calendar',
@@ -29,7 +30,7 @@ export const BROKERAGE_DASHBOARD_PATHS: readonly string[] = [
 ];
 
 /** BRK-2 — the brokerage's own pages: a developer company is sent home from them. */
-export const BROKERAGE_ONLY_DASHBOARD_PATHS: readonly string[] = ['/dashboard/listings', '/dashboard/deals'];
+export const BROKERAGE_ONLY_DASHBOARD_PATHS: readonly string[] = ['/dashboard/listings', '/dashboard/deals', '/dashboard/developers'];
 
 export function isBrokerageOnlyDashboardPath(path: string): boolean {
   return BROKERAGE_ONLY_DASHBOARD_PATHS.some((p) => path === p || path.startsWith(p + '/'));

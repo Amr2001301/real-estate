@@ -180,6 +180,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/listings', label: 'الوحدات المعروضة', labelKey: 'listings', iconKey: 'Building2', brokerageOnly: true },
       { href: '/dashboard/deals', label: 'الصفقات والعمولات', labelKey: 'deals', iconKey: 'Handshake', brokerageOnly: true },
+      { href: '/dashboard/developers', label: 'المطوّرون', labelKey: 'developers', iconKey: 'Briefcase', brokerageOnly: true },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },

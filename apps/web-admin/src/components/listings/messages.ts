@@ -38,6 +38,9 @@ const ar = {
   },
   card: { area: 'م²', beds: 'غرف', baths: 'حمام', floor: 'الدور', agent: 'المسؤول' },
   form: {
+    directoryProject: 'المشروع من دليل المطوّرين',
+    noDirectoryProject: 'بدون — أكتب المطوّر والمشروع يدويًا',
+    directoryHint: 'يملأ المطوّر والمشروع، وتُقترح عمولته عند تسجيل الصفقة.',
     newTitle: 'إضافة وحدة',
     editTitle: 'تعديل الوحدة',
     desc: 'بيانات الوحدة كما يراها فريقك وعملاؤك. بيانات المالك لا تظهر إلا للفريق.',
@@ -200,6 +203,9 @@ const en: typeof ar = {
   },
   card: { area: 'm²', beds: 'beds', baths: 'baths', floor: 'Floor', agent: 'Agent' },
   form: {
+    directoryProject: 'Project from the developer directory',
+    noDirectoryProject: 'None — type the developer and project',
+    directoryHint: 'Fills in the developer and project, and suggests its commission on deals.',
     newTitle: 'Add listing',
     editTitle: 'Edit listing',
     desc: "The listing as your team and customers see it. The owner's details are for your team only.",
@@ -361,6 +367,7 @@ export interface Listing {
   ownerPhone: string | null;
   photos: string[];
   agentId: string | null;
+  developerProjectId?: string | null;
   agent: { id: string; fullName: string; phone: string | null } | null;
   createdAt: string;
   updatedAt: string;

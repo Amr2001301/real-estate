@@ -1,4 +1,7 @@
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEmail,
@@ -63,6 +66,12 @@ export class UpdateLeadStageDto {
 
 export class AssignLeadDto {
   @IsUUID() assignedSalesId!: string;
+}
+
+/** BRK-5 — hand the unassigned leads (or the ones picked) to these reps, fewest open leads first. */
+export class DistributeLeadsDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(50) @IsUUID(undefined, { each: true }) salesIds!: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(500) @IsUUID(undefined, { each: true }) leadIds?: string[];
 }
 
 export class CreateLeadNoteDto {

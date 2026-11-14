@@ -18,13 +18,14 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { assertAssignableSales } from '../../common/utils/assignable-sales';
 import { managerScopeIds, staffName } from '../../common/utils/sales-scope';
-import { resolveTenantUser } from '../../common/tenant/resolve-tenant-entity';
+import { resolveTenantUser, scopedUserFindMany } from '../../common/tenant/resolve-tenant-entity';
 import { NotificationsService } from '../notifications/notifications.module';
 import {
   CreateLeadDto,
   UpdateLeadDto,
   UpdateLeadStageDto,
   AssignLeadDto,
+  DistributeLeadsDto,
   CreateLeadNoteDto,
   CreateLeadSourceDto,
   UpdateLeadSourceDto,
@@ -741,6 +742,72 @@ export class LeadsService {
       await this.notifications.sendToUser(lead.assignedSalesId, 'lead_unassigned', payload, { except: actorId });
     }
     return updated;
+  }
+
+  /** BRK-5 — who leads can be distributed to (the team, or every active rep) and how many open leads each holds. */
+  async distributionPreview(actor: AuthUser) {
+    const open = [LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT, LeadStage.NEGOTIATION];
+    const ids = actor.role === UserRole.SALES_MANAGER ? await managerScopeIds(this.prisma, actor.sub) : null;
+    const reps = await scopedUserFindMany(
+      this.prisma,
+      { role: { in: [UserRole.SALES, UserRole.SALES_MANAGER] }, active: true, deletedAt: null, ...(ids ? { id: { in: ids } } : {}) },
+      { id: true, fullName: true },
+      { orderBy: { fullName: 'asc' } },
+    );
+    const [counts, unassigned] = await Promise.all([
+      this.prisma.lead.groupBy({ by: ['assignedSalesId'], where: { assignedSalesId: { in: reps.map((r) => r.id) }, stage: { in: open } }, _count: true }),
+      this.prisma.lead.count({ where: { assignedSalesId: null, stage: { in: open } } }),
+    ]);
+    return {
+      unassigned: Math.min(unassigned, 500),
+      reps: reps.map((r) => ({ ...r, openLeads: counts.find((c) => c.assignedSalesId === r.id)?._count ?? 0 })),
+    };
+  }
+
+  /**
+   * BRK-5 — hand the unassigned open leads (all of them, or the ones picked)
+   * to the chosen reps, each to whoever holds the fewest open leads at that
+   * moment. A manager distributes to their team only. Each rep is told once,
+   * with how many they got.
+   */
+  async distribute(dto: DistributeLeadsDto, actor: AuthUser) {
+    const salesIds = [...new Set(dto.salesIds)];
+    if (actor.role === UserRole.SALES_MANAGER) {
+      const team = await managerScopeIds(this.prisma, actor.sub);
+      if (salesIds.some((id) => !team.includes(id))) throw new ForbiddenException('You can only assign a lead to yourself or your team');
+    }
+    for (const id of salesIds) await assertAssignableSales(this.prisma, id);
+
+    const open = [LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT, LeadStage.NEGOTIATION];
+    const leads = await this.prisma.lead.findMany({
+      where: { assignedSalesId: null, stage: { in: open }, ...(dto.leadIds?.length ? { id: { in: dto.leadIds } } : {}) },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+      take: 500,
+    });
+    const counts = await this.prisma.lead.groupBy({
+      by: ['assignedSalesId'],
+      where: { assignedSalesId: { in: salesIds }, stage: { in: open } },
+      _count: true,
+    });
+    const load = new Map(salesIds.map((id) => [id, counts.find((c) => c.assignedSalesId === id)?._count ?? 0]));
+    const given = new Map<string, string[]>();
+    for (const lead of leads) {
+      // The rep with the fewest open leads; ties go in the order picked.
+      const to = salesIds.reduce((best, id) => (load.get(id)! < load.get(best)! ? id : best), salesIds[0]!);
+      const done = await this.prisma.lead.updateMany({ where: { id: lead.id, assignedSalesId: null }, data: { assignedSalesId: to } });
+      if (done.count === 0) continue;
+      await this.prisma.leadActivity.create({ data: { leadId: lead.id, type: 'assigned', payload: { salesId: to, by: 'distribution' } } });
+      load.set(to, load.get(to)! + 1);
+      given.set(to, [...(given.get(to) ?? []), lead.id]);
+    }
+    for (const [salesId, ids] of given) {
+      await this.notifications.sendToUser(salesId, 'leads_distributed', { entityType: 'lead', entityId: ids[0], count: ids.length }, { except: actor.sub });
+    }
+    return {
+      assigned: [...given.values()].reduce((n, ids) => n + ids.length, 0),
+      perRep: salesIds.map((salesId) => ({ salesId, count: given.get(salesId)?.length ?? 0, openLeads: load.get(salesId)! })),
+    };
   }
 
   /**

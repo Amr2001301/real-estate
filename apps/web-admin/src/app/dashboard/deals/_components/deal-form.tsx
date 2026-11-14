@@ -38,6 +38,7 @@ export function DealForm({
   selfName,
   initialListingId,
   mandatePct,
+  projectPct = {},
 }: {
   locale: Locale;
   currency: string;
@@ -49,6 +50,8 @@ export function DealForm({
   selfName: string;
   initialListingId: string;
   mandatePct: number | null;
+  /** BRK-5: the commission agreed per directory project. */
+  projectPct?: Record<string, number>;
 }) {
   const m = dealsT(locale);
   const f = m.form;
@@ -64,7 +67,8 @@ export function DealForm({
   const [lead, setLead] = useState<LeadOption | null>(null);
   const [agentId, setAgentId] = useState(listing?.agentId ?? '');
 
-  const startPct = listingId === initialListingId && mandatePct ? mandatePct : listing?.kind === 'RENT' ? null : 2.5;
+  const agreedPct = (l: Listing | null) => (l?.developerProjectId ? projectPct[l.developerProjectId] ?? null : null);
+  const startPct = listingId === initialListingId && mandatePct ? mandatePct : agreedPct(listing) ?? (listing?.kind === 'RENT' ? null : 2.5);
   const [value, setValue] = useState(listing ? String(Number(listing.price)) : '');
   const [pct, setPct] = useState(startPct ? String(startPct) : '');
   const [commission, setCommission] = useState(listing && startPct ? String(round2((Number(listing.price) * startPct) / 100)) : '');
@@ -75,7 +79,9 @@ export function DealForm({
     if (!l) return;
     setValue(String(Number(l.price)));
     if (l.agentId) setAgentId(l.agentId);
-    const p = Number(pct);
+    const agreed = agreedPct(l);
+    if (agreed !== null) setPct(String(agreed));
+    const p = agreed ?? Number(pct);
     if (p > 0) setCommission(String(round2((Number(l.price) * p) / 100)));
   }
   function onValue(v: string) {
@@ -265,7 +271,11 @@ export function DealForm({
             <label className={label}>
               {f.commissionPct}
               <Input type="number" min={0} max={100} step="0.01" dir="ltr" value={pct} onChange={(e) => onPct(e.target.value)} className="mt-1.5" data-testid="deal-pct" />
-              {listingId === initialListingId && mandatePct ? <span className={hint}>{f.fromMandate(mandatePct)}</span> : null}
+              {listingId === initialListingId && mandatePct ? (
+                <span className={hint}>{f.fromMandate(mandatePct)}</span>
+              ) : agreedPct(listing) !== null ? (
+                <span className={hint}>{f.fromDeveloper(agreedPct(listing)!)}</span>
+              ) : null}
             </label>
             <label className={label}>
               {f.commissionTotal}
