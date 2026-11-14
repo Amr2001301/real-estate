@@ -70,6 +70,8 @@ export const TENANT_SCOPED_MODELS_LEGACY = new Set([
   'developerproject',
   'developerplan',
   'leadrequirement',
+  'launch',
+  'launcheoi',
   // Chat
   'chatsession', 'chatmessage', 'chatfeedback',
   // Option B part 2 (docs/audit/13-user-tenancy.md): TENANT_CONTROLLED → TENANT_OWNED

@@ -42,6 +42,7 @@ import {
   Upload,
   Scale,
   Handshake,
+  Rocket,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -58,6 +59,7 @@ import type { NavItemKey, NavSectionKey } from '@/messages/ui';
  */
 export const NAV_ICONS = {
   Handshake,
+  Rocket,
   Globe,
   Printer,
   ListPlus,
@@ -181,6 +183,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/listings', label: 'الوحدات المعروضة', labelKey: 'listings', iconKey: 'Building2', brokerageOnly: true },
       { href: '/dashboard/deals', label: 'الصفقات والعمولات', labelKey: 'deals', iconKey: 'Handshake', brokerageOnly: true },
       { href: '/dashboard/developers', label: 'المطوّرون', labelKey: 'developers', iconKey: 'Briefcase', brokerageOnly: true },
+      { href: '/dashboard/launches', label: 'الإطلاقات', labelKey: 'launches', iconKey: 'Rocket', brokerageOnly: true },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', labelKey: 'leads', iconKey: 'Users' },
       { href: '/dashboard/follow-ups', label: 'المتابعات', labelKey: 'followUps', iconKey: 'PhoneCall' },
       { href: '/dashboard/calendar', label: 'التقويم', labelKey: 'calendar', iconKey: 'CalendarDays' },
