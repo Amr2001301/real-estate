@@ -636,6 +636,31 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'فريقك لديه {{today}} متابعة اليوم و{{overdue}} متأخرة عند {{lateReps}} مندوب.',
     en_body: 'Your team has {{today}} follow-ups today and {{overdue}} overdue across {{lateReps}} reps.',
   },
+  // Brokerage listings (BRK-2): an owner's mandate ending, a tenancy ending, rent unpaid.
+  {
+    code: 'listing_mandate_expiring',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تفويض ينتهي قريبًا',
+    en_subject: 'Mandate ending soon',
+    ar_body: 'تفويض الوحدة {{listingCode}} «{{title}}» ينتهي بعد {{days}} يوم ({{endDate}}). جدّده مع المالك أو أغلق العرض.',
+    en_body: 'The mandate for {{listingCode}} "{{title}}" ends in {{days}} days ({{endDate}}). Renew it with the owner or close the listing.',
+  },
+  {
+    code: 'tenancy_ending',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'عقد إيجار ينتهي قريبًا',
+    en_subject: 'Tenancy ending soon',
+    ar_body: 'عقد {{tenantName}} في الوحدة {{listingCode}} ينتهي بعد {{days}} يوم ({{endDate}}).',
+    en_body: "{{tenantName}}'s tenancy in {{listingCode}} ends in {{days}} days ({{endDate}}).",
+  },
+  {
+    code: 'rent_due',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'إيجار مستحق',
+    en_subject: 'Rent due',
+    ar_body: 'إيجار {{tenantName}} في الوحدة {{listingCode}} ({{amount}}) مستحق منذ {{dueDate}} ولم يُسجَّل بعد.',
+    en_body: "{{tenantName}}'s rent for {{listingCode}} ({{amount}}) was due on {{dueDate}} and is not recorded yet.",
+  },
   // ─── Broker status ────────────────────────────────────────────────────
   {
     code: 'broker_approved',

@@ -294,22 +294,28 @@ export default async function AppointmentDetailPage({
             </Card>
           )}
 
-          {/* Project/Unit */}
-          {appt.projectId && (
+          {/* Project/Unit — or, for a brokerage, the listing */}
+          {(appt.projectId || appt.listing) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-brand-600" />
-                  {m.cardProjectTitle}
+                  {appt.listing ? uiT(locale).pages.visitsForm.listingLabel : m.cardProjectTitle}
                 </CardTitle>
               </CardHeader>
               <CardBody className="space-y-2 text-sm">
-                <Link
-                  href={`/dashboard/projects/${appt.projectId}` as never}
-                  className="font-medium text-brand-700 hover:underline"
-                >
-                  {tx(appt.project?.name)}
-                </Link>
+                {appt.listing ? (
+                  <Link href={`/dashboard/listings/${appt.listing.id}` as never} className="font-medium text-brand-700 hover:underline">
+                    <span dir="ltr">{appt.listing.code}</span> — {appt.listing.title}
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/projects/${appt.projectId}` as never}
+                    className="font-medium text-brand-700 hover:underline"
+                  >
+                    {tx(appt.project?.name)}
+                  </Link>
+                )}
                 {appt.unit && (
                   <p className="text-slate-600">
                     {m.unitLabel}: <EntityLink kind="unit" id={appt.unit.id}>{appt.unit.code}</EntityLink> — {appt.unit.type}

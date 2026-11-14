@@ -105,9 +105,9 @@ describe('SEC — Middleware Classification (STEP 2)', () => {
   });
 
   // MC-2
-  it('MC-2: TENANT_OWNED count matches audit-documented 71 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey + MigrationRun + MigrationRecord + UnitPriceRate)', () => {
+  it('MC-2: TENANT_OWNED count matches audit-documented 75 (48 + ContractCancellation + Refund + User − NotificationTemplate + ContractAmendment + BrokerCommissionAdjustment + PresignedUpload + UnitHandover + UnitType + UnitModel + PrintSettings + DocumentTemplate + SignatureRequest + CustomerField + FormLayout + CompanyAiPlan + AiLedgerEntry + CompanyMobileApp + LostReason + Campaign + CampaignSpend + LeadIntakeKey + MigrationRun + MigrationRecord + UnitPriceRate + Listing + ListingMandate + Tenancy + RentPayment)', () => {
     const owned = Object.entries(MODEL_TENANCY).filter(([, t]) => t === 'TENANT_OWNED');
-    expect(owned.length).toBe(71);
+    expect(owned.length).toBe(75);
   });
 
   // MC-3

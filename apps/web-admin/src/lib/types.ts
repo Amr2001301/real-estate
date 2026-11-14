@@ -880,6 +880,9 @@ export interface VisitAppointment {
   project?: { id: string; name: Translatable } | null;
   unitId: string | null;
   unit?: { id: string; code: string; type: string } | null;
+  /** BRK-2 — a brokerage's visit is to one of its listings. */
+  listingId?: string | null;
+  listing?: { id: string; code: string; title: string } | null;
   assignedSalesId: string | null;
   assignedSales?: { id: string; fullName: string; phone: string | null } | null;
   scheduledAt: string;

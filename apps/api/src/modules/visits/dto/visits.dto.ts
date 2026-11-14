@@ -123,7 +123,9 @@ export class SalesVisitFeedbackDto {
 export class CreateDirectAppointmentDto {
   @IsOptional() @IsUUID() leadId?: string;
   @IsOptional() @IsUUID() clientId?: string;
-  @IsUUID() projectId!: string;
+  /** A developer's visit is to a project; a brokerage's to one of its listings (BRK-2) — one of the two. */
+  @IsOptional() @IsUUID() projectId?: string;
+  @IsOptional() @IsUUID() listingId?: string;
   @IsOptional() @IsUUID() unitId?: string;
   @IsOptional() @IsUUID() assignedSalesId?: string;
   @IsDateString() scheduledAt!: string;

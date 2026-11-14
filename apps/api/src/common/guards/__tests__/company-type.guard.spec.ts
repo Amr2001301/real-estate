@@ -14,9 +14,22 @@ function ctx(companyType: string | undefined, url: string): ExecutionContext {
 describe('CompanyTypeGuard (BRK-1)', () => {
   const guard = new CompanyTypeGuard();
 
-  it('lets a developer company reach everything', () => {
+  it('lets a developer company reach its own workflows', () => {
     expect(guard.canActivate(ctx('DEVELOPER', '/v1/contracts'))).toBe(true);
     expect(guard.canActivate(ctx('DEVELOPER', '/v1/installment-plan-templates'))).toBe(true);
+    expect(guard.canActivate(ctx('DEVELOPER', '/v1/unit-types'))).toBe(true);
+  });
+
+  it('refuses a developer company the brokerage listings with NOT_FOR_DEVELOPER (BRK-2)', () => {
+    for (const url of ['/v1/listings', '/v1/listings/abc', '/v1/listings/photos/presign']) {
+      try {
+        guard.canActivate(ctx('DEVELOPER', url));
+        throw new Error(`expected ${url} to be refused`);
+      } catch (e) {
+        expect(e).toBeInstanceOf(ForbiddenException);
+        expect((e as ForbiddenException).getResponse()).toMatchObject({ code: 'NOT_FOR_DEVELOPER' });
+      }
+    }
   });
 
   it('passes a request with no company type (public route, SUPER_ADMIN)', () => {
@@ -24,7 +37,7 @@ describe('CompanyTypeGuard (BRK-1)', () => {
   });
 
   it('lets a brokerage reach its own groups', () => {
-    for (const url of ['/v1/leads', '/v1/leads/123/stage', '/v1/visits/appointments?page=1', '/v1/campaigns', '/v1/users/me', '/v1/auth/logout']) {
+    for (const url of ['/v1/leads', '/v1/leads/123/stage', '/v1/visits/appointments?page=1', '/v1/campaigns', '/v1/users/me', '/v1/auth/logout', '/v1/listings', '/v1/listings/abc/status', '/v1/unit-types']) {
       expect(guard.canActivate(ctx('BROKERAGE', url))).toBe(true);
     }
   });
