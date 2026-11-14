@@ -16,7 +16,7 @@ below.
 | 4 | **First-deploy smoke** (`scripts/first-deploy-smoke.mjs`, see below) | 28/28 |
 | 5 | **Production builds.** `next build` for the dashboard and the website, then `next start` against the production API | Both build. Dashboard: `/login` and `/super-admin/login` answer 200; `/dashboard` sends a signed-out visitor to `/login`. Website: each company opens on its own sub-domain (`{slug}.{PLATFORM_BASE_DOMAIN}`) with its own name |
 | 6 | **Browser on the production builds.** Sign in as the developer's admin, the brokerage's admin and the platform owner | Each lands on its own home (`/dashboard`, `/dashboard/super-admin`). No page errors, no 5xx. The brokerage reaches `/dashboard/listings` and `/dashboard/deals` |
-| 7 | **`scripts/release-verify.sh`**: the 8 gates (API unit, API e2e, both Playwright suites, mobile analyze + tests, no Riverpod, architecture checks, no secrets) | See "release-verify" below |
+| 7 | **`scripts/release-verify.sh`**: the 8 gates (API unit, API e2e, both Playwright suites, mobile analyze + tests, no Riverpod, architecture checks, no secrets) | After the fixes below: API unit, API e2e (both CI halves), mobile analyze + tests, no Riverpod, architecture and no-secrets pass. The two Playwright suites need the dashboard and website started against the e2e database (as CI does); they run in CI on every PR |
 
 ### The first-deploy smoke (28 checks)
 
@@ -56,6 +56,17 @@ or cancel them from the super-admin page.
   dashboards (the ring and the plain figure), the `%` sat before the number in
   right-to-left text. It now reads «22%», as in the apps.
   (`components/premium/metric-strip.tsx`)
+
+- **`release-verify.sh` itself.**
+  - It ran every API e2e spec in one process, which ran out of memory. It now runs CI's two halves, with CI's heap.
+  - It counted «1 failed, 5 passed» as a pass. A half now passes only when Jest reports no failure.
+  - It can no longer pass with no tests found.
+- **A test that passed only by luck.** The reservation race tests (`e2e-maintenance`) booked for a client the rep had never been given. They relied on a lead that an earlier spec happened to create. On their own, or in another order, both requests got 400 «Client not found». The test now gives the rep that client itself.
+- **Mobile.**
+  - The customer and staff notification-preference screens imported their data class. They now depend on a small domain contract.
+  - The staff app's reading of an «open lead exists» refusal moved out of the data DTOs.
+  - The customer app returned a future without `await` inside a `try`, so its errors escaped the `try`.
+  - These were the architecture and analyzer gates in `release-verify.sh`; CI does not run the architecture gate.
 
 The smoke's first run also failed one check, but that was the script's
 mistake: it sent a unit-type name instead of its code. The platform seeds 15
