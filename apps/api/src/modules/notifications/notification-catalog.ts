@@ -670,6 +670,15 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'وُزِّع عليك {{count}} عميل جديد — ابدأ التواصل معهم.',
     en_body: '{{count}} new leads were assigned to you — start reaching out.',
   },
+  // BRK-6: a customer's EOI was allocated a unit at the launch.
+  {
+    code: 'eoi_allocated',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تم تخصيص وحدة لعميلك',
+    en_subject: 'A unit was allocated to your client',
+    ar_body: 'خُصّصت لـ {{customerName}} في إطلاق «{{launchName}}»: {{allocation}}.',
+    en_body: '{{customerName}} was allocated {{allocation}} at the "{{launchName}}" launch.',
+  },
   // BRK-5: a new listing that fits the rep's open leads.
   {
     code: 'listing_matches_leads',

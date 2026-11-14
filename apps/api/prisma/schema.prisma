@@ -176,6 +176,8 @@ model Company {
   developerProjects DeveloperProject[]
   developerPlans    DeveloperPlan[]
   leadRequirements  LeadRequirement[]
+  launches          Launch[]
+  launchEois        LaunchEoi[]
   claimPayments     ClaimPayment[]
   campaignSpend     CampaignSpend[]
   leadIntakeKeys    LeadIntakeKey[]
@@ -647,6 +649,7 @@ model User {
   agentDeals              Deal[]                    @relation("DealAgent")
   dealSplits              DealSplit[]               @relation("DealSplitUser")
   brokerageTargets        BrokerageTarget[]         @relation("BrokerageTargetUser")
+  launchEois              LaunchEoi[]               @relation("LaunchEoiAgent")
   leads                   Lead[]                    @relation("LeadClient")
   leadNotes               LeadNote[]
   reservations            Reservation[]             @relation("ReservationSales")
@@ -1261,6 +1264,7 @@ model Lead {
   campaign    Campaign?        @relation(fields: [campaignId], references: [id])
   deals       Deal[]
   requirement LeadRequirement?
+  launchEois  LaunchEoi[]
 
   // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
   utmSource   String?
@@ -1623,6 +1627,7 @@ model DeveloperProject {
   updatedAt     DateTime        @updatedAt
   plans         DeveloperPlan[]
   listings      Listing[]
+  launches      Launch[]
 
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1680,6 +1685,73 @@ model LeadRequirement {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@index([companyId])
+}
+
+enum LaunchStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+}
+
+/// BRK-6 — a developer's launch the brokerage collects expressions of
+/// interest (EOIs) for: a refundable amount per EOI, a queue by payment time.
+model Launch {
+  id                 String            @id @default(uuid()) @db.Uuid
+  name               String
+  developerProjectId String?           @db.Uuid
+  developerProject   DeveloperProject? @relation(fields: [developerProjectId], references: [id], onDelete: SetNull)
+  developerName      String
+  launchDate         DateTime          @db.Date
+  eoiAmount          Decimal           @db.Decimal(14, 2)
+  status             LaunchStatus      @default(UPCOMING)
+  notes              String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  eois               LaunchEoi[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, launchDate])
+}
+
+enum EoiStatus {
+  PENDING_PAYMENT
+  PAID
+  ALLOCATED
+  REFUNDED
+  CANCELLED
+}
+
+/// A customer's expression of interest in a launch; paid EOIs queue by `paidAt`.
+model LaunchEoi {
+  id            String    @id @default(uuid()) @db.Uuid
+  launchId      String    @db.Uuid
+  launch        Launch    @relation(fields: [launchId], references: [id], onDelete: Cascade)
+  leadId        String?   @db.Uuid
+  lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerName  String
+  customerPhone String
+  preference    String?
+  budget        Decimal?  @db.Decimal(14, 2)
+  amount        Decimal   @db.Decimal(14, 2)
+  status        EoiStatus @default(PENDING_PAYMENT)
+  paidAt        DateTime?
+  paymentRef    String?
+  allocation    String?
+  refundedAt    DateTime?
+  agentId       String?   @db.Uuid
+  agent         User?     @relation("LaunchEoiAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  notes         String?
+  createdById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([launchId, status])
   @@index([companyId])
 }
 

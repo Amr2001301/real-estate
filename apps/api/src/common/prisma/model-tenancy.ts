@@ -132,6 +132,8 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   DeveloperProject: 'TENANT_OWNED',
   DeveloperPlan: 'TENANT_OWNED',
   LeadRequirement: 'TENANT_OWNED',
+  Launch: 'TENANT_OWNED',
+  LaunchEoi: 'TENANT_OWNED',
   // P4 — printed documents: the company's print settings and its wording.
   PrintSettings: 'TENANT_OWNED',
   DocumentTemplate: 'TENANT_OWNED',

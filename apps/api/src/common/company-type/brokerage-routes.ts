@@ -42,6 +42,8 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
   '/deals',
   // BRK-5 — its developer directory and payment plans
   '/developers',
+  // BRK-6 — launches and expressions of interest
+  '/launches',
   // Tools
   '/notifications',
   '/ai',
@@ -51,7 +53,7 @@ export const BROKERAGE_ROUTE_PREFIXES: readonly string[] = [
 ];
 
 /** The brokerage's own route groups: a developer company does not reach them. */
-export const BROKERAGE_ONLY_ROUTE_PREFIXES: readonly string[] = ['/listings', '/deals', '/developers'];
+export const BROKERAGE_ONLY_ROUTE_PREFIXES: readonly string[] = ['/listings', '/deals', '/developers', '/launches'];
 
 function bare(path: string): string {
   return (path.split('?')[0] ?? '').replace(/^\/v\d+(?=\/)/, '');
