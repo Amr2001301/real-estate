@@ -127,6 +127,7 @@ export const MODEL_TENANCY: Readonly<Record<string, ModelTenancyTier>> = {
   CommissionRule: 'TENANT_OWNED',
   DeveloperClaim: 'TENANT_OWNED',
   ClaimPayment: 'TENANT_OWNED',
+  BrokerageTarget: 'TENANT_OWNED',
   // P4 — printed documents: the company's print settings and its wording.
   PrintSettings: 'TENANT_OWNED',
   DocumentTemplate: 'TENANT_OWNED',

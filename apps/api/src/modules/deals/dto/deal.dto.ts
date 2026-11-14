@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -67,4 +68,10 @@ export class RecordClaimPaymentDto {
   @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) amount!: number;
   @IsDateString() receivedOn!: string;
   @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+export class SetTargetDto {
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) commissionTarget!: number;
+  @Type(() => Number) @IsInt() @Min(0) @Max(1000) dealsTarget!: number;
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) bonusAmount!: number;
 }

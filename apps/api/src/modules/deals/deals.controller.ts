@@ -20,6 +20,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { parseEnumList } from '../../common/utils/query-filters';
 import { DealsService } from './deals.service';
+import { DealTargetsService } from './deal-targets.service';
 import {
   CancelDealDto,
   CreateDealDto,
@@ -27,6 +28,7 @@ import {
   RecordCommissionDto,
   RejectClaimDto,
   SetCommissionRuleDto,
+  SetTargetDto,
   SubmitClaimDto,
 } from './dto/deal.dto';
 
@@ -39,7 +41,10 @@ import {
 @ApiTags('deals')
 @Controller('deals')
 export class DealsController {
-  constructor(private readonly deals: DealsService) {}
+  constructor(
+    private readonly deals: DealsService,
+    private readonly targets: DealTargetsService,
+  ) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
   @Permissions('deals:read')
@@ -151,6 +156,54 @@ export class DealsController {
   @Post('splits/:id/unpay')
   unpaySplit(@Param('id', ParseUUIDPipe) id: string) {
     return this.deals.unpaySplit(id);
+  }
+
+  /** BRK-4 — the financial report over a range of months ("YYYY-MM"). */
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Get('report')
+  report(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.targets.report(from, to);
+  }
+
+  /** A month's targets: the admin all, a manager the team, a rep their own. */
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)
+  @Permissions('deals:read')
+  @Get('targets')
+  listTargets(@CurrentUser() user: AuthUser, @Query('period') period?: string) {
+    return this.targets.targets(user, period);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Put('targets/:period/:userId')
+  setTarget(
+    @Param('period') period: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: SetTargetDto,
+  ) {
+    return this.targets.setTarget(period, userId, dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Delete('targets/:id')
+  removeTarget(@Param('id', ParseUUIDPipe) id: string) {
+    return this.targets.removeTarget(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Post('targets/:id/pay-bonus')
+  payBonus(@Param('id', ParseUUIDPipe) id: string) {
+    return this.targets.payBonus(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('deals:finance')
+  @Post('targets/:id/unpay-bonus')
+  unpayBonus(@Param('id', ParseUUIDPipe) id: string) {
+    return this.targets.unpayBonus(id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER, UserRole.SALES)

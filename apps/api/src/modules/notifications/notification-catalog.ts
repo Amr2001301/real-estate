@@ -645,6 +645,23 @@ export const NOTIFICATION_CATALOG: NotificationTemplateDef[] = [
     ar_body: 'تم صرف عمولتك {{amount}} عن الصفقة {{dealCode}}.',
     en_body: 'Your commission of {{amount}} on deal {{dealCode}} was paid.',
   },
+  // Brokerage targets (BRK-4): a month's target met (the agent and their manager), its bonus paid.
+  {
+    code: 'brokerage_target_achieved',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تحقّق الهدف الشهري',
+    en_subject: 'Monthly target met',
+    ar_body: 'حقّق {{agentName}} هدف شهر {{period}} — مبروك!',
+    en_body: '{{agentName}} met the {{period}} target — congratulations!',
+  },
+  {
+    code: 'brokerage_bonus_paid',
+    channel: NotificationChannel.PUSH,
+    ar_subject: 'تم صرف مكافأة الهدف',
+    en_subject: 'Target bonus paid',
+    ar_body: 'تم صرف مكافأتك {{amount}} عن هدف شهر {{period}}.',
+    en_body: 'Your {{amount}} bonus for the {{period}} target was paid.',
+  },
   // Brokerage listings (BRK-2): an owner's mandate ending, a tenancy ending, rent unpaid.
   {
     code: 'listing_mandate_expiring',
