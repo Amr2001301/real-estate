@@ -239,6 +239,8 @@ body { font-family:'ReportArabic','Noto Sans Arabic','DejaVu Sans',sans-serif; c
 .empty { color:var(--muted); text-align:center; padding:18px 0; font-style:italic; }
 table.data { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:10.5px; }
 table.data thead { display:table-header-group; }
+/* The totals once, under the last row: a footer group repeats on every page. */
+table.data tfoot { display:table-row-group; }
 table.data th { background:var(--primary); color:#fff; font-weight:700; text-align:right; padding:9px 10px; }
 table.data td:first-child { font-weight:700; color:var(--primary); }
 table.data td { padding:6px 10px; border-top:1px solid var(--line); text-align:right; }

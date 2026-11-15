@@ -15,6 +15,7 @@ import {
 import { barChartSvg, shareChartSvg } from '../../common/report-pdf/svg-charts';
 import type { ReportBrand } from '../../common/utils/report-brand';
 import { formatStamp } from '../../common/utils/xlsx';
+import { DETAIL_LIMIT, OPEN_CHEQUE_STATUSES, type FinancialDetail } from './financial-detail';
 
 /**
  * The presentation reports (HTML → PDF via ReportPdfService). Each takes the
@@ -368,6 +369,312 @@ export interface FinancialDashboardReportData {
   aging: Array<{ label: string; count: number; amount: Amount }>;
   /** Applied filters, already labelled ("المشروع: …"). */
   filters: string[];
+  /** The lists (ledger, late payers, next 30 days, cheques). */
+  detail?: FinancialDetail;
+  /** The last six months: due vs collected (towards the price). */
+  trend?: Array<{ month: string; label: string; due: number; collected: number }>;
+  /** Money going out: commissions, bonuses, refunds. */
+  outflows?: {
+    brokerCommissions: { pendingAmount: Amount; unpaidAmount: Amount; paidAmount: Amount };
+    salesBonus: { pendingAmount: Amount; approvedAmount: Amount; paidAmount: Amount };
+    refundsOwed: Amount;
+    refundsPaid: Amount;
+    clawbacksOwed: Amount;
+  };
+}
+
+/** Rows of a long list printed in the PDF; the Excel file carries them all. */
+export const PDF_LIST_ROWS = 300;
+
+/** A calendar day (yyyy-mm-dd): a timestamp in the company's zone, a due date as stored. */
+function dayText(d: Date | null | undefined, timeZone?: string): string {
+  if (!d) return '—';
+  if (!timeZone) return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+function cappedNote(shown: number, total: number, truncated: boolean): string | undefined {
+  if (truncated) return `أول ${countText(shown)} سجل — القائمة كاملة في ملف Excel (الحد ${countText(DETAIL_LIMIT)})`;
+  if (total > shown) return `أول ${countText(shown)} من ${countText(total)} — القائمة كاملة في ملف Excel`;
+  return undefined;
+}
+
+function financialDetailSections(
+  d: FinancialDashboardReportData,
+  c: string,
+  timeZone: string | undefined,
+): string[] {
+  const out: string[] = [];
+  const n = (v: Amount) => Number(v) || 0;
+  const rate = (part: number, whole: number) => (whole > 0 ? percentText(part, whole) : '—');
+
+  if (d.trend?.length) {
+    const due = d.trend.reduce((a, t) => a + t.due, 0);
+    const got = d.trend.reduce((a, t) => a + t.collected, 0);
+    out.push(
+      section(
+        'التحصيل الشهري: المستحق مقابل المحصّل',
+        dataTable(
+          [
+            { label: 'الشهر', width: 1.4 },
+            { label: 'المستحق', numeric: true, width: 1.4 },
+            { label: 'المحصّل', numeric: true, width: 1.4 },
+            { label: 'الفرق', numeric: true, width: 1.4 },
+            { label: 'نسبة التحصيل', numeric: true },
+          ],
+          d.trend.map((t) => [
+            `${t.label} ${t.month.slice(0, 4)}`,
+            moneyText(t.due, c),
+            moneyText(t.collected, c),
+            moneyText(t.due - t.collected, c),
+            rate(t.collected, t.due),
+          ]),
+          { totals: ['الإجمالي', moneyText(due, c), moneyText(got, c), moneyText(due - got, c), rate(got, due)] },
+        ),
+        'آخر 6 أشهر · من سعر الوحدات (بدون الرسوم)',
+      ),
+    );
+  }
+
+  const x = d.detail;
+  if (!x) return out;
+
+  const groupTable = (title: string, first: string, rows: FinancialDetail['byProject']) =>
+    section(
+      title,
+      dataTable(
+        [
+          { label: first, width: 2 },
+          { label: 'عدد الدفعات', numeric: true, width: 0.9 },
+          { label: 'تم التحصيل', numeric: true, width: 1.4 },
+          { label: 'بانتظار التأكيد', numeric: true, width: 1.4 },
+          { label: 'النسبة من المحصّل', numeric: true },
+        ],
+        rows.map((r) => [
+          r.name,
+          countText(r.count),
+          moneyText(r.collected, c),
+          moneyText(r.awaiting, c),
+          rate(r.collected, x.ledgerCollected),
+        ]),
+        {
+          totals: [
+            'الإجمالي',
+            countText(rows.reduce((a, r) => a + r.count, 0)),
+            moneyText(x.ledgerCollected, c),
+            moneyText(x.ledgerAwaiting, c),
+            x.ledgerCollected > 0 ? '100%' : '—',
+          ],
+          empty: 'لا توجد دفعات في الفترة',
+        },
+      ),
+    );
+  out.push(groupTable('التحصيل حسب المشروع', 'المشروع', x.byProject));
+  out.push(groupTable('التحصيل حسب طريقة الدفع', 'طريقة الدفع', x.byMethod));
+
+  const late = x.latePayers.slice(0, PDF_LIST_ROWS);
+  out.push(
+    section(
+      'المتأخرون عن السداد',
+      dataTable(
+        [
+          { label: 'العميل', width: 1.8 },
+          { label: 'الهاتف', numeric: true, width: 1.3 },
+          { label: 'الوحدة', width: 1.25 },
+          { label: 'العقد', width: 1.1 },
+          { label: 'أقساط متأخرة', numeric: true, width: 0.9 },
+          { label: 'أقدم استحقاق', numeric: true, width: 1.1 },
+          { label: 'أيام التأخير', numeric: true, width: 0.9 },
+          { label: 'المبلغ المتأخر', numeric: true, width: 1.4 },
+        ],
+        late.map((r) => [
+          r.customer,
+          r.phone || '—',
+          r.unit,
+          r.contract,
+          countText(r.count),
+          dayText(r.oldestDue),
+          countText(r.daysLate),
+          moneyText(r.amount, c),
+        ]),
+        {
+          totals: [
+            'الإجمالي',
+            '',
+            '',
+            '',
+            countText(x.latePayers.reduce((a, r) => a + r.count, 0)),
+            '',
+            '',
+            moneyText(x.latePayers.reduce((a, r) => a + r.amount, 0), c),
+          ],
+          empty: 'لا يوجد متأخرون',
+        },
+      ),
+      cappedNote(late.length, x.latePayers.length, x.lateTruncated) ?? 'الأكبر مبلغًا أولًا',
+    ),
+  );
+
+  const soon = x.next30.slice(0, PDF_LIST_ROWS);
+  out.push(
+    section(
+      'المستحق خلال 30 يومًا',
+      dataTable(
+        [
+          { label: 'تاريخ الاستحقاق', numeric: true, width: 1.1 },
+          { label: 'العميل', width: 1.8 },
+          { label: 'الهاتف', numeric: true, width: 1.3 },
+          { label: 'الوحدة', width: 1.25 },
+          { label: 'العقد', width: 1.1 },
+          { label: 'البند', width: 1 },
+          { label: 'المبلغ', numeric: true, width: 1.3 },
+          { label: 'ملاحظة', width: 1.3 },
+        ],
+        soon.map((r) => [
+          dayText(r.dueDate),
+          r.customer,
+          r.phone || '—',
+          r.unit,
+          r.contract,
+          r.type,
+          moneyText(r.amount, c),
+          r.onItsWay ? 'دفعة بانتظار التأكيد' : '',
+        ]),
+        {
+          totals: ['الإجمالي', '', '', '', '', '', moneyText(x.next30.reduce((a, r) => a + r.amount, 0), c), ''],
+          empty: 'لا توجد مستحقات خلال 30 يومًا',
+        },
+      ),
+      cappedNote(soon.length, x.next30.length, x.next30Truncated),
+    ),
+  );
+
+  const open = x.cheques.filter((q) => OPEN_CHEQUE_STATUSES.includes(q.status));
+  const openShown = open.slice(0, PDF_LIST_ROWS);
+  out.push(
+    section(
+      'الشيكات',
+      [
+        dataTable(
+          [
+            { label: 'الحالة', width: 1.6 },
+            { label: 'العدد', numeric: true },
+            { label: 'المبلغ', numeric: true, width: 1.4 },
+          ],
+          x.chequesByStatus.map((g) => [g.label, countText(g.count), moneyText(g.amount, c)]),
+          {
+            totals: [
+              'الإجمالي',
+              countText(x.chequesByStatus.reduce((a, g) => a + g.count, 0)),
+              moneyText(x.chequesByStatus.reduce((a, g) => a + g.amount, 0), c),
+            ],
+            empty: 'لا توجد شيكات',
+          },
+        ),
+        open.length
+          ? `<div style="height:10px"></div>` +
+            dataTable(
+              [
+                { label: 'رقم الشيك', numeric: true, width: 1.1 },
+                { label: 'البنك', width: 1.3 },
+                { label: 'الاستحقاق', numeric: true, width: 1.1 },
+                { label: 'العميل', width: 1.7 },
+                { label: 'الوحدة', width: 1.25 },
+                { label: 'العقد / الحجز', width: 1.1 },
+                { label: 'المبلغ', numeric: true, width: 1.3 },
+                { label: 'الحالة', width: 1 },
+              ],
+              openShown.map((q) => [
+                q.number,
+                q.bank,
+                dayText(q.dueDate),
+                q.customer,
+                q.unit,
+                q.reference,
+                moneyText(q.amount, c),
+                q.statusLabel,
+              ]),
+            )
+          : '',
+      ].join(''),
+      open.length ? 'تحت المتابعة: لم يُودَع، مودَع بالبنك، مرتد' : undefined,
+    ),
+  );
+
+  if (d.outflows) {
+    const o = d.outflows;
+    const rows: Array<[string, number | null, number, number]> = [
+      ['عمولات الوسطاء', n(o.brokerCommissions.pendingAmount), n(o.brokerCommissions.unpaidAmount), n(o.brokerCommissions.paidAmount)],
+      ['مكافآت فريق المبيعات', n(o.salesBonus.pendingAmount), n(o.salesBonus.approvedAmount), n(o.salesBonus.paidAmount)],
+      ['مستردات العملاء (عقود ملغاة)', null, n(o.refundsOwed), n(o.refundsPaid)],
+    ];
+    out.push(
+      section(
+        'المدفوعات والالتزامات',
+        dataTable(
+          [
+            { label: 'البند', width: 2 },
+            { label: 'قيد الاعتماد', numeric: true, width: 1.4 },
+            { label: 'مستحق الدفع', numeric: true, width: 1.4 },
+            { label: 'تم دفعه', numeric: true, width: 1.4 },
+          ],
+          rows.map(([label, pending, due, paid]) => [
+            label,
+            pending == null ? '—' : moneyText(pending, c),
+            moneyText(due, c),
+            moneyText(paid, c),
+          ]),
+          {
+            totals: [
+              'الإجمالي',
+              moneyText(rows.reduce((a, r) => a + (r[1] ?? 0), 0), c),
+              moneyText(rows.reduce((a, r) => a + r[2], 0), c),
+              moneyText(rows.reduce((a, r) => a + r[3], 0), c),
+            ],
+          },
+        ),
+        n(o.clawbacksOwed) > 0
+          ? `ومستحق للشركة استرداده من عمولات ومكافآت عقود ملغاة: ${moneyText(n(o.clawbacksOwed), c)}`
+          : undefined,
+      ),
+    );
+  }
+
+  const ledger = x.ledger.slice(0, PDF_LIST_ROWS);
+  out.push(
+    section(
+      'دفتر التحصيلات',
+      dataTable(
+        [
+          { label: 'التاريخ', numeric: true, width: 1 },
+          { label: 'العميل', width: 1.7 },
+          { label: 'الوحدة', width: 1.25 },
+          { label: 'العقد / الحجز', width: 1.1 },
+          { label: 'البند', width: 1 },
+          { label: 'طريقة الدفع', width: 0.9 },
+          { label: 'المبلغ', numeric: true, width: 1.3 },
+          { label: 'الحالة', width: 1.3 },
+        ],
+        ledger.map((r) => [
+          dayText(r.paidAt, timeZone),
+          r.customer,
+          r.unit,
+          r.reference,
+          r.type,
+          r.method,
+          moneyText(r.amount, c),
+          r.stateLabel,
+        ]),
+        {
+          totals: ['إجمالي المحصّل', '', '', '', '', '', moneyText(x.ledgerCollected, c), ''],
+          empty: 'لا توجد دفعات في الفترة',
+        },
+      ),
+      cappedNote(ledger.length, x.ledger.length, x.ledgerTruncated) ??
+        'كل دفعات الفترة؛ الإجمالي لما تم تحصيله فقط',
+    ),
+  );
+  return out;
 }
 
 export function financialDashboardReportHtml(
@@ -393,6 +700,8 @@ export function financialDashboardReportHtml(
     brand,
     title: 'التقرير المالي',
     subtitle: d.filters.length ? d.filters.join(' · ') : 'كل المشاريع وكل الفترات',
+    // The lists are wide (eight columns): the page is sideways.
+    landscape: Boolean(d.detail),
     body: [
       section(
         'الملخص التنفيذي',
@@ -509,6 +818,7 @@ export function financialDashboardReportHtml(
           { empty: 'لا توجد متأخرات' },
         ),
       ),
+      ...financialDetailSections(d, c, brand.timezone),
     ].join('\n'),
   });
 }

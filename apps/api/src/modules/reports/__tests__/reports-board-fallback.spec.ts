@@ -59,6 +59,7 @@ function makePrismaMock() {
     refund: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }) },
     contractCancellation: { aggregate: jest.fn().mockResolvedValue({ _sum: { refundAmount: 0 } }) },
     installment: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
+    paymentInstrument: { findMany: emptyArr() },
     reservation: {
       groupBy: jest.fn().mockResolvedValue([]),
       count: zero(),
