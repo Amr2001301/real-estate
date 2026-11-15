@@ -42,7 +42,6 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { currentCompanyTimeZone } from '../../common/time/company-timezone';
 import { localDate, localMonth } from '../../common/time/report-range';
-import { toCsv } from '../../common/utils/csv';
 import {
   addFooter,
   addTitledTable,
@@ -405,30 +404,8 @@ export class BonusService {
     });
   }
 
-  async entriesCsv(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
-    const entries = await this.listEntries(opts);
-    const statusLabel: Record<BonusEntryStatus, string> = {
-      [BonusEntryStatus.PENDING]: 'معلق',
-      [BonusEntryStatus.APPROVED]: 'معتمد',
-      [BonusEntryStatus.PAID]: 'مدفوع',
-      [BonusEntryStatus.CANCELLED]: 'ملغي',
-    };
-    const rows = entries.map((e) => [
-      e.sales?.fullName ?? '',
-      e.period,
-      e.rule?.name ?? '',
-      Number(e.amount),
-      statusLabel[e.status],
-      e.paidAt ? e.paidAt.toISOString().slice(0, 10) : '',
-    ]);
-    return toCsv(
-      ['المندوب', 'الفترة', 'القاعدة', 'المبلغ', 'الحالة', 'تاريخ الدفع'],
-      rows,
-    );
-  }
-
   /**
-   * P15.3 — styled XLSX twin of entriesCsv. Same real list + same filters; the
+   * P15.3 — styled XLSX of the bonus entries. Real list + filters; the
    * applied filters are surfaced in the sheet header. No demo values.
    */
   async entriesXlsx(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
@@ -822,24 +799,8 @@ class BonusController {
     return this.svc.listEntries({ ...scope, status, period });
   }
 
-  // CSV export mirrors the list read permission: the whole company's, so
-  // ADMIN or bonus:entries:read:all (PRM2).
-  @Roles(UserRole.ADMIN)
-  @GrantedBy('bonus:entries:read:all')
-  @Permissions('bonus:entries:read')
-  @Get('bonus-entries/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="bonus-entries.csv"')
-  entriesCsv(
-    @Query('salesId') salesId?: string,
-    @Query('status') status?: BonusEntryStatus,
-    @Query('period') period?: string,
-  ) {
-    return this.svc.entriesCsv({ salesId, status, period });
-  }
-
   // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +
-  // filters; the CSV above stays as the raw-data fallback.
+  // filters.
   @Roles(UserRole.ADMIN)
   @GrantedBy('bonus:entries:read:all')
   @Permissions('bonus:entries:read')

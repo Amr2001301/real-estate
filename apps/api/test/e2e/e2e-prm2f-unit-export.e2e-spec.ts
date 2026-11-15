@@ -8,6 +8,7 @@ import request from 'supertest';
 import { type TestApp, createE2ETestApp } from '../setup-app';
 import { loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
+import { xlsxText } from '../helpers/xlsx-text';
 
 describe('PRM2f — unit export opens by units:export (e2e)', () => {
   let testApp: TestApp;
@@ -52,14 +53,16 @@ describe('PRM2f — unit export opens by units:export (e2e)', () => {
       .codes as string[];
     expect(mine).toContain('units:read');
     expect(mine).not.toContain('units:export');
-    await as(repToken, http().get('/v1/units/export.csv')).expect(403);
+    await as(repToken, http().get('/v1/units/export.xlsx')).expect(403);
 
     await grant(['units:export']);
-    const csv = (await as(repToken, http().get('/v1/units/export.csv')).expect(200)).text;
-    const adminCsv = (await as(adminToken, http().get('/v1/units/export.csv')).expect(200)).text;
-    expect(csv).toBe(adminCsv);
-    await as(repToken, http().get('/v1/units/export.xlsx')).expect(200);
+    const mineX = await xlsxText(as(repToken, http().get('/v1/units/export.xlsx')));
+    const adminX = await xlsxText(as(adminToken, http().get('/v1/units/export.xlsx')));
+    expect(mineX.status).toBe(200);
+    // Same rows; the title block carries the export time, so compare from the header row on.
+    const rows = (t: string) => t.slice(t.indexOf('كود الوحدة'));
+    expect(rows(mineX.text)).toBe(rows(adminX.text));
     await grant(['units:export'], true);
-    await as(repToken, http().get('/v1/units/export.csv')).expect(403);
+    await as(repToken, http().get('/v1/units/export.xlsx')).expect(403);
   });
 });

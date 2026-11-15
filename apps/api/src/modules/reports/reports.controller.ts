@@ -44,22 +44,9 @@ export class ReportsController {
     return this.svc.adminSummary();
   }
 
-  // P14.1 — downloadable CSV of the admin dashboard summary. Same data + same
-  // ADMIN-only gate as /admin-summary; CUSTOMER / CLIENT / BROKER are rejected
-  // at @Roles.
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:operational:read')
-  @GrantedBy('reports:operational:read')
-  @Get('admin-summary/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="admin-summary.csv"')
-  adminSummaryCsv() {
-    return this.svc.adminSummaryCsv();
-  }
-
   // P14.2 — styled XLSX of the admin dashboard summary (default download).
   // Same data + same ADMIN-only gate; CUSTOMER / CLIENT / BROKER rejected at
-  // @Roles. The CSV endpoint above stays as a raw-data fallback.
+  // @Roles.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
   @GrantedBy('reports:operational:read')
@@ -191,27 +178,10 @@ export class ReportsController {
     return this.ledger.rows({ ...query, page: query.page ?? 1, pageSize: query.pageSize ?? 50 });
   }
 
-  // ── CSV exports ────────────────────────────────────────────────────────
-  // Each returns a raw CSV string; @Header switches the response so the
-  // browser treats the body as a download. Permissions mirror the matching
-  // JSON read route exactly.
+  // ── Exports ──────────────────────────────────────────────────────────
+  // Permissions mirror the matching JSON read route exactly.
 
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:sales:read')
-  @GrantedBy('reports:sales:read')
-  @Get('sales/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="sales-report.csv"')
-  salesCsv(
-    @Query('period') period?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ) {
-    return this.svc.salesCsv(period, dateFrom, dateTo);
-  }
-
-  // P15.4 — board-style XLSX (default UI download). Same ADMIN + sales gate;
-  // the CSV above stays as the raw-data fallback.
+  // P15.4 — board-style XLSX. Same ADMIN + sales gate.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @GrantedBy('reports:sales:read')
@@ -227,21 +197,6 @@ export class ReportsController {
     @Query('dateTo') dateTo?: string,
   ): Promise<StreamableFile> {
     return new StreamableFile(await this.svc.salesBoardXlsx(period, dateFrom, dateTo));
-  }
-
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:financial:read')
-  @GrantedBy('reports:financial:read')
-  @RequireCapability('feature.advancedReports')
-  @Get('financial/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="financial-report.csv"')
-  financialCsv(
-    @Query('period') period?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ) {
-    return this.svc.financialCsv(period, dateFrom, dateTo);
   }
 
   // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate.
@@ -263,18 +218,7 @@ export class ReportsController {
     return new StreamableFile(await this.svc.financialBoardXlsx(period, dateFrom, dateTo));
   }
 
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:operational:read')
-  @GrantedBy('reports:operational:read')
-  @Get('operational/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="operational-report.csv"')
-  operationalCsv() {
-    return this.svc.operationalCsv();
-  }
-
-  // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate; the
-  // CSV above stays as the raw-data fallback.
+  // P15.3 — styled XLSX. Same ADMIN-only gate.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
   @GrantedBy('reports:operational:read')
@@ -288,25 +232,7 @@ export class ReportsController {
     return new StreamableFile(await this.svc.operationalXlsx());
   }
 
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:financial:read')
-  @GrantedBy('reports:financial:read')
-  @RequireCapability('feature.advancedReports')
-  @Get('financial-dashboard/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="financial-dashboard.csv"')
-  financialDashboardCsv(@Query() query: FinancialDashboardQueryDto) {
-    return this.svc.financialDashboardCsv({
-      projectId: query.projectId,
-      q: query.q,
-      type: query.type,
-      dateFrom: query.dateFrom,
-      dateTo: query.dateTo,
-    });
-  }
-
-  // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate
-  // + filters; the CSV above stays as the raw-data fallback.
+  // P15.4 — board-style XLSX. Same ADMIN + financial gate + filters.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @GrantedBy('reports:financial:read')

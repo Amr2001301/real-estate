@@ -16,13 +16,13 @@ function run(method: string, url: string, user: { sub: string } | undefined = { 
 
 describe('AuditInterceptor', () => {
   it('records who downloaded an export, with its filters', async () => {
-    const create = await run('GET', '/v1/reports/sales/export.csv?from=2026-01-01', { sub: 'admin-1' }, { from: '2026-01-01' });
+    const create = await run('GET', '/v1/reports/sales/export.xlsx?from=2026-01-01', { sub: 'admin-1' }, { from: '2026-01-01' });
     expect(create).toHaveBeenCalledTimes(1);
     expect(create.mock.calls[0]![0].data).toMatchObject({
       actorId: 'admin-1',
       action: 'EXPORT',
       entityType: 'v1/reports/sales',
-      after: { path: '/v1/reports/sales/export.csv', filters: { from: '2026-01-01' } },
+      after: { path: '/v1/reports/sales/export.xlsx', filters: { from: '2026-01-01' } },
     });
   });
 

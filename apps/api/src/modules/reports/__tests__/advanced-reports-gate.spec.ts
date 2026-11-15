@@ -8,7 +8,7 @@ const gate = (name: keyof ReportsController) =>
 describe('advanced reports are a plan feature', () => {
   const advanced: Array<keyof ReportsController> = [
     'salesTrend', 'salesFunnel', 'brokerLeaderboard', 'financialDashboard', 'financialComparison',
-    'ledgerSummary', 'ledgerRows', 'financial', 'financialCsv', 'financialDashboardCsv',
+    'ledgerSummary', 'ledgerRows', 'financial', 'financialXlsx', 'financialDashboardXlsx',
   ];
 
   it('the advanced report endpoints require feature.advancedReports', () => {
@@ -17,7 +17,7 @@ describe('advanced reports are a plan feature', () => {
   });
 
   it('the dashboard summary and the sales report stay open on every plan', () => {
-    for (const n of ['kpis', 'adminSummary', 'sales', 'reservations', 'operationalCsv'] as Array<keyof ReportsController>) {
+    for (const n of ['kpis', 'adminSummary', 'sales', 'reservations', 'operationalXlsx'] as Array<keyof ReportsController>) {
       expect(typeof ReportsController.prototype[n]).toBe('function');
       expect(gate(n)).toBeUndefined();
     }

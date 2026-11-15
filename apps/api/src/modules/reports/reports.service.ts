@@ -42,7 +42,6 @@ import {
   operationalReportHtml,
   salesReportHtml,
 } from './report-templates';
-import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
   buildFinancialPdf,
@@ -61,7 +60,6 @@ import {
   createReportWorkbook,
   excelLocalDate,
   formatMoneyColumns,
-  formatStamp,
   setupBoardSheet,
   styleTotalsRow,
   workbookToBuffer,
@@ -983,58 +981,6 @@ export class ReportsService {
           b.signedContracts - a.signedContracts ||
           b.reservedUnits - a.reservedUnits,
       );
-  }
-
-  /**
-   * P14.1 — admin dashboard summary as a downloadable CSV. Built from the SAME
-   * real `adminSummary()` data (KPIs, reservation trend, lead sources, alerts,
-   * recent activity) as stacked tables. No demo values.
-   */
-  async adminSummaryCsv(): Promise<string> {
-    const [s, brand] = await Promise.all([this.adminSummary(), this.brand()]);
-
-    const kpiRows: CsvCell[][] = [
-      ['المشاريع المنشورة', s.kpis.projects],
-      ['إجمالي الوحدات', s.kpis.totalUnits],
-      ['وحدات متاحة', s.kpis.availableUnits],
-      ['وحدات محجوزة', s.kpis.reservedUnits],
-      ['فرص جديدة هذا الشهر', s.kpis.newLeadsThisMonth],
-      ['دفعات بانتظار المراجعة', s.kpis.pendingDeposits],
-      ['طلبات صيانة مفتوحة', s.kpis.openMaintenance],
-    ];
-    const trendRows: CsvCell[][] = s.reservationTrend.map((t) => [t.month, t.label, t.value]);
-    const leadRows: CsvCell[][] = s.leadSources.map((l) => [l.source, l.count]);
-    const alertRows: CsvCell[][] = [
-      ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
-      ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
-      ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
-      ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
-      ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
-      ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
-    ];
-    const activityRows: CsvCell[][] = s.recentActivity.map((a) => [
-      a.action,
-      a.title,
-      a.context ?? '',
-      formatStamp(a.createdAt, brand.timezone),
-    ]);
-
-    return csvSections([
-      'المؤشرات الرئيسية',
-      toCsv(['المؤشر', 'القيمة'], kpiRows),
-      '',
-      'اتجاه الحجوزات (آخر 6 أشهر)',
-      toCsv(['الشهر', 'اسم الشهر', 'عدد الحجوزات'], trendRows),
-      '',
-      'توزيع مصادر العملاء المحتملين',
-      toCsv(['المصدر', 'العدد'], leadRows),
-      '',
-      'التنبيهات المعلقة',
-      toCsv(['التنبيه', 'العدد'], alertRows),
-      '',
-      'آخر النشاطات',
-      toCsv(['النشاط', 'الجهة', 'السياق', 'التاريخ'], activityRows),
-    ]);
   }
 
   /**
@@ -2251,36 +2197,6 @@ export class ReportsService {
   // string with a UTF-8 BOM (Excel-friendly Arabic). Reuses the service's
   // existing data methods — no new business logic.
 
-  async salesCsv(period?: string, dateFrom?: string, dateTo?: string): Promise<string> {
-    const data = await this.sales(period, dateFrom, dateTo);
-
-    // Section 1 — summary KPIs (one row per metric)
-    const summaryRows: CsvCell[][] = [
-      ['الفترة', reportPeriodLabel(period, dateFrom, dateTo)],
-      ['عدد العقود', data.contracts],
-      ['إجمالي المبيعات (السعر الصافي)', Number(data.total).toFixed(2)],
-    ];
-
-    // Section 2 — per-project breakdown, by name
-    const ids = (data.byProject ?? []).map((p) => p.projectId);
-    const projects = ids.length
-      ? await this.prisma.project.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
-      : [];
-    const nameById = new Map(projects.map((p) => [p.id, translatableAr(p.name)]));
-    const projectHeaders = ['المشروع', 'عدد العقود', 'إجمالي المبيعات'];
-    const projectRows: CsvCell[][] = (data.byProject ?? []).map((p) => [
-      nameById.get(p.projectId) ?? p.projectId,
-      p.count,
-      Number(p.total).toFixed(2),
-    ]);
-
-    return csvSections([
-      toCsv(['المؤشر', 'القيمة'], summaryRows),
-      '',
-      toCsv(projectHeaders, projectRows),
-    ]);
-  }
-
   /**
    * P15.4 — sales as a board-style XLSX: branded cover with an executive summary
    * (lead/visit/contract/sales KPIs), a sales-by-project bar chart, and a detail
@@ -2340,18 +2256,6 @@ export class ReportsService {
     return workbookToBuffer(wb);
   }
 
-  async financialCsv(period?: string, dateFrom?: string, dateTo?: string): Promise<string> {
-    const data = await this.financial(period, dateFrom, dateTo);
-    const rows: CsvCell[][] = [
-      ['الفترة', reportPeriodLabel(period, dateFrom, dateTo)],
-      ['عدد الدفعات', data.deposits],
-      ['الدفعات الموثّقة', data.verified],
-      ['المحصّل من السعر', Number(data.total).toFixed(2)],
-      ['الرسوم والغرامات', Number(data.fees).toFixed(2)],
-    ];
-    return toCsv(['المؤشر', 'القيمة'], rows);
-  }
-
   /**
    * P15.4 — financial collections as a board-style XLSX: branded cover with an
    * executive summary and a verified-vs-unverified deposit doughnut. Same real
@@ -2394,36 +2298,6 @@ export class ReportsService {
     addFooter(cover, brand);
 
     return workbookToBuffer(wb);
-  }
-
-  async operationalCsv(): Promise<string> {
-    // Operational export bundles two existing reads: KPIs + reservation
-    // breakdown by status. They are emitted as two stacked tables so the
-    // user can read them with a single download.
-    const [k, r] = await Promise.all([this.kpis(), this.reservations()]);
-
-    const kpiRows: CsvCell[][] = [
-      ['المشاريع المنشورة', k.projects],
-      ['إجمالي الوحدات', k.units.total],
-      ['وحدات متاحة', k.units.available],
-      ['وحدات محجوزة', k.units.reserved],
-      ['وحدات مباعة', k.units.sold],
-      ['إجمالي العملاء المتصفّحين (Leads)', k.leads.total],
-      ['عملاء جدد', k.leads.new],
-      ['زيارات قيد الانتظار', k.pendingVisits],
-      ['عدد العقود', k.contracts],
-      ['إجمالي الدفعات المحصّلة', Number(k.depositsTotal).toFixed(2)],
-    ];
-
-    const reservationRows: CsvCell[][] = Object.entries(r).map(
-      ([status, count]) => [status, count],
-    );
-
-    return csvSections([
-      toCsv(['المؤشر', 'القيمة'], kpiRows),
-      '',
-      toCsv(['حالة الحجز', 'العدد'], reservationRows),
-    ]);
   }
 
   /**
@@ -2469,239 +2343,6 @@ export class ReportsService {
     );
 
     return workbookToBuffer(wb);
-  }
-
-  async financialDashboardCsv(opts: {
-    projectId?: string;
-    q?: string;
-    type?: DepositType;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<string> {
-    const data = await this.financialDashboard(opts);
-    const s = data.summary;
-
-    // A. Summary — metric key (stable) + Arabic label + value.
-    const summaryRows: CsvCell[][] = [
-      ['totalContractValue', 'قيمة العقود الموقّعة (السعر الصافي)', s.totalContractValue],
-      // Collected as two figures, as on the screen (decided 2026-10-16).
-      ['collectedTowardsPrice', 'المحصّل من السعر', s.collectedTowardsPrice],
-      ['feesCollected', 'الرسوم والغرامات', s.feesCollected],
-      ['dueToDate', 'المستحق حتى اليوم', s.dueToDate],
-      ['collectedAgainstDue', 'المحصّل من المستحق', s.collectedAgainstDue],
-      ['totalCollectedVerified', 'تم التحصيل (الكل)', s.totalCollectedVerified],
-      ['totalCollectedAll', 'إجمالي المحصّل المسجل', s.totalCollectedAll],
-      ['totalCollectedUnverified', 'بانتظار التأكيد (إيصال/شيك)', s.totalCollectedUnverified],
-      ['totalOutstanding', 'المتبقي للتحصيل', s.totalOutstanding],
-      ['dueSoonAmount', 'مستحق خلال 7 أيام', s.dueSoonAmount],
-      ['overdueAmountComputed', 'المتأخر المحسوب', s.overdueAmountComputed],
-      ['overdueInstallmentCountComputed', 'عدد الأقساط المتأخرة (محسوبة)', s.overdueInstallmentCountComputed],
-      ['totalRemaining', 'المتبقي (قديم)', s.totalRemaining],
-      ['totalOverdue', 'المتأخر (قديم)', s.totalOverdue],
-      ['collectedThisMonth', 'المحصّل هذا الشهر', s.collectedThisMonth],
-      ['refundsPaid', 'المستردات المصروفة', s.refundsPaid],
-      ['refundsOwed', 'المستردات المستحقة للعملاء', s.refundsOwed],
-      ['netCollected', 'صافي النقدية (كل المحصّل − المسترد)', s.netCollected],
-      ['dueThisMonth', 'المستحق هذا الشهر', s.dueThisMonth],
-      ['contractCount', 'عدد العقود', s.contractCount],
-      ['depositCount', 'عدد الدفعات', s.depositCount],
-    ];
-
-    // ── Arabic label maps for the new sections ──
-    const DEP_TYPE_LABEL: Record<string, string> = {
-      BOOKING_AMOUNT: 'مبلغ الحجز',
-      DOWN_PAYMENT: 'دفعة أولى',
-      INSTALLMENT: 'قسط شهري',
-      FINAL_PAYMENT: 'دفعة أخيرة',
-      FEE: 'رسوم وغرامات',
-    };
-    const AGING_LABEL: Record<string, string> = {
-      '1-30': '1-30 يوم',
-      '31-60': '31-60 يوم',
-      '61-90': '61-90 يوم',
-      '90+': '90+ يوم',
-    };
-
-    // B. Collection by deposit type.
-    const byTypeRows: CsvCell[][] = data.collectionByType.map((c) => [
-      c.type,
-      DEP_TYPE_LABEL[c.type] ?? c.type,
-      c.count,
-      c.totalAll,
-      c.totalCollected,
-      c.totalAwaiting,
-    ]);
-
-    // C. Aging buckets.
-    const agingRows: CsvCell[][] = data.aging.map((a) => [
-      AGING_LABEL[a.label] ?? a.label,
-      a.count,
-      a.amount,
-    ]);
-
-    // D. Booking pipeline.
-    const b = data.booking;
-    const bookingRows: CsvCell[][] = [
-      ['pendingReservationsCount', 'حجوزات قيد المراجعة (عدد)', b.pendingReservationsCount],
-      ['approvedReservationsCount', 'حجوزات معتمدة (عدد)', b.approvedReservationsCount],
-      ['pendingReservationsBookingAmount', 'مبالغ حجوزات قيد المراجعة', b.pendingReservationsBookingAmount],
-      ['approvedReservationsBookingAmount', 'مبالغ حجوزات معتمدة', b.approvedReservationsBookingAmount],
-      ['bookingCollectedVerified', 'مبالغ الحجز المؤكدة', b.bookingCollectedVerified],
-      ['bookingCollectedAll', 'مبالغ الحجز المسجلة', b.bookingCollectedAll],
-      ['bookingUncollectedEstimate', 'تقدير غير المحصّل', b.bookingUncollectedEstimate],
-    ];
-
-    // E. Commissions & liabilities.
-    const L = data.liabilities;
-    const liabilityRows: CsvCell[][] = [
-      ['salesBonus', 'pending', 'مستحقات المبيعات - معلّق', L.salesBonus.pendingCount, L.salesBonus.pendingAmount],
-      ['salesBonus', 'approved', 'مستحقات المبيعات - معتمد', L.salesBonus.approvedCount, L.salesBonus.approvedAmount],
-      ['salesBonus', 'paid', 'مستحقات المبيعات - مدفوع', L.salesBonus.paidCount, L.salesBonus.paidAmount],
-      ['salesBonus', 'unpaid', 'مستحقات المبيعات - غير مدفوع', L.salesBonus.unpaidCount, L.salesBonus.unpaidAmount],
-      ['brokerCommissions', 'pending', 'عمولات الوسطاء - معلّق', L.brokerCommissions.pendingCount, L.brokerCommissions.pendingAmount],
-      ['brokerCommissions', 'approved', 'عمولات الوسطاء - معتمد', L.brokerCommissions.approvedCount, L.brokerCommissions.approvedAmount],
-      ['brokerCommissions', 'paid', 'عمولات الوسطاء - مدفوع', L.brokerCommissions.paidCount, L.brokerCommissions.paidAmount],
-      ['brokerCommissions', 'unpaid', 'عمولات الوسطاء - غير مدفوع', L.brokerCommissions.unpaidCount, L.brokerCommissions.unpaidAmount],
-      ['brokerPayouts', 'draft', 'دفعات الوسطاء - مسودة', L.brokerPayouts.draftCount, L.brokerPayouts.draftAmount],
-      ['brokerPayouts', 'approved', 'دفعات الوسطاء - معتمدة', L.brokerPayouts.approvedCount, L.brokerPayouts.approvedAmount],
-      ['brokerPayouts', 'processing', 'دفعات الوسطاء - قيد المعالجة', L.brokerPayouts.processingCount, L.brokerPayouts.processingAmount],
-      ['brokerPayouts', 'paid', 'دفعات الوسطاء - مدفوعة', L.brokerPayouts.paidCount, L.brokerPayouts.paidAmount],
-      ['total', 'unpaid', 'إجمالي الالتزامات غير المدفوعة', '', L.totalUnpaidLiabilities],
-      // Owed to the company, not by it: outside the total above.
-      ['clawbacks', 'brokerCommissions', 'مستردات عمولات الوسطاء المستحقة', L.clawbacksOwed.brokerCommissionsCount, L.clawbacksOwed.brokerCommissionsAmount],
-      ['clawbacks', 'salesBonus', 'مستردات مستحقات المبيعات المستحقة', L.clawbacksOwed.salesBonusCount, L.clawbacksOwed.salesBonusAmount],
-    ];
-
-    // F. Documents / receipts health.
-    const H = data.documentsHealth;
-    const healthRows: CsvCell[][] = [
-      ['depositsMissingReceipt', 'دفعات مؤكدة بدون إيصال', H.depositsMissingReceipt.count, H.depositsMissingReceipt.amount],
-      ['verifiedDepositsMissingReceiptDocument', 'دفعات مؤكدة بدون مستند إيصال', H.verifiedDepositsMissingReceiptDocument.count, H.verifiedDepositsMissingReceiptDocument.amount],
-      ['depositsWithLegacyReceiptUrlMissingDocument', 'إيصالات قديمة غير مربوطة كمستند', H.depositsWithLegacyReceiptUrlMissingDocument.count, H.depositsWithLegacyReceiptUrlMissingDocument.amount],
-      ['signedContractsMissingDocument', 'عقود موقعة بدون مستند عقد', H.signedContractsMissingDocument.count, H.signedContractsMissingDocument.amount],
-      ['contractsWithLegacyPdfUrlMissingDocument', 'ملفات عقود قديمة غير مربوطة كمستند', H.contractsWithLegacyPdfUrlMissingDocument.count, H.contractsWithLegacyPdfUrlMissingDocument.amount],
-    ];
-
-    // We use a permissive shape here — the report payload's nested selects
-    // vary slightly between branches and aren't worth a new exported type
-    // just for the CSV builder.
-    type InstRow = {
-      id: string;
-      type: string;
-      dueDate: Date | string;
-      amount: Prisma.Decimal | string | number;
-      status: string;
-      plan: {
-        contract: {
-          contractNumber: string | null;
-          customer: { fullName: string };
-          unit: { code: string };
-        };
-      };
-    };
-    type DepositRow = {
-      id: string;
-      type: string;
-      amount: Prisma.Decimal | string | number;
-      paidAt: Date | string;
-      verified: boolean;
-      contract:
-        | {
-            contractNumber: string | null;
-            customer: { fullName: string } | null;
-            unit: { code: string } | null;
-          }
-        | null;
-      reservation:
-        | {
-            reservationNumber: string | null;
-            unit: { code: string } | null;
-            client: { fullName: string } | null;
-            lead: { fullName: string } | null;
-          }
-        | null;
-    };
-
-    const fmtInst = (rows: InstRow[]): CsvCell[][] =>
-      rows.map((r) => [
-        r.plan.contract.contractNumber ?? '',
-        r.plan.contract.customer.fullName,
-        r.plan.contract.unit.code,
-        r.type,
-        new Date(r.dueDate).toISOString().slice(0, 10),
-        r.amount.toString(),
-        r.status,
-      ]);
-
-    const overdueRows = fmtInst(data.overdue as unknown as InstRow[]);
-    const weekRows = fmtInst(data.upcomingThisWeek as unknown as InstRow[]);
-    const monthRows = fmtInst(data.upcomingThisMonth as unknown as InstRow[]);
-
-    const depositRows: CsvCell[][] = (
-      data.recentDeposits as unknown as DepositRow[]
-    ).map((d) => [
-      d.contract?.contractNumber ?? d.reservation?.reservationNumber ?? '',
-      d.contract?.customer?.fullName ??
-        d.reservation?.client?.fullName ??
-        d.reservation?.lead?.fullName ??
-        '',
-      d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '',
-      d.type,
-      new Date(d.paidAt).toISOString().slice(0, 10),
-      d.amount.toString(),
-      d.verified ? 'نعم' : 'لا',
-    ]);
-
-    const instHeaders = [
-      'رقم العقد',
-      'العميل',
-      'كود الوحدة',
-      'النوع',
-      'تاريخ الاستحقاق',
-      'المبلغ',
-      'الحالة',
-    ];
-    const depHeaders = [
-      'المرجع',
-      'العميل',
-      'كود الوحدة',
-      'النوع',
-      'تاريخ السداد',
-      'المبلغ',
-      'موثّقة',
-    ];
-
-    return csvSections([
-      '# ملخص',
-      toCsv(['المؤشر', 'البيان', 'القيمة'], summaryRows),
-      '',
-      '# التحصيل حسب النوع',
-      toCsv(['النوع', 'البيان', 'العدد', 'الإجمالي', 'تم التحصيل', 'بانتظار التأكيد (إيصال/شيك)'], byTypeRows),
-      '',
-      '# أعمار المتأخرات',
-      toCsv(['الفئة', 'العدد', 'المبلغ'], agingRows),
-      '',
-      '# خط الحجوزات',
-      toCsv(['المؤشر', 'البيان', 'القيمة'], bookingRows),
-      '',
-      '# العمولات والالتزامات',
-      toCsv(['القسم', 'الحالة', 'البيان', 'العدد', 'المبلغ'], liabilityRows),
-      '',
-      '# سلامة المستندات والإيصالات',
-      toCsv(['المؤشر', 'البيان', 'العدد', 'المبلغ'], healthRows),
-      '',
-      '# الأقساط المتأخرة',
-      toCsv(instHeaders, overdueRows),
-      '',
-      '# أقساط مستحقة هذا الأسبوع',
-      toCsv(instHeaders, weekRows),
-      '',
-      '# أقساط مستحقة هذا الشهر',
-      toCsv(instHeaders, monthRows),
-      '',
-      '# آخر الدفعات',
-      toCsv(depHeaders, depositRows),
-    ]);
   }
 
   /**

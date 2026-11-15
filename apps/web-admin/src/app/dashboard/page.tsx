@@ -263,7 +263,6 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               label={m.exportReport}
               pdfPath="/reports/admin-summary/export.pdf"
               xlsxPath="/reports/admin-summary/export.xlsx"
-              csvPath="/reports/admin-summary/export.csv"
               filenameBase="dashboard-report"
             />
             <Link href={'/dashboard/reservations/new' as never}>

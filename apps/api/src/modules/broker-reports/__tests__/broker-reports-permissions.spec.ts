@@ -121,14 +121,10 @@ describe('Broker reports module · permissions enforcement', () => {
     expect(serviceMock.summary).toHaveBeenCalledTimes(1);
   });
 
-  it('CSV export returns text/csv after the gate passes', async () => {
+  it('the CSV export is gone (Excel and PDF only)', async () => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
-    const res = await request(app.getHttpServer())
-      .get('/broker-reports/export/summary.csv')
-      .expect(200);
-    expect(res.headers['content-type']).toContain('text/csv');
-    expect(res.headers['content-disposition']).toContain('broker-summary.csv');
-    expect(serviceMock.summaryCsv).toHaveBeenCalledTimes(1);
+    await request(app.getHttpServer()).get('/broker-reports/export/summary.csv').expect(404);
+    expect(serviceMock.summaryCsv).not.toHaveBeenCalled();
   });
 
   it('SALES without broker_reports:read is blocked at the @Roles layer; service never runs', async () => {
@@ -143,13 +139,6 @@ describe('Broker reports module · permissions enforcement', () => {
     expect(serviceMock.summary).toHaveBeenCalled();
   });
 
-  it('SALES blocked from CSV export too; export generation never runs', async () => {
-    FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
-    await request(app.getHttpServer())
-      .get('/broker-reports/export/summary.csv')
-      .expect(403);
-    expect(serviceMock.summaryCsv).not.toHaveBeenCalled();
-  });
 
   it('rejects unauthenticated requests', async () => {
     FakeAuthGuard.currentUser = null;

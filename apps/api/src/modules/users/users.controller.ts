@@ -156,19 +156,6 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('users:read')
-  @Get('export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="people.csv"')
-  exportCsv(
-    @Query('role') role?: string,
-    @Query('q') q?: string,
-    @Query('active') active?: string,
-  ): Promise<string> {
-    return this.users.exportCsv(exportRole(role), q, activeParam(active));
-  }
-
-  @Roles(UserRole.ADMIN)
-  @Permissions('users:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.findOne(id);

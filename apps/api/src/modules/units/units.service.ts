@@ -26,7 +26,7 @@ import { UnitTypesService } from './unit-types.service';
 import { UnitModelsService } from './unit-models.service';
 import { DeliveryDelaysService } from './delivery-delays.service';
 import { UnitValueService } from './unit-value.service';
-import { arText, collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
+import { arText, collectPages, isoDate, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { resetUnitWarranties } from '../contracts/unit-warranties';
 import { dateOnlyString, toDateOnly } from '../../common/time/date-only';
@@ -166,10 +166,6 @@ export class UnitsService {
       rows,
       brand,
     });
-  }
-
-  async exportCsv(query: UnitQueryDto): Promise<string> {
-    return listCsv(UnitsService.EXPORT_COLUMNS, await this.exportRows(query));
   }
 
   async create(dto: CreateUnitDto) {

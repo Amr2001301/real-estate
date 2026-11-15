@@ -154,7 +154,7 @@ describe('MC3 — campaign reports (e2e)', () => {
     const r = await report({ from: today, to: today });
     expect(row(r, a)).toMatchObject({ spend: 2000, leads: 2, sales: 2, revenue: 150_000, cpl: 1000, cpa: 1000, roi: 7400, conversion: 100 });
     // The cancelled contract and the lead after the signing bring B nothing.
-    expect(row(r, b)).toMatchObject({ spend: 1000, leads: 3, sales: 0, revenue: 0, cpl: 333.33, cpa: null, roi: -100 });
+    expect(row(r, b)).toMatchObject({ spend: 1000, leads: 3, sales: 0, revenue: 0, cpl: 333.33, cpa: null, roi: null });
     expect(r.totals.spend).toBeGreaterThanOrEqual(3000);
     expect(r.totals.sales).toBeGreaterThanOrEqual(2);
     const facebook = r.byChannel.find((c: { channel: string }) => c.channel === 'FACEBOOK');

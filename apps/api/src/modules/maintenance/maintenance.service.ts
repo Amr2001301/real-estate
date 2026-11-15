@@ -21,7 +21,6 @@ import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/repo
 import { fallbackBrand } from '../../common/utils/report-brand';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { maintenanceReportHtml } from './maintenance-report-template';
-import { csvSections, toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   addFooter,
   addTable,
@@ -1554,82 +1553,8 @@ export class MaintenanceService {
     };
   }
 
-  // CSV export of the operational report — same filters, multi-section layout
-  // (summary KPIs, category breakdown, assignee breakdown, expiring warranties).
-  async reportsSummaryCsv(opts: {
-    from?: string;
-    to?: string;
-    assignedAdminId?: string;
-    categoryId?: string;
-    reviewStatus?: MaintenanceReviewStatus;
-    status?: MaintenanceStatus;
-  }) {
-    const r = await this.reportsSummary(opts);
-    const txAr = (v: unknown): string => {
-      if (!v) return '—';
-      if (typeof v === 'string') return v;
-      const t = v as { ar?: string; en?: string };
-      return t.ar || t.en || '—';
-    };
-    const fmtDate = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '—');
-
-    const summaryRows: CsvCell[][] = [
-      ['totalRequests', 'إجمالي الطلبات', r.totalRequests],
-      ['pendingReviewCount', 'قيد المراجعة', r.pendingReviewCount],
-      ['approvedCount', 'معتمدة', r.approvedCount],
-      ['rejectedCount', 'مرفوضة', r.rejectedCount],
-      ['openCount', 'مفتوحة', r.openCount],
-      ['assignedCount', 'مسندة', r.assignedCount],
-      ['inProgressCount', 'قيد التنفيذ', r.inProgressCount],
-      ['resolvedCount', 'تم الحل', r.resolvedCount],
-      ['closedCount', 'مغلقة', r.closedCount],
-      ['overdueCount', 'متأخرة', r.overdueCount],
-      ['inWarrantyCount', 'تحت الضمان', r.inWarrantyCount],
-      ['outOfWarrantyCount', 'خارج الضمان', r.outOfWarrantyCount],
-      ['unknownWarrantyCount', 'ضمان غير معروف', r.unknownWarrantyCount],
-      ['avgResolutionHours', 'متوسط زمن المعالجة (ساعة)', r.avgResolutionHours ?? '—'],
-      ['resolvedWithinSlaCount', 'تم الحل ضمن المدة', r.resolvedWithinSlaCount],
-      ['resolvedOverdueCount', 'تم الحل بعد الموعد', r.resolvedOverdueCount],
-      ['slaAttainmentPercent', 'نسبة الالتزام بالمدة (٪)', r.slaAttainmentPercent ?? '—'],
-      ['avgDelayHours', 'متوسط التأخير (ساعة)', r.avgDelayHours ?? '—'],
-    ];
-
-    const categoryRows: CsvCell[][] = r.byCategory.map((c) => [
-      'category',
-      txAr(c.categoryName),
-      c.count,
-      c.overdueCount,
-      c.outOfWarrantyCount,
-    ]);
-
-    const assigneeRows: CsvCell[][] = r.byAssignee.map((a) => [
-      'assignee',
-      a.name,
-      a.count,
-      a.overdueCount,
-      a.inProgressCount,
-    ]);
-
-    const expiringRows: CsvCell[][] = r.expiringWarranties.map((e) => [
-      'expiring',
-      e.unitCode,
-      txAr(e.categoryName),
-      fmtDate(e.warrantyEnd),
-    ]);
-
-    return csvSections([
-      toCsv(['metric', 'label', 'value'], summaryRows),
-      '',
-      toCsv(['section', 'category', 'count', 'overdueCount', 'outOfWarrantyCount'], categoryRows),
-      '',
-      toCsv(['section', 'assignee', 'count', 'overdueCount', 'inProgressCount'], assigneeRows),
-      '',
-      toCsv(['section', 'unitCode', 'categoryName', 'warrantyEnd'], expiringRows),
-    ]);
-  }
-
   /**
-   * P15.3 — styled XLSX twin of reportsSummaryCsv. Same real report (summary +
+   * P15.3 — styled XLSX of the maintenance report. Real report (summary +
    * by-category + by-assignee + expiring warranties), one sheet per section,
    * applied filters surfaced on the summary sheet. No demo values.
    */

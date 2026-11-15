@@ -286,43 +286,6 @@ describe('GET /reports/admin-summary (P14)', () => {
 
   // ── P14.1 — CSV export ───────────────────────────────────────────────────
 
-  it('export.csv returns a downloadable CSV with the real summary data (no demo values)', async () => {
-    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
-    const res = await request(app.getHttpServer())
-      .get('/reports/admin-summary/export.csv')
-      .expect(200);
-
-    expect(res.headers['content-type']).toContain('text/csv');
-    expect(res.headers['content-disposition']).toContain('attachment');
-
-    const csv = res.text;
-    // All five real sections are present.
-    expect(csv).toContain('المؤشرات الرئيسية');
-    expect(csv).toContain('اتجاه الحجوزات');
-    expect(csv).toContain('توزيع مصادر العملاء المحتملين');
-    expect(csv).toContain('التنبيهات المعلقة');
-    expect(csv).toContain('آخر النشاطات');
-    // Real values from the mocked DB rows.
-    expect(csv).toContain('المشاريع المنشورة,4');
-    expect(csv).toContain('مباشر,10');
-    expect(csv).toContain('خالد'); // recent-activity actor
-    // One BOM for the whole file — none inside later sections' header cells.
-    expect(csv.split('\uFEFF').length).toBeLessThanOrEqual(2);
-    expect(csv).toContain('\r\nالمؤشر,القيمة\r\n');
-    // Activity times are readable stamps, not raw ISO strings.
-    expect(csv).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-    expect(csv).toMatch(/,2026-05-31 \d{2}:\d{2}/);
-    // None of the removed hardcoded demo values survive.
-    expect(csv).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
-  });
-
-  it('export.csv is forbidden for CUSTOMER / CLIENT / BROKER', async () => {
-    for (const role of [UserRole.CUSTOMER, UserRole.CLIENT, UserRole.BROKER]) {
-      FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
-      await request(app.getHttpServer()).get('/reports/admin-summary/export.csv').expect(403);
-    }
-  });
-
   // ── P14.2 — styled XLSX export ───────────────────────────────────────────
 
   // Pulls the raw binary body so the workbook can be parsed back with exceljs.

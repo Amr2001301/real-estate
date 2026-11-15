@@ -66,12 +66,21 @@ export interface Kpi {
   tone?: 'default' | 'warn' | 'good';
 }
 
+/** Smaller type for figures too long for their card, so they are never cut. */
+function kpiValueSize(value: string, columns: number): string {
+  const room = columns >= 4 ? 13 : columns === 3 ? 18 : 26;
+  if (value.length > room + 4) return ' xs';
+  if (value.length > room) return ' sm';
+  return '';
+}
+
 export function kpiGrid(cards: Kpi[], columns = 4): string {
-  return `<div class="kpis" style="grid-template-columns:repeat(${columns},1fr)">${cards
+  // minmax(0,1fr): a long figure must not widen its column past the page edge.
+  return `<div class="kpis" style="grid-template-columns:repeat(${columns},minmax(0,1fr))">${cards
     .map(
       (k) => `<div class="kpi ${k.tone ?? 'default'}">
   <div class="kpi-label">${esc(k.label)}</div>
-  <div class="kpi-value" dir="ltr">${esc(k.value)}</div>
+  <div class="kpi-value${kpiValueSize(k.value, columns)}" dir="ltr">${esc(k.value)}</div>
   ${k.hint ? `<div class="kpi-hint">${esc(k.hint)}</div>` : ''}
 </div>`,
     )
@@ -204,11 +213,13 @@ body { font-family:'ReportArabic','Noto Sans Arabic','DejaVu Sans',sans-serif; c
   border-inline-start:3px solid var(--accent); padding-inline-start:8px; break-after:avoid; }
 .section h2 .note { color:var(--muted); font-weight:400; font-size:10px; }
 .kpis { display:grid; gap:10px; }
-.kpi { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; break-inside:avoid; }
+.kpi { border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:#fff; break-inside:avoid; min-width:0; }
 .kpi.warn { background:#fff7ed; border-color:#fed7aa; }
 .kpi.good { background:#f0fdf4; border-color:#bbf7d0; }
 .kpi-label { color:var(--muted); font-size:10px; }
-.kpi-value { font-size:18px; font-weight:800; color:var(--primary); margin-top:2px; text-align:right; white-space:nowrap; }
+.kpi-value { font-size:18px; font-weight:800; color:var(--primary); margin-top:2px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:clip; }
+.kpi-value.sm { font-size:15px; }
+.kpi-value.xs { font-size:12.5px; }
 .kpi.warn .kpi-value { color:#c2410c; }
 .kpi-hint { color:var(--muted); font-size:9.5px; margin-top:1px; }
 .panels { display:grid; gap:12px; }

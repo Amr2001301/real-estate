@@ -128,7 +128,6 @@ export default async function CustomersPage({
             locale={locale}
             filenameBase="customers"
             xlsxPath="/users/export.xlsx"
-            csvPath="/users/export.csv"
             params={{
               role: 'CUSTOMER',
               q: q || undefined,
