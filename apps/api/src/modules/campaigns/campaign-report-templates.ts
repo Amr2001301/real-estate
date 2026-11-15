@@ -84,6 +84,8 @@ export function campaignReportHtml(r: CampaignReport, brand: ReportBrand, opts: 
   return reportDocument({
     brand,
     title: 'تقرير الحملات التسويقية',
+    // Wide table: printed sideways like the HR summaries.
+    landscape: true,
     subtitle: `الفترة: ${periodText(opts)}`,
     meta: filters,
     body: [

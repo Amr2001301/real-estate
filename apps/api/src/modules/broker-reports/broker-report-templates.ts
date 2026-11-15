@@ -183,6 +183,8 @@ export function topBrokersReportHtml(
   return reportDocument({
     brand,
     title: 'تقرير أعلى الوسطاء',
+    // Wide table: printed sideways like the HR summaries.
+    landscape: true,
     subtitle: `مرتّب حسب ${metricLabel} · الفترة: ${d.periodLabel}`,
     body: [
       section(

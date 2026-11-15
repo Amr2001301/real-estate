@@ -159,6 +159,8 @@ export interface ReportDocument {
   body: string;
   /** Extra header facts ([label, value]); the issue time and currency are always shown. */
   meta?: Array<[string, string]>;
+  /** Wide tables: print the page sideways (A4 landscape). */
+  landscape?: boolean;
 }
 
 export function reportDocument(doc: ReportDocument): string {
@@ -166,7 +168,11 @@ export function reportDocument(doc: ReportDocument): string {
   const primary = hex(brand.primary, '#0F1E33');
   const accent = hex(brand.accent, '#C8A24B');
   const currency = normalizeCurrency(brand.currency);
+  // «الفترة: …» reads best as the first fact card (as on the HR reports).
+  const periodMatch = doc.subtitle?.match(/^(.*?)(?:\s*·\s*)?الفترة:\s*(.+)$/);
+  const subtitle = periodMatch ? (periodMatch[1] ?? '').trim() || undefined : doc.subtitle;
   const meta: Array<[string, string]> = [
+    ...(periodMatch ? ([['الفترة', (periodMatch[2] ?? '').trim()]] as Array<[string, string]>) : []),
     ...(doc.meta ?? []),
     ['تاريخ الإصدار', formatStamp(new Date(), brand.timezone)],
     ['العملة', `${arabicCurrencySymbol(currency)} (${currency})`],
@@ -191,23 +197,27 @@ export function reportDocument(doc: ReportDocument): string {
 <title>${esc(doc.title)}</title>
 <style>
 ${fontFace()}
-@page { size: A4; }
-:root { --primary:${primary}; --accent:${accent}; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --zebra:#f8fafc; }
+@page { size: A4${doc.landscape ? ' landscape' : ''}; }
+:root { --primary:${primary}; --accent:${accent}; --ink:#0f172a; --muted:#64748b; --line:#e8e1d2; --zebra:#fbf8f2; }
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; }
 body { font-family:'ReportArabic','Noto Sans Arabic','DejaVu Sans',sans-serif; color:var(--ink); font-size:11px; line-height:1.5;
   -webkit-print-color-adjust:exact; print-color-adjust:exact; font-variant-numeric:tabular-nums; }
-.head { background:var(--primary); color:#fff; border-radius:14px; padding:18px 20px; display:flex; gap:16px; align-items:center; }
-.head .id { display:flex; gap:14px; align-items:center; flex:1; min-width:0; }
-.logo { height:54px; max-width:140px; object-fit:contain; background:#fff; border-radius:10px; padding:4px; }
-.monogram { width:54px; height:54px; border-radius:12px; background:var(--accent); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; }
-.company { color:var(--accent); font-weight:700; font-size:11.5px; letter-spacing:.2px; }
-.title { font-size:22px; font-weight:800; margin:2px 0 0; line-height:1.25; }
-.subtitle { opacity:.85; font-size:11px; margin-top:2px; }
-.meta { display:grid; grid-template-columns:auto auto; gap:2px 10px; font-size:10px; color:#e2e8f0; white-space:nowrap; }
-.meta dt { opacity:.75; } .meta dd { margin:0; font-weight:600; color:#fff; }
-.contact { display:flex; gap:14px; flex-wrap:wrap; color:var(--muted); font-size:9.5px; padding:6px 4px 0; }
-.rule { height:3px; background:var(--accent); border-radius:2px; margin:10px 0 2px; width:64px; }
+.head { display:flex; gap:16px; align-items:center; justify-content:space-between; padding:2px 2px 12px; }
+.head .titles { min-width:0; }
+.company { color:#4a5263; font-weight:700; font-size:12px; }
+.title { font-size:24px; font-weight:800; color:var(--primary); margin:2px 0 0; line-height:1.25; }
+.subtitle { color:var(--muted); font-size:11px; margin-top:3px; }
+.brandbox { display:flex; gap:10px; align-items:center; flex-shrink:0; }
+.brandbox .bname { font-weight:800; font-size:13px; color:var(--primary); white-space:nowrap; }
+.contact { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; color:var(--muted); font-size:9px; margin-bottom:4px; }
+.logo { height:52px; max-width:150px; object-fit:contain; }
+.monogram { width:46px; height:46px; border-radius:10px; background:var(--primary); color:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; }
+.goldline { height:3px; border-radius:2px; background:linear-gradient(90deg, rgba(200,162,75,.35), var(--accent) 35%, var(--accent) 65%, rgba(200,162,75,.35)); }
+.facts { display:grid; gap:10px; margin-top:14px; }
+.fact { border:1px solid #e8e1d2; border-radius:12px; padding:8px 14px; background:#fff; }
+.fact dt { color:var(--muted); font-size:9.5px; }
+.fact dd { margin:2px 0 0; font-weight:800; font-size:13px; color:var(--primary); }
 .section { margin-top:18px; }
 .section h2 { font-size:13.5px; margin:0 0 10px; color:var(--primary); display:flex; align-items:baseline; gap:8px;
   border-inline-start:3px solid var(--accent); padding-inline-start:8px; break-after:avoid; }
@@ -227,14 +237,15 @@ body { font-family:'ReportArabic','Noto Sans Arabic','DejaVu Sans',sans-serif; c
 .panel-title { font-weight:700; font-size:11px; margin-bottom:6px; }
 .panel svg { display:block; margin:0 auto; }
 .empty { color:var(--muted); text-align:center; padding:18px 0; font-style:italic; }
-table.data { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:10.5px; }
+table.data { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; font-size:10.5px; }
 table.data thead { display:table-header-group; }
-table.data th { background:var(--primary); color:#fff; font-weight:600; text-align:right; padding:7px 10px; }
+table.data th { background:var(--primary); color:#fff; font-weight:700; text-align:right; padding:9px 10px; }
+table.data td:first-child { font-weight:700; color:var(--primary); }
 table.data td { padding:6px 10px; border-top:1px solid var(--line); text-align:right; }
 table.data tbody tr:nth-child(even) td { background:var(--zebra); }
 table.data tr { break-inside:avoid; }
 table.data .num { text-align:left; white-space:nowrap; }
-table.data tfoot td { font-weight:700; background:#fbf7ec; border-top:2px solid var(--accent); }
+table.data tfoot td { font-weight:800; background:#f6eedc; border-top:2px solid var(--accent); padding:9px 10px; }
 table.data td.empty { text-align:center; }
 .notice { border-radius:10px; padding:10px 12px; font-size:11px; }
 .notice.good { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; }
@@ -245,21 +256,22 @@ table.data td.empty { text-align:center; }
 <body>
 <header>
   <div class="head">
-    <div class="id">${mark}
-      <div>
-        <div class="company">${esc(brand.name)}</div>
-        <h1 class="title">${esc(doc.title)}</h1>
-        ${doc.subtitle ? `<div class="subtitle">${esc(doc.subtitle)}</div>` : ''}
-      </div>
+    <div class="titles">
+      ${brand.name ? `<div class="company">${esc(brand.name)}</div>` : ''}
+      <h1 class="title">${esc(doc.title)}</h1>
+      ${subtitle ? `<div class="subtitle">${esc(subtitle)}</div>` : ''}
     </div>
-    <dl class="meta">${meta.map(([k, v]) => `<dt>${esc(k)}</dt><dd><bdi dir="ltr">${esc(v)}</bdi></dd>`).join('')}</dl>
+    <div class="brandbox">${mark}</div>
   </div>
-  ${contact ? `<div class="contact">${contact}</div>` : ''}
+  <div class="goldline"></div>
+  <dl class="facts" style="grid-template-columns:repeat(${meta.length},minmax(0,1fr))">${meta
+    .map(([k, v]) => `<div class="fact"><dt>${esc(k)}</dt><dd><bdi dir="auto">${esc(v)}</bdi></dd></div>`)
+    .join('')}</dl>
 </header>
 <main>
 ${doc.body}
 </main>
-<div class="endnote">أُعدّ هذا التقرير آلياً من بيانات النظام${brand.name ? ` · ${esc(brand.name)}` : ''}</div>
+<div class="endnote">${contact ? `<div class="contact">${contact}</div>` : ''}أُعدّ هذا التقرير آلياً من بيانات النظام${brand.name ? ` · ${esc(brand.name)}` : ''}</div>
 </body>
 </html>`;
 }

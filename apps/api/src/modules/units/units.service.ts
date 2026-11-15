@@ -134,13 +134,13 @@ export class UnitsService {
     { header: 'المبنى', width: 18, value: (u) => arText(u.building?.name) },
     { header: 'كود الوحدة', width: 14, value: (u) => u.code },
     { header: 'النوع', width: 14, value: (u) => u.type },
-    { header: 'الطابق', width: 8, value: (u) => u.floor },
-    { header: 'المساحة (م²)', width: 12, value: (u) => Number(u.area) },
-    { header: 'غرف النوم', width: 10, value: (u) => u.bedrooms },
-    { header: 'الحمامات', width: 10, value: (u) => u.bathrooms },
-    { header: 'السعر', width: 16, value: (u) => Number(u.price), money: true },
+    { header: 'الطابق', width: 8, value: (u) => u.floor, numeric: true },
+    { header: 'المساحة (م²)', width: 12, value: (u) => Number(u.area), numeric: true, sum: true },
+    { header: 'غرف النوم', width: 10, value: (u) => u.bedrooms, numeric: true },
+    { header: 'الحمامات', width: 10, value: (u) => u.bathrooms, numeric: true },
+    { header: 'السعر', width: 16, value: (u) => Number(u.price), money: true, sum: true },
     { header: 'الحالة', width: 12, value: (u) => UnitsService.STATUS_AR[u.status] ?? u.status },
-    { header: 'تاريخ الإضافة', width: 14, value: (u) => isoDate(u.createdAt) },
+    { header: 'تاريخ الإضافة', width: 14, value: (u) => isoDate(u.createdAt), numeric: true },
   ];
 
   /** Every unit matching the list filters (no paging). */

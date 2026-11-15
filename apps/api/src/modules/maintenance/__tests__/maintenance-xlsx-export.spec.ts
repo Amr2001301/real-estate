@@ -130,7 +130,7 @@ describe('GET /maintenance-requests/reports/summary.xlsx (P15.3)', () => {
     const all = flat.join(' ');
     expect(all).toContain('تقرير الصيانة');
     expect(all).toContain('إجمالي الطلبات');
-    expect(all).toContain('عوامل التصفية'); // applied status filter surfaced
+    expect(all).toContain('التصفية'); // applied status filter surfaced
     expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
   });
 

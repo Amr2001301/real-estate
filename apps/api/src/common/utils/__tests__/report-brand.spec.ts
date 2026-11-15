@@ -69,7 +69,7 @@ describe('XLSX banner / footer use the company identity', () => {
     const ws = wb.addWorksheet('s');
     addBoardBanner(ws, 'تقرير المبيعات', 6, { wb, brand });
     expect(ws.getCell(1, 1).value).toBe('شركة النخبة');
-    expect((ws.getCell(2, 1).fill as { fgColor: { argb: string } }).fgColor.argb).toBe('FF1E3A5F');
+    expect((ws.getCell(2, 1).font as { color: { argb: string } }).color.argb).toBe('FF1E3A5F');
     expect(String(ws.getCell(3, 1).value)).toContain('(SAR)');
     addFooter(ws, brand);
     expect(ws.getRow(ws.rowCount).getCell(1).value).toBe('صادر عن شركة النخبة');
