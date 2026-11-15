@@ -72,12 +72,13 @@ import type { ReqWithCodes } from '../../common/permissions/staff-codes';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
-import { getRequiredCompanyId, getTenantContext, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
+import { getRequiredCompanyId, runInCompany, runTenantContext } from '../../common/tenant/tenant-context';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { fallbackBrand } from '../../common/utils/report-brand';
-import { installmentPlanReportHtml, PLAN_TYPE_AR } from './installment-plan-template';
+import { installmentPlanReportHtml, planStatement } from './installment-plan-template';
+import { DEPOSIT_STATE_SELECT, withDepositState } from '../../common/finance/deposit-state';
 import { balloonOf, balloonProblem, computeDurationOption, type BalloonTerms } from './duration-calc';
 import {
   addTitledTable,
@@ -457,116 +458,161 @@ export class InstallmentsService {
   }
 
   /**
-   * A contract's installment schedule as a statement PDF (HTML → Chromium;
-   * 503 when unavailable): the plan's progress, the next payment and every
-   * installment with its status, for the customer or the file.
+   * A contract's installment schedule as a statement (كشف الأقساط): the
+   * customer and unit, where the plan stands and every row with what was
+   * paid, what is left, how, when and the receipt. One builder
+   * (planStatement) for the PDF and the Excel file.
    */
-  async planPdf(planId: string): Promise<Buffer> {
+  private async loadPlanStatement(planId: string) {
     const companyId = getRequiredCompanyId();
     const plan = await this.prisma.installmentPlan.findFirst({
       where: { id: planId, companyId },
       include: {
-        installments: { orderBy: { dueDate: 'asc' } },
+        installments: {
+          orderBy: { dueDate: 'asc' },
+          include: {
+            deposits: {
+              where: { deletedAt: null },
+              orderBy: { paidAt: 'desc' },
+              select: {
+                id: true,
+                paidAt: true,
+                paymentMethod: true,
+                deletedAt: true,
+                reviewStatus: true,
+                ...DEPOSIT_STATE_SELECT,
+              },
+            },
+          },
+        },
         contract: {
           select: {
             contractNumber: true,
-            customer: { select: { fullName: true } },
-            unit: { select: { code: true } },
+            signedAt: true,
+            totalAmount: true,
+            customer: { select: { fullName: true, phone: true } },
+            unit: {
+              select: {
+                code: true,
+                building: { select: { phase: { select: { project: { select: { name: true } } } } } },
+              },
+            },
           },
         },
       },
     });
     if (!plan) throw new NotFoundException('Installment plan not found');
+    const timeZone = await companyTimeZone(this.prisma, companyId);
+    const localDay = (d: Date) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    const projectName = plan.contract?.unit?.building?.phase?.project?.name as { ar?: string; en?: string } | string | null | undefined;
+    const statement = planStatement({
+      contractNumber: plan.contract?.contractNumber ?? planId.slice(0, 8),
+      customer: plan.contract?.customer?.fullName ?? '—',
+      phone: plan.contract?.customer?.phone ?? null,
+      unit: plan.contract?.unit?.code ?? '—',
+      project: typeof projectName === 'string' ? projectName : (projectName?.ar ?? projectName?.en ?? null),
+      signedAt: plan.contract?.signedAt ?? null,
+      contractValue: plan.contract ? Number(plan.contract.totalAmount) : null,
+      today: localDay(new Date()),
+      localDay,
+      installments: plan.installments.map((i) => ({
+        id: i.id,
+        type: i.type,
+        dueDate: i.dueDate,
+        amount: Number(i.amount),
+        status: i.status,
+        paidAt: i.paidAt,
+        feeForId: i.feeForId,
+        payments: i.deposits.map((dep) => {
+          const st = withDepositState(dep);
+          return {
+            id: dep.id,
+            state: st.state,
+            paidAt: dep.paidAt,
+            method: dep.paymentInstrument?.type ?? dep.paymentMethod ?? null,
+          };
+        }),
+      })),
+    });
     const brand =
       (await this.reportBrand?.forCompany(companyId)) ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
-    const html = installmentPlanReportHtml(
-      {
-        contractNumber: plan.contract?.contractNumber ?? planId.slice(0, 8),
-        customer: plan.contract?.customer?.fullName ?? '—',
-        unit: plan.contract?.unit?.code ?? '—',
-        rows: plan.installments.map((inst) => ({
-          dueDate: inst.dueDate.toISOString().slice(0, 10),
-          type: inst.type,
-          amount: Number(inst.amount),
-          status: inst.status,
-          paidAt: inst.paidAt ? inst.paidAt.toISOString().slice(0, 10) : '',
-        })),
-      },
-      brand,
-    );
-    return presentReportPdf(this.reportPdf, html, brand);
+    return { statement, brand };
+  }
+
+  /** The statement as a PDF (HTML → Chromium; 503 when unavailable). */
+  async planPdf(planId: string): Promise<Buffer> {
+    const { statement, brand } = await this.loadPlanStatement(planId);
+    return presentReportPdf(this.reportPdf, installmentPlanReportHtml(statement, brand), brand);
   }
 
   /**
-   * Step D1 — installment plan XLSX export.
-   *
-   * CANCELLED rows are included and labelled "ملغى" — auditors need the full
-   * picture, but they must not appear as outstanding obligations in summaries.
-   * Outstanding total only sums PENDING + OVERDUE rows.
+   * The statement as Excel: the same rows, every column. CANCELLED rows are
+   * listed and labelled, but count in no total.
    */
   async planXlsx(planId: string): Promise<Buffer> {
-    const plan = await this.prisma.installmentPlan.findUnique({
-      where: { id: planId },
-      include: {
-        installments: { orderBy: { dueDate: 'asc' } },
-        contract: { select: { contractNumber: true } },
-      },
-    });
-    if (!plan) throw new NotFoundException('Installment plan not found');
-
-    const STATUS_LABEL: Record<string, string> = {
-      PENDING: 'معلّق',
-      OVERDUE: 'متأخر',
-      PAID: 'مدفوع',
-      CANCELLED: 'ملغى',
-    };
-
-    const rows = plan.installments.map((inst) => [
-      inst.dueDate.toISOString().slice(0, 10),
-      Number(inst.amount),
-      STATUS_LABEL[inst.status] ?? inst.status,
-      inst.paidAt ? inst.paidAt.toISOString().slice(0, 10) : '',
-      PLAN_TYPE_AR[inst.type] ?? inst.type,
-    ]);
-
-    // Outstanding = PENDING + OVERDUE only — CANCELLED excluded.
-    const outstandingTotal = plan.installments
-      .filter((i) => i.status === InstallmentStatus.PENDING || i.status === InstallmentStatus.OVERDUE)
-      .reduce((acc, i) => acc + Number(i.amount), 0);
-
-    const paidTotal = plan.installments
-      .filter((i) => i.status === InstallmentStatus.PAID)
-      .reduce((acc, i) => acc + Number(i.amount), 0);
-
-    const companyId = plan.companyId ?? getTenantContext()?.companyId;
-    const currency = await getCompanyCurrency(this.prisma, companyId);
-    const brand = await this.reportBrand?.forCompany(companyId);
+    const { statement: s, brand } = await this.loadPlanStatement(planId);
+    const currency = brand.currency;
+    const h = s.header;
     const wb = createReportWorkbook();
-    const ws = wb.addWorksheet('جدول الأقساط');
+    const ws = wb.addWorksheet('كشف الأقساط');
     ws.properties.defaultRowHeight = 18;
-
-    const contractRef = plan.contract?.contractNumber ?? planId;
     addTitledTable(ws, {
-      title: `جدول الأقساط — عقد ${contractRef}`,
-      headers: ['تاريخ الاستحقاق', 'المبلغ', 'الحالة', 'تاريخ الدفع', 'النوع'],
-      rows,
-      widths: [18, 16, 14, 18, 16],
+      title: 'كشف الأقساط',
+      subject: [
+        ['العقد', h.contractNumber],
+        ['العميل', h.customer],
+        ['الوحدة', h.unit],
+      ],
+      headers: [
+        '#', 'الاستحقاق', 'البند', 'المبلغ', 'المدفوع', 'المتبقي',
+        'الحالة', 'تاريخ الدفع', 'طريقة الدفع', 'رقم الإيصال', 'ملاحظة',
+      ],
+      rows: s.rows.map((r) => [
+        r.n, r.dueDate, r.type, r.amount, r.paid, r.remaining,
+        r.status, r.paidAt || '—', r.method || '—', r.receipt || '—', r.note,
+      ]),
+      widths: [6, 13, 15, 16, 16, 16, 15, 13, 13, 13, 30],
+      numeric: [1, 2, 4, 5, 6, 8, 10],
+      totals: ['', '', 'الإجمالي', s.totals.total, s.totals.paid, s.totals.remaining, null, null, null, null, null],
       currency,
       brand,
     });
-    formatMoneyColumns(ws, [2], currency);
+    formatMoneyColumns(ws, [4, 5, 6], currency);
 
-    // Summary rows below the table — outstanding excludes CANCELLED.
-    const summaryStartRow = ws.rowCount + 2;
-    ws.getCell(summaryStartRow, 1).value = 'إجمالي المدفوع';
-    ws.getCell(summaryStartRow, 2).value = paidTotal;
-    ws.getCell(summaryStartRow + 1, 1).value = 'إجمالي المتبقي (معلّق + متأخر)';
-    ws.getCell(summaryStartRow + 1, 2).value = outstandingTotal;
-    ws.getCell(summaryStartRow, 2).numFmt = amountFormat(currency);
-    ws.getCell(summaryStartRow + 1, 2).numFmt = amountFormat(currency);
+    // The summary under the table, as on the PDF.
+    const summary: Array<[string, number | string]> = [
+      ...(h.contractValue != null ? ([['قيمة العقد', h.contractValue]] as Array<[string, number]>) : []),
+      ['إجمالي الخطة', s.totals.total],
+      ['المدفوع', s.totals.paid],
+      ['المتبقي', s.totals.remaining],
+      ['المتأخر', s.totals.overdue],
+      ...(s.totals.awaiting > 0 ? ([['بانتظار التأكيد (إيصال/شيك)', s.totals.awaiting]] as Array<[string, number]>) : []),
+      ...(s.next
+        ? ([
+            ['الدفعة القادمة', s.next.amount],
+            ['تاريخ الدفعة القادمة', s.next.dueDate],
+          ] as Array<[string, number | string]>)
+        : []),
+      ...(h.phone ? ([['هاتف العميل', h.phone]] as Array<[string, string]>) : []),
+      ...(h.project ? ([['المشروع', h.project]] as Array<[string, string]>) : []),
+      ...(h.signedAt ? ([['تاريخ التوقيع', h.signedAt]] as Array<[string, string]>) : []),
+    ];
+    let r = ws.rowCount + 2;
+    for (const [label, value] of summary) {
+      ws.mergeCells(r, 1, r, 3);
+      const l = ws.getCell(r, 1);
+      l.value = label;
+      l.font = { bold: true };
+      l.alignment = { horizontal: 'right' };
+      const v = ws.getCell(r, 4);
+      v.value = value;
+      if (typeof value === 'number') v.numFmt = amountFormat(currency);
+      v.alignment = { horizontal: 'center' };
+      r++;
+    }
 
     addFooter(ws, brand);
-
     return workbookToBuffer(wb);
   }
 

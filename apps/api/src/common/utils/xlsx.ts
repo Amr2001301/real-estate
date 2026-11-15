@@ -427,6 +427,11 @@ export function addTitledTable(
     numeric?: number[];
     /** A totals row under the table. */
     totals?: Array<string | number | null>;
+    /**
+     * What the sheet is about ([label, value], e.g. the contract and the
+     * customer), shown as the first fact cards in place of the filter card.
+     */
+    subject?: Array<[string, string]>;
   },
 ): void {
   ws.columns = opts.widths.map((w) => ({ width: w }));
@@ -434,7 +439,8 @@ export function addTitledTable(
   // A narrow sheet (a schedule) has no room for «كل البيانات»: show the
   // filter card only when a filter is applied or the sheet is wide.
   const facts: Array<[string, string]> = [
-    ...(applied.length || opts.headers.length > 6
+    ...(opts.subject ?? []),
+    ...(!opts.subject?.length && (applied.length || opts.headers.length > 6)
       ? ([['التصفية', applied.length ? applied.map(([k, v]) => `${k}: ${v}`).join(' · ') : 'كل البيانات']] as Array<[string, string]>)
       : []),
     ['تاريخ الإصدار', formatStamp(new Date(), opts.brand?.timezone)],

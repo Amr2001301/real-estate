@@ -4,7 +4,7 @@ import {
   brokerDetailReportHtml,
   brokerSummaryReportHtml,
 } from '../../broker-reports/broker-report-templates';
-import { installmentPlanReportHtml } from '../../installments/installment-plan-template';
+import { installmentPlanReportHtml, planStatement } from '../../installments/installment-plan-template';
 import { maintenanceReportHtml } from '../../maintenance/maintenance-report-template';
 import { financialDashboardReportHtml, operationalReportHtml } from '../report-templates';
 
@@ -221,42 +221,74 @@ describe('presentation report templates', () => {
     noMarkup(html);
   });
 
-  it('installment schedule: paid / outstanding / next payment', () => {
+  it('installment schedule: paid / remaining per row, receipt, late days, next payment', () => {
     const html = installmentPlanReportHtml(
-      {
+      planStatement({
         contractNumber: 'C-1',
         customer: evil,
+        phone: '+201000000001',
         unit: 'A-102',
-        rows: [
+        project: 'النخيل',
+        signedAt: new Date('2026-08-20T10:00:00Z'),
+        contractValue: 140_000,
+        today: '2026-10-15',
+        localDay: (d) => d.toISOString().slice(0, 10),
+        installments: [
           {
-            dueDate: '2026-09-01',
+            id: 'r1',
             type: 'DOWN_PAYMENT',
+            dueDate: new Date('2026-09-01T00:00:00Z'),
             amount: 100_000,
             status: 'PAID',
-            paidAt: '2026-09-01',
+            paidAt: new Date('2026-09-01T09:00:00Z'),
+            feeForId: null,
+            payments: [{ id: 'dep-0000-abcd1234', state: 'COLLECTED', paidAt: new Date('2026-09-01T09:00:00Z'), method: 'BANK_TRANSFER' }],
           },
           {
-            dueDate: '2026-10-01',
+            id: 'r2',
             type: 'INSTALLMENT',
+            dueDate: new Date('2026-10-01T00:00:00Z'),
             amount: 20_000,
             status: 'OVERDUE',
-            paidAt: '',
+            paidAt: null,
+            feeForId: null,
+            payments: [],
           },
           {
-            dueDate: '2026-11-01',
+            id: 'r3',
+            type: 'LATE_FEE',
+            dueDate: new Date('2026-10-20T00:00:00Z'),
+            amount: 500,
+            status: 'PENDING',
+            paidAt: null,
+            feeForId: 'r2',
+            payments: [],
+          },
+          {
+            id: 'r4',
             type: 'INSTALLMENT',
+            dueDate: new Date('2026-11-01T00:00:00Z'),
             amount: 20_000,
             status: 'CANCELLED',
-            paidAt: '',
+            paidAt: null,
+            feeForId: null,
+            payments: [],
           },
         ],
-      },
+      }),
       brand,
     );
     expect(html).toContain('كشف الأقساط');
-    expect(html).toContain('120,000 ج.م'); // plan total excludes the cancelled row
-    expect(html).toContain('مستحقة في 2026-10-01');
-    expect(html).toContain('دفعة أولى');
+    expect(html).toContain('size: A4 landscape');
+    expect(html).toContain('120,500 ج.م'); // plan total excludes the cancelled row
+    expect(html).toContain('20,500 ج.م'); // remaining
+    expect(html).toContain('ABCD1234'); // the receipt number
+    expect(html).toContain('تحويل بنكي');
+    expect(html).toContain('متأخر 14 يوم');
+    expect(html).toContain('عن قسط \u20662026-10-01\u2069');
+    expect(html).toContain('تستحق \u20662026-10-20\u2069');
+    expect(html).toContain('+201000000001');
+    expect(html).toContain('عقد C-1 · النخيل');
     noMarkup(html);
   });
 });
