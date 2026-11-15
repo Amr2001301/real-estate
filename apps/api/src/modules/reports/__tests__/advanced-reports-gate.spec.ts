@@ -8,7 +8,7 @@ const gate = (name: keyof ReportsController) =>
 describe('advanced reports are a plan feature', () => {
   const advanced: Array<keyof ReportsController> = [
     'salesTrend', 'salesFunnel', 'brokerLeaderboard', 'financialDashboard', 'financialComparison',
-    'ledgerSummary', 'ledgerRows', 'financial', 'financialXlsx', 'financialDashboardXlsx',
+    'ledgerSummary', 'ledgerRows', 'financial', 'financialDashboardXlsx', 'financialDashboardPdf',
   ];
 
   it('the advanced report endpoints require feature.advancedReports', () => {

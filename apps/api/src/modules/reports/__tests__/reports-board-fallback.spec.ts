@@ -118,7 +118,6 @@ describe('Board XLSX — graceful chart fallback (P15.4)', () => {
   afterAll(async () => app?.close());
 
   it.each([
-    ['/reports/financial/export.xlsx', 'الملخص'],
     ['/reports/sales/export.xlsx', 'الملخص'],
     ['/reports/financial-dashboard/export.xlsx', 'الملخص'],
   ])('%s still produces a valid workbook with its tables + a chart-unavailable note when charts are null', async (path, coverName) => {

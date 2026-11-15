@@ -150,7 +150,6 @@ describe('Reports module · permissions enforcement', () => {
       ['adminSummary',       'reports:operational:read'],
       ['adminSummaryXlsx',   'reports:operational:read'],
       ['salesXlsx',          'reports:sales:read'],
-      ['financialXlsx',      'reports:financial:read'],
       ['operationalXlsx',    'reports:operational:read'],
       ['financialDashboardXlsx', 'reports:financial:read'],
       ['sales',              'reports:sales:read'],

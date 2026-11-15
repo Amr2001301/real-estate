@@ -3,7 +3,6 @@ import { bonusReportHtml } from '../../bonus/bonus-report-template';
 import {
   brokerDetailReportHtml,
   brokerSummaryReportHtml,
-  topBrokersReportHtml,
 } from '../../broker-reports/broker-report-templates';
 import { installmentPlanReportHtml } from '../../installments/installment-plan-template';
 import { maintenanceReportHtml } from '../../maintenance/maintenance-report-template';
@@ -108,21 +107,20 @@ describe('presentation report templates', () => {
       },
       brand,
     );
-    expect(html).toContain('لوحة المؤشرات المالية');
+    expect(html).toContain('التقرير المالي');
     expect(html).toContain('دفعة أولى');
     expect(html).toContain('1-30 يوم');
     expect(html).not.toContain('مستحق خلال 7 أيام'); // zero → not a risk card
     noMarkup(html);
   });
 
-  it('broker summary / top brokers / one broker', () => {
-    noMarkup(brokerSummaryReportHtml({ summary, top: [topRow], periodLabel: 'كل الفترات' }, brand));
-    const top = topBrokersReportHtml(
-      { metric: 'contracts', rows: [topRow], periodLabel: 'كل الفترات' },
-      brand,
-    );
-    expect(top).toContain('مرتّب حسب العقود');
-    noMarkup(top);
+  it('broker summary (with the full ranking) / one broker', () => {
+    const summaryHtml = brokerSummaryReportHtml({ summary, top: [topRow], periodLabel: 'كل الفترات' }, brand);
+    noMarkup(summaryHtml);
+    // The ranking carries what the old «أعلى الوسطاء» report had, with a totals row.
+    expect(summaryHtml).toContain('صافي المدفوعات');
+    expect(summaryHtml).toContain('التحويل');
+    expect(summaryHtml).toContain('الإجمالي');
     const one = brokerDetailReportHtml(
       {
         broker: { name: evil, code: 'B-1', status: 'SUSPENDED' },

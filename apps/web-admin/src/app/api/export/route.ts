@@ -20,12 +20,10 @@ const ALLOWED = [
   // P15.3 — simple-table XLSX twins
   /^\/reports\/operational\/export\.xlsx$/,
   /^\/bonus-entries\/export\.xlsx$/,
-  /^\/broker-reports\/export\/top-brokers\.xlsx$/,
   /^\/broker-reports\/export\/broker\/[a-f0-9-]{36}\.xlsx$/,
   /^\/maintenance-requests\/reports\/summary\.xlsx$/,
   // P15.4 — board-style report XLSX
   /^\/reports\/sales\/export\.xlsx$/,
-  /^\/reports\/financial\/export\.xlsx$/,
   /^\/reports\/financial-dashboard\/export\.xlsx$/,
   /^\/campaigns\/report\/export\.xlsx$/,
   /^\/broker-reports\/export\/summary\.xlsx$/,
@@ -36,13 +34,10 @@ const ALLOWED = [
   // PDF exports — presentation reports (dashboard, sales, financial, brokers)
   /^\/reports\/admin-summary\/export\.pdf$/,
   /^\/reports\/sales\/export\.pdf$/,
-  /^\/reports\/financial\/export\.pdf$/,
-  /^\/reports\/broker-leaderboard\/export\.pdf$/,
   /^\/reports\/operational\/export\.pdf$/,
   /^\/reports\/financial-dashboard\/export\.pdf$/,
   /^\/campaigns\/report\/export\.pdf$/,
   /^\/broker-reports\/export\/summary\.pdf$/,
-  /^\/broker-reports\/export\/top-brokers\.pdf$/,
   /^\/broker-reports\/export\/broker\/[a-f0-9-]{36}\.pdf$/,
   /^\/maintenance-requests\/reports\/summary\.pdf$/,
   /^\/bonus-entries\/export\.pdf$/,

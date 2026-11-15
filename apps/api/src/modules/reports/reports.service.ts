@@ -34,19 +34,13 @@ import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import {
-  brokerReportHtml,
   dashboardReportHtml,
   DEPOSIT_TYPE_AR,
   financialDashboardReportHtml,
-  financialReportHtml,
   operationalReportHtml,
   salesReportHtml,
 } from './report-templates';
-import {
-  buildBrokerPdf,
-  buildFinancialPdf,
-  buildSalesPdf,
-} from '../../common/utils/pdf';
+import { buildSalesPdf } from '../../common/utils/pdf';
 import {
   XLSX_ALERT_BG,
   addBoardBanner,
@@ -2257,50 +2251,6 @@ export class ReportsService {
   }
 
   /**
-   * P15.4 — financial collections as a board-style XLSX: branded cover with an
-   * executive summary and a verified-vs-unverified deposit doughnut. Same real
-   * `financial()` data as the CSV. Chart degrades gracefully to tables-only.
-   */
-  async financialBoardXlsx(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const data = await this.financial(period, dateFrom, dateTo);
-    const unverified = Math.max(0, data.deposits - data.verified);
-
-    const statusChart = await renderShareChartPng({
-      width: 560,
-      height: 320,
-      series: [
-        { label: 'موثّقة', value: data.verified },
-        { label: 'غير موثّقة', value: unverified },
-      ],
-    });
-
-    const brand = await this.brand();
-    const currency = brand.currency;
-    const SPAN = 6;
-    const wb = createReportWorkbook();
-    const cover = wb.addWorksheet('الملخص');
-    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, brand });
-    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
-    addKpiCards(
-      cover,
-      [
-        { label: 'الفترة', value: reportPeriodLabel(period, dateFrom, dateTo) },
-        { label: 'عدد الدفعات', value: data.deposits },
-        { label: 'الدفعات الموثّقة', value: data.verified },
-        { label: 'الدفعات غير الموثّقة', value: unverified },
-        { label: 'المحصّل من السعر', value: Number(data.total), currency },
-        { label: 'الرسوم والغرامات', value: Number(data.fees), currency },
-      ],
-      { span: SPAN, perRow: 3 },
-    );
-    addChartBlock(wb, cover, 'توزيع الدفعات حسب التوثيق', statusChart, { span: SPAN, width: 560, height: 320 });
-    addFooter(cover, brand);
-
-    return workbookToBuffer(wb);
-  }
-
-  /**
    * P15.3 — styled XLSX twin of operationalCsv. Same two real reads (KPIs +
    * reservation breakdown), one sheet per table. No demo values.
    */
@@ -2388,7 +2338,7 @@ export class ReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, brand });
+    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, brand });
 
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
@@ -2565,32 +2515,6 @@ export class ReportsService {
     return this.presentPdf(html, brand, () =>
       buildSalesPdf({ contracts: data.contracts, total: Number(data.total), byProject, period, dateFrom, dateTo }, brand),
     );
-  }
-
-  async financialPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const data = await this.financial(period, dateFrom, dateTo);
-    const brand = await this.brand();
-    const html = financialReportHtml(
-      { deposits: data.deposits, verified: data.verified, total: Number(data.total), fees: Number(data.fees), periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
-      brand,
-    );
-    return this.presentPdf(html, brand, () =>
-      buildFinancialPdf(
-        { deposits: data.deposits, verified: data.verified, total: Number(data.total), period, dateFrom, dateTo },
-        brand,
-      ),
-    );
-  }
-
-  async brokerPdf(dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const brokers = (await this.brokerLeaderboard(dateFrom, dateTo)).map((b) => ({
-      brokerName: b.brokerName,
-      count: b.count,
-      commissionAmount: b.commissionAmount,
-    }));
-    const brand = await this.brand();
-    const html = brokerReportHtml({ brokers, periodLabel: reportPeriodLabel(undefined, dateFrom, dateTo) }, brand);
-    return this.presentPdf(html, brand, () => buildBrokerPdf({ brokers, dateFrom, dateTo }, brand));
   }
 
   /** A "YYYY-MM" period: that month in the company's time zone. */

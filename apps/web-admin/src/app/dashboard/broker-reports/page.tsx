@@ -166,13 +166,6 @@ export default async function AdminBrokerReportsPage({
               filenameBase="broker-summary"
               params={{ brokerId: sp.brokerId, projectId: sp.projectId, from: sp.from, to: sp.to }}
             />
-            <ExportMenu locale={locale}
-              label={m.exportTopBrokersBtn}
-              pdfPath="/broker-reports/export/top-brokers.pdf"
-              xlsxPath="/broker-reports/export/top-brokers.xlsx"
-              filenameBase="top-brokers"
-              params={{ projectId: sp.projectId, from: sp.from, to: sp.to, metric: sp.metric }}
-            />
           </div>
         }
       />

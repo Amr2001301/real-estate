@@ -12,7 +12,7 @@ import {
   reportDocument,
   section,
 } from '../../common/report-pdf/report-html';
-import { barChartSvg, compact, shareChartSvg } from '../../common/report-pdf/svg-charts';
+import { barChartSvg, shareChartSvg } from '../../common/report-pdf/svg-charts';
 import type { ReportBrand } from '../../common/utils/report-brand';
 import { formatStamp } from '../../common/utils/xlsx';
 
@@ -219,139 +219,6 @@ export function salesReportHtml(d: SalesReportData, brand: ReportBrand): string 
   });
 }
 
-// ── Financial ────────────────────────────────────────────────────────────────
-
-export interface FinancialReportData {
-  deposits: number;
-  verified: number;
-  /** Collected towards the price. */
-  total: number;
-  /** Fees & penalties collected (decided 2026-10-16: two figures). */
-  fees?: number;
-  periodLabel: string;
-}
-
-export function financialReportHtml(d: FinancialReportData, brand: ReportBrand): string {
-  const c = brand.currency;
-  const unverified = Math.max(0, d.deposits - d.verified);
-  return reportDocument({
-    brand,
-    title: 'التقرير المالي',
-    subtitle: `الفترة: ${d.periodLabel}`,
-    body: [
-      section(
-        'الملخص',
-        kpiGrid([
-          { label: 'المحصّل من السعر', value: moneyText(d.total, c) },
-          { label: 'الرسوم والغرامات', value: moneyText(d.fees ?? 0, c) },
-          { label: 'عدد الدفعات', value: countText(d.deposits) },
-          { label: 'الدفعات الموثّقة', value: countText(d.verified), tone: 'good' },
-          {
-            label: 'بانتظار التوثيق',
-            value: countText(unverified),
-            tone: unverified ? 'warn' : 'default',
-          },
-        ]),
-      ),
-      section(
-        'حالة التوثيق',
-        chartPanel(
-          `نسبة التوثيق ${percentText(d.verified, d.deposits)}`,
-          shareChartSvg({
-            series: [
-              { label: 'موثّقة', value: d.verified },
-              { label: 'بانتظار التوثيق', value: unverified },
-            ],
-            color: brand.primary,
-            width: CHART_FULL,
-          }),
-        ),
-      ),
-      section(
-        'التفاصيل',
-        dataTable(
-          [
-            { label: 'البيان', width: 2 },
-            { label: 'القيمة', numeric: true },
-          ],
-          [
-            ['إجمالي المبالغ المحصّلة', moneyText(d.total, c)],
-            ['متوسط الدفعة', d.deposits ? moneyText(Math.round(d.total / d.deposits), c) : '—'],
-            ['الدفعات الموثّقة', countText(d.verified)],
-            ['الدفعات بانتظار التوثيق', countText(unverified)],
-            ['عدد الدفعات الكلي', countText(d.deposits)],
-          ],
-        ),
-      ),
-    ].join('\n'),
-  });
-}
-
-// ── Brokers ──────────────────────────────────────────────────────────────────
-
-export interface BrokerReportData {
-  brokers: Array<{ brokerName: string; count: number; commissionAmount: number }>;
-  periodLabel: string;
-}
-
-export function brokerReportHtml(d: BrokerReportData, brand: ReportBrand): string {
-  const c = brand.currency;
-  const rows = [...d.brokers].sort((a, b) => b.commissionAmount - a.commissionAmount);
-  const total = rows.reduce((a, b) => a + b.commissionAmount, 0);
-  const count = rows.reduce((a, b) => a + b.count, 0);
-  return reportDocument({
-    brand,
-    title: 'تقرير الوسطاء',
-    subtitle: `الفترة: ${d.periodLabel}`,
-    body: [
-      section(
-        'الملخص',
-        kpiGrid([
-          { label: 'عدد الوسطاء', value: countText(rows.length) },
-          { label: 'عدد العمولات', value: countText(count) },
-          { label: 'إجمالي العمولات', value: moneyText(total, c) },
-          { label: 'متوسط العمولة', value: count ? moneyText(Math.round(total / count), c) : '—' },
-        ]),
-      ),
-      section(
-        'أعلى الوسطاء',
-        chartPanel(
-          'حسب إجمالي العمولات',
-          shareChartSvg({
-            series: rows.map((b) => ({ label: b.brokerName, value: b.commissionAmount })),
-            color: brand.primary,
-            format: compact,
-            width: CHART_FULL,
-          }),
-        ),
-      ),
-      section(
-        'الترتيب',
-        dataTable(
-          [
-            { label: '#', numeric: true, width: 0.4 },
-            { label: 'الوسيط', width: 2.4 },
-            { label: 'العمولات', numeric: true },
-            { label: 'الإجمالي', numeric: true, width: 1.5 },
-            { label: 'الحصة', numeric: true, width: 0.8 },
-          ],
-          rows.map((b, i) => [
-            i + 1,
-            b.brokerName,
-            countText(b.count),
-            moneyText(b.commissionAmount, c),
-            percentText(b.commissionAmount, total),
-          ]),
-          {
-            totals: ['', 'الإجمالي', countText(count), moneyText(total, c), total ? '100%' : '—'],
-            empty: 'لا توجد عمولات في هذه الفترة',
-          },
-        ),
-      ),
-    ].join('\n'),
-  });
-}
-
 // ── Operational ──────────────────────────────────────────────────────────────
 
 const RESERVATION_STATUS_AR: Record<string, string> = {
@@ -524,7 +391,7 @@ export function financialDashboardReportHtml(
 
   return reportDocument({
     brand,
-    title: 'لوحة المؤشرات المالية',
+    title: 'التقرير المالي',
     subtitle: d.filters.length ? d.filters.join(' · ') : 'كل المشاريع وكل الفترات',
     body: [
       section(
