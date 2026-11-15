@@ -2,6 +2,7 @@ import { Plus, AlertCircle } from 'lucide-react';
 import { activityActionLabel, monthChartLabel } from '@/lib/activity-labels';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { api, safe } from '@/lib/api';
 import { getSession, isBrokerage } from '@/lib/session';
 import { getDisabledFeatures } from '@/lib/capabilities';
@@ -179,8 +180,11 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   const session = await getSession();
   // ?day=YYYY-MM-DD picks the agenda day on the sales homes; anything else reads as today.
   const { day } = await searchParams;
+  // The platform owner has no company: its home is the platform page (the
+  // sidebar logo and breadcrumbs link here).
+  if (session?.role === 'SUPER_ADMIN') redirect('/dashboard/super-admin');
   // BRK-1: a brokerage company's home is its pipeline, whatever the role.
-  if (isBrokerage(session) && session?.role !== 'SUPER_ADMIN') return <BrokerageDashboard day={day} />;
+  if (isBrokerage(session)) return <BrokerageDashboard day={day} />;
   if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} day={day} />;
   if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard day={day} />;
 
