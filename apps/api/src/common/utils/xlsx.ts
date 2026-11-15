@@ -13,13 +13,13 @@ import { argb, fitInto, imageSize, type ReportBrand } from './report-brand';
 
 // ── Brand + palette (ARGB) ───────────────────────────────────────────────────
 export const XLSX_BRAND = 'Devora';
-export const XLSX_NAVY = 'FF1E3348'; // header fill / titles
-export const XLSX_GOLD = 'FFC99A2E'; // accent
-export const XLSX_GOLD_TINT = 'FFFBF3DE'; // totals row fill
+export const XLSX_NAVY = 'FF0F1A33'; // header fill / titles
+export const XLSX_GOLD = 'FFB8892F'; // accent
+export const XLSX_GOLD_TINT = 'FFF6EEDC'; // totals row fill
 export const XLSX_MUTED = 'FF64748B'; // secondary text
-export const XLSX_ZEBRA = 'FFF8FAFC'; // alternating row fill
-export const XLSX_CARD_BG = 'FFEEF2F7'; // KPI card fill (light slate)
-export const XLSX_CARD_BORDER = 'FFCBD5E1'; // KPI card edge
+export const XLSX_ZEBRA = 'FFFBF8F2'; // alternating row fill (cream)
+export const XLSX_CARD_BG = 'FFFBF8F2'; // KPI card fill (cream)
+export const XLSX_CARD_BORDER = 'FFE8E1D2'; // KPI card edge
 export const XLSX_ALERT_BG = 'FFFBF3DE'; // alert/risk card fill (gold tint)
 
 export const THIN_BORDER = {
@@ -117,16 +117,16 @@ export function styleHeaderCell(cell: Cell): void {
   cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
   cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_NAVY } };
   cell.alignment = { horizontal: 'center', vertical: 'middle' };
-  cell.border = THIN_BORDER;
+  cell.border = { bottom: { style: 'medium', color: { argb: XLSX_GOLD } } };
 }
 
-/** Bold gold-tinted totals row. */
+/** Bold cream totals row under a gold rule. */
 export function styleTotalsRow(row: Row): void {
   row.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: XLSX_NAVY } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_GOLD_TINT } };
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = THIN_BORDER;
+    cell.border = { top: { style: 'medium', color: { argb: XLSX_GOLD } } };
   });
 }
 
@@ -192,9 +192,12 @@ export function appendTable(
 
   rows.forEach((r, idx) => {
     const row = ws.addRow(r);
-    row.eachCell((cell) => {
-      cell.border = THIN_BORDER;
+    row.height = 20;
+    row.eachCell((cell, col) => {
+      cell.border = { bottom: { style: 'thin', color: { argb: XLSX_CARD_BORDER } } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      // The first column names the row: bold, like the HR exports.
+      if (col === 1) cell.font = { bold: true, color: { argb: XLSX_NAVY } };
       if (idx % 2 === 1) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
       }
@@ -232,15 +235,32 @@ export const DOC_TOTAL = 'FFF6EEDC';
 export const DOC_RULE = 'FFE8E1D2';
 const FONT = 'Arial';
 
-/** Split `span` columns into `n` near-equal groups ([from, to], 1-based). */
-function groups(span: number, n: number): Array<[number, number]> {
+/**
+ * Split `span` columns into one run per fact ([from, to], 1-based), each run
+ * as wide as its text needs (by the sheet's column widths), so a long value —
+ * a date and time — is never cut.
+ */
+function factRuns(ws: Worksheet, span: number, texts: string[]): Array<[number, number]> {
+  const n = texts.length;
+  if (n === 0) return [];
+  const widths = Array.from({ length: span }, (_, i) => ws.getColumn(i + 1).width ?? 12);
+  const total = widths.reduce((a, w) => a + w, 0);
+  const need = texts.map((t) => Math.max(8, t.length * 1.15));
+  const sumNeed = need.reduce((a, w) => a + w, 0);
   const out: Array<[number, number]> = [];
-  let from = 1;
+  let col = 1;
   for (let i = 0; i < n; i++) {
-    const width = Math.floor(span / n) + (i < span % n ? 1 : 0);
-    const to = Math.max(from, from + width - 1);
-    out.push([from, Math.min(to, span)]);
-    from = to + 1;
+    const left = n - i - 1; // runs still to place after this one
+    const target = (need[i]! / sumNeed) * total;
+    let to = col;
+    let acc = widths[col - 1]!;
+    while (to < span - left && acc < target) {
+      to++;
+      acc += widths[to - 1]!;
+    }
+    if (i === n - 1) to = span;
+    out.push([col, to]);
+    col = to + 1;
   }
   return out;
 }
@@ -264,7 +284,8 @@ export function addDocumentHeader(
 
   ws.mergeCells(3, 1, 3, span);
   const t = ws.getCell(3, 1);
-  t.value = opts.title;
+  // RLM first: a title with a Latin code («عقد E2E-…») keeps Arabic order.
+  t.value = `\u200f${opts.title}`;
   t.font = { name: FONT, bold: true, size: 20, color: { argb: DOC_INK } };
   t.alignment = { horizontal: 'right', vertical: 'middle' };
   ws.getRow(3).height = 36;
@@ -276,7 +297,7 @@ export function addDocumentHeader(
   ws.getRow(5).height = 12;
 
   const facts = opts.facts.slice(0, Math.min(4, span));
-  groups(span, facts.length).forEach(([from, to], i) => {
+  factRuns(ws, span, facts.map(([l, v]) => (v.length > l.length ? v : l))).forEach(([from, to], i) => {
     const [label, value] = facts[i]!;
     if (to > from) {
       ws.mergeCells(6, from, 6, to);
@@ -289,7 +310,8 @@ export function addDocumentHeader(
     v.value = value;
     v.font = { name: FONT, bold: true, size: 12, color: { argb: DOC_INK } };
     for (const cell of [l, v]) {
-      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+      // shrinkToFit: a long value (a date and time) never spills or gets cut.
+      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1, shrinkToFit: true };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DOC_CREAM } };
     }
   });
@@ -409,8 +431,12 @@ export function addTitledTable(
 ): void {
   ws.columns = opts.widths.map((w) => ({ width: w }));
   const applied = (opts.filters ?? []).filter(([, v]) => v !== '' && v != null);
+  // A narrow sheet (a schedule) has no room for «كل البيانات»: show the
+  // filter card only when a filter is applied or the sheet is wide.
   const facts: Array<[string, string]> = [
-    ['التصفية', applied.length ? applied.map(([k, v]) => `${k}: ${v}`).join(' · ') : 'كل البيانات'],
+    ...(applied.length || opts.headers.length > 6
+      ? ([['التصفية', applied.length ? applied.map(([k, v]) => `${k}: ${v}`).join(' · ') : 'كل البيانات']] as Array<[string, string]>)
+      : []),
     ['تاريخ الإصدار', formatStamp(new Date(), opts.brand?.timezone)],
     ['عدد السجلات', String(opts.rows.length)],
   ];
@@ -486,45 +512,44 @@ export function addBoardBanner(
   span: number,
   opts?: { wb?: Workbook; logo?: Buffer | null; currency?: string; brand?: ReportBrand },
 ): void {
+  // The document look (as the HR exports): white, company line, big title,
+  // the issue line, a gold rule under it — the logo on the opposite side.
   const brand = opts?.brand;
-  const band = brand ? argb(brand.primary) : XLSX_NAVY;
-  const accent = brand ? argb(brand.accent) : XLSX_GOLD;
+  const ink = brand ? argb(brand.primary) : DOC_INK;
+  const rule = brand ? argb(brand.accent) : DOC_GOLD;
   const currency = brand?.currency ?? opts?.currency;
   ws.mergeCells(1, 1, 1, span);
   ws.mergeCells(2, 1, 2, span);
   ws.mergeCells(3, 1, 3, span);
-  // Navy fill across every cell of the band so the colour spans the full width.
-  for (let r = 1; r <= 3; r++) {
-    for (let c = 1; c <= span; c++) {
-      ws.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: band } };
-    }
-  }
+
   const name = ws.getCell(1, 1);
   name.value = brand ? brand.name : XLSX_BRAND;
-  name.font = { bold: true, size: 11, color: { argb: accent } };
-  name.alignment = { horizontal: 'right', vertical: 'middle' };
+  name.font = { bold: true, size: 12, color: { argb: DOC_SUB } };
+  name.alignment = { horizontal: 'right', vertical: 'bottom' };
 
   const t = ws.getCell(2, 1);
   t.value = title;
-  t.font = { bold: true, size: 22, color: { argb: 'FFFFFFFF' } };
+  t.font = { bold: true, size: 20, color: { argb: ink } };
   t.alignment = { horizontal: 'right', vertical: 'middle' };
 
   const d = ws.getCell(3, 1);
-  d.value = `تاريخ التوليد: ${formatStamp(new Date(), brand?.timezone)}${currency ? ` · ${currencyNote(currency)}` : ''}`;
-  d.font = { italic: true, size: 10, color: { argb: 'FFCBD5E1' } };
-  d.alignment = { horizontal: 'right', vertical: 'middle' };
+  d.value = `تاريخ الإصدار: ${formatStamp(new Date(), brand?.timezone)}${currency ? ` · ${currencyNote(currency)}` : ''}`;
+  d.font = { size: 10, color: { argb: DOC_LABEL } };
+  d.alignment = { horizontal: 'right', vertical: 'top' };
+  for (let c = 1; c <= span; c++) {
+    ws.getCell(3, c).border = { bottom: { style: 'medium', color: { argb: rule } } };
+  }
 
-  ws.getRow(1).height = 22;
-  ws.getRow(2).height = 40;
-  ws.getRow(3).height = 20;
+  ws.getRow(1).height = 24;
+  ws.getRow(2).height = 36;
+  ws.getRow(3).height = 22;
 
   // The company logo when there is one; the platform logo only for unbranded files.
   const logo = brand ? brand.logo : opts?.logo ? { buffer: opts.logo, extension: 'png' as const } : null;
   if (opts?.wb && logo) {
     const id = opts.wb.addImage({ buffer: logo.buffer as unknown as ArrayBuffer, extension: logo.extension });
-    // Anchor on the leading column of the band (the side opposite the
-    // right-aligned brand text); the navy logo backdrop blends into the band.
-    const ext = brand ? fitInto(imageSize(logo.buffer), { width: 160, height: 70 }) : { width: 78, height: 78 };
+    // Anchor on the leading column (the side opposite the right-aligned text).
+    const ext = brand ? fitInto(imageSize(logo.buffer), { width: 150, height: 60 }) : { width: 60, height: 60 };
     ws.addImage(id, { tl: { col: span - 1, row: 0 }, ext });
   }
 }

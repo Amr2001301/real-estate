@@ -111,7 +111,7 @@ describe('GET /bonus-entries/export.xlsx (P15.3)', () => {
     const all = flat.join(' ');
     expect(all).toContain('تقرير مكافآت المندوبين');
     expect(all).toContain('منى المبيعات'); // real row
-    expect(all).toContain('عوامل التصفية'); // applied filters surfaced
+    expect(all).toContain('التصفية'); // applied filters surfaced
     expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
   });
 

@@ -251,7 +251,7 @@ describe('GET /portal/performance/export.xlsx · controller wiring', () => {
     wb.eachSheet((ws) => ws.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? '')))));
     const all = flat.join(' ');
     expect(all).toContain('تقرير الوسيط');
-    expect(all).toContain('عوامل التصفية');
+    expect(all).toContain('التصفية');
     expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
   });
 
