@@ -20,10 +20,10 @@ import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import { fallbackBrand } from '../../common/utils/report-brand';
 import { getCompanyCurrency } from '../../common/currency/currency';
-import { maintenanceReportHtml } from './maintenance-report-template';
+import { maintenanceReportHtml, openRequestLines } from './maintenance-report-template';
 import {
   addFooter,
-  addTable,
+  excelLocalDate,
   addTitledTable,
   createReportWorkbook,
   workbookToBuffer,
@@ -1371,6 +1371,75 @@ export class MaintenanceService {
   // warranties. avgResolutionHours is null: the schema has no resolvedAt/
   // closedAt timestamp, so resolution duration can't be derived reliably
   // (updatedAt is bumped by any edit). See Batch 14 report.
+  /** The report's filters (summary and lists alike). */
+  private reportWhere(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }): Prisma.MaintenanceRequestWhereInput {
+    return {
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(opts.reviewStatus ? { reviewStatus: opts.reviewStatus } : {}),
+      ...(opts.assignedAdminId ? { assignedAdminId: opts.assignedAdminId } : {}),
+      // A request "has" a category when one of its items references it.
+      ...(opts.categoryId ? { items: { some: { categoryId: opts.categoryId } } } : {}),
+      ...this.createdAtRange(opts.from, opts.to),
+    };
+  }
+
+  /**
+   * The report's open requests, one line each: not resolved, closed or
+   * rejected, within the report's filters. Oldest first, most overdue on
+   * top of its day. Company-scoped.
+   */
+  async openRequests(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }) {
+    const companyId = getTenantContext()?.companyId;
+    const rows = await this.prisma.maintenanceRequest.findMany({
+      where: {
+        AND: [
+          this.reportWhere(opts),
+          ...(companyId ? [{ companyId }] : []),
+          {
+            status: { in: [MaintenanceStatus.OPEN, MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS] },
+            reviewStatus: { not: MaintenanceReviewStatus.REJECTED },
+          },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 2000,
+      select: {
+        createdAt: true,
+        status: true,
+        reviewStatus: true,
+        priority: true,
+        dueAt: true,
+        description: true,
+        complaintAt: true,
+        customer: { select: { fullName: true, phone: true } },
+        unit: {
+          select: {
+            code: true,
+            building: { select: { phase: { select: { project: { select: { name: true } } } } } },
+          },
+        },
+        category: { select: { name: true } },
+        items: { select: { category: { select: { name: true } } } },
+        assignedAdmin: { select: { fullName: true } },
+      },
+    });
+    return openRequestLines(rows, new Date());
+  }
+
   async reportsSummary(opts: {
     from?: string;
     to?: string;
@@ -1379,14 +1448,7 @@ export class MaintenanceService {
     reviewStatus?: MaintenanceReviewStatus;
     status?: MaintenanceStatus;
   }) {
-    const where: Prisma.MaintenanceRequestWhereInput = {
-      ...(opts.status ? { status: opts.status } : {}),
-      ...(opts.reviewStatus ? { reviewStatus: opts.reviewStatus } : {}),
-      ...(opts.assignedAdminId ? { assignedAdminId: opts.assignedAdminId } : {}),
-      // A request "has" a category when one of its items references it.
-      ...(opts.categoryId ? { items: { some: { categoryId: opts.categoryId } } } : {}),
-      ...this.createdAtRange(opts.from, opts.to),
-    };
+    const where = this.reportWhere(opts);
 
     const requests = await this.prisma.maintenanceRequest.findMany({
       where,
@@ -1568,11 +1630,17 @@ export class MaintenanceService {
     status?: MaintenanceStatus;
   }): Promise<Buffer> {
     const companyId = getTenantContext()?.companyId;
-    const [r, brand] = await Promise.all([
+    const [r, brand, open] = await Promise.all([
       this.reportsSummary(opts),
       this.reportBrand?.forCompany(companyId),
+      this.openRequests(opts),
     ]);
     const report = brand ?? fallbackBrand(await getCompanyCurrency(this.prisma, companyId));
+    const timeZone = report.timezone;
+    const day = (d: Date) =>
+      timeZone
+        ? new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d)
+        : d.toISOString().slice(0, 10);
     const txAr = (v: unknown): string => {
       if (!v) return '—';
       if (typeof v === 'string') return v;
@@ -1602,6 +1670,8 @@ export class MaintenanceService {
           warrantyEnd: w.warrantyEnd ? new Date(w.warrantyEnd).toISOString().slice(0, 10) : '—',
         })),
         filters,
+        open,
+        day,
       },
       report,
     );
@@ -1671,29 +1741,74 @@ export class MaintenanceService {
     });
     addFooter(sum, brand);
 
-    const cat = wb.addWorksheet('حسب الفئة');
-    addTable(
-      cat,
-      ['الفئة', 'العدد', 'متأخرة', 'خارج الضمان'],
-      r.byCategory.map((c) => [txAr(c.categoryName), c.count, c.overdueCount, c.outOfWarrantyCount]),
-      [28, 12, 12, 14],
-    );
+    const appliedFilters: Array<[string, string]> = [
+      ['من', opts.from ?? ''],
+      ['إلى', opts.to ?? ''],
+      ['الحالة', opts.status ? (STATUS_AR[opts.status] ?? opts.status) : ''],
+      ['حالة المراجعة', opts.reviewStatus ? (REVIEW_AR[opts.reviewStatus] ?? opts.reviewStatus) : ''],
+    ];
+    const sheet = (name: string, o: Omit<Parameters<typeof addTitledTable>[1], 'brand' | 'filters'>) => {
+      const ws = wb.addWorksheet(name);
+      addTitledTable(ws, { ...o, brand, filters: appliedFilters });
+      addFooter(ws, brand);
+      return ws;
+    };
 
-    const assignee = wb.addWorksheet('حسب المسند إليه');
-    addTable(
-      assignee,
-      ['المسند إليه', 'العدد', 'متأخرة', 'قيد التنفيذ'],
-      r.byAssignee.map((a) => [a.name, a.count, a.overdueCount, a.inProgressCount]),
-      [28, 12, 12, 14],
-    );
+    sheet('حسب الفئة', {
+      title: 'الطلبات حسب الفئة',
+      headers: ['الفئة', 'العدد', 'متأخرة', 'خارج الضمان'],
+      rows: r.byCategory.map((c) => [txAr(c.categoryName), c.count, c.overdueCount, c.outOfWarrantyCount]),
+      widths: [28, 12, 12, 14],
+      numeric: [2, 3, 4],
+      emptyText: 'لا توجد طلبات',
+    });
 
-    const expiring = wb.addWorksheet('ضمانات تنتهي قريباً');
-    addTable(
-      expiring,
-      ['الوحدة', 'الفئة', 'نهاية الضمان'],
-      r.expiringWarranties.map((e) => [e.unitCode, txAr(e.categoryName), fmtDate(e.warrantyEnd)]),
-      [18, 24, 16],
-    );
+    sheet('حسب المسند إليه', {
+      title: 'الطلبات حسب المسند إليه',
+      headers: ['المسند إليه', 'العدد', 'متأخرة', 'قيد التنفيذ'],
+      rows: r.byAssignee.map((a) => [a.name, a.count, a.overdueCount, a.inProgressCount]),
+      widths: [28, 12, 12, 14],
+      numeric: [2, 3, 4],
+      emptyText: 'لا توجد طلبات مسندة',
+    });
+
+    sheet('ضمانات تنتهي قريباً', {
+      title: 'ضمانات تنتهي خلال 30 يومًا',
+      headers: ['الوحدة', 'الفئة', 'نهاية الضمان'],
+      rows: r.expiringWarranties.map((e) => [e.unitCode, txAr(e.categoryName), fmtDate(e.warrantyEnd)]),
+      widths: [18, 24, 16],
+      numeric: [1, 3],
+      emptyText: 'لا توجد ضمانات تنتهي قريباً',
+    });
+
+    // The open requests, every one, most overdue first.
+    const open = await this.openRequests(opts);
+    const openWs = sheet('الطلبات المفتوحة', {
+      title: 'الطلبات المفتوحة',
+      headers: ['تاريخ الطلب', 'العميل', 'الهاتف', 'الوحدة', 'المشروع', 'الفئة', 'الأولوية', 'الحالة', 'المسند إليه', 'الموعد', 'أيام التأخير', 'مفتوح منذ (يوم)', 'شكوى', 'الوصف'],
+      rows: open.map((o) => [
+        excelLocalDate(o.createdAt, brand?.timezone),
+        o.customer,
+        o.phone || '—',
+        o.unit,
+        o.project,
+        o.category,
+        o.priority,
+        o.status,
+        o.assignee,
+        o.dueAt ? excelLocalDate(o.dueAt, brand?.timezone) : '—',
+        o.daysLate,
+        o.daysOpen,
+        o.complaint ? 'نعم' : '',
+        o.description,
+      ]),
+      widths: [13, 22, 16, 15, 22, 18, 11, 13, 18, 13, 11, 13, 8, 40],
+      numeric: [1, 3, 10, 11, 12],
+      totals: ['الإجمالي', open.length, null, null, null, null, null, null, 'متأخرة', open.filter((o) => o.daysLate > 0).length, null, null, null, null],
+      emptyText: 'لا توجد طلبات مفتوحة',
+    });
+    openWs.getColumn(1).numFmt = 'yyyy-mm-dd';
+    openWs.getColumn(10).numFmt = 'yyyy-mm-dd';
 
     return workbookToBuffer(wb);
   }

@@ -117,13 +117,13 @@ describe('GET /maintenance-requests/reports/summary.xlsx (P15.3)', () => {
     expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
   });
 
-  it('opens with the four expected sheets and no fake/demo values', async () => {
+  it('opens with the five expected sheets and no fake/demo values', async () => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
     const res = await fetchXlsx(app, '/maintenance-requests/reports/summary.xlsx?status=OPEN').expect(200);
     const wb = new Workbook();
     await wb.xlsx.load(res.body as unknown as ArrayBuffer);
     expect(wb.worksheets.map((w) => w.name)).toEqual([
-      'الملخص', 'حسب الفئة', 'حسب المسند إليه', 'ضمانات تنتهي قريباً',
+      'الملخص', 'حسب الفئة', 'حسب المسند إليه', 'ضمانات تنتهي قريباً', 'الطلبات المفتوحة',
     ]);
     const flat: string[] = [];
     wb.eachSheet((ws) => ws.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? '')))));
@@ -131,6 +131,7 @@ describe('GET /maintenance-requests/reports/summary.xlsx (P15.3)', () => {
     expect(all).toContain('تقرير الصيانة');
     expect(all).toContain('إجمالي الطلبات');
     expect(all).toContain('التصفية'); // applied status filter surfaced
+    expect(all).toContain('لا توجد طلبات مفتوحة');
     expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
   });
 
