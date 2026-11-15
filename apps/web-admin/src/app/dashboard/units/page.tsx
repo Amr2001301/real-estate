@@ -159,7 +159,6 @@ export default async function UnitsPage({
                 locale={locale}
                 filenameBase="units"
                 xlsxPath="/units/export.xlsx"
-                csvPath="/units/export.csv"
                 params={{
                   projectId: sp.projectId, status: sp.status, bedrooms: sp.bedrooms,
                   priceMin: sp.priceMin, priceMax: sp.priceMax, areaMin: sp.areaMin, areaMax: sp.areaMax,

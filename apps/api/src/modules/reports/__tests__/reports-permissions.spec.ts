@@ -148,8 +148,11 @@ describe('Reports module · permissions enforcement', () => {
     it.each<[string, string]>([
       ['kpis',               'reports:operational:read'],
       ['adminSummary',       'reports:operational:read'],
-      ['adminSummaryCsv',    'reports:operational:read'],
       ['adminSummaryXlsx',   'reports:operational:read'],
+      ['salesXlsx',          'reports:sales:read'],
+      ['financialXlsx',      'reports:financial:read'],
+      ['operationalXlsx',    'reports:operational:read'],
+      ['financialDashboardXlsx', 'reports:financial:read'],
       ['sales',              'reports:sales:read'],
       ['financial',          'reports:financial:read'],
       ['reservations',       'reports:operational:read'],

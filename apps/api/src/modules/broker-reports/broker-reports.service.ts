@@ -14,7 +14,6 @@ import {
   TopBrokersQueryDto,
   TopMetric,
 } from './dto/broker-report.dto';
-import { toCsv } from '../../common/utils/csv';
 import { getCompanyCurrency } from '../../common/currency/currency';
 import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand';
 import { ReportBrandService } from '../company-branding/report-brand.service';
@@ -609,42 +608,6 @@ export class BrokerReportsService {
 
   // ── CSV exports ─────────────────────────────────────────────────────────
 
-  async summaryCsv(query: BrokerReportsSummaryQueryDto) {
-    const s = await this.summary(query);
-    const rows: [string, string | number][] = [
-      ['الوسطاء الإجماليون', s.totalBrokers],
-      ['الوسطاء النشطون', s.activeBrokers],
-      ['وكلاء الوسطاء', s.totalBrokerAgents],
-      ['الفرص المرسلة', s.leadsSubmitted],
-      ['الفرص المعتمدة', s.leadsApproved],
-      ['الفرص المرفوضة', s.leadsRejected],
-      ['الفرص المكررة', s.leadsDuplicate],
-      ['الزيارات المطلوبة', s.visitsRequested],
-      ['الحجوزات المُنشأة', s.reservationsCreated],
-      ['الحجوزات المعتمدة', s.reservationsApproved],
-      ['الحجوزات الملغاة', s.reservationsCancelled],
-      ['العقود المُنشأة', s.contractsCreated],
-      ['العقود الموقّعة', s.contractsSigned],
-      ['إجمالي المبيعات', s.salesGross],
-      ['عمولات قيد الانتظار', s.commissionsPending],
-      ['عمولات معتمدة', s.commissionsApproved],
-      ['عمولات مرفوضة', s.commissionsRejected],
-      ['عمولات ملغاة', s.commissionsCancelled],
-      ['إجمالي العمولات', s.commissionsGross],
-      ['صافي العمولات', s.commissionsNet],
-      ['مدفوعات مسودة', s.payoutsDraft],
-      ['مدفوعات معتمدة', s.payoutsApproved],
-      ['مدفوعات قيد التنفيذ', s.payoutsProcessing],
-      ['مدفوعات مدفوعة', s.payoutsPaid],
-      ['صافي المدفوعات', s.payoutsTotalNet],
-      ['نسبة الفرصة → الحجز', formatRate(s.leadToReservationRate)],
-      ['نسبة الحجز → العقد', formatRate(s.reservationToContractRate)],
-      ['نسبة العقد الموقّع', formatRate(s.signedContractRate)],
-      ['نسبة العقد → الدفع', formatRate(s.contractToPaidPayoutRate)],
-    ];
-    return toCsv(['المؤشر', 'القيمة'], rows);
-  }
-
   /**
    * P15.4 — broker performance as a board-style XLSX: branded cover with an
    * executive summary + a top-brokers (by sales) bar chart, plus a top-brokers
@@ -700,43 +663,6 @@ export class BrokerReportsService {
     formatMoneyColumns(topSheet, [3, 4, 5], currency);
 
     return workbookToBuffer(wb);
-  }
-
-  async topBrokersCsv(query: TopBrokersQueryDto) {
-    const { data, metric } = await this.topBrokers(query);
-    const headers = [
-      'الوسيط',
-      'الكود',
-      'الحالة',
-      'فرص',
-      'فرص معتمدة',
-      'حجوزات',
-      'عقود',
-      'عقود موقّعة',
-      'إجمالي المبيعات',
-      'إجمالي العمولات',
-      'صافي العمولات',
-      'صافي المدفوعات',
-      'نسبة التحويل',
-      'مرتب حسب',
-    ];
-    const rows = data.map((r) => [
-      r.companyName,
-      r.code,
-      r.status,
-      r.leads,
-      r.approvedLeads,
-      r.reservations,
-      r.contracts,
-      r.contractsSigned,
-      r.salesGross,
-      r.commissionGross,
-      r.commissionNet,
-      r.payoutNet,
-      formatRate(r.conversionRate),
-      metric,
-    ]);
-    return toCsv(headers, rows);
   }
 
   // ── Presentation PDFs (HTML → Chromium; 503 when unavailable) ─────────────
@@ -805,110 +731,6 @@ export class BrokerReportsService {
       detail.agentBreakdown = detail.agentBreakdown.filter((a) => a.brokerAgentId === opts.onlyAgent);
     }
     return detail;
-  }
-
-  async brokerDetailCsv(brokerId: string, query: BrokerDetailReportQueryDto, opts: DetailExportScope = {}) {
-    const detail = await this.detailForExport(brokerId, query, opts);
-    const s = detail.summary;
-    const headerRows: [string, string | number | null][] = [
-      ['الوسيط', this.localizedName(detail.broker.companyName) ?? ''],
-      ['الكود', detail.broker.code ?? ''],
-      ['الحالة', detail.broker.status],
-      ['', ''],
-      ['الفترة من', query.from ?? ''],
-      ['الفترة إلى', query.to ?? ''],
-      ['', ''],
-      ['فرص مرسلة', s.leadsSubmitted],
-      ['فرص معتمدة', s.leadsApproved],
-      ['حجوزات', s.reservationsCreated],
-      ['عقود', s.contractsCreated],
-      ['عقود موقّعة', s.contractsSigned],
-      ['إجمالي المبيعات', s.salesGross],
-      ['صافي العمولات', s.commissionsNet],
-      ['صافي المدفوعات', s.payoutsTotalNet],
-      ['نسبة الفرصة → الحجز', formatRate(s.leadToReservationRate)],
-      ['نسبة الحجز → العقد', formatRate(s.reservationToContractRate)],
-      ['نسبة العقد الموقّع', formatRate(s.signedContractRate)],
-      ['نسبة العقد → الدفع', formatRate(s.contractToPaidPayoutRate)],
-    ];
-
-    const sections: string[] = [];
-    sections.push(toCsv(['المؤشر', 'القيمة'], headerRows));
-
-    if (detail.monthlyTrend.length > 0) {
-      sections.push(
-        toCsv(
-          ['الشهر', 'حجوزات', 'عقود موقّعة', 'صافي العمولات', 'صافي المدفوعات'],
-          detail.monthlyTrend.map((m) => [
-            m.label,
-            m.reservations,
-            m.contractsSigned,
-            m.commissionsNet,
-            m.payoutsNet,
-          ]),
-        ),
-      );
-    }
-
-    if (detail.agentBreakdown.length > 0) {
-      sections.push(
-        toCsv(
-          [
-            'الوكيل',
-            'البريد',
-            'الهاتف',
-            'فرص',
-            'حجوزات',
-            'عقود',
-            'عقود موقّعة',
-            'إجمالي المبيعات',
-            'صافي العمولات',
-            'صافي المدفوعات',
-          ],
-          detail.agentBreakdown.map((a) => [
-            a.fullName,
-            a.email,
-            a.phone,
-            a.leadsSubmitted,
-            a.reservations,
-            a.contracts,
-            a.contractsSigned,
-            a.salesGross,
-            a.commissionNet,
-            a.payoutNet,
-          ]),
-        ),
-      );
-    }
-
-    if (detail.projectBreakdown.length > 0) {
-      sections.push(
-        toCsv(
-          [
-            'المشروع',
-            'المدينة',
-            'عدد الوسطاء',
-            'عقود',
-            'عقود موقّعة',
-            'إجمالي المبيعات',
-            'صافي العمولات',
-            'صافي المدفوعات',
-          ],
-          detail.projectBreakdown.map((p) => [
-            this.localizedName(p.projectName),
-            this.localizedName(p.city),
-            p.brokerCount,
-            p.contracts,
-            p.contractsSigned,
-            p.salesGross,
-            p.commissionNet,
-            p.payoutNet,
-          ]),
-        ),
-      );
-    }
-
-    return sections.join('\r\n\r\n');
   }
 
   /**

@@ -138,7 +138,6 @@ export default async function InventoryPage({
                 locale={locale}
                 filenameBase="inventory"
                 xlsxPath="/units/export.xlsx"
-                csvPath="/units/export.csv"
                 params={{ status: status === 'all' ? undefined : status, projectId: projectId || undefined }}
               />
             )}

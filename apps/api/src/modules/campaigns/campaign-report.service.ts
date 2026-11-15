@@ -77,7 +77,8 @@ function finish<T extends CampaignFigures>(f: T): T {
   f.revenue = round2(f.revenue);
   f.cpl = f.leads > 0 ? round2(f.spend / f.leads) : null;
   f.cpa = f.sales > 0 ? round2(f.spend / f.sales) : null;
-  f.roi = f.spend > 0 ? Math.round(((f.revenue - f.spend) / f.spend) * 1000) / 10 : null;
+  // No sale yet → no return to measure: «—», not a frightening «-100%».
+  f.roi = f.spend > 0 && f.sales > 0 ? Math.round(((f.revenue - f.spend) / f.spend) * 1000) / 10 : null;
   f.conversion = pct(f.sales, f.leads);
   return f;
 }

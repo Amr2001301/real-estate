@@ -1,4 +1,3 @@
-import { toCsv, type CsvCell } from './csv';
 import { MAX_PAGE_SIZE } from './pagination';
 import type { ReportBrand } from './report-brand';
 import { addFooter, addTitledTable, createReportWorkbook, formatMoneyColumns, workbookToBuffer } from './xlsx';
@@ -57,13 +56,6 @@ export async function listXlsx<T>(opts: {
   if (money.length && opts.brand) formatMoneyColumns(ws, money, opts.brand.currency);
   addFooter(ws, opts.brand);
   return workbookToBuffer(wb);
-}
-
-export function listCsv<T>(columns: ListColumn<T>[], rows: T[]): string {
-  return toCsv(
-    columns.map((c) => c.header),
-    rows.map((r) => columns.map((c) => (c.value(r) ?? '') as CsvCell)),
-  );
 }
 
 /** "2026-10-09" for a date column (locale-independent, sorts correctly). */

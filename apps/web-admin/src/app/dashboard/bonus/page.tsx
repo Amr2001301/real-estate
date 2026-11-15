@@ -232,7 +232,6 @@ export default async function BonusPage({
             <ExportMenu locale={locale}
               pdfPath="/bonus-entries/export.pdf"
               xlsxPath="/bonus-entries/export.xlsx"
-              csvPath="/bonus-entries/export.csv"
               filenameBase="bonus-entries"
               params={{ salesId: sp.salesId, status: sp.status, period: sp.period }}
             />

@@ -140,16 +140,6 @@ export class UnitsController {
     return new StreamableFile(await this.units.exportXlsx(query));
   }
 
-  @Roles(UserRole.ADMIN)
-  @GrantedBy('units:export')
-  @Permissions('units:read')
-  @Get('units/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="units.csv"')
-  exportCsv(@Query() query: UnitQueryDto): Promise<string> {
-    return this.units.exportCsv(query);
-  }
-
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('units:read')
   @Get('units/inventory-matrix')

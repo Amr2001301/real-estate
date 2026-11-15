@@ -6,7 +6,7 @@ const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 /**
  * P15.2 — authenticated proxy for BINARY exports (styled XLSX, and PDF later).
  *
- * Unlike /api/csv (which is text-only and forces text/csv), this route reads the
+ * This route reads the
  * upstream body as an ArrayBuffer and streams the raw bytes back untouched — it
  * never calls .json()/.text(), so a StreamableFile XLSX is delivered intact and
  * never serialized into a JSON cell. Content-Type is taken from the upstream

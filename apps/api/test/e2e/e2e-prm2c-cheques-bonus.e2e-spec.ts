@@ -82,7 +82,7 @@ describe('PRM2c — cheques and bonus open by their codes (e2e)', () => {
   it('PRM2c-1: without the codes the cheques, the rules and the export stay closed; the rep sees only their own bonus', async () => {
     await as(repToken, http().get('/v1/payment-instruments')).expect(403);
     await as(repToken, http().get('/v1/bonus-rules')).expect(403);
-    await as(repToken, http().get('/v1/bonus-entries/export.csv')).expect(403);
+    await as(repToken, http().get('/v1/bonus-entries/export.xlsx')).expect(403);
     const mine = (await as(repToken, http().get('/v1/bonus-entries')).expect(200)).body as Array<{
       id: string;
     }>;
@@ -118,7 +118,7 @@ describe('PRM2c — cheques and bonus open by their codes (e2e)', () => {
       .body as Array<{ id: string }>;
     expect(mine.map((e) => e.id).sort()).toEqual(admins.map((e) => e.id).sort());
     expect(mine.map((e) => e.id)).toContain(entryId);
-    await as(repToken, http().get('/v1/bonus-entries/export.csv')).expect(200);
+    await as(repToken, http().get('/v1/bonus-entries/export.xlsx')).expect(200);
     await grant(['bonus:entries:read:all'], true);
   });
 

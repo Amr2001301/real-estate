@@ -285,18 +285,8 @@ export class BrokerPortalController {
     return this.portalPerformance.agents(scope, query);
   }
 
-  @Get('performance/export.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="my-performance.csv"')
-  performanceExport(
-    @BrokerScope() scope: BrokerScopeContext,
-    @Query() query: PortalPerformanceQueryDto,
-  ) {
-    return this.portalPerformance.exportCsv(scope, query);
-  }
-
   // P15.5 — styled XLSX twin (default UI download). Same BROKER role +
-  // BrokerScopeGuard + per-agent scoping; the CSV above stays the raw fallback.
+  // BrokerScopeGuard + per-agent scoping.
   // The broker firm is always scope.brokerId (from the token), so a broker can
   // only export their own performance — no cross-broker access.
   @Get('performance/export.xlsx')

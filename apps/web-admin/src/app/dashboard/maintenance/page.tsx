@@ -200,7 +200,6 @@ export default async function MaintenancePage({
             <ExportMenu locale={locale}
               pdfPath="/maintenance-requests/reports/summary.pdf"
               xlsxPath="/maintenance-requests/reports/summary.xlsx"
-              csvPath="/maintenance-requests/reports/summary.csv"
               filenameBase="maintenance-report"
               params={csvParams}
             />

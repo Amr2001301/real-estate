@@ -240,10 +240,10 @@ export default async function ReportsPage({
             locale={locale}
             label={m.exportAll}
             groups={[
-              ...(canSales ? [{ label: m.exportSales, filenameBase: 'sales-report', xlsxPath: '/reports/sales/export.xlsx', pdfPath: '/reports/sales/export.pdf', csvPath: '/reports/sales/export.csv', params: exportParams }] : []),
-              ...(canFin ? [{ label: m.exportFinancial, filenameBase: 'financial-report', xlsxPath: '/reports/financial/export.xlsx', pdfPath: '/reports/financial/export.pdf', csvPath: '/reports/financial/export.csv', params: exportParams }] : []),
+              ...(canSales ? [{ label: m.exportSales, filenameBase: 'sales-report', xlsxPath: '/reports/sales/export.xlsx', pdfPath: '/reports/sales/export.pdf', params: exportParams }] : []),
+              ...(canFin ? [{ label: m.exportFinancial, filenameBase: 'financial-report', xlsxPath: '/reports/financial/export.xlsx', pdfPath: '/reports/financial/export.pdf', params: exportParams }] : []),
               ...(canSales ? [{ label: m.exportBrokers, filenameBase: 'broker-report', pdfPath: '/reports/broker-leaderboard/export.pdf', params: exportParams }] : []),
-              ...(canOps ? [{ label: m.exportOperational, filenameBase: 'operational-report', pdfPath: '/reports/operational/export.pdf', xlsxPath: '/reports/operational/export.xlsx', csvPath: '/reports/operational/export.csv' }] : []),
+              ...(canOps ? [{ label: m.exportOperational, filenameBase: 'operational-report', pdfPath: '/reports/operational/export.pdf', xlsxPath: '/reports/operational/export.xlsx' }] : []),
             ]}
           />
         }

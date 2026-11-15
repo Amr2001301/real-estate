@@ -290,7 +290,6 @@ export default async function FinancialReportsPage({
             label={m.exportBtn}
             pdfPath="/reports/financial-dashboard/export.pdf"
             xlsxPath="/reports/financial-dashboard/export.xlsx"
-            csvPath="/reports/financial-dashboard/export.csv"
             filenameBase="financial-dashboard"
             params={{ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }}
           />

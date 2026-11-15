@@ -43,21 +43,8 @@ export class BrokerPortalPerformanceService {
     };
   }
 
-  async exportCsv(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
-    // Same scoping as forBroker — never leak firm-wide numbers to non-managers.
-    const { brokerAgentId, canSeeAllAgents, canViewCommissions } = await this.resolveAgentScope(
-      scope,
-      query.brokerAgentId,
-    );
-    return this.reports.brokerDetailCsv(
-      scope.brokerId,
-      { from: query.from, to: query.to, projectId: query.projectId, brokerAgentId },
-      this.agentRows(scope, canSeeAllAgents, canViewCommissions),
-    );
-  }
-
   /**
-   * P15.5 — styled XLSX twin of exportCsv. Identical scoping: the broker firm is
+   * P15.5 — styled XLSX of the broker's own performance. Scoping: the broker firm is
    * always `scope.brokerId` (from the token, never a request param), and a
    * non-manager is pinned to their own brokerAgentId — so a broker can only ever
    * export their own firm's slice, with no cross-broker leakage.

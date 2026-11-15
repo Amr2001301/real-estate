@@ -213,7 +213,6 @@ export default async function PortalPerformancePage({
           <ExportMenu
             pdfPath="/portal/performance/export.pdf"
             xlsxPath="/portal/performance/export.xlsx"
-            csvPath="/portal/performance/export.csv"
             filenameBase="my-performance"
             locale={locale}
             params={{ from: sp.from, to: sp.to, projectId: sp.projectId, brokerAgentId: sp.brokerAgentId }}

@@ -7,11 +7,11 @@ import { maskSensitiveFields } from '../utils/sensitive-fields';
 const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 /**
- * A download of company data (report, unit, payment lists as CSV / XLSX / PDF):
+ * A download of company data (report, unit, payment lists as XLSX / PDF):
  * a GET, so the interceptor skipped it — bulk customer and money data could leave
  * with no trace of who took it (QA F-058).
  */
-const EXPORT_PATH = /\/export(\.(csv|xlsx|pdf))?$/i;
+const EXPORT_PATH = /\/export(\.(xlsx|pdf))?$/i;
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {

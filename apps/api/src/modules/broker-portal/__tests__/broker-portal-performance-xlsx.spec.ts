@@ -80,18 +80,6 @@ describe('BrokerPortalPerformanceService.exportXlsx · scoping', () => {
     );
   });
 
-  it('a non-manager CSV export carries only their own agent row', async () => {
-    prisma.brokerUser.findUnique.mockResolvedValue({
-      userId: 'u-self', brokerId: 'broker-A', isPrimaryContact: false, canManageBrokerUsers: false, canViewCommissions: true,
-    });
-    await svc.exportCsv(SCOPE, {});
-    expect(reports.brokerDetailCsv).toHaveBeenCalledWith(
-      'broker-A',
-      expect.objectContaining({ brokerAgentId: 'u-self' }),
-      { portal: true, withoutMoney: false, onlyAgent: 'u-self' },
-    );
-  });
-
   it('the PDF of a non-manager is «أدائي» with only their own agent row', async () => {
     const pdfReports = { brokerDetailPdf: jest.fn().mockResolvedValue(Buffer.from('%PDF-')) };
     const pdfSvc = new BrokerPortalPerformanceService(prisma as never, pdfReports as never);
@@ -189,7 +177,6 @@ describe('GET /portal/performance/export.xlsx · controller wiring', () => {
   let app: INestApplication;
   const performanceMock = {
     exportXlsx: jest.fn(async () => sampleWorkbook()),
-    exportCsv: jest.fn(),
     forBroker: jest.fn(),
     agents: jest.fn(),
   };

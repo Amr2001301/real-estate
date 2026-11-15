@@ -25,7 +25,7 @@ import { USER_ROLE_AR } from '../notifications/notification-catalog';
 import { resolvePrefs, type NotificationPrefs } from '../notifications/notification-groups';
 import type { NotificationPrefsDto } from './dto/notification-prefs.dto';
 import { PlanLimitService } from '../../common/capabilities/plan-limit.service';
-import { collectPages, isoDate, listCsv, listXlsx, type ListColumn } from '../../common/utils/list-export';
+import { collectPages, isoDate, listXlsx, type ListColumn } from '../../common/utils/list-export';
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { grantRoleDefaultPermissions } from '../permissions/role-default-permissions';
 
@@ -107,10 +107,6 @@ export class UsersService {
       rows,
       brand,
     });
-  }
-
-  async exportCsv(role: ExportableRole, q?: string, active?: boolean): Promise<string> {
-    return listCsv(UsersService.EXPORT_COLUMNS, await this.exportRows(role, q, active));
   }
 
   async create(dto: CreateUserDto) {

@@ -249,27 +249,8 @@ export class MaintenanceController {
     return this.svc.reportsSummary({ from, to, assignedAdminId, categoryId, reviewStatus, status });
   }
 
-  // CSV export of the same report. Declared before `:id` so the literal path
-  // is never read as a request id.
-  @Roles(UserRole.ADMIN)
-  @GrantedBy('maintenance:manage:all')
-  @Permissions('maintenance:read')
-  @Get('maintenance-requests/reports/summary.csv')
-  @Header('Content-Type', 'text/csv; charset=utf-8')
-  @Header('Content-Disposition', 'attachment; filename="maintenance-report.csv"')
-  reportsSummaryCsv(
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-    @Query('assignedAdminId') assignedAdminId?: string,
-    @Query('categoryId') categoryId?: string,
-    @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
-    @Query('status') status?: MaintenanceStatus,
-  ) {
-    return this.svc.reportsSummaryCsv({ from, to, assignedAdminId, categoryId, reviewStatus, status });
-  }
-
   // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +
-  // filters; the CSV above stays as the raw-data fallback. Declared before
+  // filters. Declared before
   // `:id` so the literal path is never read as a request id.
   @Roles(UserRole.ADMIN)
   @GrantedBy('maintenance:manage:all')

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Download, FileSpreadsheet, FileText, Sheet } from 'lucide-react';
+import { ChevronDown, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
@@ -13,14 +13,14 @@ import { portalSharedT } from '@/messages/portal/shared';
  *   • a single format → the button downloads it directly ("Export Excel");
  *   • several formats → it opens a menu that says what each file is for
  *     (PDF: the company-branded presentation report · Excel: formatted data
- *     to analyse · CSV: raw data for other systems);
+ *     to analyse);
  *   • several reports (`groups`) → one menu with a section per report, so a
  *     page never shows a row of export buttons.
  * Downloads are binary-safe (fetch → blob → anchor) through the whitelisting
- * proxies: XLSX/PDF → /api/export, CSV → /api/csv.
+ * proxy /api/export.
  */
 
-export type ExportFormat = 'xlsx' | 'pdf' | 'csv';
+export type ExportFormat = 'xlsx' | 'pdf';
 
 export interface ExportGroup {
   /** Section title in the menu (e.g. "Sales"). */
@@ -29,7 +29,6 @@ export interface ExportGroup {
   filenameBase: string;
   xlsxPath?: string;
   pdfPath?: string;
-  csvPath?: string;
   /** Filters forwarded to the endpoint (empty values dropped). */
   params?: Record<string, string | undefined>;
 }
@@ -45,13 +44,11 @@ interface ExportMenuProps extends Partial<ExportGroup> {
 const ICON: Record<ExportFormat, typeof FileText> = {
   xlsx: FileSpreadsheet,
   pdf: FileText,
-  csv: Sheet,
 };
 
 const TINT: Record<ExportFormat, string> = {
   xlsx: 'bg-emerald-50 text-emerald-700',
   pdf: 'bg-rose-50 text-rose-700',
-  csv: 'bg-slate-100 text-slate-600',
 };
 
 interface Option {
@@ -65,10 +62,9 @@ function optionsOf(group: ExportGroup): Option[] {
   const out: Option[] = [];
   const add = (format: ExportFormat, path?: string) =>
     path && out.push({ key: `${group.filenameBase}:${format}`, format, path, group });
-  // Presentation first (PDF), then data (Excel), then raw (CSV).
+  // Presentation first (PDF), then data (Excel).
   add('pdf', group.pdfPath);
   add('xlsx', group.xlsxPath);
-  add('csv', group.csvPath);
   return out;
 }
 
@@ -108,7 +104,7 @@ export function ExportMenu({ groups, label, locale, ...single }: ExportMenuProps
     const qs = new URLSearchParams({ path: o.path, filename });
     for (const [k, v] of Object.entries(o.group.params ?? {})) if (v) qs.set(k, v);
     try {
-      const res = await fetch(`/api/${o.format === 'csv' ? 'csv' : 'export'}?${qs}`, {
+      const res = await fetch(`/api/export?${qs}`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error(String(res.status));

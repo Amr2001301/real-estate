@@ -40,13 +40,6 @@ describe('BrokerReportsService broker-detail exports · agent scope', () => {
     return svc;
   }
 
-  it('CSV: only the named agent', async () => {
-    const csv = await service().brokerDetailCsv('broker-A', {}, { onlyAgent: 'u-self' });
-    expect(csv).toContain('self@x.test');
-    expect(csv).not.toContain('other@x.test');
-    expect(csv).not.toContain('Other Agent');
-  });
-
   it('XLSX: only the named agent', async () => {
     const buf = await service().brokerDetailXlsx('broker-A', {}, { onlyAgent: 'u-self' });
     const wb = new Workbook();
@@ -54,10 +47,14 @@ describe('BrokerReportsService broker-detail exports · agent scope', () => {
     const text = JSON.stringify(wb.worksheets.map((ws) => ws.getSheetValues()));
     expect(text).toContain('self@x.test');
     expect(text).not.toContain('other@x.test');
+    expect(text).not.toContain('Other Agent');
   });
 
   it('without a scope (admin / manager) every agent stays', async () => {
-    const csv = await service().brokerDetailCsv('broker-A', {});
-    expect(csv).toContain('other@x.test');
+    const buf = await service().brokerDetailXlsx('broker-A', {});
+    const wb = new Workbook();
+    await wb.xlsx.load(buf as never);
+    const text = JSON.stringify(wb.worksheets.map((ws) => ws.getSheetValues()));
+    expect(text).toContain('other@x.test');
   });
 });

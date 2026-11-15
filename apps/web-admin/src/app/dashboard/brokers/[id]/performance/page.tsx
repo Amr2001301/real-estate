@@ -165,7 +165,6 @@ export default async function BrokerPerformancePage({
           <ExportMenu locale={locale}
             pdfPath={`/broker-reports/export/broker/${id}.pdf`}
             xlsxPath={`/broker-reports/export/broker/${id}.xlsx`}
-            csvPath={`/broker-reports/export/broker/${id}.csv`}
             filenameBase={`broker-${report.broker.code ?? id}`}
             params={{ from: sp.from, to: sp.to, projectId: sp.projectId, brokerAgentId: sp.brokerAgentId }}
           />

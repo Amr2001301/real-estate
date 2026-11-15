@@ -18,6 +18,16 @@ async function downloadFrom(page: Page, optionTestId: string): Promise<string> {
   return download.suggestedFilename();
 }
 
+/** One format only: the button itself downloads, no menu. */
+async function downloadDirect(page: Page): Promise<string> {
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('export-menu').first().click(),
+  ]);
+  expect(await download.failure()).toBeNull();
+  return download.suggestedFilename();
+}
+
 test.describe('admin', () => {
   test.use({ storageState: ADMIN_STORAGE });
 
@@ -26,7 +36,7 @@ test.describe('admin', () => {
     await expect(page.getByTestId('export-menu')).toHaveCount(1);
     await page.getByTestId('export-menu').click();
     const menu = page.getByRole('menu');
-    for (const key of ['sales-report:pdf', 'financial-report:xlsx', 'broker-report:pdf', 'operational-report:csv']) {
+    for (const key of ['sales-report:pdf', 'financial-report:xlsx', 'broker-report:pdf', 'operational-report:xlsx']) {
       await expect(menu.getByTestId(`export-${key}`)).toBeVisible();
     }
     await page.keyboard.press('Escape');
@@ -41,19 +51,20 @@ test.describe('admin', () => {
     const items = page.getByRole('menu').getByRole('menuitem');
     await expect(items.first()).toHaveAttribute('data-testid', 'export-dashboard-report:pdf');
     await expect(page.getByTestId('export-dashboard-report:xlsx')).toBeVisible();
-    await expect(page.getByTestId('export-dashboard-report:csv')).toBeVisible();
+    // Excel and PDF only — CSV is gone everywhere.
+    await expect(page.locator('[data-testid$=":csv"]')).toHaveCount(0);
   });
 
-  test('units list exports what it shows (Excel)', async ({ page }) => {
+  test('units list exports what it shows (Excel, one click)', async ({ page }) => {
     await page.goto('/dashboard/units?status=AVAILABLE', { waitUntil: 'networkidle' });
-    const name = await downloadFrom(page, 'export-units:xlsx');
+    const name = await downloadDirect(page);
     expect(name).toMatch(/^units-.*\.xlsx$/);
   });
 
-  test('customers list exports (CSV)', async ({ page }) => {
+  test('customers list exports (Excel, one click)', async ({ page }) => {
     await page.goto('/dashboard/customers', { waitUntil: 'networkidle' });
-    const name = await downloadFrom(page, 'export-customers:csv');
-    expect(name).toMatch(/^customers-.*\.csv$/);
+    const name = await downloadDirect(page);
+    expect(name).toMatch(/^customers-.*\.xlsx$/);
   });
 });
 

@@ -1693,44 +1693,6 @@ describe('Maintenance module · permissions enforcement', () => {
     });
   });
 
-  // ── CSV export (Batch 16) ─────────────────────────────────────────────
-  describe('GET /maintenance-requests/reports/summary.csv', () => {
-    const CSV = '/maintenance-requests/reports/summary.csv';
-
-    it('ADMIN downloads a CSV with BOM, headers, and key metrics', async () => {
-      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
-      mock.maintenanceRequest.findMany.mockResolvedValueOnce([]);
-      const res = await request(app.getHttpServer()).get(CSV).expect(200);
-      expect(res.headers['content-type']).toContain('text/csv');
-      expect(res.headers['content-disposition']).toContain('maintenance-report.csv');
-      // UTF-8 BOM so Excel renders Arabic correctly.
-      expect(res.text.charCodeAt(0)).toBe(0xfeff);
-      expect(res.text).toContain('metric,label,value');
-      expect(res.text).toContain('totalRequests');
-      expect(res.text).toContain('slaAttainmentPercent');
-      expect(res.text).toContain('section,category,count,overdueCount,outOfWarrantyCount');
-    });
-
-    it('applies the same filters (forwards categoryId to the request query)', async () => {
-      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
-      mock.maintenanceRequest.findMany.mockResolvedValueOnce([]);
-      await request(app.getHttpServer()).get(`${CSV}?categoryId=cat-x&status=OPEN`).expect(200);
-      const call = mock.maintenanceRequest.findMany.mock.calls[0]![0] as { where: Record<string, unknown> };
-      expect(call.where.status).toBe('OPEN');
-      expect(call.where.items).toEqual({ some: { categoryId: 'cat-x' } });
-    });
-
-    it.each<[UserRole]>([
-      [UserRole.SALES],
-      [UserRole.SALES_MANAGER],
-      [UserRole.MAINTENANCE_SUPERVISOR],
-      [UserRole.CUSTOMER],
-    ])('%s is blocked from the CSV export (403)', async (role) => {
-      FakeAuthGuard.currentUser = { sub: 'u-1', role, codes: ['maintenance:read'] };
-      await request(app.getHttpServer()).get(CSV).expect(403);
-    });
-  });
-
   // ── Legacy PATCH /:id removed ──────────────────────────────────────────
 
   describe('Legacy PATCH /maintenance-requests/:id', () => {

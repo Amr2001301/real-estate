@@ -1,4 +1,5 @@
 import {
+  CHART_FULL,
   CHART_HALF,
   chartPanel,
   countText,
@@ -48,7 +49,12 @@ export interface MaintenanceReportData {
   filters: string[];
 }
 
-const hours = (v: number | null) => (v == null ? '—' : `${Math.round(v * 10) / 10} ساعة`);
+const hours = (v: number | null) => {
+  if (v == null) return '—';
+  if (v < 1) return 'أقل من ساعة';
+  if (v >= 48) return `${Math.round((v / 24) * 10) / 10} يوم`;
+  return `${Math.round(v * 10) / 10} ساعة`;
+};
 
 export function maintenanceReportHtml(d: MaintenanceReportData, brand: ReportBrand): string {
   const status = [
@@ -64,6 +70,7 @@ export function maintenanceReportHtml(d: MaintenanceReportData, brand: ReportBra
     { label: 'غير معروف', value: d.unknownWarrantyCount },
   ];
   const sla = d.slaAttainmentPercent;
+  const knownWarranty = d.inWarrantyCount + d.outOfWarrantyCount > 0;
 
   return reportDocument({
     brand,
@@ -104,19 +111,25 @@ export function maintenanceReportHtml(d: MaintenanceReportData, brand: ReportBra
             shareChartSvg({
               series: status,
               color: brand.primary,
-              width: CHART_HALF,
+              width: knownWarranty ? CHART_HALF : CHART_FULL,
               format: countText,
             }),
           ),
-          chartPanel(
-            'حسب الضمان',
-            shareChartSvg({
-              series: warranty,
-              color: brand.primary,
-              width: CHART_HALF,
-              format: countText,
-            }),
-          ),
+          // Only when some request has a known warranty: a chart that is all
+          // «غير معروف» says nothing.
+          ...(knownWarranty
+            ? [
+                chartPanel(
+                  'حسب الضمان',
+                  shareChartSvg({
+                    series: warranty,
+                    color: brand.primary,
+                    width: CHART_HALF,
+                    format: countText,
+                  }),
+                ),
+              ]
+            : []),
         ),
       ),
       section(

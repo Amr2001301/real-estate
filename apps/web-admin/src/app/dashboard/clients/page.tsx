@@ -127,7 +127,6 @@ export default async function ClientsPage({
               locale={locale}
               filenameBase={role === 'CUSTOMER' ? 'customers' : 'clients'}
               xlsxPath="/users/export.xlsx"
-              csvPath="/users/export.csv"
               params={{ role, q: q || undefined }}
             />
             <Link href={`/dashboard/clients/new?role=${role}` as never}>
