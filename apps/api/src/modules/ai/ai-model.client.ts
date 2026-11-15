@@ -9,7 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import type { AppEnv } from '../../config/env.validation';
 
 export const DEFAULT_AI_MODEL = 'claude-opus-5-5';
-const MAX_TOKENS = 4000;
+// Room for the adaptive thinking and a full answer: thinking counts against max_tokens.
+const MAX_TOKENS = 16000;
 const TIMEOUT_MS = 90_000;
 
 export interface AiTurnRequest {
