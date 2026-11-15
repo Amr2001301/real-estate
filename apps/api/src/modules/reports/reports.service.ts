@@ -72,6 +72,7 @@ import {
 } from '../../common/finance/collected';
 import { dueToDateSplit, portfolioSplit } from './portfolio-split';
 import { buildFinancialDetail, DETAIL_LIMIT } from './financial-detail';
+import { buildSalesDetail } from './sales-detail';
 import { commissionBasis, MARKUP_SNAPSHOT_SELECT, NET_PRICE_SQL, netContractValue } from '../../common/finance/commission-basis';
 import {
   BILLABLE_PLAN_WHERE,
@@ -239,6 +240,74 @@ export class ReportsService {
       total,
       byProject,
     };
+  }
+
+  /**
+   * The exported sales report's lists (sales-detail.ts): the contracts the
+   * report counts — signed, live, by signing date, the same filter as
+   * sales() — and the reservations open now (pending or approved).
+   */
+  async salesDetail(period?: string, dateFrom?: string, dateTo?: string) {
+    const companyId = getRequiredCompanyId();
+    let signed: Prisma.ContractWhereInput = { signedAt: { not: null } };
+    if (dateFrom || dateTo) {
+      const tz = await this.rangeTimeZone(dateFrom, dateTo);
+      signed = { signedAt: { not: null, ...reportRange(dateFrom, dateTo, tz) } };
+    } else if (period) {
+      signed = await this.periodWhereContract(period);
+    }
+    const unitSelect = {
+      code: true,
+      building: { select: { phase: { select: { project: { select: { name: true } } } } } },
+    } as const;
+    const person = { select: { fullName: true } } as const;
+    const [contracts, reservations, unitTypes] = await Promise.all([
+      this.prisma.contract.findMany({
+        where: { AND: [signed, LIVE_CONTRACT_WHERE, { companyId }] },
+        orderBy: { signedAt: 'asc' },
+        take: 5000,
+        select: {
+          contractNumber: true,
+          signedAt: true,
+          totalAmount: true,
+          markupWaived: true,
+          customer: person,
+          unit: { select: { ...unitSelect, type: true, area: true } },
+          reservation: { select: { ...MARKUP_SNAPSHOT_SELECT, sales: person } },
+          broker: { select: { companyName: true } },
+        },
+      }),
+      this.prisma.reservation.findMany({
+        where: {
+          companyId,
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 5000,
+        select: {
+          reservationNumber: true,
+          createdAt: true,
+          expiresAt: true,
+          status: true,
+          bookingAmount: true,
+          bookingPaymentStatus: true,
+          client: person,
+          lead: person,
+          sales: person,
+          unit: { select: unitSelect },
+        },
+      }),
+      this.prisma.unitType.findMany({ where: { companyId }, select: { code: true, name: true } }),
+    ]);
+    const typeName = new Map(unitTypes.map((t) => [t.code, translatableAr(t.name)]));
+    return buildSalesDetail({
+      contracts,
+      reservations,
+      unitTypeName: (code) => typeName.get(code),
+      projectName: translatableAr,
+      now: new Date(),
+    });
   }
 
   async financial(period?: string, dateFrom?: string, dateTo?: string) {
@@ -2396,14 +2465,110 @@ export class ReportsService {
     addChartBlock(wb, cover, 'المبيعات حسب المشروع', projectChart, { span: SPAN, width: 720, height: 320 });
     addFooter(cover, brand);
 
+    // The lists, one sheet each, in the document look.
+    const x = await this.salesDetail(period, dateFrom, dateTo);
+    const filters: Array<[string, string]> = [['الفترة', reportPeriodLabel(period, dateFrom, dateTo)]];
     const detail = wb.addWorksheet('المبيعات حسب المشروع');
-    addTable(
-      detail,
-      ['المشروع', 'عدد العقود', 'إجمالي القيمة'],
-      byProject.map((p) => [p.name, p.count, p.total]),
-      [30, 14, 18],
-    );
+    addTitledTable(detail, {
+      title: 'المبيعات حسب المشروع',
+      headers: ['المشروع', 'عدد العقود', 'إجمالي القيمة', 'الحصة'],
+      rows: byProject.map((p) => [p.name, p.count, p.total, Number(data.total) > 0 ? p.total / Number(data.total) : 0]),
+      widths: [30, 14, 20, 12],
+      numeric: [2, 3, 4],
+      totals: ['الإجمالي', data.contracts, Number(data.total), Number(data.total) > 0 ? 1 : 0],
+      emptyText: 'لا توجد مبيعات في هذه الفترة',
+      brand,
+      currency,
+      filters,
+    });
     formatMoneyColumns(detail, [3], currency);
+    detail.getColumn(4).numFmt = '0%';
+    addFooter(detail, brand);
+    const sheet = (
+      name: string,
+      opts: Omit<Parameters<typeof addTitledTable>[1], 'brand' | 'currency' | 'filters'>,
+      money: number[],
+      dates: number[] = [],
+    ) => {
+      const ws = wb.addWorksheet(name);
+      addTitledTable(ws, { ...opts, brand, currency, filters });
+      formatMoneyColumns(ws, money, currency);
+      for (const col of dates) ws.getColumn(col).numFmt = 'yyyy-mm-dd';
+      addFooter(ws, brand);
+      return ws;
+    };
+    const count = x.contracts.length;
+    const avg = (total: number, n: number) => (n ? total / n : 0);
+    const share = (part: number) => (x.contractsTotal > 0 ? part / x.contractsTotal : 0);
+    for (const [name, first, rows] of [
+      ['حسب المندوب', 'المندوب', x.byRep],
+      ['حسب نوع الوحدة', 'نوع الوحدة', x.byUnitType],
+    ] as const) {
+      const ws = sheet(
+        name,
+        {
+          title: `المبيعات ${name}`,
+          headers: [first, 'عدد العقود', 'إجمالي المبيعات', 'متوسط العقد', 'الحصة'],
+          rows: rows.map((r) => [r.name, r.count, r.total, avg(r.total, r.count), share(r.total)]),
+          widths: [28, 14, 20, 18, 12],
+          numeric: [2, 3, 4, 5],
+          totals: ['الإجمالي', count, x.contractsTotal, avg(x.contractsTotal, count), x.contractsTotal ? 1 : 0],
+          emptyText: 'لا توجد مبيعات في هذه الفترة',
+        },
+        [3, 4],
+      );
+      ws.getColumn(5).numFmt = '0%';
+    }
+    sheet(
+      'العقود الموقعة',
+      {
+        title: 'العقود الموقّعة',
+        headers: ['تاريخ التوقيع', 'العقد', 'العميل', 'المشروع', 'الوحدة', 'النوع', 'المساحة م²', 'المندوب', 'الوسيط', 'السعر الصافي'],
+        rows: x.contracts.map((r) => [
+          r.signedAt ? excelLocalDate(r.signedAt, brand.timezone) : '—',
+          r.contractNumber,
+          r.customer,
+          r.project,
+          r.unit,
+          r.unitType,
+          r.area ?? '—',
+          r.rep,
+          r.broker || '—',
+          r.price,
+        ]),
+        widths: [14, 16, 24, 24, 16, 14, 12, 20, 20, 18],
+        numeric: [1, 7, 10],
+        totals: ['الإجمالي', null, null, null, null, null, null, null, null, x.contractsTotal],
+        emptyText: 'لا توجد عقود موقّعة في هذه الفترة',
+      },
+      [10],
+      [1],
+    );
+    sheet(
+      'الحجوزات المفتوحة',
+      {
+        title: 'الحجوزات المفتوحة الآن',
+        headers: ['تاريخ الحجز', 'رقم الحجز', 'العميل', 'المشروع', 'الوحدة', 'المندوب', 'مبلغ الحجز', 'دفع الحجز', 'الحالة', 'ينتهي في'],
+        rows: x.reservations.map((r) => [
+          excelLocalDate(r.createdAt, brand.timezone),
+          r.number,
+          r.customer,
+          r.project,
+          r.unit,
+          r.rep,
+          r.booking,
+          r.bookingState,
+          r.expired ? `${r.status} (انتهى)` : r.status,
+          excelLocalDate(r.expiresAt, brand.timezone),
+        ]),
+        widths: [14, 16, 24, 24, 16, 20, 18, 16, 18, 14],
+        numeric: [1, 7, 10],
+        totals: ['الإجمالي', x.reservations.length, null, null, null, null, x.reservations.reduce((a, r) => a + r.booking, 0), null, null, null],
+        emptyText: 'لا توجد حجوزات مفتوحة',
+      },
+      [7],
+      [1, 10],
+    );
 
     return workbookToBuffer(wb);
   }
@@ -2839,9 +3004,15 @@ export class ReportsService {
       count: p.count,
       total: Number(p.total),
     }));
-    const brand = await this.brand();
+    const [brand, detail] = await Promise.all([this.brand(), this.salesDetail(period, dateFrom, dateTo)]);
     const html = salesReportHtml(
-      { contracts: data.contracts, total: Number(data.total), byProject, periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
+      {
+        contracts: data.contracts,
+        total: Number(data.total),
+        byProject,
+        periodLabel: reportPeriodLabel(period, dateFrom, dateTo),
+        detail,
+      },
       brand,
     );
     return this.presentPdf(html, brand, () =>

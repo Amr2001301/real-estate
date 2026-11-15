@@ -16,10 +16,26 @@ function prismaMock() {
     contract: {
       count: jest.fn().mockResolvedValue(3),
       aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 6_100_000 } }),
+      // The report's contract list (one shown; names escaped like the rest).
+      findMany: jest.fn().mockResolvedValue([
+        {
+          contractNumber: 'C-9',
+          signedAt: new Date('2026-10-05T10:00:00Z'),
+          totalAmount: 2_000_000,
+          markupWaived: 0,
+          customer: { fullName: 'هالة' },
+          unit: { code: 'N-1', type: '2BR', area: 120, building: { phase: { project: { name: { ar: 'أبراج <النيل>' } } } } },
+          reservation: { snapshotFinancedAmount: null, snapshotRemainingAmount: null, sales: { fullName: 'مندوب <أ>' } },
+          broker: null,
+        },
+      ]),
     },
     reservation: {
       aggregate: jest.fn().mockResolvedValue({ _sum: { snapshotFinancedAmount: null, snapshotRemainingAmount: null } }),
+      findMany: jest.fn().mockResolvedValue([]),
     },
+    unitType: { findMany: jest.fn().mockResolvedValue([{ code: '2BR', name: { ar: 'غرفتين' } }]) },
+    setting: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([{ projectId: 'p1', total: 6_100_000, count: 3 }]),
     project: {
       findMany: jest
@@ -44,6 +60,15 @@ describe('ReportsService — presentation PDFs', () => {
     expect(html).toContain('تقرير المبيعات');
     expect(html).toContain('أبراج &#60;النيل&#62;');
     expect(html).toContain('6,100,000 ج.م');
+    // The lists: by rep and unit type, the contracts, the open reservations.
+    expect(html).toContain('size: A4 landscape');
+    expect(html).toContain('المبيعات حسب المندوب');
+    expect(html).toContain('مندوب &#60;أ&#62;');
+    expect(html).toContain('غرفتين');
+    expect(html).toContain('العقود الموقّعة');
+    expect(html).toContain('C-9');
+    expect(html).toContain('2,000,000 ج.م');
+    expect(html).toContain('لا توجد حجوزات مفتوحة');
   });
 
   it('falls back to the PDFKit layout when Chromium is not installed', async () => {

@@ -16,6 +16,7 @@ import { barChartSvg, shareChartSvg } from '../../common/report-pdf/svg-charts';
 import type { ReportBrand } from '../../common/utils/report-brand';
 import { formatStamp } from '../../common/utils/xlsx';
 import { DETAIL_LIMIT, OPEN_CHEQUE_STATUSES, type FinancialDetail } from './financial-detail';
+import type { SalesDetail } from './sales-detail';
 
 /**
  * The presentation reports (HTML → PDF via ReportPdfService). Each takes the
@@ -157,6 +158,116 @@ export interface SalesReportData {
   total: number;
   byProject: Array<{ name: string; count: number; total: number }>;
   periodLabel: string;
+  /** The lists (contracts, by rep, by unit type, open reservations). */
+  detail?: SalesDetail;
+}
+
+function salesDetailSections(x: SalesDetail, c: string, timeZone: string | undefined): string[] {
+  const share = (part: number) => (x.contractsTotal > 0 ? percentText(part, x.contractsTotal) : '—');
+  const groupTable = (title: string, first: string, rows: Array<{ name: string; count: number; total: number }>) =>
+    section(
+      title,
+      dataTable(
+        [
+          { label: first, width: 2.2 },
+          { label: 'عدد العقود', numeric: true },
+          { label: 'إجمالي المبيعات', numeric: true, width: 1.6 },
+          { label: 'متوسط العقد', numeric: true, width: 1.4 },
+          { label: 'الحصة', numeric: true, width: 0.8 },
+        ],
+        rows.map((r) => [
+          r.name,
+          countText(r.count),
+          moneyText(r.total, c),
+          moneyText(r.count ? Math.round(r.total / r.count) : 0, c),
+          share(r.total),
+        ]),
+        {
+          totals: [
+            'الإجمالي',
+            countText(x.contracts.length),
+            moneyText(x.contractsTotal, c),
+            moneyText(x.contracts.length ? Math.round(x.contractsTotal / x.contracts.length) : 0, c),
+            x.contractsTotal ? '100%' : '—',
+          ],
+          empty: 'لا توجد مبيعات في هذه الفترة',
+        },
+      ),
+    );
+  const list = x.contracts.slice(0, PDF_LIST_ROWS);
+  const open = x.reservations.slice(0, PDF_LIST_ROWS);
+  return [
+    groupTable('المبيعات حسب المندوب', 'المندوب', x.byRep),
+    groupTable('المبيعات حسب نوع الوحدة', 'نوع الوحدة', x.byUnitType),
+    section(
+      'العقود الموقّعة',
+      dataTable(
+        [
+          { label: 'تاريخ التوقيع', numeric: true, width: 1 },
+          { label: 'العقد', numeric: true, width: 1.3 },
+          { label: 'العميل', width: 1.5 },
+          { label: 'المشروع', width: 1.5 },
+          { label: 'الوحدة', width: 1.25 },
+          { label: 'النوع', width: 1.05 },
+          { label: 'المساحة م²', numeric: true, width: 0.75 },
+          { label: 'المندوب', width: 1.2 },
+          { label: 'الوسيط', width: 1.1 },
+          { label: 'السعر الصافي', numeric: true, width: 1.4 },
+        ],
+        list.map((r) => [
+          dayText(r.signedAt, timeZone),
+          r.contractNumber,
+          r.customer,
+          r.project,
+          r.unit,
+          r.unitType,
+          r.area != null ? countText(r.area) : '—',
+          r.rep,
+          r.broker || '—',
+          moneyText(r.price, c),
+        ]),
+        {
+          totals: ['الإجمالي', '', '', '', '', '', '', '', '', moneyText(x.contractsTotal, c)],
+          empty: 'لا توجد عقود موقّعة في هذه الفترة',
+        },
+      ),
+      cappedNote(list.length, x.contracts.length, false) ?? 'السعر بدون فوائد التقسيط',
+    ),
+    section(
+      'الحجوزات المفتوحة',
+      dataTable(
+        [
+          { label: 'تاريخ الحجز', numeric: true, width: 1 },
+          { label: 'رقم الحجز', numeric: true, width: 1.3 },
+          { label: 'العميل', width: 1.6 },
+          { label: 'المشروع', width: 1.5 },
+          { label: 'الوحدة', width: 1.2 },
+          { label: 'المندوب', width: 1.3 },
+          { label: 'مبلغ الحجز', numeric: true, width: 1.3 },
+          { label: 'دفع الحجز', width: 1.1 },
+          { label: 'الحالة', width: 1.1 },
+          { label: 'ينتهي في', numeric: true, width: 1 },
+        ],
+        open.map((r) => [
+          dayText(r.createdAt, timeZone),
+          r.number,
+          r.customer,
+          r.project,
+          r.unit,
+          r.rep,
+          moneyText(r.booking, c),
+          r.bookingState,
+          r.status,
+          r.expired ? `${dayText(r.expiresAt, timeZone)} (انتهى)` : dayText(r.expiresAt, timeZone),
+        ]),
+        {
+          totals: ['الإجمالي', countText(x.reservations.length), '', '', '', '', moneyText(x.reservations.reduce((a, r) => a + r.booking, 0), c), '', '', ''],
+          empty: 'لا توجد حجوزات مفتوحة',
+        },
+      ),
+      cappedNote(open.length, x.reservations.length, false) ?? 'كما هي الآن (بانتظار الاعتماد أو معتمدة)، أيًا كانت الفترة',
+    ),
+  ];
 }
 
 export function salesReportHtml(d: SalesReportData, brand: ReportBrand): string {
@@ -166,6 +277,8 @@ export function salesReportHtml(d: SalesReportData, brand: ReportBrand): string 
     brand,
     title: 'تقرير المبيعات',
     subtitle: `الفترة: ${d.periodLabel}`,
+    // The lists are wide (ten columns): the page is sideways.
+    landscape: Boolean(d.detail),
     body: [
       section(
         'الملخص',
@@ -216,6 +329,7 @@ export function salesReportHtml(d: SalesReportData, brand: ReportBrand): string 
           },
         ),
       ),
+      ...(d.detail ? salesDetailSections(d.detail, c, brand.timezone) : []),
     ].join('\n'),
   });
 }
