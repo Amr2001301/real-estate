@@ -59,9 +59,14 @@ describe('PRM2f — unit export opens by units:export (e2e)', () => {
     const mineX = await xlsxText(as(repToken, http().get('/v1/units/export.xlsx')));
     const adminX = await xlsxText(as(adminToken, http().get('/v1/units/export.xlsx')));
     expect(mineX.status).toBe(200);
-    // Same rows; the title block carries the export time, so compare from the header row on.
-    const rows = (t: string) => t.slice(t.indexOf('كود الوحدة'));
+    // Same rows; the title block carries the export time and the footer who
+    // issued it, so compare the table (header row to footer).
+    const rows = (t: string) => t.slice(t.indexOf('كود الوحدة'), t.lastIndexOf('صادر عن'));
     expect(rows(mineX.text)).toBe(rows(adminX.text));
+    // Each file says who issued it.
+    expect(mineX.text).toContain('أصدره:');
+    expect(adminX.text).toContain('أصدره:');
+    expect(mineX.text.slice(mineX.text.lastIndexOf('أصدره:'))).not.toBe(adminX.text.slice(adminX.text.lastIndexOf('أصدره:')));
     await grant(['units:export'], true);
     await as(repToken, http().get('/v1/units/export.xlsx')).expect(403);
   });
