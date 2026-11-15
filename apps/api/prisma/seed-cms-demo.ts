@@ -165,7 +165,7 @@ async function main(): Promise<void> {
       data: {
         title: { ar: 'خدمات التمويل العقاري', en: 'Real Estate Financing Services' },
         imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80',
-        link: '/financing',
+        link: '/contact',
         active: true,
         order: 2,
       },
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
       data: {
         title: { ar: 'مشاريع قادمة — كن أول من يعلم', en: 'Upcoming Projects — Be the First to Know' },
         imageUrl: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=80',
-        link: '/register-interest',
+        link: '/contact',
         active: false,
         order: 3,
       },
