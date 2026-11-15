@@ -199,25 +199,6 @@ export class ReportsController {
     return new StreamableFile(await this.svc.salesBoardXlsx(period, dateFrom, dateTo));
   }
 
-  // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate.
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:financial:read')
-  @GrantedBy('reports:financial:read')
-  @RequireCapability('feature.advancedReports')
-  @Get('financial/export.xlsx')
-  @Header(
-    'Content-Type',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  )
-  @Header('Content-Disposition', 'attachment; filename="financial-report.xlsx"')
-  async financialXlsx(
-    @Query('period') period?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.financialBoardXlsx(period, dateFrom, dateTo));
-  }
-
   // P15.3 — styled XLSX. Same ADMIN-only gate.
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
@@ -311,34 +292,5 @@ export class ReportsController {
     @Query('dateTo') dateTo?: string,
   ): Promise<StreamableFile> {
     return new StreamableFile(await this.svc.salesPdf(period, dateFrom, dateTo));
-  }
-
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:financial:read')
-  @GrantedBy('reports:financial:read')
-  @RequireCapability('feature.advancedReports')
-  @Get('financial/export.pdf')
-  @Header('Content-Type', 'application/pdf')
-  @Header('Content-Disposition', 'attachment; filename="financial-report.pdf"')
-  async financialPdf(
-    @Query('period') period?: string,
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.financialPdf(period, dateFrom, dateTo));
-  }
-
-  @Roles(UserRole.ADMIN)
-  @Permissions('reports:sales:read')
-  @GrantedBy('reports:sales:read')
-  @RequireCapability('feature.advancedReports')
-  @Get('broker-leaderboard/export.pdf')
-  @Header('Content-Type', 'application/pdf')
-  @Header('Content-Disposition', 'attachment; filename="broker-report.pdf"')
-  async brokerPdf(
-    @Query('dateFrom') dateFrom?: string,
-    @Query('dateTo') dateTo?: string,
-  ): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.brokerPdf(dateFrom, dateTo));
   }
 }

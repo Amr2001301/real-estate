@@ -1424,7 +1424,6 @@ const UI = {
         exportSales: 'تقرير المبيعات',
         exportFinancial: 'التقرير المالي',
         exportOperational: 'التقرير التشغيلي',
-        exportBrokers: 'تقرير الوسطاء',
         kpi: {
           totalSales: 'إجمالي المبيعات',
           contractsSigned: 'العقود المبرمة',
@@ -3485,7 +3484,6 @@ const UI = {
         breadcrumbBrokers: 'الوسطاء',
         breadcrumbSelf: 'تقارير الوسطاء',
         exportSummaryBtn: 'تصدير الملخص',
-        exportTopBrokersBtn: 'تصدير أعلى الوسطاء',
         errorLoad: 'تعذر تحميل بعض البيانات: ',
         filterBroker: 'الوسيط',
         filterAllBrokers: 'كل الوسطاء',
@@ -7419,7 +7417,6 @@ const UI = {
         exportSales: 'Sales report',
         exportFinancial: 'Financial report',
         exportOperational: 'Operational report',
-        exportBrokers: 'Brokers report',
         kpi: {
           totalSales: 'Total Sales',
           contractsSigned: 'Contracts Signed',
@@ -9479,7 +9476,6 @@ const UI = {
         breadcrumbBrokers: 'Brokers',
         breadcrumbSelf: 'Broker Reports',
         exportSummaryBtn: 'Export Summary',
-        exportTopBrokersBtn: 'Export Top Brokers',
         errorLoad: 'Failed to load some data: ',
         filterBroker: 'Broker',
         filterAllBrokers: 'All Brokers',

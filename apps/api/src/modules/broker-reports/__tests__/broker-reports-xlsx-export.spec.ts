@@ -16,9 +16,9 @@ import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 
 /**
- * P15.3 — styled XLSX twins of the broker-reports CSV exports (top-brokers +
+ * P15.3 — styled XLSX exports of the broker reports (summary +
  * broker-detail). Controller-level @Roles(ADMIN) + @Permissions('broker_reports
- * :read') still apply; the CSV endpoints stay the raw fallback.
+ * :read') still apply.
  *
  * The empty-universe path (no commissions/contracts in range) is the realistic
  * "nothing to show" case and the cleanest way to prove the XLSX generates a
@@ -124,29 +124,11 @@ describe('broker-reports XLSX exports (P15.3)', () => {
 
   afterAll(async () => app?.close());
 
-  describe('GET /broker-reports/export/top-brokers.xlsx', () => {
-    it('returns a real XLSX (PK) + content-type/attachment, single sheet, no fakes', async () => {
-      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
-      const res = await fetchXlsx(app, '/broker-reports/export/top-brokers.xlsx').expect(200);
-      expect(res.headers['content-type']).toContain('spreadsheetml.sheet');
-      expect(res.headers['content-disposition']).toContain('top-brokers.xlsx');
-      expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
-      const { names, text } = await loadSheets(res.body as Buffer);
-      expect(names).toEqual(['أعلى الوسطاء']);
-      expect(text).toContain('تقرير أعلى الوسطاء');
-      expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
-    });
-
-    it('is forbidden for SALES without the code and for BROKER / CUSTOMER; open to SALES with broker_reports:read', async () => {
-      for (const role of [UserRole.BROKER, UserRole.CUSTOMER]) {
-        FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['broker_reports:read'] };
-        await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(403);
-      }
-      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: [] };
-      await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(403);
-      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['broker_reports:read'] };
-      await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(200);
-    });
+  // The «أعلى الوسطاء» files are folded into the broker summary (its ranking sheet).
+  it('the old top-brokers exports are gone', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.xlsx').expect(404);
+    await request(app.getHttpServer()).get('/broker-reports/export/top-brokers.pdf').expect(404);
   });
 
   describe('GET /broker-reports/export/broker/:id.xlsx', () => {
@@ -168,15 +150,18 @@ describe('broker-reports XLSX exports (P15.3)', () => {
   });
 
   describe('GET /broker-reports/export/summary.xlsx (board, P15.4)', () => {
-    it('returns a real XLSX (PK) with cover + top-brokers sheet, no fakes', async () => {
+    it('returns a real XLSX (PK) with cover + the full ranking sheet, no fakes', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       const res = await fetchXlsx(app, '/broker-reports/export/summary.xlsx').expect(200);
       expect(res.headers['content-type']).toContain('spreadsheetml.sheet');
       expect(res.headers['content-disposition']).toContain('broker-summary.xlsx');
       expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
       const { names, text } = await loadSheets(res.body as Buffer);
-      expect(names).toEqual(['الملخص', 'أعلى الوسطاء']);
+      expect(names).toEqual(['الملخص', 'ترتيب الوسطاء']);
       expect(text).toContain('تقرير أداء الوسطاء');
+      // The ranking carries the columns of the old «أعلى الوسطاء» file.
+      expect(text).toContain('نسبة التحويل');
+      expect(text).toContain('فرص معتمدة');
       expect(text).toContain('الملخص التنفيذي');
       expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
     });
@@ -194,7 +179,6 @@ describe('broker-reports XLSX exports (P15.3)', () => {
   describe('presentation PDFs', () => {
     const paths = () => [
       '/broker-reports/export/summary.pdf',
-      '/broker-reports/export/top-brokers.pdf',
       `/broker-reports/export/broker/${BROKER_ID}.pdf`,
     ];
 

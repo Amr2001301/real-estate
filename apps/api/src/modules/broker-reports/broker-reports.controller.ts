@@ -84,25 +84,6 @@ export class BrokerReportsController {
     return new StreamableFile(await this.svc.summaryPdf(query));
   }
 
-  // P15.3 — styled XLSX twin (default UI download). Controller-level
-  // @Roles(ADMIN) + @Permissions('broker_reports:read') still apply.
-  @Get('export/top-brokers.xlsx')
-  @Header(
-    'Content-Type',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  )
-  @Header('Content-Disposition', 'attachment; filename="top-brokers.xlsx"')
-  async topBrokersXlsx(@Query() query: TopBrokersQueryDto): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.topBrokersXlsx(query));
-  }
-
-  @Get('export/top-brokers.pdf')
-  @Header('Content-Type', 'application/pdf')
-  @Header('Content-Disposition', 'attachment; filename="top-brokers.pdf"')
-  async topBrokersPdf(@Query() query: TopBrokersQueryDto): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.topBrokersPdf(query));
-  }
-
   // P15.3 — styled XLSX. Same controller-level gate.
   @Get('export/broker/:brokerId.xlsx')
   @Header(

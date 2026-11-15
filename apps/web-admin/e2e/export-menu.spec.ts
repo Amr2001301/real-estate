@@ -36,7 +36,7 @@ test.describe('admin', () => {
     await expect(page.getByTestId('export-menu')).toHaveCount(1);
     await page.getByTestId('export-menu').click();
     const menu = page.getByRole('menu');
-    for (const key of ['sales-report:pdf', 'financial-report:xlsx', 'broker-report:pdf', 'operational-report:xlsx']) {
+    for (const key of ['sales-report:pdf', 'financial-report:xlsx', 'operational-report:xlsx']) {
       await expect(menu.getByTestId(`export-${key}`)).toBeVisible();
     }
     await page.keyboard.press('Escape');

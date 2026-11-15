@@ -31,15 +31,6 @@ export const BROKER_STATUS_AR: Record<string, string> = {
   TERMINATED: 'منتهي التعاقد',
 };
 
-export const TOP_METRIC_AR: Record<string, string> = {
-  leads: 'الفرص',
-  reservations: 'الحجوزات',
-  contracts: 'العقود',
-  salesGross: 'إجمالي المبيعات',
-  commissionNet: 'صافي العمولات',
-  payoutNet: 'صافي المدفوعات',
-};
-
 export interface BrokerSummaryData {
   totalBrokers: number;
   activeBrokers: number;
@@ -93,6 +84,8 @@ export function brokerSummaryReportHtml(
   return reportDocument({
     brand,
     title: 'تقرير أداء الوسطاء',
+    // Wide ranking table: printed sideways like the HR summaries.
+    landscape: true,
     subtitle: `الفترة: ${d.periodLabel}`,
     body: [
       section(
@@ -122,7 +115,7 @@ export function brokerSummaryReportHtml(
         chartPanel(
           'إجمالي المبيعات',
           shareChartSvg({
-            series: d.top.map((b) => ({ label: b.companyName, value: n(b.salesGross) })),
+            series: d.top.slice(0, 10).map((b) => ({ label: b.companyName, value: n(b.salesGross) })),
             color: brand.primary,
             width: CHART_FULL,
           }),
@@ -133,123 +126,49 @@ export function brokerSummaryReportHtml(
         'الترتيب',
         dataTable(
           [
-            { label: '#', numeric: true, width: 0.4 },
-            { label: 'الوسيط', width: 2.2 },
+            { label: '#', numeric: true, width: 0.35 },
+            { label: 'الوسيط', width: 1.8 },
             { label: 'الكود', numeric: true, width: 0.9 },
-            { label: 'إجمالي المبيعات', numeric: true, width: 1.5 },
-            { label: 'صافي العمولات', numeric: true, width: 1.4 },
-            { label: 'صافي المدفوعات', numeric: true, width: 1.4 },
+            { label: 'الحالة', width: 0.7 },
+            { label: 'فرص', numeric: true, width: 0.55 },
+            { label: 'حجوزات', numeric: true, width: 0.65 },
+            { label: 'عقود موقّعة', numeric: true, width: 0.75 },
+            { label: 'المبيعات', numeric: true, width: 1.3 },
+            { label: 'صافي العمولات', numeric: true, width: 1.2 },
+            { label: 'صافي المدفوعات', numeric: true, width: 1.2 },
+            { label: 'التحويل', numeric: true, width: 0.6 },
           ],
           d.top.map((b, i) => [
             i + 1,
             b.companyName,
             b.code,
-            moneyText(n(b.salesGross), c),
-            moneyText(n(b.commissionNet), c),
-            moneyText(n(b.payoutNet), c),
-          ]),
-          { empty: 'لا توجد بيانات' },
-        ),
-      ),
-    ].join('\n'),
-  });
-}
-
-// ── Top brokers ──────────────────────────────────────────────────────────────
-
-export function topBrokersReportHtml(
-  d: { metric: string; rows: TopBrokerRow[]; periodLabel: string },
-  brand: ReportBrand,
-): string {
-  const c = brand.currency;
-  const metricLabel = TOP_METRIC_AR[d.metric] ?? d.metric;
-  const money = ['salesGross', 'commissionNet', 'payoutNet'].includes(d.metric);
-  const value = (b: TopBrokerRow): number => {
-    switch (d.metric) {
-      case 'leads':
-        return b.leads;
-      case 'reservations':
-        return b.reservations;
-      case 'contracts':
-        return b.contracts;
-      case 'commissionNet':
-        return n(b.commissionNet);
-      case 'payoutNet':
-        return n(b.payoutNet);
-      default:
-        return n(b.salesGross);
-    }
-  };
-  return reportDocument({
-    brand,
-    title: 'تقرير أعلى الوسطاء',
-    // Wide table: printed sideways like the HR summaries.
-    landscape: true,
-    subtitle: `مرتّب حسب ${metricLabel} · الفترة: ${d.periodLabel}`,
-    body: [
-      section(
-        'الملخص',
-        kpiGrid([
-          { label: 'عدد الوسطاء', value: countText(d.rows.length) },
-          {
-            label: 'إجمالي المبيعات',
-            value: moneyText(
-              d.rows.reduce((a, b) => a + n(b.salesGross), 0),
-              c,
-            ),
-          },
-          {
-            label: 'العقود الموقّعة',
-            value: countText(d.rows.reduce((a, b) => a + b.contractsSigned, 0)),
-          },
-          {
-            label: 'صافي العمولات',
-            value: moneyText(
-              d.rows.reduce((a, b) => a + n(b.commissionNet), 0),
-              c,
-            ),
-          },
-        ]),
-      ),
-      section(
-        `الترتيب حسب ${metricLabel}`,
-        chartPanel(
-          metricLabel,
-          shareChartSvg({
-            series: d.rows.map((b) => ({ label: b.companyName, value: value(b) })),
-            color: brand.primary,
-            width: CHART_FULL,
-            ...(money ? {} : { format: (v: number) => countText(v) }),
-          }),
-          'لا توجد بيانات في هذه الفترة',
-        ),
-      ),
-      section(
-        'التفاصيل',
-        dataTable(
-          [
-            { label: '#', numeric: true, width: 0.35 },
-            { label: 'الوسيط', width: 1.8 },
-            { label: 'الحالة', width: 0.8 },
-            { label: 'فرص', numeric: true, width: 0.6 },
-            { label: 'حجوزات', numeric: true, width: 0.7 },
-            { label: 'عقود موقّعة', numeric: true, width: 0.8 },
-            { label: 'المبيعات', numeric: true, width: 1.4 },
-            { label: 'صافي العمولات', numeric: true, width: 1.3 },
-            { label: 'التحويل', numeric: true, width: 0.7 },
-          ],
-          d.rows.map((b, i) => [
-            i + 1,
-            b.companyName,
             BROKER_STATUS_AR[b.status] ?? b.status,
             countText(b.leads),
             countText(b.reservations),
             countText(b.contractsSigned),
             moneyText(n(b.salesGross), c),
             moneyText(n(b.commissionNet), c),
+            moneyText(n(b.payoutNet), c),
             rate(b.conversionRate),
           ]),
-          { empty: 'لا توجد بيانات' },
+          {
+            empty: 'لا توجد بيانات',
+            totals: d.top.length
+              ? [
+                  '',
+                  'الإجمالي',
+                  '',
+                  '',
+                  countText(d.top.reduce((a, b) => a + b.leads, 0)),
+                  countText(d.top.reduce((a, b) => a + b.reservations, 0)),
+                  countText(d.top.reduce((a, b) => a + b.contractsSigned, 0)),
+                  moneyText(d.top.reduce((a, b) => a + n(b.salesGross), 0), c),
+                  moneyText(d.top.reduce((a, b) => a + n(b.commissionNet), 0), c),
+                  moneyText(d.top.reduce((a, b) => a + n(b.payoutNet), 0), c),
+                  '',
+                ]
+              : undefined,
+          },
         ),
       ),
     ].join('\n'),

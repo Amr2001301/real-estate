@@ -9,6 +9,7 @@ import {
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
+  PaymentInstrumentType,
   InfoRequestStatus,
   InstallmentStatus,
   MaintenanceStatus,
@@ -34,19 +35,13 @@ import { fallbackBrand, type ReportBrand } from '../../common/utils/report-brand
 import { ReportBrandService } from '../company-branding/report-brand.service';
 import { presentReportPdf, ReportPdfService } from '../../common/report-pdf/report-pdf.service';
 import {
-  brokerReportHtml,
   dashboardReportHtml,
   DEPOSIT_TYPE_AR,
   financialDashboardReportHtml,
-  financialReportHtml,
   operationalReportHtml,
   salesReportHtml,
 } from './report-templates';
-import {
-  buildBrokerPdf,
-  buildFinancialPdf,
-  buildSalesPdf,
-} from '../../common/utils/pdf';
+import { buildSalesPdf } from '../../common/utils/pdf';
 import {
   XLSX_ALERT_BG,
   addBoardBanner,
@@ -76,6 +71,7 @@ import {
   TOWARDS_PRICE_DEPOSIT_WHERE,
 } from '../../common/finance/collected';
 import { dueToDateSplit, portfolioSplit } from './portfolio-split';
+import { buildFinancialDetail, DETAIL_LIMIT } from './financial-detail';
 import { commissionBasis, MARKUP_SNAPSHOT_SELECT, NET_PRICE_SQL, netContractValue } from '../../common/finance/commission-basis';
 import {
   BILLABLE_PLAN_WHERE,
@@ -112,6 +108,38 @@ function reportPeriodLabel(period?: string, dateFrom?: string, dateTo?: string):
 
 /** The dashboard report's alerts section when nothing is waiting on anyone. */
 const NO_OPEN_ALERTS = 'لا توجد تنبيهات معلقة';
+
+/** The financial report's applied filters, labelled; the period last (it becomes a fact card). */
+function financialFilterPairs(
+  opts: { type?: DepositType; q?: string; dateFrom?: string; dateTo?: string },
+  projectName: string | null | undefined,
+): Array<[string, string]> {
+  const period = reportPeriodLabel(undefined, opts.dateFrom, opts.dateTo);
+  return [
+    projectName ? (['المشروع', projectName] as [string, string]) : null,
+    opts.type ? (['النوع', DEPOSIT_TYPE_AR[opts.type] ?? opts.type] as [string, string]) : null,
+    opts.q ? (['بحث', opts.q] as [string, string]) : null,
+    period !== 'كل الفترات' ? (['الفترة', period] as [string, string]) : null,
+  ].filter((f): f is [string, string] => f !== null);
+}
+
+/** Money going out, as the financial report's outflows table reads it. */
+function financialOutflows(data: {
+  liabilities: {
+    brokerCommissions: { pendingAmount: string; unpaidAmount: string; paidAmount: string };
+    salesBonus: { pendingAmount: string; approvedAmount: string; paidAmount: string };
+    clawbacksOwed: { totalAmount: string };
+  };
+  summary: { refundsOwed: string; refundsPaid: string };
+}) {
+  return {
+    brokerCommissions: data.liabilities.brokerCommissions,
+    salesBonus: data.liabilities.salesBonus,
+    refundsOwed: data.summary.refundsOwed,
+    refundsPaid: data.summary.refundsPaid,
+    clawbacksOwed: data.liabilities.clawbacksOwed.totalAmount,
+  };
+}
 
 @Injectable()
 export class ReportsService {
@@ -1115,6 +1143,8 @@ export class ReportsService {
     type?: DepositType;
     dateFrom?: string;
     dateTo?: string;
+    /** The exported report: also the lists (ledger, late payers, …). */
+    detail?: boolean;
   }) {
     // Today, this month and the monthly buckets are the company's (its time
     // zone), not UTC's. Calendar dates (dueDate) compare with the UTC
@@ -2131,6 +2161,27 @@ export class ReportsService {
     // subtract every refund of the period from, say, the fees collected.
     const netCollected = opts.type ? collectedVerified : collectedVerified.minus(refundsPaid);
 
+    // ── The exported report's lists, on the report's own filters ─────────────
+    // Ledger: the payments the figures count (recorded, in the period).
+    // Late: the rows of the late figure. Next 30 days: rows towards the price
+    // falling due in [today, today+30). Cheques: those of the period's
+    // payments (bounced ones too, which the ledger leaves out).
+    const detail = opts.detail
+      ? await this.financialDetailRows({
+          ledgerWhere: filteredDepWhere(),
+          lateWhere: instWhere({ ...overdueUnpaid, dueDate: { lt: todayUTC } }),
+          next30Where: instWhere({ ...unpaid, dueDate: { gte: todayUTC, lt: in30 } }),
+          chequeDepositWhere: {
+            AND: [
+              { deletedAt: null },
+              ...baseDepAnd.slice(1),
+              ...(opts.dateFrom || opts.dateTo ? [{ paidAt: reportRange(opts.dateFrom, opts.dateTo, tz) }] : []),
+            ],
+          },
+          today: todayUTC,
+        })
+      : undefined;
+
     const cashflowTrend = trendSlots.map(({ month, label }, i) => ({
       month,
       label,
@@ -2189,7 +2240,108 @@ export class ReportsService {
         next3160: Number(forecast3160Agg._sum.amount ?? 0),
         next6190: Number(forecast6190Agg._sum.amount ?? 0),
       },
+      ...(detail ? { detail } : {}),
     };
+  }
+
+  /** The rows behind the exported financial report (see financial-detail.ts). */
+  private async financialDetailRows(w: {
+    ledgerWhere: Prisma.DepositWhereInput;
+    lateWhere: Prisma.InstallmentWhereInput;
+    next30Where: Prisma.InstallmentWhereInput;
+    chequeDepositWhere: Prisma.DepositWhereInput;
+    today: Date;
+  }) {
+    const take = DETAIL_LIMIT + 1;
+    const unit = {
+      select: {
+        code: true,
+        building: { select: { phase: { select: { project: { select: { id: true, name: true } } } } } },
+      },
+    } as const;
+    const party = { select: { fullName: true } } as const;
+    const contractRef = {
+      select: {
+        id: true,
+        contractNumber: true,
+        customer: { select: { fullName: true, phone: true } },
+        unit: { select: { code: true } },
+      },
+    } as const;
+    const [deposits, late, next30, cheques] = await Promise.all([
+      this.prisma.deposit.findMany({
+        where: w.ledgerWhere,
+        orderBy: [{ paidAt: 'asc' }, { createdAt: 'asc' }],
+        take,
+        select: {
+          type: true,
+          amount: true,
+          paidAt: true,
+          paymentMethod: true,
+          deletedAt: true,
+          reviewStatus: true,
+          ...DEPOSIT_STATE_SELECT,
+          contract: { select: { contractNumber: true, customer: party, unit } },
+          reservation: { select: { reservationNumber: true, client: party, lead: party, unit } },
+        },
+      }),
+      this.prisma.installment.findMany({
+        where: w.lateWhere,
+        orderBy: { dueDate: 'asc' },
+        take,
+        select: { type: true, dueDate: true, amount: true, plan: { select: { contract: contractRef } } },
+      }),
+      this.prisma.installment.findMany({
+        where: w.next30Where,
+        orderBy: { dueDate: 'asc' },
+        take,
+        select: {
+          type: true,
+          dueDate: true,
+          amount: true,
+          deposits: { where: PAYMENT_ON_ITS_WAY, select: { id: true }, take: 1 },
+          plan: { select: { contract: contractRef } },
+        },
+      }),
+      this.prisma.paymentInstrument.findMany({
+        where: {
+          companyId: getRequiredCompanyId(),
+          type: PaymentInstrumentType.CHEQUE,
+          deposits: { some: w.chequeDepositWhere },
+        },
+        orderBy: [{ chequeDueDate: 'asc' }, { createdAt: 'asc' }],
+        take,
+        select: {
+          chequeNumber: true,
+          drawerBankName: true,
+          chequeDueDate: true,
+          status: true,
+          deposits: {
+            where: w.chequeDepositWhere,
+            select: {
+              amount: true,
+              contract: { select: { contractNumber: true, customer: party, unit: { select: { code: true } } } },
+              reservation: {
+                select: {
+                  reservationNumber: true,
+                  client: party,
+                  lead: party,
+                  unit: { select: { code: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+    return buildFinancialDetail({
+      deposits,
+      late,
+      next30,
+      cheques,
+      today: w.today,
+      projectName: translatableAr,
+    });
   }
 
   // ── CSV builders ─────────────────────────────────────────────────────────
@@ -2257,50 +2409,6 @@ export class ReportsService {
   }
 
   /**
-   * P15.4 — financial collections as a board-style XLSX: branded cover with an
-   * executive summary and a verified-vs-unverified deposit doughnut. Same real
-   * `financial()` data as the CSV. Chart degrades gracefully to tables-only.
-   */
-  async financialBoardXlsx(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const data = await this.financial(period, dateFrom, dateTo);
-    const unverified = Math.max(0, data.deposits - data.verified);
-
-    const statusChart = await renderShareChartPng({
-      width: 560,
-      height: 320,
-      series: [
-        { label: 'موثّقة', value: data.verified },
-        { label: 'غير موثّقة', value: unverified },
-      ],
-    });
-
-    const brand = await this.brand();
-    const currency = brand.currency;
-    const SPAN = 6;
-    const wb = createReportWorkbook();
-    const cover = wb.addWorksheet('الملخص');
-    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, brand });
-    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
-    addKpiCards(
-      cover,
-      [
-        { label: 'الفترة', value: reportPeriodLabel(period, dateFrom, dateTo) },
-        { label: 'عدد الدفعات', value: data.deposits },
-        { label: 'الدفعات الموثّقة', value: data.verified },
-        { label: 'الدفعات غير الموثّقة', value: unverified },
-        { label: 'المحصّل من السعر', value: Number(data.total), currency },
-        { label: 'الرسوم والغرامات', value: Number(data.fees), currency },
-      ],
-      { span: SPAN, perRow: 3 },
-    );
-    addChartBlock(wb, cover, 'توزيع الدفعات حسب التوثيق', statusChart, { span: SPAN, width: 560, height: 320 });
-    addFooter(cover, brand);
-
-    return workbookToBuffer(wb);
-  }
-
-  /**
    * P15.3 — styled XLSX twin of operationalCsv. Same two real reads (KPIs +
    * reservation breakdown), one sheet per table. No demo values.
    */
@@ -2358,7 +2466,7 @@ export class ReportsService {
     dateFrom?: string;
     dateTo?: string;
   }): Promise<Buffer> {
-    const data = await this.financialDashboard(opts);
+    const data = await this.financialDashboard({ ...opts, detail: true });
     const s = data.summary;
     const DEP_TYPE_LABEL: Record<string, string> = {
       BOOKING_AMOUNT: 'مبلغ الحجز',
@@ -2388,7 +2496,7 @@ export class ReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, brand });
+    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, brand });
 
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
@@ -2454,7 +2562,184 @@ export class ReportsService {
     );
     formatMoneyColumns(aging, [3], currency);
 
+    const project = opts.projectId
+      ? await this.prisma.project.findFirst({
+          where: { id: opts.projectId, companyId: getRequiredCompanyId() },
+          select: { name: true },
+        })
+      : null;
+    this.addFinancialDetailSheets(wb, data, {
+      brand,
+      filters: financialFilterPairs(opts, project && translatableAr(project.name)),
+    });
+
     return workbookToBuffer(wb);
+  }
+
+  /** The financial report's lists as sheets, each in the document look. */
+  private addFinancialDetailSheets(
+    wb: ReturnType<typeof createReportWorkbook>,
+    data: Awaited<ReturnType<ReportsService['financialDashboard']>>,
+    ctx: { brand: ReportBrand; filters: Array<[string, string]> },
+  ): void {
+    const { brand, filters } = ctx;
+    const currency = brand.currency;
+    const x = data.detail;
+    if (!x) return;
+    const sheet = (
+      name: string,
+      opts: Omit<Parameters<typeof addTitledTable>[1], 'brand' | 'currency' | 'filters'>,
+      money: number[],
+      dates: number[] = [],
+    ) => {
+      const ws = wb.addWorksheet(name);
+      addTitledTable(ws, { ...opts, brand, currency, filters });
+      formatMoneyColumns(ws, money, currency);
+      for (const col of dates) ws.getColumn(col).numFmt = 'yyyy-mm-dd';
+      addFooter(ws, brand);
+      return ws;
+    };
+    const sum = <T>(rows: T[], f: (r: T) => number) => rows.reduce((a, r) => a + f(r), 0);
+    const share = (part: number, whole: number) => (whole > 0 ? part / whole : 0);
+    const limitNote = (truncated: boolean) =>
+      truncated ? ` (أول ${DETAIL_LIMIT.toLocaleString('en-US')} سجل)` : '';
+
+    const trend = data.cashflowTrend;
+    const tDue = sum(trend, (t) => t.due);
+    const tGot = sum(trend, (t) => t.collected);
+    const trendWs = sheet(
+      'التحصيل الشهري',
+      {
+        title: 'التحصيل الشهري: المستحق مقابل المحصّل (آخر 6 أشهر)',
+        headers: ['الشهر', 'المستحق', 'المحصّل', 'الفرق', 'نسبة التحصيل'],
+        rows: trend.map((t) => [`${t.label} ${t.month.slice(0, 4)}`, t.due, t.collected, t.due - t.collected, share(t.collected, t.due)]),
+        widths: [18, 18, 18, 18, 14],
+        numeric: [2, 3, 4, 5],
+        totals: ['الإجمالي', tDue, tGot, tDue - tGot, share(tGot, tDue)],
+      },
+      [2, 3, 4],
+    );
+    trendWs.getColumn(5).numFmt = '0%';
+
+    for (const [name, title, first, rows] of [
+      ['حسب المشروع', 'التحصيل حسب المشروع', 'المشروع', x.byProject],
+      ['حسب طريقة الدفع', 'التحصيل حسب طريقة الدفع', 'طريقة الدفع', x.byMethod],
+    ] as const) {
+      const ws = sheet(
+        name,
+        {
+          title,
+          headers: [first, 'عدد الدفعات', 'تم التحصيل', 'بانتظار التأكيد', 'النسبة من المحصّل'],
+          rows: rows.map((r) => [r.name, r.count, r.collected, r.awaiting, share(r.collected, x.ledgerCollected)]),
+          widths: [28, 14, 18, 18, 16],
+          numeric: [2, 3, 4, 5],
+          totals: ['الإجمالي', sum(rows, (r) => r.count), x.ledgerCollected, x.ledgerAwaiting, x.ledgerCollected > 0 ? 1 : 0],
+          emptyText: 'لا توجد دفعات في الفترة',
+        },
+        [3, 4],
+      );
+      ws.getColumn(5).numFmt = '0%';
+    }
+
+    sheet(
+      'المتأخرون',
+      {
+        title: `المتأخرون عن السداد${limitNote(x.lateTruncated)}`,
+        headers: ['العميل', 'الهاتف', 'الوحدة', 'العقد', 'أقساط متأخرة', 'أقدم استحقاق', 'أيام التأخير', 'المبلغ المتأخر'],
+        rows: x.latePayers.map((r) => [r.customer, r.phone || '—', r.unit, r.contract, r.count, r.oldestDue, r.daysLate, r.amount]),
+        widths: [26, 16, 16, 16, 12, 14, 12, 18],
+        numeric: [2, 5, 6, 7, 8],
+        totals: ['الإجمالي', null, null, null, sum(x.latePayers, (r) => r.count), null, null, sum(x.latePayers, (r) => r.amount)],
+        emptyText: 'لا يوجد متأخرون',
+      },
+      [8],
+      [6],
+    );
+
+    sheet(
+      'المستحق خلال 30 يوم',
+      {
+        title: `المستحق خلال 30 يومًا${limitNote(x.next30Truncated)}`,
+        headers: ['تاريخ الاستحقاق', 'العميل', 'الهاتف', 'الوحدة', 'العقد', 'البند', 'المبلغ', 'ملاحظة'],
+        rows: x.next30.map((r) => [r.dueDate, r.customer, r.phone || '—', r.unit, r.contract, r.type, r.amount, r.onItsWay ? 'دفعة بانتظار التأكيد' : '']),
+        widths: [14, 26, 16, 16, 16, 14, 18, 20],
+        numeric: [1, 3, 7],
+        totals: ['الإجمالي', null, null, null, null, null, sum(x.next30, (r) => r.amount), null],
+        emptyText: 'لا توجد مستحقات خلال 30 يومًا',
+      },
+      [7],
+      [1],
+    );
+
+    sheet(
+      'الشيكات',
+      {
+        title: `الشيكات${limitNote(x.chequesTruncated)}`,
+        headers: ['رقم الشيك', 'البنك', 'الاستحقاق', 'العميل', 'الوحدة', 'العقد / الحجز', 'المبلغ', 'الحالة'],
+        rows: x.cheques.map((q) => [q.number, q.bank, q.dueDate ?? '—', q.customer, q.unit, q.reference, q.amount, q.statusLabel]),
+        widths: [16, 20, 14, 26, 16, 16, 18, 14],
+        numeric: [1, 3, 7],
+        totals: ['الإجمالي', null, null, null, null, null, sum(x.cheques, (q) => q.amount), null],
+        emptyText: 'لا توجد شيكات',
+      },
+      [7],
+      [3],
+    );
+
+    const o = financialOutflows(data);
+    const N = (v: string) => Number(v) || 0;
+    const out: Array<[string, number | string, number, number]> = [
+      ['عمولات الوسطاء', N(o.brokerCommissions.pendingAmount), N(o.brokerCommissions.unpaidAmount), N(o.brokerCommissions.paidAmount)],
+      ['مكافآت فريق المبيعات', N(o.salesBonus.pendingAmount), N(o.salesBonus.approvedAmount), N(o.salesBonus.paidAmount)],
+      ['مستردات العملاء (عقود ملغاة)', '—', N(o.refundsOwed), N(o.refundsPaid)],
+    ];
+    const outWs = sheet(
+      'المدفوعات والالتزامات',
+      {
+        title: 'المدفوعات والالتزامات',
+        headers: ['البند', 'قيد الاعتماد', 'مستحق الدفع', 'تم دفعه'],
+        rows: out,
+        widths: [32, 18, 18, 18],
+        numeric: [2, 3, 4],
+        totals: [
+          'الإجمالي',
+          sum(out, (r) => (typeof r[1] === 'number' ? r[1] : 0)),
+          sum(out, (r) => r[2]),
+          sum(out, (r) => r[3]),
+        ],
+      },
+      [2, 3, 4],
+    );
+    if (N(o.clawbacksOwed) > 0) {
+      outWs.addRow([]);
+      const note = outWs.addRow(['مستحق للشركة استرداده من عمولات ومكافآت عقود ملغاة', N(o.clawbacksOwed)]);
+      note.getCell(1).font = { italic: true };
+      note.getCell(2).numFmt = amountFormat(currency);
+    }
+
+    sheet(
+      'دفتر التحصيلات',
+      {
+        title: `دفتر التحصيلات${limitNote(x.ledgerTruncated)}`,
+        headers: ['التاريخ', 'العميل', 'الوحدة', 'العقد / الحجز', 'البند', 'طريقة الدفع', 'المبلغ', 'الحالة'],
+        rows: x.ledger.map((r) => [
+          excelLocalDate(r.paidAt, brand.timezone),
+          r.customer,
+          r.unit,
+          r.reference,
+          r.type,
+          r.method,
+          r.amount,
+          r.stateLabel,
+        ]),
+        widths: [14, 26, 16, 16, 14, 14, 18, 20],
+        numeric: [1, 7],
+        totals: ['إجمالي المحصّل', null, null, null, null, null, x.ledgerCollected, null],
+        emptyText: 'لا توجد دفعات في الفترة',
+      },
+      [7],
+      [1],
+    );
   }
 
   /** The company identity (name, logo, colours) on report files. */
@@ -2513,20 +2798,14 @@ export class ReportsService {
     dateFrom?: string;
     dateTo?: string;
   }): Promise<Buffer> {
-    const [data, brand] = await Promise.all([this.financialDashboard(opts), this.brand()]);
+    const [data, brand] = await Promise.all([this.financialDashboard({ ...opts, detail: true }), this.brand()]);
     const project = opts.projectId
       ? await this.prisma.project.findFirst({
           where: { id: opts.projectId, companyId: getRequiredCompanyId() },
           select: { name: true },
         })
       : null;
-    const filters = [
-      project && `المشروع: ${translatableAr(project.name)}`,
-      opts.type && `النوع: ${DEPOSIT_TYPE_AR[opts.type] ?? opts.type}`,
-      opts.q && `بحث: ${opts.q}`,
-      reportPeriodLabel(undefined, opts.dateFrom, opts.dateTo) !== 'كل الفترات' &&
-        `الفترة: ${reportPeriodLabel(undefined, opts.dateFrom, opts.dateTo)}`,
-    ].filter((f): f is string => Boolean(f));
+    const filters = financialFilterPairs(opts, project && translatableAr(project.name)).map(([k, v]) => `${k}: ${v}`);
     const html = financialDashboardReportHtml(
       {
         summary: data.summary,
@@ -2534,6 +2813,9 @@ export class ReportsService {
         collectionByType: data.collectionByType,
         aging: data.aging,
         filters,
+        detail: data.detail,
+        trend: data.cashflowTrend,
+        outflows: financialOutflows(data),
       },
       brand,
     );
@@ -2565,32 +2847,6 @@ export class ReportsService {
     return this.presentPdf(html, brand, () =>
       buildSalesPdf({ contracts: data.contracts, total: Number(data.total), byProject, period, dateFrom, dateTo }, brand),
     );
-  }
-
-  async financialPdf(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const data = await this.financial(period, dateFrom, dateTo);
-    const brand = await this.brand();
-    const html = financialReportHtml(
-      { deposits: data.deposits, verified: data.verified, total: Number(data.total), fees: Number(data.fees), periodLabel: reportPeriodLabel(period, dateFrom, dateTo) },
-      brand,
-    );
-    return this.presentPdf(html, brand, () =>
-      buildFinancialPdf(
-        { deposits: data.deposits, verified: data.verified, total: Number(data.total), period, dateFrom, dateTo },
-        brand,
-      ),
-    );
-  }
-
-  async brokerPdf(dateFrom?: string, dateTo?: string): Promise<Buffer> {
-    const brokers = (await this.brokerLeaderboard(dateFrom, dateTo)).map((b) => ({
-      brokerName: b.brokerName,
-      count: b.count,
-      commissionAmount: b.commissionAmount,
-    }));
-    const brand = await this.brand();
-    const html = brokerReportHtml({ brokers, periodLabel: reportPeriodLabel(undefined, dateFrom, dateTo) }, brand);
-    return this.presentPdf(html, brand, () => buildBrokerPdf({ brokers, dateFrom, dateTo }, brand));
   }
 
   /** A "YYYY-MM" period: that month in the company's time zone. */
