@@ -1,7 +1,46 @@
-# Handoff — where the work stands (2026-11-12, after #396)
+# Handoff — where the work stands (2026-11-15, after #426)
 
 > Read this first if you are picking up this repository in a new Claude session.
 > The owner writes in Egyptian Arabic; code, commits, PRs and docs are in English.
+
+---
+
+## ملخص سريع — التقارير والتصدير، شركات الوساطة، تجربة الإطلاق (12–15 نوفمبر، #397–#426، كله مدموج)
+
+**ابدأ من هنا:** آخر شغل اتعمل هو التقارير والتصدير. التفاصيل في القسم **2u**.
+
+- **التصدير (#419–#426):**
+  - **الورق دايمًا فاتح:** أي حاجة بتتطبع بتطلع فاتحة، حتى لو المستخدم شغال بالوضع الليلي.
+  - **شكل موحّد:** كل ملفات الـ PDF والإكسل بقت بشكل واحد، على نمط تقارير Devora HR، والمالك وافق عليه.
+  - **التقارير العريضة:** بتتطبع بالعرض.
+  - **CSV اتشال خالص.** التقارير المكررة اتدمجت، وفاضل تقرير مالي واحد وتقرير وسطاء واحد.
+  - **التفاصيل الناقصة اتضافت:**
+    - **المالي:** دفتر التحصيلات، والتحصيل حسب المشروع وطريقة الدفع، والمتأخرين بالاسم، والمستحق في 30 يوم، والشيكات، والمدفوعات والالتزامات.
+    - **كشف الأقساط:** المدفوع والباقي في كل سطر، ورقم الإيصال، والغرامة، وبيانات العميل.
+    - **المبيعات:** حسب المندوب ونوع الوحدة، والعقود، والحجوزات المفتوحة.
+    - **الوحدات:** سعر المتر، والتشطيب، والفيو، والتسليم، والمشتري أو الحاجز.
+    - **الصيانة:** الطلبات المفتوحة.
+    - **كل تقرير:** عليه اسم اللي طلّعه («أصدره»).
+- **شركات الوساطة (#409–#416):** ست مراحل للشركات اللي شغلها وساطة مش تطوير:
+  - الإعلانات، والتفويضات، والإيجارات
+  - الصفقات، والعمولات، ومطالبات المطوّرين
+  - التقارير، والأهداف، والمكافآت
+  - دليل المطوّرين، والمطابقة، والتوزيع
+  - الإطلاقات وطلبات الاهتمام، والوساطة المشتركة
+  - شاشات تطبيق الموظفين
+- **تجربة الإطلاق (P0، #417):** مكتوبة في `docs/release-rehearsal.md`.
+- **باقي اللي اتعمل (#397–#408):**
+  - رسائل الأخطاء بالعربي
+  - لوحة السوبر أدمن: الاستخدام، والشركات اللي محتاجة متابعة، وعرض السعر PDF
+  - ربط صفحة فيسبوك للعملاء المحتملين
+  - شاشات التحميل بشكل كل صفحة
+  - الكحلي الافتراضي للتطبيقات بقى `#0E1626`
+- **اللي فاضل عليك:**
+  - الاستضافة والحسابات
+  - بيئة staging
+  - التجربة على موبايلات حقيقية
+  - قرارات النشر (REL1)، وتفاصيلها في القسم 5
+  - النشر على السيرفر لازم يشغّل migrations القسم 2u
 
 ---
 
@@ -813,6 +852,61 @@ The owner asked for the customer app to look like the staff app. The method: sha
 
 ---
 
+### 2u. #397–#426 (2026-11-12 → 2026-11-15) — Arabic errors, super-admin, brokerage, release rehearsal, exports
+
+| Theme | PRs |
+|---|---|
+| Docs, config, mobile | #397 / #400 HANDOFF (REL1 deferred, proposals kept in section 5); #399 `DEFAULT_COMPANY_ID` optional in production + production env doc; #398 the apps' default navy `#0E1626` |
+| API errors in Arabic | #401 (F-023, section 2s) |
+| Plans and super-admin | #402 plans limit staff users only (section 2t); #403 usage and features panel, staff seats; #404 companies needing follow-up; #405 branded price quotation PDF; #406 advanced reports gated by plan, seat limit on restore, custom domain needs the public website |
+| Leads | #407 link a Facebook Page so lead ads arrive without Zapier (`meta_lead_ads` migration; `docs/meta-lead-ads-setup.md`) |
+| Loading screens | #408 each page's skeleton takes its current shape (website, dashboard for every role, both apps) |
+| Brokerage companies | #409 company type + brokerage home; #410 listings, mandates, tenancies + rent reminders, visits; #411 deals, commission rules, developer claims, staff payouts; #412 reports, targets, target bonuses; #413 developer directory, plan comparison, lead matching + distribution; #414 launches + EOIs; #415 co-broking; #416 staff-app screens |
+| Release | #417 P0 rehearsal (`docs/release-rehearsal.md`, `scripts/first-deploy-smoke.mjs`); #418 developer-platform demo check |
+| Exports | #419 paper always light, CSV removed, report fixes; #420 the document look on every PDF and Excel; #421 one financial report + one broker report, financial details; #422 installment statement; #423 sales details; #424 units list; #425 maintenance open requests; #426 issuer on every report |
+
+**Migrations added (production: `pnpm db:deploy`, then `pnpm db:schema-check`):** `20261112200000_meta_lead_ads` and the seven brokerage ones: `20261113180000_brokerage_listings`, `20261113200000_brokerage_mandates_tenancies`, `20261114090000_brokerage_deals`, `20261114120000_brokerage_targets`, `20261114150000_brokerage_developers_matching`, `20261114180000_brokerage_launches_eoi`, `20261114200000_brokerage_co_broking`. The exports added none.
+
+**Exports — how they are built now (follow this for any new report):**
+- **PDF:** HTML printed by Chromium (`common/report-pdf/report-html.ts`):
+  - `reportDocument({ brand, title, subtitle, meta, body, landscape })`. A subtitle «الفترة: …» becomes the first fact card.
+  - Pass `landscape: true` when a table has more than about seven columns.
+  - Parts: `section`, `kpiGrid`, `dataTable(columns, rows, { totals, empty })`, `chartPanel`, `panelGrid`, `notice`.
+  - A table's totals print once, under its last row (`tfoot` is a row group, not repeated on each page).
+  - Long lists show 300 rows in the PDF and say so; the Excel file carries them all.
+- **Excel:** `common/utils/xlsx.ts`:
+  - `addTitledTable(ws, { title, filters | subject, headers, rows, widths, numeric, totals, currency, brand })` gives the document look: company, title, gold rule, fact cards, frozen header, autofilter, landscape when there are more than 6 columns.
+  - Then `formatMoneyColumns` and `addFooter`.
+  - `subject` (e.g. contract, customer, unit) replaces the filter card.
+  - Board-style covers use `addBoardBanner` + `addKpiCards` + `addChartBlock`.
+  - Lists: `common/utils/list-export.ts` (`listXlsx`, `ListColumn` with `money` / `numeric` / `sum`).
+- **Issuer («أصدره»):** `ReportIssuerInterceptor` names the signed-in user on GET `.pdf` / `.xlsx` / `/export` routes (`runWithReportIssuer`, scoped to that request). `reportDocument` adds the fact card, and `addFooter` / `addBoardBanner` add the line. A new report gets it for free.
+- **Lists behind reports:** each list is built by a pure function next to the service, fed with the report's own filters, so its totals equal the report's figures:
+  - `reports/financial-detail.ts` (`financialDashboard({ detail: true })`)
+  - `reports/sales-detail.ts` (`salesDetail()`)
+  - `installments/installment-plan-template.ts` (`planStatement()`)
+  - `maintenance-report-template.ts` (`openRequestLines()`)
+  - the units export's `holders()`
+- **The web-admin download proxy** is `/api/export` with an allow-list of paths (`apps/web-admin/src/app/api/export/route.ts`); add a new export path there. `/api/csv` is gone.
+- **Printing from the dashboard or the site:** the dark class is never applied on `/print/…` pages, and is removed during `beforeprint` everywhere (`theme-script.tsx`; `PrintLight` in web-public).
+
+**Rules learned (apply them):**
+- Arabic text holding a date or another left-to-right run: wrap it in `\u2066…\u2069`, or Chromium prints 2026-12-04 as 04-12-2026.
+- A table column that holds a number with a word (e.g. «7 يوم») reads backwards in a `numeric` (LTR) cell: put the unit in the header instead.
+- `AsyncLocalStorage`: use `run` for per-request state that is set inside an interceptor; `enterWith` leaked to later code in the tests.
+- Partial instalment payments stay unsupported (decided 2026-10-18): a row is paid in full or not at all.
+- Read a user with `findTenantUser` / `resolveTenantUser` (lint rule MT-012), never `prisma.user` directly.
+- Check every export visually before sending it: PDF with `pdftoppm`, Excel through LibreOffice (`soffice --headless --convert-to pdf`), then read the pages.
+
+**Local stack:** the container is rebuilt from time to time, which wipes `node_modules`, the scratchpad and the local database. Afterwards:
+- run `pnpm install --frozen-lockfile` and `npx prisma generate`;
+- start Postgres (`service postgresql start`, then set the `postgres` password) and Redis;
+- re-create the demo data.
+
+To run e2e locally: `TEST_DATABASE_URL` must differ from `DATABASE_URL` and contain «e2e» or «test»; copy the env block of the e2e jobs in `.github/workflows/ci.yml`.
+
+---
+
 ### 2t. Plans limit staff users only; super-admin dashboard review (2026-11-12)
 
 - **Decision (owner):** a plan limits the company's **staff users** only (customers and visitors are not counted). Units and projects are unlimited on every plan: `PLAN_DEFAULTS` in `apps/api/src/common/capabilities/capability-schema.ts` has `limit.maxUnits` / `limit.maxProjects` = null for all plans. The keys and `PlanLimitService` checks stay, so a company override can still set one; nothing sets one by default. (Before this the plans had 150 / 500 / 2,500 units and 5 / 5 / 20 projects: F-080.)
@@ -1141,4 +1235,6 @@ Left for the owner, not in V1–V3:
     - Production builds of both web apps.
     - `release-verify.sh`, plus the fixes it turned up.
   - What is left of P0 needs the owner: hosting, the service accounts, a staging copy and real phones.
+- **Exports (2026-11-15, #419–#426, all merged):** done as the owner asked (paper always light, one look, CSV removed, duplicates merged, the missing details, the issuer). How they are built is in section 2u. Not done: a «who exported what» screen. The audit log records exports whose path ends in `/export`, `/export.xlsx` or `/export.pdf` (`EXPORT_PATH` in `audit.interceptor.ts`), not every download (e.g. `…/reports/summary.pdf`).
+- **Production deploy:** also run the migrations of 2u.
 - Older backlog docs: `docs/BACKLOG.md`, `docs/EXECUTION_BACKLOG.md`, `docs/PROJECT_CURRENT_STATE.md` (may be behind this file).
