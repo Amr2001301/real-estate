@@ -1,3 +1,4 @@
+import { reportIssuer } from './report-issuer';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { arabicCurrencySymbol, normalizeCurrency } from '../currency/currency';
@@ -169,12 +170,15 @@ export function reportDocument(doc: ReportDocument): string {
   const accent = hex(brand.accent, '#C8A24B');
   const currency = normalizeCurrency(brand.currency);
   // «الفترة: …» reads best as the first fact card (as on the HR reports).
+  // Who asked for it (set per export request; see report-issuer.ts).
+  const issuer = reportIssuer();
   const periodMatch = doc.subtitle?.match(/^(.*?)(?:\s*·\s*)?الفترة:\s*(.+)$/);
   const subtitle = periodMatch ? (periodMatch[1] ?? '').trim() || undefined : doc.subtitle;
   const meta: Array<[string, string]> = [
     ...(periodMatch ? ([['الفترة', (periodMatch[2] ?? '').trim()]] as Array<[string, string]>) : []),
     ...(doc.meta ?? []),
     ['تاريخ الإصدار', formatStamp(new Date(), brand.timezone)],
+    ...(issuer ? ([['أصدره', issuer]] as Array<[string, string]>) : []),
     ['العملة', `${arabicCurrencySymbol(currency)} (${currency})`],
   ];
   const mark = brand.logo

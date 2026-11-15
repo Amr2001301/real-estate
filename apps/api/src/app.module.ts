@@ -9,6 +9,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { LocaleInterceptor } from './common/interceptors/locale.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
+import { ReportIssuerInterceptor } from './common/interceptors/report-issuer.interceptor';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -191,6 +192,8 @@ import { PermissionCatalogBootstrap } from './modules/permissions/permission-cat
     // Tenant context must be set before any business interceptor (Locale, Audit)
     // so that Prisma middleware has the ALS companyId available.
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
+    // After the tenant context: names who asked for an exported report.
+    { provide: APP_INTERCEPTOR, useClass: ReportIssuerInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LocaleInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
