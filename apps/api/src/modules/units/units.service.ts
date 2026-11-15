@@ -5,7 +5,8 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Prisma, ReservationStatus, UnitStatus, UnitUsage } from '@prisma/client';
+import { ContractStatus, Prisma, ReservationStatus, UnitFinishing, UnitOrientation, UnitStatus, UnitUsage, UnitView } from '@prisma/client';
+import { FINISHING_AR, ORIENTATION_AR, VIEW_AR } from './unit-specs';
 import { LIVE_CONTRACT_WHERE } from '../installments/live-contract';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -63,16 +64,25 @@ function specData(dto: CreateUnitDto | UpdateUnitDto) {
 
 /** The fields of a listed unit the export reads (findAll includes the rest). */
 type UnitExportRow = {
+  id: string;
   code: string;
   type: string;
+  typeName?: unknown;
   floor: number;
   area: number | { toString(): string };
   bedrooms: number;
   bathrooms: number;
   price: number | { toString(): string };
+  pricePerMeter?: number | { toString(): string } | null;
+  finishing?: string | null;
+  view?: string | null;
+  orientation?: string | null;
+  effectiveDeliveryDate?: string | null;
   status: string;
   createdAt: Date;
   building?: { name: unknown; phase?: { project?: { name: unknown } } };
+  /** Who holds it: the buyer on its live contract, else the open reservation's customer. */
+  holder?: { name: string; ref: string } | null;
 };
 
 /**
@@ -130,18 +140,80 @@ export class UnitsService {
   };
 
   private static readonly EXPORT_COLUMNS: ListColumn<UnitExportRow>[] = [
-    { header: 'المشروع', width: 26, value: (u) => arText(u.building?.phase?.project?.name) },
-    { header: 'المبنى', width: 18, value: (u) => arText(u.building?.name) },
-    { header: 'كود الوحدة', width: 14, value: (u) => u.code },
-    { header: 'النوع', width: 14, value: (u) => u.type },
+    { header: 'المشروع', width: 24, value: (u) => arText(u.building?.phase?.project?.name) },
+    { header: 'المبنى', width: 16, value: (u) => arText(u.building?.name) },
+    { header: 'كود الوحدة', width: 15, value: (u) => u.code },
+    { header: 'النوع', width: 16, value: (u) => (u.typeName ? arText(u.typeName) : u.type) },
     { header: 'الطابق', width: 8, value: (u) => u.floor, numeric: true },
     { header: 'المساحة (م²)', width: 12, value: (u) => Number(u.area), numeric: true, sum: true },
     { header: 'غرف النوم', width: 10, value: (u) => u.bedrooms, numeric: true },
     { header: 'الحمامات', width: 10, value: (u) => u.bathrooms, numeric: true },
-    { header: 'السعر', width: 16, value: (u) => Number(u.price), money: true, sum: true },
-    { header: 'الحالة', width: 12, value: (u) => UnitsService.STATUS_AR[u.status] ?? u.status },
-    { header: 'تاريخ الإضافة', width: 14, value: (u) => isoDate(u.createdAt), numeric: true },
+    { header: 'التشطيب', width: 13, value: (u) => (u.finishing ? (FINISHING_AR[u.finishing as UnitFinishing] ?? u.finishing) : '') },
+    { header: 'الفيو', width: 13, value: (u) => (u.view ? (VIEW_AR[u.view as UnitView] ?? u.view) : '') },
+    { header: 'الاتجاه', width: 12, value: (u) => (u.orientation ? (ORIENTATION_AR[u.orientation as UnitOrientation] ?? u.orientation) : '') },
+    { header: 'السعر', width: 17, value: (u) => Number(u.price), money: true, sum: true },
+    {
+      header: 'سعر المتر',
+      width: 14,
+      // Its own when priced by the meter; else the price over the area.
+      value: (u) =>
+        u.pricePerMeter != null
+          ? Number(u.pricePerMeter)
+          : Number(u.area) > 0
+            ? Math.round(Number(u.price) / Number(u.area))
+            : null,
+      money: true,
+    },
+    { header: 'التسليم', width: 12, value: (u) => u.effectiveDeliveryDate ?? '', numeric: true },
+    { header: 'الحالة', width: 11, value: (u) => UnitsService.STATUS_AR[u.status] ?? u.status },
+    { header: 'المشتري / الحاجز', width: 22, value: (u) => u.holder?.name ?? '' },
+    { header: 'العقد / الحجز', width: 16, value: (u) => u.holder?.ref ?? '', numeric: true },
+    { header: 'تاريخ الإضافة', width: 13, value: (u) => isoDate(u.createdAt), numeric: true },
   ];
+
+  /**
+   * Who holds each unit: the buyer on its live contract, else the customer
+   * of its open reservation (pending or approved). Company-scoped.
+   */
+  private async holders(unitIds: string[]): Promise<Map<string, { name: string; ref: string }>> {
+    const out = new Map<string, { name: string; ref: string }>();
+    if (!unitIds.length) return out;
+    const companyId = getRequiredCompanyId();
+    const [contracts, reservations] = await Promise.all([
+      this.prisma.contract.findMany({
+        where: { companyId, unitId: { in: unitIds }, deletedAt: null, status: { not: ContractStatus.CANCELLED } },
+        orderBy: { createdAt: 'desc' },
+        select: { unitId: true, contractNumber: true, customer: { select: { fullName: true } } },
+      }),
+      this.prisma.reservation.findMany({
+        where: {
+          companyId,
+          unitId: { in: unitIds },
+          deletedAt: null,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          unitId: true,
+          reservationNumber: true,
+          client: { select: { fullName: true } },
+          lead: { select: { fullName: true } },
+        },
+      }),
+    ]);
+    for (const r of reservations) {
+      if (out.has(r.unitId)) continue;
+      out.set(r.unitId, { name: r.client?.fullName ?? r.lead?.fullName ?? '', ref: r.reservationNumber ?? '' });
+    }
+    // A contract wins over a reservation.
+    const seen = new Set<string>();
+    for (const c of contracts) {
+      if (seen.has(c.unitId)) continue;
+      seen.add(c.unitId);
+      out.set(c.unitId, { name: c.customer?.fullName ?? '', ref: c.contractNumber ?? '' });
+    }
+    return out;
+  }
 
   /** Every unit matching the list filters (no paging). */
   private async exportRows(query: UnitQueryDto): Promise<UnitExportRow[]> {
@@ -155,6 +227,8 @@ export class UnitsService {
       this.exportRows(query),
       this.reportBrand?.forCompany(getRequiredCompanyId()),
     ]);
+    const holders = await this.holders(rows.map((r) => r.id));
+    for (const r of rows) r.holder = holders.get(r.id) ?? null;
     return listXlsx({
       title: 'قائمة الوحدات',
       sheet: 'الوحدات',
