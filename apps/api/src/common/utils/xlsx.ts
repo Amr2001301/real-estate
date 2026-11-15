@@ -218,45 +218,219 @@ export function addTable(
   appendTable(ws, headers, rows);
 }
 
+// ── Document look (as the Devora HR exports) ─────────────────────────────────
+// Company line, big title, a gold rule, fact cards (period / issued / count),
+// then a navy header row with a gold underline, cream zebra rows, a bold first
+// column and a cream totals row.
+export const DOC_INK = 'FF0F1A33';
+export const DOC_TEXT = 'FF1F2937';
+export const DOC_SUB = 'FF4A5263';
+export const DOC_LABEL = 'FF6B7280';
+export const DOC_GOLD = 'FFB8892F';
+export const DOC_CREAM = 'FFFBF8F2';
+export const DOC_TOTAL = 'FFF6EEDC';
+export const DOC_RULE = 'FFE8E1D2';
+const FONT = 'Arial';
+
+/** Split `span` columns into `n` near-equal groups ([from, to], 1-based). */
+function groups(span: number, n: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  let from = 1;
+  for (let i = 0; i < n; i++) {
+    const width = Math.floor(span / n) + (i < span % n ? 1 : 0);
+    const to = Math.max(from, from + width - 1);
+    out.push([from, Math.min(to, span)]);
+    from = to + 1;
+  }
+  return out;
+}
+
 /**
- * A titled RTL table sheet: navy title + generated-on stamp, an optional applied
- * "عوامل التصفية" line, then a frozen-header table. The default presentation for
- * the simple-list XLSX exports. Mutates the sheet.
+ * The document header: company, title, gold rule, fact cards. Returns the
+ * row number where the next block (the table) should start.
+ */
+export function addDocumentHeader(
+  ws: Worksheet,
+  opts: { span: number; company?: string; title: string; facts: Array<[string, string]> },
+): number {
+  const span = Math.max(3, opts.span);
+  ws.getRow(1).height = 8;
+  ws.mergeCells(2, 1, 2, span);
+  const c = ws.getCell(2, 1);
+  c.value = opts.company ?? '';
+  c.font = { name: FONT, bold: true, size: 12, color: { argb: DOC_SUB } };
+  c.alignment = { horizontal: 'right', vertical: 'middle' };
+  ws.getRow(2).height = 22;
+
+  ws.mergeCells(3, 1, 3, span);
+  const t = ws.getCell(3, 1);
+  t.value = opts.title;
+  t.font = { name: FONT, bold: true, size: 20, color: { argb: DOC_INK } };
+  t.alignment = { horizontal: 'right', vertical: 'middle' };
+  ws.getRow(3).height = 36;
+
+  ws.getRow(4).height = 6;
+  for (let col = 1; col <= span; col++) {
+    ws.getCell(4, col).border = { bottom: { style: 'medium', color: { argb: DOC_GOLD } } };
+  }
+  ws.getRow(5).height = 12;
+
+  const facts = opts.facts.slice(0, Math.min(4, span));
+  groups(span, facts.length).forEach(([from, to], i) => {
+    const [label, value] = facts[i]!;
+    if (to > from) {
+      ws.mergeCells(6, from, 6, to);
+      ws.mergeCells(7, from, 7, to);
+    }
+    const l = ws.getCell(6, from);
+    l.value = label;
+    l.font = { name: FONT, size: 9.5, color: { argb: DOC_LABEL } };
+    const v = ws.getCell(7, from);
+    v.value = value;
+    v.font = { name: FONT, bold: true, size: 12, color: { argb: DOC_INK } };
+    for (const cell of [l, v]) {
+      cell.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DOC_CREAM } };
+    }
+  });
+  ws.getRow(6).height = 18;
+  ws.getRow(7).height = 22;
+  ws.getRow(8).height = 14;
+  return 9;
+}
+
+/**
+ * The document table at `startRow`: header + rows (+ optional totals), with a
+ * filter on the header, the header frozen and repeated on every printed page.
+ */
+export function addDocumentTable(
+  ws: Worksheet,
+  startRow: number,
+  opts: {
+    headers: string[];
+    rows: Array<Array<string | number | Date>>;
+    /** 1-based columns that hold numbers / dates: centred. */
+    numeric?: number[];
+    totals?: Array<string | number | null>;
+    emptyText?: string;
+  },
+): void {
+  const span = opts.headers.length;
+  const numeric = new Set(opts.numeric ?? []);
+  const header = ws.getRow(startRow);
+  opts.headers.forEach((h, i) => {
+    const cell = header.getCell(i + 1);
+    cell.value = h;
+    cell.font = { name: FONT, bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DOC_INK } };
+    cell.alignment = { horizontal: numeric.has(i + 1) ? 'center' : 'right', vertical: 'middle', indent: numeric.has(i + 1) ? 0 : 1 };
+    cell.border = { bottom: { style: 'medium', color: { argb: DOC_GOLD } } };
+  });
+  header.height = 30;
+
+  let r = startRow + 1;
+  if (opts.rows.length === 0) {
+    ws.mergeCells(r, 1, r, span);
+    const e = ws.getCell(r, 1);
+    e.value = opts.emptyText ?? 'لا توجد بيانات';
+    e.font = { name: FONT, italic: true, color: { argb: DOC_LABEL } };
+    e.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(r).height = 24;
+    r++;
+  }
+  opts.rows.forEach((values, idx) => {
+    const row = ws.getRow(r);
+    values.forEach((v, i) => {
+      const cell = row.getCell(i + 1);
+      cell.value = v as never;
+      const first = i === 0;
+      cell.font = { name: FONT, size: 10.5, bold: first, color: { argb: first ? DOC_INK : DOC_TEXT } };
+      cell.alignment = { horizontal: numeric.has(i + 1) ? 'center' : 'right', vertical: 'middle', indent: numeric.has(i + 1) ? 0 : 1 };
+      cell.border = { bottom: { style: 'thin', color: { argb: DOC_RULE } } };
+      if (idx % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DOC_CREAM } };
+    });
+    row.height = 22;
+    r++;
+  });
+
+  if (opts.totals) {
+    const row = ws.getRow(r);
+    for (let i = 0; i < span; i++) {
+      const cell = row.getCell(i + 1);
+      const v = opts.totals[i];
+      if (v != null) cell.value = v;
+      cell.font = { name: FONT, bold: true, size: 11, color: { argb: DOC_INK } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DOC_TOTAL } };
+      cell.alignment = { horizontal: numeric.has(i + 1) ? 'center' : 'right', vertical: 'middle', indent: numeric.has(i + 1) ? 0 : 1 };
+      cell.border = { top: { style: 'medium', color: { argb: DOC_GOLD } } };
+    }
+    row.height = 26;
+  }
+
+  ws.views = [{ state: 'frozen', ySplit: startRow, rightToLeft: true, showGridLines: false }];
+  if (opts.rows.length) ws.autoFilter = { from: { row: startRow, column: 1 }, to: { row: startRow, column: span } };
+  ws.pageSetup = {
+    orientation: span > 6 ? 'landscape' : 'portrait',
+    paperSize: 9,
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    printTitlesRow: `${startRow}:${startRow}`,
+    margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+  };
+  ws.headerFooter.oddFooter = '&L&P / &N';
+}
+
+/**
+ * A titled RTL table sheet in the document look: company, title, gold rule,
+ * fact cards (applied filters, issue time, record count), then the table.
+ * The default presentation for the simple-list XLSX exports. Mutates the sheet.
  */
 export function addTitledTable(
   ws: Worksheet,
   opts: {
     title: string;
-    /** Applied filters as [label, value] pairs; omitted/empty → no filter line. */
+    /** Applied filters as [label, value] pairs; omitted/empty → «كل البيانات». */
     filters?: Array<[string, string]>;
     headers: string[];
     rows: Array<Array<string | number | Date>>;
     widths: number[];
-    /** Company currency — stated under the title. */
+    /** Company currency — stated in the facts. */
     currency?: string;
-    /** Company identity — its name is stated under the title, the time in its zone. */
+    /** Company identity — its name heads the sheet, the time in its zone. */
     brand?: Pick<ReportBrand, 'name' | 'timezone'>;
     /** Shown in place of rows when there are none. */
     emptyText?: string;
+    /** 1-based columns holding numbers / dates (centred). */
+    numeric?: number[];
+    /** A totals row under the table. */
+    totals?: Array<string | number | null>;
   },
 ): void {
-  const span = opts.headers.length;
   ws.columns = opts.widths.map((w) => ({ width: w }));
-  addReportTitle(ws, opts.title, span, opts.currency, opts.brand?.name, opts.brand?.timezone);
-
   const applied = (opts.filters ?? []).filter(([, v]) => v !== '' && v != null);
-  if (applied.length > 0) {
-    const text = applied.map(([k, v]) => `${k}: ${v}`).join('  •  ');
-    const fr = ws.addRow([`عوامل التصفية — ${text}`]);
-    ws.mergeCells(fr.number, 1, fr.number, span);
-    fr.getCell(1).font = { italic: true, size: 9, color: { argb: XLSX_MUTED } };
-    fr.getCell(1).alignment = { horizontal: 'right' };
+  const facts: Array<[string, string]> = [
+    ['التصفية', applied.length ? applied.map(([k, v]) => `${k}: ${v}`).join(' · ') : 'كل البيانات'],
+    ['تاريخ الإصدار', formatStamp(new Date(), opts.brand?.timezone)],
+    ['عدد السجلات', String(opts.rows.length)],
+  ];
+  if (opts.currency) {
+    const code = normalizeCurrency(opts.currency);
+    facts.push(['العملة', `${arabicCurrencySymbol(code)} (${code})`]);
   }
-
-  ws.addRow([]); // spacer
-  const headerRowIndex = ws.rowCount + 1;
-  ws.views = [{ state: 'frozen', ySplit: headerRowIndex, rightToLeft: true }];
-  appendTable(ws, opts.headers, opts.rows, opts.emptyText);
+  const start = addDocumentHeader(ws, {
+    span: opts.headers.length,
+    company: opts.brand?.name,
+    title: opts.title,
+    facts,
+  });
+  addDocumentTable(ws, start, {
+    headers: opts.headers,
+    rows: opts.rows,
+    numeric: opts.numeric,
+    totals: opts.totals,
+    emptyText: opts.emptyText,
+  });
 }
 
 // ── Board / proposal report helpers (P15.4) ──────────────────────────────────

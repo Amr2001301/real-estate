@@ -18,6 +18,10 @@ export interface ListColumn<T> {
   value: (row: T) => string | number | null | undefined;
   /** An amount in the company currency (number format with the symbol). */
   money?: boolean;
+  /** A number or a date: centred. Money columns are numeric too. */
+  numeric?: boolean;
+  /** Add this column up in the totals row. */
+  sum?: boolean;
 }
 
 /** Every row of a paginated list, page by page, up to the cap. */
@@ -51,6 +55,17 @@ export async function listXlsx<T>(opts: {
     widths: opts.columns.map((c) => c.width),
     currency: opts.brand?.currency,
     brand: opts.brand,
+    numeric: opts.columns.flatMap((c, i) => (c.numeric || c.money ? [i + 1] : [])),
+    totals:
+      opts.rows.length && opts.columns.some((c) => c.sum)
+        ? opts.columns.map((c, i) =>
+            i === 0
+              ? 'الإجمالي'
+              : c.sum
+                ? opts.rows.reduce((a, r) => a + (Number(c.value(r)) || 0), 0)
+                : null,
+          )
+        : undefined,
   });
   const money = opts.columns.flatMap((c, i) => (c.money ? [i + 1] : []));
   if (money.length && opts.brand) formatMoneyColumns(ws, money, opts.brand.currency);
