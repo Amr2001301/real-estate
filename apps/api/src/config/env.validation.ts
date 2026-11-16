@@ -261,7 +261,12 @@ function assertProductionRequirements(env: AppEnv): string[] {
 }
 
 export function configValidation(raw: Record<string, unknown>): AppEnv {
-  const parsed = EnvSchema.safeParse(raw);
+  // .env files emit empty strings for unset vars; Zod .optional() only accepts
+  // undefined, so blank values must be normalized before the schema runs.
+  const normalized = Object.fromEntries(
+    Object.entries(raw).map(([k, v]) => [k, v === '' ? undefined : v]),
+  );
+  const parsed = EnvSchema.safeParse(normalized);
   if (!parsed.success) {
     const issues = parsed.error.errors.map((e) => `  - ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`Invalid environment variables:\n${issues}`);

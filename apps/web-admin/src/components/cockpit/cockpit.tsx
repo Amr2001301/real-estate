@@ -129,7 +129,7 @@ export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 |
         const body = (
           <>
             <dt className="text-[13px] leading-snug text-[#A9B0BD]">{f.label}</dt>
-            <dd className="num mt-2 whitespace-nowrap text-[34px] font-semibold leading-none tabular-nums text-[#F4ECD8] [&_.text-slate-500]:!text-[#D8B66A]">{f.value}</dd>
+            <dd className="num mt-2 whitespace-nowrap text-[34px] font-semibold leading-none text-[#F4ECD8] [&_.text-slate-500]:!text-[#D8B66A]">{f.value}</dd>
             {f.sub && <dd className={cn('mt-2 truncate text-[12px]', f.warn ? 'font-semibold text-[#E8B96E]' : 'text-[#A9B0BD]')}>{f.sub}</dd>}
           </>
         );
