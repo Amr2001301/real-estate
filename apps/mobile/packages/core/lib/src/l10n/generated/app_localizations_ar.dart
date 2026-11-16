@@ -4576,6 +4576,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeScheduleLink => 'الجدول';
 
   @override
+  String get homeExploreTitle => 'استكشف مشاريعنا';
+
+  @override
+  String get homeExploreAll => 'كل المشاريع';
+
+  @override
+  String get accountSectionExplore => 'استكشف';
+
+  @override
+  String get exploreProjectsDesc => 'كل مشاريع الشركة ووحداتها المتاحة';
+
+  @override
+  String get exploreUnitsDesc => 'ابحث وفلتر بالسعر والمساحة والمدينة';
+
+  @override
+  String get exploreCompareDesc => 'قارن بين الوحدات التي اخترتها';
+
+  @override
+  String get explorePickProject => 'اختر المشروع';
+
+  @override
   String get paymentProgress => 'تقدّم السداد';
 
   @override

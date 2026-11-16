@@ -8612,6 +8612,48 @@ abstract class AppLocalizations {
   /// **'Schedule'**
   String get homeScheduleLink;
 
+  /// No description provided for @homeExploreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore our projects'**
+  String get homeExploreTitle;
+
+  /// No description provided for @homeExploreAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All projects'**
+  String get homeExploreAll;
+
+  /// No description provided for @accountSectionExplore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get accountSectionExplore;
+
+  /// No description provided for @exploreProjectsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'All the company\'s projects and available units'**
+  String get exploreProjectsDesc;
+
+  /// No description provided for @exploreUnitsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Search and filter by price, area and city'**
+  String get exploreUnitsDesc;
+
+  /// No description provided for @exploreCompareDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare the units you\'ve picked'**
+  String get exploreCompareDesc;
+
+  /// No description provided for @explorePickProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a project'**
+  String get explorePickProject;
+
   /// No description provided for @paymentProgress.
   ///
   /// In en, this message translates to:

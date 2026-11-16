@@ -10,6 +10,7 @@ import '../../../home_summary/presentation/home_summary_cubit.dart';
 import '../../../maintenance/presentation/maintenance_format.dart';
 import '../../../notifications/presentation/unread_count_cubit.dart';
 import 'customer_home_header.dart';
+import 'home_explore_section.dart';
 
 Color get _navy => AppPalette.navyDeep;
 Color get _navyCard => AppPalette.navyCard;
@@ -132,6 +133,19 @@ class _Body extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           HomeFinancialCard(installments: summary.installments),
+          const SizedBox(height: AppSpacing.md),
+
+          // 3b · The company's projects: an owner's tab bar has no catalog tabs.
+          _SectionRow(
+            icon: Icons.travel_explore_rounded,
+            title: l10n.homeExploreTitle,
+            trailing: _Link(
+              label: l10n.homeExploreAll,
+              onTap: () => context.push('/explore/projects'),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          const HomeExploreSection(showHeader: false),
           const SizedBox(height: AppSpacing.md),
 
           // 4 · Maintenance

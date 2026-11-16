@@ -9,7 +9,8 @@ import 'package:mobile_customer/features/notifications/domain/repositories/notif
 import 'package:mobile_customer/features/notifications/domain/usecases/notification_use_cases.dart';
 import 'package:mobile_customer/features/notifications/presentation/unread_count_cubit.dart';
 
-/// «حسابي»: the hero stays where it is while the list under it scrolls.
+/// «حسابي»: the hero stays where it is while the list under it scrolls, and
+/// the company's catalog is one tap away.
 
 class _Notifications implements NotificationsRepository {
   @override
@@ -35,13 +36,7 @@ class _Content implements ContentRepository {
   Future<Result<ContentPage>> page(String slug) async => throw UnimplementedError();
 }
 
-void main() {
-  testWidgets('the account hero does not scroll with the list', (tester) async {
-    tester.view.physicalSize = const Size(390, 700);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(RepositoryProvider<ContentRepository>.value(
+Widget _app() => RepositoryProvider<ContentRepository>.value(
       value: _Content(),
       child: MultiBlocProvider(
         providers: [
@@ -56,9 +51,16 @@ void main() {
           home: const Scaffold(body: AccountScreen()),
         ),
       ),
-    ));
-    await tester.pumpAndSettle();
+    );
 
+void main() {
+  testWidgets('the account hero does not scroll with the list', (tester) async {
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
     final hero = find.byKey(const Key('account-hero'));
     final before = tester.getTopLeft(hero);
     await tester.drag(find.byKey(const Key('account-list')), const Offset(0, -400));
@@ -66,5 +68,14 @@ void main() {
 
     expect(hero, findsOneWidget);
     expect(tester.getTopLeft(hero), before);
+  });
+
+  testWidgets('a customer can reach the company catalog from «حسابي»', (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    expect(find.text('استكشف'), findsOneWidget);
+    expect(find.text('المشاريع'), findsOneWidget);
+    expect(find.text('الوحدات'), findsOneWidget);
+    expect(find.text('المقارنة'), findsOneWidget);
   });
 }

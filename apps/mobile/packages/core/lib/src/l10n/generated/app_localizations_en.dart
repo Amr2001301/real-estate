@@ -4626,6 +4626,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeScheduleLink => 'Schedule';
 
   @override
+  String get homeExploreTitle => 'Explore our projects';
+
+  @override
+  String get homeExploreAll => 'All projects';
+
+  @override
+  String get accountSectionExplore => 'Explore';
+
+  @override
+  String get exploreProjectsDesc =>
+      'All the company\'s projects and available units';
+
+  @override
+  String get exploreUnitsDesc => 'Search and filter by price, area and city';
+
+  @override
+  String get exploreCompareDesc => 'Compare the units you\'ve picked';
+
+  @override
+  String get explorePickProject => 'Choose a project';
+
+  @override
   String get paymentProgress => 'Payment progress';
 
   @override
