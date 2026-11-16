@@ -180,15 +180,29 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
                   <p className="font-heading text-[56px] font-bold leading-none tabular-nums text-slate-900">
                     {att === null ? '—' : `${att > 999 ? '+999' : att}%`}
                   </p>
-                  <div className="pb-1.5 text-[13px] text-slate-500">
-                    <p className="font-semibold text-slate-700">{m.ofTarget(money(perf?.achievedAmount ?? 0), money(target.amountTarget))}</p>
-                    <p>{m.unitsOf(perf?.achievedUnits ?? 0, target.unitsTarget)}</p>
-                  </div>
                 </div>
                 <PaceBar className="mt-5" pct={att} expected={expected} tone={STATUS_BAR[status]} />
                 <div className="mt-2 flex justify-between text-[12px] text-slate-500">
                   <span>{t.common.targetExpected(expected)}</span>
                   <span>{m.daysLeft(daysLeft)}</span>
+                </div>
+                <div className="mt-6 grid gap-x-8 gap-y-5 border-t border-hairline pt-5 sm:grid-cols-2">
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                      <span className="font-semibold text-slate-500">{m.valueLabel}</span>
+                      <b className="font-bold tabular-nums text-slate-900">{perf?.targetAmountPercent == null ? '—' : `${perf.targetAmountPercent > 999 ? '+999' : perf.targetAmountPercent}%`}</b>
+                    </div>
+                    <PaceBar className="mt-2" pct={perf?.targetAmountPercent ?? null} expected={expected} tone={STATUS_BAR[status]} />
+                    <p className="mt-2 text-[12px] tabular-nums text-slate-500">{m.ofTarget(money(perf?.achievedAmount ?? 0), money(target.amountTarget))}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                      <span className="font-semibold text-slate-500">{m.unitsLabel}</span>
+                      <b className="font-bold tabular-nums text-slate-900">{perf?.targetUnitsPercent == null ? '—' : `${perf.targetUnitsPercent > 999 ? '+999' : perf.targetUnitsPercent}%`}</b>
+                    </div>
+                    <PaceBar className="mt-2" pct={perf?.targetUnitsPercent ?? null} expected={expected} tone={STATUS_BAR[status]} />
+                    <p className="mt-2 text-[12px] tabular-nums text-slate-500">{m.unitsOf(perf?.achievedUnits ?? 0, target.unitsTarget)}</p>
+                  </div>
                 </div>
               </>
             ) : (
