@@ -81,7 +81,7 @@ class UnitCard extends StatelessWidget {
               ]),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(13, 9, 13, 10),
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 13),
               decoration: BoxDecoration(
                 color: colors.surfaceSoft.withValues(alpha: 0.6),
                 border: Border(top: BorderSide(color: colors.hairline)),
@@ -89,8 +89,10 @@ class UnitCard extends StatelessWidget {
               child: Row(children: [
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(l10n.detailTotalPrice, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    PriceText(unit.price, style: homeDisplay(18, AppPalette.gold600)),
+                    Text(l10n.detailTotalPrice, style: TextStyle(fontSize: 12, height: 1.3, color: colors.inkMuted)),
+                    // A clear gap: the price's tall display font used to touch the label above it.
+                    const SizedBox(height: 6),
+                    PriceText(unit.price, style: homeDisplay(18, AppPalette.gold600).copyWith(height: 1.25)),
                   ]),
                 ),
                 Icon(Icons.chevron_right_rounded, size: 22, color: colors.inkStrong),

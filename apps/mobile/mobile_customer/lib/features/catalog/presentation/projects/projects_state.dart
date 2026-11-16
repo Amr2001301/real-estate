@@ -50,6 +50,7 @@ class ProjectsState extends Equatable {
     this.page = 1,
     this.filter = const ProjectsFilter(),
     this.knownCities = const [],
+    this.cityCounts = const {},
   });
 
   final DataStatus status;
@@ -65,6 +66,9 @@ class ProjectsState extends Equatable {
   final ProjectsFilter filter;
   final List<String> knownCities;
 
+  /// How many projects each known city has (the most seen so far) — the city chips show the biggest first.
+  final Map<String, int> cityCounts;
+
   ProjectsState copyWith({
     DataStatus? status,
     List<ProjectListItem>? items,
@@ -75,6 +79,7 @@ class ProjectsState extends Equatable {
     int? page,
     ProjectsFilter? filter,
     List<String>? knownCities,
+    Map<String, int>? cityCounts,
   }) {
     return ProjectsState(
       status: status ?? this.status,
@@ -86,10 +91,11 @@ class ProjectsState extends Equatable {
       page: page ?? this.page,
       filter: filter ?? this.filter,
       knownCities: knownCities ?? this.knownCities,
+      cityCounts: cityCounts ?? this.cityCounts,
     );
   }
 
   @override
   List<Object?> get props =>
-      [status, items, failure, isLoadingMore, isRefreshing, hasMore, page, filter, knownCities];
+      [status, items, failure, isLoadingMore, isRefreshing, hasMore, page, filter, knownCities, cityCounts];
 }
