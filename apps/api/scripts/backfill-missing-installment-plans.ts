@@ -14,6 +14,9 @@
  * - Never touches an existing plan or installment.
  * - `--months=N` (default 24).
  *
+ * Every row carries the contract's companyId: plans and installments are tenant-owned, and a row
+ * without one is invisible to the API (the customer app showed no schedule).
+ *
  * Run:
  *   npx tsx scripts/backfill-missing-installment-plans.ts                    (dry-run)
  *   npx tsx scripts/backfill-missing-installment-plans.ts --execute --months=36
@@ -75,10 +78,10 @@ async function main(): Promise<void> {
         });
         const rows: Prisma.InstallmentCreateManyInput[] = [];
         if (down > 0) {
-          rows.push({ planId: plan.id, type: PlanPaymentType.DOWN_PAYMENT, dueDate: startsAt, amount: money(down) });
+          rows.push({ planId: plan.id, companyId: c.companyId, type: PlanPaymentType.DOWN_PAYMENT, dueDate: startsAt, amount: money(down) });
         }
         for (let i = 0; i < MONTHS; i++) {
-          rows.push({ planId: plan.id, dueDate: addMonths(startsAt, i), amount: money(i === MONTHS - 1 ? last : monthly) });
+          rows.push({ planId: plan.id, companyId: c.companyId, dueDate: addMonths(startsAt, i), amount: money(i === MONTHS - 1 ? last : monthly) });
         }
         await tx.installment.createMany({ data: rows });
       });
