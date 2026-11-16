@@ -146,6 +146,7 @@
   "projectAmenities": "المرافق والخدمات",
   "projectLocation": "الموقع",
   "openInMaps": "افتح في الخرائط",
+  "mapExpand": "عرض الخريطة بالكامل",
   "projectAvailableUnits": "الوحدات المتاحة",
   "availableUnitsCount": "{count, plural, =0{لا وحدات متاحة} =1{وحدة متاحة واحدة} other{{count} وحدات متاحة}}",
   "@availableUnitsCount": { "placeholders": { "count": { "type": "int" } } },

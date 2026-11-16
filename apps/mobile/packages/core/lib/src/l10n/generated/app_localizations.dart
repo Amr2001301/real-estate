@@ -890,6 +890,12 @@ abstract class AppLocalizations {
   /// **'Open in Maps'**
   String get openInMaps;
 
+  /// No description provided for @mapExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'View full map'**
+  String get mapExpand;
+
   /// No description provided for @projectAvailableUnits.
   ///
   /// In en, this message translates to:

@@ -35,6 +35,7 @@ class _ProjectsFilterSheetState extends State<_ProjectsFilterSheet> {
   /// backend value (used for filtering) is never changed.
   String _cityLabel(String raw) => switch (raw) {
         'Riyadh' => 'الرياض',
+        'Jeddah' => 'جدة',
         'New Damietta' => 'دمياط الجديدة',
         _ => raw,
       };

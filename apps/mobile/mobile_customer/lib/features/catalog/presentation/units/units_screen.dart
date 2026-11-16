@@ -153,6 +153,15 @@ class _UnitsScreenState extends State<UnitsScreen> {
                     ),
                   ),
 
+                  // A reload keeps the list in place; this line (always 2px, so nothing
+                  // moves) shows it is working.
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 2,
+                      child: state.isRefreshing ? const LinearProgressIndicator(minHeight: 2) : null,
+                    ),
+                  ),
+
                   // ── Compare-mode selection hint ────────────────────────
                   if (compareMode && compareCount == 0)
                     SliverToBoxAdapter(
