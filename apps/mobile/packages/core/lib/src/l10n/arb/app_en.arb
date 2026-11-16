@@ -31,6 +31,7 @@
   "errorNoConnection": "No internet connection. Please check your network and try again.",
   "errorTimeout": "The connection timed out. Please try again.",
   "errorSessionExpired": "Your session has expired. Please sign in again.",
+  "errorInvalidCredentials": "Incorrect email or password.",
   "errorPermissionDenied": "You don't have permission to perform this action.",
   "errorNotFound": "We couldn't find what you were looking for.",
   "errorValidation": "Please review the information you entered and try again.",

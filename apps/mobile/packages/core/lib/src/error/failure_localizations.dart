@@ -12,6 +12,7 @@ extension AppErrorMessageKeyL10n on AppErrorMessageKey {
         AppErrorMessageKey.noConnection => l.errorNoConnection,
         AppErrorMessageKey.timeout => l.errorTimeout,
         AppErrorMessageKey.sessionExpired => l.errorSessionExpired,
+        AppErrorMessageKey.invalidCredentials => l.errorInvalidCredentials,
         AppErrorMessageKey.permissionDenied => l.errorPermissionDenied,
         AppErrorMessageKey.notFound => l.errorNotFound,
         AppErrorMessageKey.validation => l.errorValidation,

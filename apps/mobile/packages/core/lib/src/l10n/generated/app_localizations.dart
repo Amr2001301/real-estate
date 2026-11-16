@@ -236,6 +236,12 @@ abstract class AppLocalizations {
   /// **'Your session has expired. Please sign in again.'**
   String get errorSessionExpired;
 
+  /// No description provided for @errorInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect email or password.'**
+  String get errorInvalidCredentials;
+
   /// No description provided for @errorPermissionDenied.
   ///
   /// In en, this message translates to:

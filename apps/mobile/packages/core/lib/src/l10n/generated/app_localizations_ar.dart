@@ -80,6 +80,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorSessionExpired => 'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.';
 
   @override
+  String get errorInvalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
+
+  @override
   String get errorPermissionDenied => 'ليس لديك صلاحية لتنفيذ هذا الإجراء.';
 
   @override

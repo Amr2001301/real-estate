@@ -80,6 +80,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your session has expired. Please sign in again.';
 
   @override
+  String get errorInvalidCredentials => 'Incorrect email or password.';
+
+  @override
   String get errorPermissionDenied =>
       'You don\'t have permission to perform this action.';
 
