@@ -152,18 +152,28 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
         breadcrumbs={[{ label: m.breadcrumbDashboard, href: '/dashboard' }, { label: m.breadcrumbSelf }]}
       />
 
+      <FigureBar
+        cols={4}
+        figures={[
+          { label: m.activityOpenLeads, value: openLeads, href: '/dashboard/leads' },
+          { label: m.activityUpcomingVisits, value: upcomingVisits, href: '/dashboard/visits?tab=appointments' },
+          { label: m.activityActiveReservations, value: activeReservations, href: '/dashboard/reservations' },
+          { label: m.perfClosedContractsLabel, value: perf?.signedContractsCount ?? 0, href: '/dashboard/contracts' },
+        ]}
+      />
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 xl:items-stretch">
         {/* This month's target, its pace and the month's activity */}
         <section data-testid="month-target" className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface xl:col-span-3">
+          <header className="flex items-center justify-between gap-3 bg-navy-band px-6 py-4 text-[#F4ECD8] sm:px-7">
+            <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.monthTarget} · {periodLabel(currentPeriod)}</h2>
+            {target && (
+              <span data-testid="month-status" className={cn('rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
+                {t.common.targetStatus[status]}
+              </span>
+            )}
+          </header>
           <div className="flex-1 p-6 sm:p-7">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] font-bold text-[#B8913F] dark:text-[#D8B66A]">{m.monthTarget} · {periodLabel(currentPeriod)}</p>
-              {target && (
-                <span data-testid="month-status" className={cn('rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
-                  {t.common.targetStatus[status]}
-                </span>
-              )}
-            </div>
             {target ? (
               <>
                 <div className="mt-4 flex flex-wrap items-end gap-x-5 gap-y-2">
@@ -185,23 +195,14 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
               <p className="mt-6 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-slate-500">{m.noMonthTarget}</p>
             )}
           </div>
-          <div className="border-t border-hairline">
-            <FigureBar
-              bare
-              cols={4}
-              figures={[
-                { label: m.activityOpenLeads, value: openLeads, href: '/dashboard/leads' },
-                { label: m.activityUpcomingVisits, value: upcomingVisits, href: '/dashboard/visits?tab=appointments' },
-                { label: m.activityActiveReservations, value: activeReservations, href: '/dashboard/reservations' },
-                { label: m.perfClosedContractsLabel, value: perf?.signedContractsCount ?? 0, href: '/dashboard/contracts' },
-              ]}
-            />
-          </div>
         </section>
 
         {/* What the rep has earned */}
-        <section data-testid="earnings" className="flex flex-col rounded-[22px] border border-hairline bg-surface p-6 sm:p-7 xl:col-span-2">
-          <p className="text-[13px] font-bold text-[#B8913F] dark:text-[#D8B66A]">{m.earningsTitle}</p>
+        <section data-testid="earnings" className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface xl:col-span-2">
+          <header className="bg-navy-band px-6 py-4 text-[#F4ECD8] sm:px-7">
+            <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.earningsTitle}</h2>
+          </header>
+          <div className="flex flex-1 flex-col p-6 sm:p-7">
           {bonusRes.error ? (
             <div className="mt-4"><SectionError msg={m.errorSection} /></div>
           ) : (
@@ -231,12 +232,14 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
               </p>
             </>
           )}
+          </div>
         </section>
       </div>
 
       {/* Earnings, one per line */}
       {entries.length > 0 && (
         <Panel
+          band
           testId="entries"
           title={m.entriesSectionTitle}
           sub={m.entriesCountSuffix(entries.length)}
@@ -268,7 +271,7 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
       )}
 
       {/* Every month against its target */}
-      <Panel testId="target-history" title={m.historyTitle} sub={m.historySub}>
+      <Panel band testId="target-history" title={m.historyTitle} sub={m.historySub}>
         {targetsRes.error ? (
           <SectionError msg={m.errorSection} />
         ) : targets.length === 0 ? (

@@ -105,6 +105,14 @@ export interface Figure {
  * PremiumMetricStrip: one navy band, gold hairlines between the figures, cream values.
  * `bare` is accepted for older callers; the band is always its own card.
  */
+const FIGURE_COLS: Record<number, string> = {
+  2: 'xl:grid-cols-2',
+  3: 'xl:grid-cols-3',
+  4: 'xl:grid-cols-4',
+  5: 'xl:grid-cols-5',
+  6: 'sm:grid-cols-3 xl:grid-cols-6',
+};
+
 export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean }) {
   return (
     <dl
@@ -112,7 +120,7 @@ export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 |
       className={cn(
         'grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16] text-[#F4ECD8]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
-        cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : cols === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
+        FIGURE_COLS[Math.min(cols, Math.max(2, figures.length))] ?? 'xl:grid-cols-4',
         // An odd count: the first figure spans the phone row, no empty cell.
         figures.length % 2 === 1 && 'max-xl:[&>*:first-child]:col-span-2',
       )}
@@ -172,6 +180,7 @@ export function Panel({
   children,
   className,
   testId,
+  band,
 }: {
   title: string;
   sub?: string;
@@ -179,16 +188,18 @@ export function Panel({
   children: ReactNode;
   className?: string;
   testId?: string;
+  /** A navy title band, like a table's header row. */
+  band?: boolean;
 }) {
   return (
-    <section data-testid={testId} className={cn('flex flex-col rounded-[22px] border border-hairline bg-surface', className)}>
-      <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
+    <section data-testid={testId} className={cn('flex flex-col rounded-[22px] border border-hairline bg-surface', band && 'overflow-hidden', className)}>
+      <header className={cn('flex items-start justify-between gap-4 px-6', band ? 'items-center bg-navy-band py-4 text-[#F4ECD8]' : 'pb-4 pt-5')}>
         <div className="min-w-0">
-          <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
-          {sub && <p className="mt-0.5 text-[12.5px] text-slate-500">{sub}</p>}
+          <h2 className={cn('font-heading text-[19px] font-bold leading-snug', band ? 'text-[#F4ECD8]' : 'text-slate-900')}>{title}</h2>
+          {sub && <p className={cn('mt-0.5 text-[12.5px]', band ? 'text-[#A9B0BD]' : 'text-slate-500')}>{sub}</p>}
         </div>
         {link && (
-          <Link href={link.href as never} className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-brand-700 hover:text-brand-600">
+          <Link href={link.href as never} className={cn('inline-flex shrink-0 items-center gap-1 text-[13px] font-bold', band ? 'text-[#D8B66A] hover:text-[#E9D9B0]' : 'text-brand-700 hover:text-brand-600')}>
             {link.label}
             <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
