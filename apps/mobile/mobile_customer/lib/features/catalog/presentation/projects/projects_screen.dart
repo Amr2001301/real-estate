@@ -28,6 +28,21 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         _ => raw,
       };
 
+  /// The row holds «الكل» and three cities — the same four chips as the units row, so it
+  /// never runs off the screen. The biggest cities come first; the chosen one is always
+  /// there; the rest are in the filter sheet.
+  List<String> _chipCities(ProjectsState state) {
+    final ranked = [...state.knownCities]
+      ..sort((a, b) {
+        final byCount = (state.cityCounts[b] ?? 0).compareTo(state.cityCounts[a] ?? 0);
+        return byCount != 0 ? byCount : a.compareTo(b);
+      });
+    final top = ranked.take(3).toList();
+    final chosen = state.filter.city;
+    if (chosen != null && !top.contains(chosen)) top[top.length - 1] = chosen;
+    return top;
+  }
+
   final _scroll = ScrollController();
   late final TextEditingController _search;
 
@@ -134,7 +149,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             selected: state.filter.city == null,
                             onTap: () => context.read<ProjectsCubit>().applyFilter(state.filter.copyWith(clearCity: true)),
                           ),
-                          for (final c in state.knownCities)
+                          for (final c in _chipCities(state))
                             HomePill(
                               id: c,
                               label: _cityLabel(c),

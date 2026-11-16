@@ -79,6 +79,16 @@ void main() {
       expect(cubit.state.knownCities, ['Jeddah', 'Riyadh']);
     });
 
+    test('cities are counted, so the chips can show the biggest first', () async {
+      final cubit = ProjectsCubit(GetProjects(_Repo()));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(cubit.state.cityCounts, {'Riyadh': 2, 'Jeddah': 1});
+      cubit.applyFilter(cubit.state.filter.copyWith(city: 'Jeddah'));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      // Filtering must not shrink the counts.
+      expect(cubit.state.cityCounts, {'Riyadh': 2, 'Jeddah': 1});
+    });
+
     test('a filter change keeps the list on screen while it reloads', () async {
       final cubit = ProjectsCubit(GetProjects(_Repo()));
       await Future<void>.delayed(const Duration(milliseconds: 10));

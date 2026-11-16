@@ -33,6 +33,7 @@ class ProjectsCubit extends Cubit<ProjectsState> {
         // The city chips are the cities seen so far, not only those of the
         // current result: filtering to one city must not make the others vanish.
         knownCities: _mergeCities(state.knownCities, page.data),
+        cityCounts: _mergeCounts(state.cityCounts, page.data),
       )),
       err: (failure) =>
           emit(state.copyWith(status: DataStatus.failure, failure: failure, isRefreshing: false)),
@@ -86,6 +87,17 @@ class ProjectsCubit extends Cubit<ProjectsState> {
       page: page,
       pageSize: _pageSize,
     ));
+  }
+
+  /// The most projects seen in one city so far (each load only sees a page, so the max is the best estimate).
+  Map<String, int> _mergeCounts(Map<String, int> current, List<ProjectListItem> items) {
+    final seen = <String, int>{};
+    for (final p in items) {
+      if (p.city.isNotEmpty) seen[p.city] = (seen[p.city] ?? 0) + 1;
+    }
+    return {
+      for (final c in {...current.keys, ...seen.keys}) c: (seen[c] ?? 0) > (current[c] ?? 0) ? seen[c]! : (current[c] ?? 0),
+    };
   }
 
   List<String> _mergeCities(List<String> current, List<ProjectListItem> items) {
