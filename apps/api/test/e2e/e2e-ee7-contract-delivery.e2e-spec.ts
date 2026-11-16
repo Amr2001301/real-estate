@@ -40,6 +40,8 @@ describe('EE7 — the contract handover date (e2e)', () => {
       .send({ customerId, unitId: unit.id, totalAmount: 2_000_000, downPayment: 200_000 })
       .expect(201);
     contractIds.push(created.body.id);
+    // A contract is signed only with a payment plan.
+    await testApp.rawPrisma.installmentPlan.create({ data: { contractId: created.body.id, totalMonths: 0, monthlyAmount: 0, startsAt: new Date('2031-01-01'), companyId } });
     await asAdmin(http().post(`/v1/contracts/${created.body.id}/sign`))
       .send({ signedAt: new Date().toISOString(), ...sign })
       .expect(201);

@@ -15,12 +15,22 @@ export function CreatePlanForm({
   today,
 }: {
   contractId: string;
-  labels: { months: string; monthly: string; submit: string; backdated: string };
+  labels: {
+    months: string;
+    monthly: string;
+    submit: string;
+    backdated: string;
+    method: string;
+    installments: string;
+    cash: string;
+    cashHint: string;
+  };
   /** Today in the company's time zone (YYYY-MM-DD). */
   today: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [startsAt, setStartsAt] = useState('');
+  const [method, setMethod] = useState<'installments' | 'cash'>('installments');
   const [pending, startTransition] = useTransition();
 
   return (
@@ -35,9 +45,27 @@ export function CreatePlanForm({
       className="space-y-3"
       data-testid="create-plan-form"
     >
+      <label className="flex flex-col gap-1 text-xs text-slate-500 md:max-w-xs">
+        {labels.method}
+        <select
+          name="method"
+          value={method}
+          onChange={(e) => setMethod(e.target.value as 'installments' | 'cash')}
+          className={inputClass}
+          data-testid="plan-method"
+        >
+          <option value="installments">{labels.installments}</option>
+          <option value="cash">{labels.cash}</option>
+        </select>
+      </label>
+      {method === 'cash' && <p className="text-xs text-slate-500">{labels.cashHint}</p>}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input name="totalMonths" type="number" min={1} max={360} placeholder={labels.months} required className={inputClass} />
-        <input name="monthlyAmount" type="number" step="any" min={0} placeholder={labels.monthly} className={inputClass} />
+        {method === 'installments' && (
+          <>
+            <input name="totalMonths" type="number" min={1} max={360} placeholder={labels.months} required className={inputClass} />
+            <input name="monthlyAmount" type="number" step="any" min={0} placeholder={labels.monthly} className={inputClass} />
+          </>
+        )}
         <input
           name="startsAt"
           type="date"

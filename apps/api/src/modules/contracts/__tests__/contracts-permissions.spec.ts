@@ -120,6 +120,7 @@ function makePrismaMock() {
         return (u?.codes ?? []).map((code) => ({ permission: { code } }));
       }),
     },
+    installmentPlan: { findFirst: jest.fn().mockResolvedValue({ id: 'plan-1' }) },
     contract: {
       findUnique: jest.fn().mockImplementation(async () => ({ ...contractStore.current })),
       findMany: jest.fn().mockResolvedValue([]),

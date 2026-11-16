@@ -121,6 +121,8 @@ function makePrismaMock() {
       updateMany: jest.fn(),
       findUniqueOrThrow: jest.fn(),
     },
+    // A contract is only signed with a payment plan (instalments or cash).
+    installmentPlan: { findFirst: jest.fn().mockResolvedValue({ id: 'plan-1' }) },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
     notification: {
@@ -239,6 +241,7 @@ describe('Contracts · signing workflow', () => {
     resetFixture();
     mock.contract.findUnique.mockClear();
     mock.contract.update.mockClear();
+    mock.installmentPlan.findFirst.mockResolvedValue({ id: 'plan-1' });
     mock.auditLog.create.mockClear();
     mock.unitMaintenanceItem.findMany.mockClear();
     mock.unitMaintenanceItem.update.mockClear();
@@ -252,6 +255,19 @@ describe('Contracts · signing workflow', () => {
     brokerCommissionsMock.materializeFromContract.mockResolvedValue({ status: 'created' });
     bonusServiceMock.materializeFromSignedContract.mockClear();
     bonusServiceMock.materializeFromSignedContract.mockResolvedValue({ status: 'created' });
+  });
+
+  // ── A contract is not signed without a way to pay ───────────────────────
+
+  it('refuses to sign a contract that has no payment plan, and writes nothing', async () => {
+    mock.installmentPlan.findFirst.mockResolvedValue(null);
+    const res = await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2026-01-15T10:00:00.000Z' })
+      .expect(400);
+    expect(res.body.code).toBe('PAYMENT_PLAN_REQUIRED');
+    expect(mock.contract.update).not.toHaveBeenCalled();
+    expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
   });
 
   // ── Happy path: non-broker contract ─────────────────────────────────────

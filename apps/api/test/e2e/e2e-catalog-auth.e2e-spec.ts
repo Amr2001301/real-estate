@@ -808,11 +808,19 @@ describe('Flow A — Catalog sync (e2e)', () => {
       created.push(c.id);
       return c.id;
     };
-    const sign = (id: string) =>
-      http()
+    const sign = async (id: string) => {
+      // A contract is signed only with a payment plan.
+      const { companyId } = await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id }, select: { companyId: true } });
+      await testApp.rawPrisma.installmentPlan.upsert({
+        where: { contractId: id },
+        update: {},
+        create: { contractId: id, totalMonths: 0, monthlyAmount: 0, startsAt: new Date('2031-01-01'), companyId },
+      });
+      return http()
         .post(`/v1/contracts/${id}/sign`)
         .send({ signedAt: new Date().toISOString() })
         .set('Authorization', bearer(adminToken));
+    };
 
     afterAll(async () => {
       const raw = testApp.rawPrisma;
@@ -1038,6 +1046,13 @@ describe('Flow A — Catalog sync (e2e)', () => {
     });
 
     it('signing records the follow-ups; a recorded failure shows on the contract until a re-run succeeds', async () => {
+      // A contract is signed only with a payment plan.
+      const { companyId } = await testApp.rawPrisma.contract.findUniqueOrThrow({ where: { id: contractId }, select: { companyId: true } });
+      await testApp.rawPrisma.installmentPlan.upsert({
+        where: { contractId },
+        update: {},
+        create: { contractId, totalMonths: 0, monthlyAmount: 0, startsAt: new Date('2031-01-01'), companyId },
+      });
       const signed = await http()
         .post(`/v1/contracts/${contractId}/sign`)
         .set('Authorization', bearer(adminToken))

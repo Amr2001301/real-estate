@@ -47,23 +47,12 @@ export async function createContractAction(
     return { error: (e as Error).message };
   }
 
-  // Optional signing step. If signing fails, the contract was still created;
-  // we surface the error so the user knows to retry signing from the detail
-  // page rather than re-submitting the create form (which would duplicate).
-  if (signedAt) {
-    try {
-      await api.post(`/contracts/${created.id}/sign`, { signedAt });
-    } catch (e) {
-      unstable_rethrow(e);
-      revalidatePath('/dashboard/contracts');
-      return {
-        error: `تم إنشاء العقد لكن فشل التوقيع: ${(e as Error).message}. افتح صفحة العقد من القائمة وحاول التوقيع مرة أخرى.`,
-      };
-    }
-  }
-
+  // A contract is signed only once it has a payment plan (instalments or cash), which is set on
+  // its page. The signing date typed here is carried there, ready for the signing step.
   revalidatePath('/dashboard/contracts');
-  redirect(`/dashboard/contracts/${created.id}`);
+  redirect(
+    `/dashboard/contracts/${created.id}?tab=installments${signedAtRaw ? `&signAt=${encodeURIComponent(signedAtRaw.slice(0, 10))}` : ''}`,
+  );
 }
 
 // Signing is its own step (the strict `contracts:sign` permission): a contract
@@ -164,11 +153,17 @@ export async function createInstallmentPlanAction(
   // Left empty, the monthly amount is computed from the contract (total minus
   // down payment, over the months); a typed one must fit the contract.
   const monthly = String(formData.get('monthlyAmount') ?? '').trim();
+  const cash = String(formData.get('method') ?? '') === 'cash';
   try {
     await api.post('/installment-plans', {
       contractId,
-      totalMonths: Number(formData.get('totalMonths') ?? 12),
-      ...(monthly ? { monthlyAmount: Number(monthly) } : {}),
+      // A cash sale has no months: one payment on the start date.
+      ...(cash
+        ? { cash: true }
+        : {
+            totalMonths: Number(formData.get('totalMonths') ?? 12),
+            ...(monthly ? { monthlyAmount: Number(monthly) } : {}),
+          }),
       startsAt: new Date(String(formData.get('startsAt'))).toISOString(),
     });
   } catch (e) {

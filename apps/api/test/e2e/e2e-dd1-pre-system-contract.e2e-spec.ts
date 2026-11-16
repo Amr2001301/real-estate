@@ -109,6 +109,10 @@ describe('DD1 — contract signed before the system (e2e)', () => {
 
   it('DD1-1: signed on its real date, quietly — no notification, no bonus', async () => {
     const id = await createContract(1, true);
+    // A contract is signed only with a payment plan: its schedule is entered first.
+    await asAdmin(http().post('/v1/installment-plans'))
+      .send({ contractId: id, totalMonths: 40, startsAt: '2025-02-01T00:00:00.000Z' })
+      .expect(201);
     const signed = await asAdmin(http().post(`/v1/contracts/${id}/sign`))
       .send({ signedAt: '2025-01-15T10:00:00.000Z' })
       .expect(201);
@@ -128,10 +132,8 @@ describe('DD1 — contract signed before the system (e2e)', () => {
   });
 
   it('DD1-2: what was paid before entry is marked paid, each row on its due date', async () => {
+    // Its 40-month schedule was entered before signing (DD1-1).
     const id = contractIds[0]!;
-    await asAdmin(http().post('/v1/installment-plans'))
-      .send({ contractId: id, totalMonths: 40, startsAt: '2025-02-01T00:00:00.000Z' })
-      .expect(201);
     const entered = startOfLocalToday(await companyTimeZone(testApp.rawPrisma, companyId));
 
     // Up to the end of June 2026 first (the customer fell behind after).
