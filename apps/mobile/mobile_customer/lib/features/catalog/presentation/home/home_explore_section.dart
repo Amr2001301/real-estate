@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/project.dart';
 import '../projects/projects_cubit.dart';
+import '../widgets/project_card.dart';
 
 /// «استكشف مشاريعنا» on a signed-in customer's home: their tab bar has no
 /// catalog tabs, so this is how an owner gets back to the company's projects
@@ -60,21 +61,22 @@ class HomeExploreSection extends StatelessWidget {
               ),
             ],
           ),
+        // The guest home's project cards: up to three, one under another.
         if (projects.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
-          SizedBox(
-            height: 196,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: projects.length,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-              itemBuilder: (_, i) => _ProjectTile(project: projects[i]),
+          for (final p in projects.take(3))
+            Padding(
+              key: Key('home-explore-project-${p.id}'),
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ProjectCard(
+                project: p,
+                onTap: () => context.push('/projects/${p.id}'),
+              ),
             ),
-          ),
         ] else if (state.status == DataStatus.loading ||
             state.status == DataStatus.initial)
           const SizedBox(
-            height: 196,
+            height: 200,
             child: Center(child: CircularProgressIndicator.adaptive()),
           ),
         const SizedBox(height: AppSpacing.sm),
@@ -168,70 +170,6 @@ Future<void> _pickProjectForVisit(
       'imageUrl': picked.coverImage,
     },
   );
-}
-
-class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.project});
-  final ProjectListItem project;
-
-  @override
-  Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
-    final city = project.city.trim();
-    return SizedBox(
-      width: 230,
-      child: Material(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: Key('home-explore-project-${project.id}'),
-          onTap: () => context.push('/projects/${project.id}'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              CatalogCover(
-                url: project.coverImage,
-                height: 116,
-                child: const SizedBox.shrink(),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      project.name.resolve(lang),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.inkStrong,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      [
-                        if (city.isNotEmpty) city,
-                        context.l10n.availableUnitsCount(
-                          project.availableUnitsCount,
-                        ),
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: colors.inkMuted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _Shortcut extends StatelessWidget {
