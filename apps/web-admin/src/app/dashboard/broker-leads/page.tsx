@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Users, Eye, Phone, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
+import { Users, Eye, Phone, AlertCircle, Search } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerLead, Paged } from '@/lib/types';
@@ -15,6 +15,9 @@ import {
   PremiumFilterBar,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
+  PremiumFilterField,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -184,18 +187,16 @@ export default async function AdminBrokerLeadsPage({
         {!showFilters && sp.projectId            && <input type="hidden" name="projectId"            value={sp.projectId} />}
 
         {/* ── Row 1: search + actions (always visible) ──────────────────────── */}
-        <div className="flex-1 min-w-[160px]">
-          <label htmlFor="bl-q" className="sr-only">{m.searchLabel}</label>
-          <Input
+        <PremiumFilterField label={m.searchLabel} htmlFor="bl-q">
+<Input
             id="bl-q"
             name="q"
             inputSize="sm"
             placeholder={m.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 shrink-0">
@@ -205,51 +206,31 @@ export default async function AdminBrokerLeadsPage({
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-          <Link
-            href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
-              showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filterHideFilters : m.filterAdvanced}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
         </div>
 
         {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
         {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bl-broker" className="text-[11px] font-medium text-slate-400">{m.filterBroker}</label>
-                <Select id="bl-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+          <PremiumFilterAdvancedPanel>
+              <PremiumFilterField label={m.filterBroker}>
+<Select id="bl-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
                   <option value="">{m.filterAllBrokers}</option>
                   {brokers.map((b) => (
                     <option key={b.id} value={b.id}>{b.companyName}</option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bl-status" className="text-[11px] font-medium text-slate-400">{m.filterReviewStatus}</label>
-                <Select id="bl-status" name="brokerApprovalStatus" inputSize="sm" defaultValue={sp.brokerApprovalStatus ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterReviewStatus}>
+<Select id="bl-status" name="brokerApprovalStatus" inputSize="sm" defaultValue={sp.brokerApprovalStatus ?? ''}>
                   <option value="">{m.filterAllStatuses}</option>
                   <option value="PENDING">{m.filterStatusPending}</option>
                   <option value="APPROVED">{m.filterStatusApproved}</option>
                   <option value="REJECTED">{m.filterStatusRejected}</option>
                   <option value="DUPLICATE">{m.filterStatusDuplicate}</option>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bl-stage" className="text-[11px] font-medium text-slate-400">{m.filterStage}</label>
-                <Select id="bl-stage" name="stage" inputSize="sm" defaultValue={sp.stage ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterStage}>
+<Select id="bl-stage" name="stage" inputSize="sm" defaultValue={sp.stage ?? ''}>
                   <option value="">{m.filterAllStages}</option>
                   <option value="NEW">{m.filterStageNew}</option>
                   <option value="INTERESTED">{m.filterStageInterested}</option>
@@ -258,18 +239,16 @@ export default async function AdminBrokerLeadsPage({
                   <option value="WON">{m.filterStageWon}</option>
                   <option value="LOST">{m.filterStageLost}</option>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bl-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
-                <Select id="bl-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterProject}>
+<Select id="bl-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
                   <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
-              </div>
-            </div>
-          </div>
+</PremiumFilterField>
+            </PremiumFilterAdvancedPanel>
         )}
       </PremiumFilterBar>
 

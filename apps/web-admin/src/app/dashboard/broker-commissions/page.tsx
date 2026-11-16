@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BadgePercent, Eye, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { BadgePercent, Eye, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions } from '@/lib/options';
 import type { AdminBrokerCommission, Paged } from '@/lib/types';
@@ -17,6 +17,8 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -172,58 +174,36 @@ export default async function AdminBrokerCommissionsPage({
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-          <Link
-            href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
-              showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filterHideFilters : m.filterAdvanced}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
         </div>
 
         {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
         {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-status" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
-                <Select id="bcom-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+          <PremiumFilterAdvancedPanel>
+              <PremiumFilterField label={m.filterStatus}>
+<Select id="bcom-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
                   <option value="">{m.filterAllStatuses}</option>
                   <option value="PENDING">{m.filterStatusPending}</option>
                   <option value="APPROVED">{m.filterStatusApproved}</option>
                   <option value="REJECTED">{m.filterStatusRejected}</option>
                   <option value="CANCELLED">{m.filterStatusCancelled}</option>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
-                <Select id="bcom-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterProject}>
+<Select id="bcom-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
                   <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-from" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
-                <Input id="bcom-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-to" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
-                <Input id="bcom-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
-              </div>
-            </div>
-          </div>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateFrom}>
+<Input id="bcom-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateTo}>
+<Input id="bcom-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
+</PremiumFilterField>
+            </PremiumFilterAdvancedPanel>
         )}
       </PremiumFilterBar>
 

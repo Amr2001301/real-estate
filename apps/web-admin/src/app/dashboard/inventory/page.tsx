@@ -32,8 +32,6 @@ import {
   PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumFilterChips,
-  PremiumFilterDivider,
   PremiumEmptyState,
   UNIT_STATUS_COLORS,
 } from '@/components/premium';
@@ -101,14 +99,6 @@ export default async function InventoryPage({
   const avgParts       = compactParts(avgPrice, symbol, locale);
 
   // ── URL helpers ─────────────────────────────────────────────────────────
-  const qs = (extra: Record<string, string | undefined>) => {
-    const p = new URLSearchParams();
-    if (q) p.set('q', q);
-    if (status !== 'all') p.set('status', status);
-    if (projectId) p.set('projectId', projectId);
-    for (const [k, v] of Object.entries(extra)) { v === undefined ? p.delete(k) : p.set(k, v); }
-    const s = p.toString(); return s ? `?${s}` : '';
-  };
   const unitsHref = (overrides: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
     if (status !== 'all') p.set('status', status);
@@ -187,16 +177,6 @@ export default async function InventoryPage({
       <PremiumFilterBar
         method="get"
         action="/dashboard/inventory"
-        trailing={
-          <PremiumFilterChips
-            chips={[
-              { label: m.filter.allChip, count: total, href: `/dashboard/inventory${qs({ status: undefined })}`, active: status === 'all' },
-              { label: m.filter.availableChip, count: available, href: `/dashboard/inventory${qs({ status: 'AVAILABLE' })}`, active: status === 'AVAILABLE' },
-              { label: m.filter.reservedChip, count: reserved, href: `/dashboard/inventory${qs({ status: 'RESERVED' })}`, active: status === 'RESERVED' },
-              { label: m.filter.soldChip, count: sold, href: `/dashboard/inventory${qs({ status: 'SOLD' })}`, active: status === 'SOLD' },
-            ]}
-          />
-        }
         summary={
           hasFilters ? (
             <Link href={resetHref as never} className="font-bold text-brand-700 underline underline-offset-4">
@@ -205,9 +185,6 @@ export default async function InventoryPage({
           ) : undefined
         }
       >
-        {/* Keep the status chip choice when the search or project changes */}
-        {status !== 'all' && <input type="hidden" name="status" value={status} />}
-
         <PremiumFilterField label={m.filter.searchLabel} htmlFor="inv-q">
           <Input id="inv-q" name="q" type="search" defaultValue={q} placeholder={m.filter.searchPlaceholder} />
         </PremiumFilterField>
@@ -220,7 +197,15 @@ export default async function InventoryPage({
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterDivider />
+
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="inv-status">
+          <Select id="inv-status" name="status" inputSize="sm" defaultValue={status === 'all' ? '' : status}>
+            <option value="">{m.filter.allChip} ({total})</option>
+            <option value="AVAILABLE">{m.filter.availableChip} ({available})</option>
+            <option value="RESERVED">{m.filter.reservedChip} ({reserved})</option>
+            <option value="SOLD">{m.filter.soldChip} ({sold})</option>
+          </Select>
+        </PremiumFilterField>
       </PremiumFilterBar>
 
       {/* ── 5. Inventory matrix ─────────────────────────────────────────────── */}

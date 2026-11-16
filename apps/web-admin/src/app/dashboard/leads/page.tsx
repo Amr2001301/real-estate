@@ -18,7 +18,6 @@ import {
   PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumFilterChips,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -69,15 +68,6 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
   const conversion = totalLeads > 0 ? Math.round((won / totalLeads) * 100) : 0;
   const sources = (sourcesRes.data ?? []).filter((s) => s.active);
   const reps = repsRes.data?.data ?? [];
-
-  // The unassigned toggle keeps the other filters.
-  const toggleHref = (() => {
-    const p = new URLSearchParams();
-    for (const k of ['q', 'stage', 'sourceId', 'salesId'] as const) if (sp[k]) p.set(k, sp[k]!);
-    if (!unassignedQueue) p.set('unassigned', '1');
-    const s = p.toString();
-    return `/dashboard/leads${s ? `?${s}` : ''}`;
-  })();
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6 pb-2">
@@ -144,15 +134,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <PremiumFilterBar
         method="get"
         action="/dashboard/leads"
-        trailing={
-          canRoute ? (
-            <PremiumFilterChips
-              chips={[{ label: m.unassignedQueue, href: toggleHref, active: unassignedQueue }]}
-            />
-          ) : undefined
-        }
       >
-        {unassignedQueue && <input type="hidden" name="unassigned" value="1" />}
         {sp.stage && <input type="hidden" name="stage" value={sp.stage} />}
         <PremiumFilterField label={m.filter.searchLabel} htmlFor="leads-q">
           <Input id="leads-q" name="q" type="search" defaultValue={sp.q ?? ''} placeholder={m.filter.searchPlaceholder} />
@@ -164,6 +146,14 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               {reps.map((r) => (
                 <option key={r.id} value={r.id}>{r.fullName}</option>
               ))}
+            </Select>
+          </PremiumFilterField>
+        )}
+        {canRoute && (
+          <PremiumFilterField label={m.filter.assignmentLabel} htmlFor="leads-assign">
+            <Select id="leads-assign" name="unassigned" inputSize="sm" defaultValue={unassignedQueue ? '1' : ''}>
+              <option value="">{m.filter.all}</option>
+              <option value="1">{m.unassignedQueue}</option>
             </Select>
           </PremiumFilterField>
         )}

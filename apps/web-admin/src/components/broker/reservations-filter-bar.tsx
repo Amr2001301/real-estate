@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { SlidersHorizontal } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
-import { cn } from '@/lib/cn';
+import { PremiumFilterBar, PremiumFilterField, PremiumFilterAdvancedPanel, PremiumFilterAdvancedToggle } from '@/components/premium/filter-bar';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 
@@ -76,21 +74,20 @@ export function ReservationsFilterBar({ projects, sp, locale = 'ar' }: Props) {
         </Select>
       </PremiumFilterField>
       {showAdvanced && (
-        <div className="flex basis-full flex-wrap items-center gap-2.5 border-t border-hairline pt-2.5">
-          <span className="px-2 text-[13px] text-slate-500">{r.reservationDate}</span>
-          <PremiumFilterField label={L.from} htmlFor="rf-from">
+        <PremiumFilterAdvancedPanel>
+<PremiumFilterField label={L.from} htmlFor="rf-from">
             <input id="rf-from" name="from" type="date" dir="ltr" defaultValue={sp.from ?? ''} />
           </PremiumFilterField>
           <PremiumFilterField label={L.to} htmlFor="rf-to">
             <input id="rf-to" name="to" type="date" dir="ltr" defaultValue={sp.to ?? ''} />
           </PremiumFilterField>
-        </div>
+        </PremiumFilterAdvancedPanel>
       )}
     </PremiumFilterBar>
   );
 }
 
-/** The dashed "more filters" pill, with the count of advanced filters set. */
+/** The gold "more filters" square, with a dot when an advanced filter is set. */
 export function MoreFiltersButton({
   open,
   count,
@@ -102,23 +99,5 @@ export function MoreFiltersButton({
   label: string;
   onClick: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-expanded={open}
-      className={cn(
-        'inline-flex h-11 items-center gap-2 rounded-full border border-dashed px-4 text-[13.5px] font-bold transition-colors',
-        open || count > 0 ? 'border-brand-400/70 text-brand-700' : 'border-hairline text-slate-700 hover:border-brand-400/50',
-      )}
-    >
-      <SlidersHorizontal className="h-4 w-4" aria-hidden />
-      {label}
-      {count > 0 && (
-        <span className="num inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-brand-100 px-1.5 text-[14px] text-brand-700">
-          {count}
-        </span>
-      )}
-    </button>
-  );
+  return <PremiumFilterAdvancedToggle onClick={onClick} open={open} active={count > 0} label={label} />;
 }

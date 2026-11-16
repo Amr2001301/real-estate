@@ -8,7 +8,7 @@ import {
   type FormHTMLAttributes,
   type ReactNode,
 } from 'react';
-import { ArrowLeft, CalendarRange } from 'lucide-react';
+import { ArrowLeft, CalendarRange, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export interface PremiumFilterBarProps extends FormHTMLAttributes<HTMLFormElement> {
@@ -63,16 +63,17 @@ export function PremiumFilterBar({
       <form
         onChange={handleChange}
         className={cn(
-          'flex flex-wrap items-center gap-2.5',
-          'rounded-card border border-hairline bg-surface p-2 sm:p-2.5',
-          'shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]',
+          // The one filter bar: ivory glass, a fine gold edge, search first, then the filters.
+          'flex flex-wrap items-center gap-y-3 py-2.5 ps-3 pe-3 sm:min-h-[76px] sm:ps-4 sm:pe-3',
+          'rounded-card border border-[#D8B66A]/35 bg-gradient-to-b from-surface to-surface-muted/40',
+          'shadow-[0_1px_0_rgb(255_255_255/0.7)_inset,0_18px_40px_-22px_rgb(15_30_51/0.35)]',
           autoSubmit && '[&_button[type=submit]]:hidden',
           className,
         )}
         {...rest}
       >
         {children}
-        {trailing && <div className="ms-auto flex shrink-0 flex-wrap items-center gap-2">{trailing}</div>}
+        {trailing && <div className="ms-auto flex shrink-0 flex-wrap items-center gap-2 ps-2">{trailing}</div>}
       </form>
       {summary && <div className="flex flex-wrap items-center gap-3 px-2 text-[13px] text-slate-500">{summary}</div>}
     </div>
@@ -90,12 +91,23 @@ export interface PremiumFilterFieldProps {
 }
 
 /** The page's free-text search: an input of type "search", or the `q` field. */
+function firstInput(node: ReactNode, depth = 0): { type?: string; name?: string } | null {
+  for (const child of Children.toArray(node)) {
+    if (!isValidElement<{ type?: string; name?: string; children?: ReactNode }>(child)) continue;
+    if (child.type === 'input' || child.props.type !== undefined || child.props.name !== undefined) return child.props;
+    if (depth < 3) {
+      const inner = firstInput(child.props.children, depth + 1);
+      if (inner) return inner;
+    }
+  }
+  return null;
+}
+
 function isSearch(children: ReactNode): boolean {
-  const only = Children.toArray(children)[0];
-  return (
-    isValidElement<{ type?: string; name?: string }>(only) &&
-    (only.props.type === 'search' || (only.props.name === 'q' && (only.props.type ?? 'text') === 'text'))
-  );
+  const input = firstInput(children);
+  if (!input) return false;
+  if (input.type === 'search') return true;
+  return !!input.name && ['q', 'search', 'query'].includes(input.name) && (input.type ?? 'text') === 'text';
 }
 
 export function PremiumFilterField({ label, htmlFor, children, className, neutral }: PremiumFilterFieldProps) {
@@ -103,11 +115,12 @@ export function PremiumFilterField({ label, htmlFor, children, className, neutra
     return (
       <div
         className={cn(
-          'relative flex min-w-[220px] flex-1 items-center',
-          // The inset ivory search: restyle the Input inside.
-          '[&_input]:h-11 [&_input]:w-full [&_input]:rounded-full [&_input]:border-0 [&_input]:bg-surface-sunken/60',
-          '[&_input]:ps-11 [&_input]:pe-4 [&_input]:text-[14px] [&_input]:shadow-none [&_input]:ring-0',
-          '[&_input]:focus:ring-2 [&_input]:focus:ring-brand-400/40',
+          'relative flex min-w-[240px] flex-1 items-center basis-[260px]',
+          '[&_input]:h-12 [&_input]:w-full [&_input]:rounded-none [&_input]:border-0 [&_input]:bg-transparent',
+          '[&_input]:ps-12 [&_input]:pe-4 [&_input]:text-[15px] [&_input]:shadow-none [&_input]:ring-0',
+          '[&_input]:placeholder:text-slate-400 [&_input]:focus:ring-0 [&_input]:focus-visible:ring-0',
+          // An Input with its own search icon: ours is the one shown.
+          '[&>div>span]:hidden',
           className,
         )}
       >
@@ -115,13 +128,14 @@ export function PremiumFilterField({ label, htmlFor, children, className, neutra
         <svg
           aria-hidden
           viewBox="0 0 24 24"
-          className="pointer-events-none absolute start-4 h-4 w-4 text-slate-400"
+          className="pointer-events-none absolute start-3 h-5 w-5 text-brand-700"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           strokeLinecap="round"
         >
-          <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4" />
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
         </svg>
         {children}
       </div>
@@ -131,84 +145,96 @@ export function PremiumFilterField({ label, htmlFor, children, className, neutra
     <label
       htmlFor={htmlFor}
       className={cn(
-        'flex h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-hairline bg-surface ps-4 pe-1',
-        'text-[13.5px] text-slate-500 transition-colors hover:border-brand-400/50',
-        // Set (a non-empty option chosen) → gold border + gold-soft background.
-        !neutral && "has-[option:checked:not([value=''])]:border-brand-400/70 has-[option:checked:not([value=''])]:bg-brand-50",
-        // The control inside shows only its value, bold, without its own box.
-        '[&_select]:h-9 [&_select]:w-auto [&_select]:min-w-0 [&_select]:border-0 [&_select]:bg-transparent [&_select]:shadow-none',
-        '[&_select]:py-0 [&_select]:ps-1 [&_select]:pe-8 [&_select]:text-[13.5px] [&_select]:font-bold [&_select]:text-slate-900',
+        // A filter: a small gold caption over its value, a fine fading rule between neighbours.
+        'group relative flex min-w-[148px] shrink-0 cursor-pointer flex-col justify-center gap-0.5 px-5 sm:px-6',
+        'before:pointer-events-none before:absolute before:inset-y-0 before:end-0 before:my-auto before:hidden before:h-8 before:w-px sm:before:block',
+        'before:bg-gradient-to-b before:from-transparent before:via-[#D8B66A]/60 before:to-transparent',
+        // The control shows only its value, without its own box.
+        '[&_select]:h-7 [&_select]:!w-full [&_select]:min-w-0 [&_select]:border-0 [&_select]:bg-transparent [&_select]:shadow-none',
+        '[&_select]:py-0 [&_select]:ps-0 [&_select]:pe-6 [&_select]:text-[15px] [&_select]:font-semibold [&_select]:text-slate-900',
         '[&_select]:ring-0 [&_select]:focus:ring-0 [&_select]:bg-none [&_select]:appearance-none',
-        // Focus shows ONCE, on the pill itself: the inner select draws no ring of its own.
         '[&_select]:![box-shadow:none] [&_select:focus]:![box-shadow:none] [&_select:focus-visible]:![box-shadow:none]',
-        'has-[select:focus-visible]:border-brand-500/70',
-        '[&_input]:h-9 [&_input]:border-0 [&_input]:bg-transparent [&_input]:shadow-none [&_input]:font-bold [&_input]:text-slate-900 [&_input]:focus:ring-0',
+        '[&_input]:h-7 [&_input]:w-full [&_input]:border-0 [&_input]:bg-transparent [&_input]:p-0 [&_input]:text-[15px] [&_input]:shadow-none [&_input]:font-semibold [&_input]:text-slate-900 [&_input]:ring-0 [&_input]:focus:ring-0',
+        // One focus cue: the caption turns gold.
+        'focus-within:[&>span:first-child]:text-brand-700',
+        // Set (a non-empty option chosen): gold caption with a dot, gold value.
+        !neutral && "has-[option:checked:not([value=''])]:[&>span:first-child]:text-brand-700 has-[option:checked:not([value=''])]:[&>span:first-child]:after:content-['_•'] has-[option:checked:not([value=''])]:[&_select]:text-brand-700",
         className,
       )}
     >
-      <span className="whitespace-nowrap">{label}</span>
-      <span className="relative flex items-center">
+      <span className="whitespace-nowrap text-[11px] font-semibold tracking-wide text-brand-700/80">{label}</span>
+      <span className="relative flex items-center [&:has(input)>svg]:hidden">
         {children}
         <svg
           aria-hidden
           viewBox="0 0 24 24"
-          className="pointer-events-none absolute end-3 h-3.5 w-3.5 text-slate-700"
+          className="pointer-events-none absolute end-0 h-3.5 w-3.5 text-brand-700"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M6 9l6 6 6-6" />
+          <path d="m6 9 6 6 6-6" />
         </svg>
       </span>
     </label>
   );
 }
 
-/** Status toggle chips with counts (as on inventory). Each chip is a link that sets one URL param. */
-export interface FilterChip {
-  label: string;
-  count?: number;
-  href: string;
-  active?: boolean;
+/** A thin vertical divider between groups in the bar. */
+export function PremiumFilterDivider() {
+  return null;
 }
 
-export function PremiumFilterChips({ chips, className }: { chips: FilterChip[]; className?: string }) {
-  return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      {chips.map((c) => (
-        <a
-          key={c.href}
-          href={c.href}
-          aria-current={c.active ? 'true' : undefined}
-          className={cn(
-            'inline-flex h-11 items-center gap-2 rounded-full border ps-1.5 pe-4 text-[13.5px] font-bold transition-colors',
-            c.active
-              ? 'border-brand-400/70 bg-brand-50 text-brand-700'
-              : 'border-hairline bg-surface text-slate-800 hover:border-brand-400/50',
-          )}
-        >
-          {c.count !== undefined && (
-            <span
-              className={cn(
-                'num inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[15px] font-semibold',
-                c.active ? 'bg-brand-100 text-brand-700' : 'bg-surface-muted text-slate-700',
-              )}
-            >
-              {c.count}
-            </span>
-          )}
-          {c.label}
-        </a>
-      ))}
-    </div>
+/**
+ * The gold square at the end of the bar that opens/closes the advanced filters. A link, because the
+ * pages keep that state in the URL (`showFilters`). `active` shows a dot when an advanced filter is set.
+ */
+export function PremiumFilterAdvancedToggle({
+  href,
+  onClick,
+  open,
+  active,
+  label,
+}: {
+  /** A link (the URL keeps the state), or `onClick` for a bar that keeps it in the page. */
+  href?: string;
+  onClick?: () => void;
+  open: boolean;
+  active?: boolean;
+  /** The text for screen readers and the tooltip. */
+  label: string;
+}) {
+  const cls = cn(
+        'relative grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl text-navy transition-[filter,box-shadow]',
+        'bg-gradient-to-br from-[#E9D39A] to-[#C79A3B] shadow-[0_10px_20px_-10px_#C79A3B] hover:brightness-105',
+        open && 'ring-2 ring-[#D8B66A]/50 ring-offset-2 ring-offset-surface',
+  );
+  const inner = (
+    <>
+      <SlidersHorizontal className="h-[18px] w-[18px]" strokeWidth={1.7} />
+      {active && !open && <span aria-hidden className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-surface bg-navy" />}
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} aria-label={label} title={label} aria-expanded={open} className={cls}>
+      {inner}
+    </button>
+  ) : (
+    <a href={href} aria-label={label} title={label} aria-expanded={open} className={cls}>
+      {inner}
+    </a>
   );
 }
 
-/** A thin vertical divider between groups in the bar. */
-export function PremiumFilterDivider() {
-  return <span aria-hidden className="mx-1 hidden h-7 w-px bg-hairline sm:block" />;
+/** The advanced filters: a second row under the bar, the same fields in a quiet grid. */
+export function PremiumFilterAdvancedPanel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mt-1 w-full basis-full border-t border-[#D8B66A]/30 pt-3">
+      <div className="grid grid-cols-2 gap-y-3 sm:grid-cols-3 lg:grid-cols-5 [&>label]:min-w-0">{children}</div>
+    </div>
+  );
 }
 
 /** Table / cards (/ kanban) switch. Each option is a link carrying the page's own `view` param. */
@@ -258,22 +284,20 @@ export function PremiumRangeField({
 }) {
   const set = !!(from.value || to.value);
   const input =
-    'h-9 w-[124px] rounded-full border-0 bg-surface-sunken/60 px-3 text-[13px] font-bold tabular-nums text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-400/40';
+    'h-7 w-[128px] border-0 bg-transparent p-0 text-[14px] font-semibold tabular-nums text-slate-900 focus:outline-none focus:ring-0';
   return (
-    <div
-      className={cn(
-        'flex h-11 items-center gap-2 rounded-full border ps-4 pe-1 text-[13.5px] text-slate-500',
-        set ? 'border-brand-400/70 bg-brand-50' : 'border-hairline bg-surface',
-      )}
-    >
-      <CalendarRange className="h-4 w-4 shrink-0 text-brand-700" />
-      {/* With a single range on the page the calendar icon says it; the label stays for screen readers. */}
-      <span className={hideLabel ? 'sr-only' : 'whitespace-nowrap'}>{label}</span>
-      <label htmlFor={from.id} className="sr-only">{from.label}</label>
-      <input id={from.id} name={from.id} type="date" defaultValue={from.value ?? ''} className={input} />
-      <ArrowLeft className="h-3.5 w-3.5 shrink-0 text-slate-400 ltr:rotate-180" aria-hidden />
-      <label htmlFor={to.id} className="sr-only">{to.label}</label>
-      <input id={to.id} name={to.id} type="date" defaultValue={to.value ?? ''} className={input} />
+    <div className="relative flex shrink-0 flex-col justify-center gap-0.5 px-5 sm:px-6 sm:before:absolute sm:before:inset-y-0 sm:before:end-0 sm:before:my-auto sm:before:h-8 sm:before:w-px sm:before:bg-gradient-to-b sm:before:from-transparent sm:before:via-[#D8B66A]/60 sm:before:to-transparent">
+      <span className={cn('flex items-center gap-1.5 text-[11px] font-semibold tracking-wide', set ? 'text-brand-700' : 'text-brand-700/80', hideLabel && 'sr-only')}>
+        <CalendarRange className="h-3 w-3" />
+        {label}
+      </span>
+      <span className="flex items-center gap-2">
+        <label htmlFor={from.id} className="sr-only">{from.label}</label>
+        <input id={from.id} name={from.id} type="date" defaultValue={from.value ?? ''} className={input} />
+        <ArrowLeft className="h-3 w-3 shrink-0 text-slate-400 ltr:rotate-180" aria-hidden />
+        <label htmlFor={to.id} className="sr-only">{to.label}</label>
+        <input id={to.id} name={to.id} type="date" defaultValue={to.value ?? ''} className={input} />
+      </span>
     </div>
   );
 }

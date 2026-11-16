@@ -2,17 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, SlidersHorizontal } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
+import { PremiumFilterBar, PremiumFilterField, PremiumFilterAdvancedPanel, PremiumFilterAdvancedToggle } from '@/components/premium/filter-bar';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';
 
-const DATE_CLS =
-  'h-8 w-full rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 ' +
-  'focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors';
 
 interface Props {
   defaultQ?: string;
@@ -74,122 +70,54 @@ export function AuditFilterBar({
   }
 
   return (
-    <div className="rounded-2xl border border-hairline bg-surface shadow-xs overflow-hidden">
-      <form onSubmit={handleSubmit}>
+    <PremiumFilterBar
+      autoSubmit={false}
+      onSubmit={handleSubmit}
+      trailing={
+        <>
+          <Button type="submit" variant="primary" size="sm">{m.applyBtn}</Button>
+          {hasAny && (
+            <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{m.clearBtn}</Button>
+          )}
+          <PremiumFilterAdvancedToggle
+            onClick={() => setShowAdvanced((v) => !v)}
+            open={showAdvanced}
+            active={hasAdvanced}
+            label={showAdvanced ? m.advancedHide : m.advancedShow}
+          />
+        </>
+      }
+    >
+      <PremiumFilterField label={m.searchPlaceholder} htmlFor="audit-q">
+        <Input id="audit-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={m.searchPlaceholder} />
+      </PremiumFilterField>
 
-        {/* ── Main row (always visible) ─────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-          {/* General search */}
-          <div className="flex-1 min-w-[180px]">
-            <Input
-              inputSize="sm"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={m.searchPlaceholder}
-              leftAddon={<Search />}
-            />
-          </div>
+      <PremiumFilterField label={m.actionAriaLabel} htmlFor="audit-action">
+        <Select id="audit-action" inputSize="sm" value={action} onChange={(e) => setAction(e.target.value)}>
+          <option value="">{m.allActions}</option>
+          <option value="POST">{m.actionPost}</option>
+          <option value="PATCH">{m.actionPatch}</option>
+          <option value="PUT">{m.actionPut}</option>
+          <option value="DELETE">{m.actionDelete}</option>
+        </Select>
+      </PremiumFilterField>
 
-          {/* Action method */}
-          <Select
-            inputSize="sm"
-            value={action}
-            onChange={(e) => setAction(e.target.value)}
-            className="w-44 shrink-0"
-            aria-label={m.actionAriaLabel}
-          >
-            <option value="">{m.allActions}</option>
-            <option value="POST">{m.actionPost}</option>
-            <option value="PATCH">{m.actionPatch}</option>
-            <option value="PUT">{m.actionPut}</option>
-            <option value="DELETE">{m.actionDelete}</option>
-          </Select>
-
-          <span className="h-5 w-px bg-hairline shrink-0 hidden sm:block" aria-hidden />
-
-          {/* Apply + clear */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button type="submit" variant="primary" size="sm">{m.applyBtn}</Button>
-            {hasAny && (
-              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{m.clearBtn}</Button>
-            )}
-          </div>
-
-          <span className="h-5 w-px bg-hairline shrink-0 hidden sm:block" aria-hidden />
-
-          {/* Advanced toggle */}
-          <button
-            type="button"
-            onClick={() => setShowAdvanced((s) => !s)}
-            className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors',
-              showAdvanced ? 'text-brand-600' : 'text-slate-500 hover:text-slate-700',
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showAdvanced ? m.advancedHide : m.advancedShow}
-            {hasAdvanced && !showAdvanced && (
-              <span className="inline-flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* ── Advanced panel (expands inside same card) ─────────────────── */}
-        {showAdvanced && (
-          <div className="border-t border-hairline bg-surface-muted/30 px-4 py-3.5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.areaLabel}</label>
-                <Input
-                  inputSize="sm"
-                  value={entityType}
-                  onChange={(e) => setEntityType(e.target.value)}
-                  placeholder={m.areaPlaceholder}
-                  dir="ltr"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.fromDateLabel}</label>
-                <input
-                  type="date"
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                  className={DATE_CLS}
-                  aria-label={m.fromDateAriaLabel}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.toDateLabel}</label>
-                <input
-                  type="date"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  className={DATE_CLS}
-                  aria-label={m.toDateAriaLabel}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.actorIdLabel}</label>
-                <Input
-                  inputSize="sm"
-                  value={actorId}
-                  onChange={(e) => setActorId(e.target.value)}
-                  placeholder={m.actorIdPlaceholder}
-                  dir="ltr"
-                />
-              </div>
-
-            </div>
-          </div>
-        )}
-
-      </form>
-    </div>
+      {showAdvanced && (
+        <PremiumFilterAdvancedPanel>
+          <PremiumFilterField label={m.areaLabel} htmlFor="audit-area">
+            <Input id="audit-area" value={entityType} onChange={(e) => setEntityType(e.target.value)} placeholder={m.areaPlaceholder} dir="ltr" />
+          </PremiumFilterField>
+          <PremiumFilterField label={m.fromDateLabel} htmlFor="audit-from">
+            <input id="audit-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label={m.fromDateAriaLabel} />
+          </PremiumFilterField>
+          <PremiumFilterField label={m.toDateLabel} htmlFor="audit-to">
+            <input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label={m.toDateAriaLabel} />
+          </PremiumFilterField>
+          <PremiumFilterField label={m.actorIdLabel} htmlFor="audit-actor">
+            <Input id="audit-actor" value={actorId} onChange={(e) => setActorId(e.target.value)} placeholder={m.actorIdPlaceholder} dir="ltr" />
+          </PremiumFilterField>
+        </PremiumFilterAdvancedPanel>
+      )}
+    </PremiumFilterBar>
   );
 }

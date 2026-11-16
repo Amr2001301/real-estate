@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Wallet, Plus, Eye, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { Wallet, Plus, Eye, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { brokerOptions } from '@/lib/options';
 import type { AdminBrokerPayout, Paged } from '@/lib/types';
@@ -18,6 +18,8 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
@@ -179,32 +181,14 @@ export default async function AdminBrokerPayoutsPage({
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-          <Link
-            href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
-              showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filterHideFilters : m.filterAdvanced}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
         </div>
 
         {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
         {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-status" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
-                <Select id="bpay-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+          <PremiumFilterAdvancedPanel>
+              <PremiumFilterField label={m.filterStatus}>
+<Select id="bpay-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
                   <option value="">{m.filterAllStatuses}</option>
                   <option value="DRAFT">{m.filterStatusDraft}</option>
                   <option value="APPROVED">{m.filterStatusApproved}</option>
@@ -212,10 +196,9 @@ export default async function AdminBrokerPayoutsPage({
                   <option value="PAID">{m.filterStatusPaid}</option>
                   <option value="CANCELLED">{m.filterStatusCancelled}</option>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-period" className="text-[11px] font-medium text-slate-400">{m.filterPeriod}</label>
-                <Input
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterPeriod}>
+<Input
                   id="bpay-period"
                   name="period"
                   inputSize="sm"
@@ -223,17 +206,14 @@ export default async function AdminBrokerPayoutsPage({
                   dir="ltr"
                   defaultValue={sp.period ?? ''}
                 />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-from" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
-                <Input id="bpay-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-to" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
-                <Input id="bpay-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
-              </div>
-            </div>
-          </div>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateFrom}>
+<Input id="bpay-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateTo}>
+<Input id="bpay-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
+</PremiumFilterField>
+            </PremiumFilterAdvancedPanel>
         )}
       </PremiumFilterBar>
 

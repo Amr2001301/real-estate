@@ -141,17 +141,15 @@ export default async function ContractsPage({
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/contracts">
         {/* Search */}
-        <div className="flex-1 min-w-[160px]">
-          <label htmlFor="con-q" className="sr-only">{m.filter.searchLabel}</label>
-          <Input
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="con-q">
+<Input
             id="con-q"
             name="q"
             inputSize="sm"
             placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
 
         <PremiumFilterField label={m.filter.signedLabel} htmlFor="con-signed">
           <Select id="con-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">

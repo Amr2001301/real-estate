@@ -137,18 +137,16 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
         <PremiumFilterField label={m.filter.dueTo} htmlFor="chq-dueTo">
           <Input id="chq-dueTo" name="dueTo" type="date" inputSize="sm" defaultValue={sp.dueTo ?? ''} className="w-40 shrink-0" />
         </PremiumFilterField>
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="chq-q" className="sr-only">{common.searchBtn}</label>
-          <Input
+        <PremiumFilterField label={common.searchBtn} htmlFor="chq-q">
+<Input
             id="chq-q"
             name="q"
             inputSize="sm"
             placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
         <div className="flex items-center gap-2 shrink-0">
           <Button type="submit" variant="primary" size="sm">{common.filterBtn}</Button>
           {(status || sp.dueFrom || sp.dueTo || sp.q) && (
