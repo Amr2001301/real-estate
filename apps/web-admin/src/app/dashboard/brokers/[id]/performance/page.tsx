@@ -49,7 +49,7 @@ interface Search {
   brokerAgentId?: string;
 }
 
-const CARD = 'rounded-[22px] border border-hairline bg-surface';
+const CARD = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';
 
 /** Funnel stages, each with its tone; the rate is against the stage before it. */
 const STAGES: Array<{ key: keyof BrokerReportsSummary; icon: ReactNode; tile: string; bar: string }> = [
@@ -85,12 +85,12 @@ function Code({
 
 function SectionHead({ icon, title, sub, children }: { icon?: ReactNode; title: string; sub?: string; children?: ReactNode }) {
   return (
-    <header className="flex items-center justify-between gap-3 px-6 py-5">
+    <header className="flex items-center justify-between gap-3 bg-navy-band px-6 py-4 text-[#F4ECD8]">
       <div className="flex min-w-0 items-center gap-2.5">
-        {icon && <span className="text-[#B8913F] dark:text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">{icon}</span>}
+        {icon && <span className="text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">{icon}</span>}
         <div className="min-w-0">
-          <h2 className="font-heading text-[18px] font-bold text-slate-900">{title}</h2>
-          {sub && <p className="text-[12px] text-slate-500">{sub}</p>}
+          <h2 className="font-heading text-[18px] font-bold text-[#F4ECD8]">{title}</h2>
+          {sub && <p className="text-[12px] text-[#A9B0BD]">{sub}</p>}
         </div>
       </div>
       {children}
@@ -100,7 +100,7 @@ function SectionHead({ icon, title, sub, children }: { icon?: ReactNode; title: 
 
 function ViewAll({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href as never} className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-bold text-[#9A7A2E] hover:text-[#B8913F] dark:text-[#D8B66A]">
+    <Link href={href as never} className="inline-flex shrink-0 items-center gap-1 text-[12.5px] font-bold text-[#D8B66A] hover:text-[#E9D9B0]">
       {label}
       <ArrowUpRight className="h-3.5 w-3.5" />
     </Link>
