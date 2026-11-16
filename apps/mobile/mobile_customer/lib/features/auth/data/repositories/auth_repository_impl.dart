@@ -27,8 +27,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<Session>> loginWithEmail(String slug, String email, String password) {
-    return guardApiCall(() async => _persist(await _remote.loginCustomer(slug, email, password)));
+  Future<Result<Session>> loginWithEmail(String slug, String email, String password) async {
+    final result = await guardApiCall(() async => _persist(await _remote.loginCustomer(slug, email, password)));
+    return result.when(ok: (_) => result, err: (f) => Result.err(asRefusedSignIn(f)));
   }
 
   @override
@@ -82,4 +83,20 @@ class AuthRepositoryImpl implements AuthRepository {
 /// Sentinel so a missing refresh token maps to an unauthorized AppFailure.
 class _NoRefreshToken implements Exception {
   const _NoRefreshToken();
+}
+
+
+/// A 401 on the sign-in call means the email or password was refused — there is no session
+/// to have expired, so it must not read «انتهت جلستك».
+AppFailure asRefusedSignIn(AppFailure f) {
+  if (f.type != FailureType.unauthorized) return f;
+  return AppFailure(
+    type: f.type,
+    userMessageKey: AppErrorMessageKey.invalidCredentials,
+    code: f.code,
+    statusCode: f.statusCode,
+    technicalMessage: f.technicalMessage,
+    requestId: f.requestId,
+    originalError: f.originalError,
+  );
 }

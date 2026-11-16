@@ -18,6 +18,9 @@ enum AppErrorMessageKey {
   noConnection,
   timeout,
   sessionExpired,
+
+  /// A sign-in was refused: wrong email/phone or password. Not an expired session.
+  invalidCredentials,
   permissionDenied,
   notFound,
   validation,
