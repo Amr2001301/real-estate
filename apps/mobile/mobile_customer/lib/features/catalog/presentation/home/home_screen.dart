@@ -74,6 +74,9 @@ class HomeScreen extends StatelessWidget {
                 final topPad = MediaQuery.paddingOf(context).top;
 
                 return RefreshIndicator(
+                  key: const Key('home-refresh'),
+                  // Pull-to-refresh starts under the pinned header, not over it.
+                  edgeOffset: _CustomerHeaderDelegate.maxExtentFor(topPad),
                   onRefresh: () => context.read<HomeSummaryCubit>().load(),
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -236,6 +239,8 @@ class _CustomerHeaderDelegate extends SliverPersistentHeaderDelegate {
   static Color get _navyDeep => AppPalette.navyDeep;
   static Color get _navyMid => AppPalette.navyMid;
   static Color get _navyLight => AppPalette.navyLight;
+
+  static double maxExtentFor(double topPad) => topPad + _expandedContent;
 
   @override double get maxExtent => topPad + _expandedContent;
   @override double get minExtent => topPad + _collapsedContent;
