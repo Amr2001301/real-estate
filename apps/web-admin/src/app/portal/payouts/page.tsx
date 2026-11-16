@@ -88,7 +88,7 @@ export default async function PortalPayoutsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={5}
@@ -114,6 +114,7 @@ export default async function PortalPayoutsPage({
         icon={<Wallet />}
         title={t.tableTitle}
         padded={false}
+        band
       >
         {rows.length === 0 ? (
           <EmptyState icon={<Wallet />} title={t.emptyTitle} description={t.emptyDescription} />

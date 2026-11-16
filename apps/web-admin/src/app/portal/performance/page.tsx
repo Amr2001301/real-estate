@@ -254,7 +254,7 @@ export default async function PortalPerformancePage({
       </PremiumFilterBar>
 
       {/* ── Figures ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={6}

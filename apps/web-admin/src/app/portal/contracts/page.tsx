@@ -97,7 +97,7 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -160,6 +160,7 @@ export default async function PortalContractsPage({
         icon={<FileText />}
         title={t.tableTitle}
         padded={false}
+        band
       >
         {rows.length === 0 ? (
           <EmptyState icon={<FileText />} title={t.emptyTitle} description={t.emptyDescription} />

@@ -301,6 +301,14 @@
     @apply outline-none ring-2 ring-brand-500/45 ring-offset-2 ring-offset-canvas;
   }
 
+  /* Form controls draw their own border, so the offset ring above made a second outline floating
+     outside it (two borders). A focused field keeps ONE edge: its own border turns brand, no ring. */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply ring-0 ring-offset-0 border-brand-500/70;
+  }
+
   h1,
   h2,
   h3,

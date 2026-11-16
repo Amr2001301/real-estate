@@ -100,14 +100,18 @@ export interface Figure {
   warn?: boolean;
 }
 
-/** One quiet row of figures, hairlines between them. */
-export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean }) {
+/**
+ * The navy KPI band for list and cockpit pages — the same look as the dashboard's
+ * PremiumMetricStrip: one navy band, gold hairlines between the figures, cream values.
+ * `bare` is accepted for older callers; the band is always its own card.
+ */
+export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean }) {
   return (
     <dl
       data-testid="figure-bar"
       className={cn(
-        'grid grid-cols-2 overflow-hidden',
-        !bare && 'rounded-[22px] border border-hairline bg-surface',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16] text-[#F4ECD8]',
+        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
         cols === 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : cols === 5 ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
         // An odd count: the first figure spans the phone row, no empty cell.
         figures.length % 2 === 1 && 'max-xl:[&>*:first-child]:col-span-2',
@@ -116,14 +120,14 @@ export function FigureBar({ figures, cols = 6, bare }: { figures: Figure[]; cols
       {figures.map((f) => {
         const body = (
           <>
-            <dt className="text-[12px] font-semibold text-slate-500">{f.label}</dt>
-            <dd className="mt-2 whitespace-nowrap text-[26px] font-bold leading-none tabular-nums text-slate-900">{f.value}</dd>
-            {f.sub && <dd className={cn('mt-2 truncate text-[11.5px]', f.warn ? 'font-semibold text-amber-600' : 'text-slate-500')}>{f.sub}</dd>}
+            <dt className="text-[13px] leading-snug text-[#A9B0BD]">{f.label}</dt>
+            <dd className="num mt-2 whitespace-nowrap text-[34px] font-semibold leading-none tabular-nums text-[#F4ECD8] [&_.text-slate-500]:!text-[#D8B66A]">{f.value}</dd>
+            {f.sub && <dd className={cn('mt-2 truncate text-[12px]', f.warn ? 'font-semibold text-[#E8B96E]' : 'text-[#A9B0BD]')}>{f.sub}</dd>}
           </>
         );
-        const cls = 'block border-hairline px-5 py-5 xl:[&:not(:last-child)]:border-e max-xl:border-b';
+        const cls = 'block bg-navy-band px-5 py-5 sm:px-6';
         return f.href ? (
-          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-colors hover:bg-surface-muted/40')}>
+          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-[filter] hover:brightness-125')}>
             {body}
           </Link>
         ) : (

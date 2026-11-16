@@ -91,7 +91,7 @@ export default async function PortalUnitsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -110,6 +110,7 @@ export default async function PortalUnitsPage({
         icon={<Home />}
         title={t.sectionTitle}
         padded={false}
+        band
       >
         {rows.length === 0 ? (
           <EmptyState icon={<Home />} title={t.emptyTitle} description={t.emptyDescription} />

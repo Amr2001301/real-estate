@@ -120,7 +120,7 @@ export default async function ContractsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -197,6 +197,7 @@ export default async function ContractsPage({
       <PremiumSectionCard
         title={m.title}
         padded={false}
+        band
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
             {(meta?.total ?? contracts.length).toLocaleString(intlLocale(locale))} {m.countSuffix}

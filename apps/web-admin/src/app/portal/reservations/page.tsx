@@ -92,7 +92,7 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -115,6 +115,7 @@ export default async function PortalReservationsPage({
         icon={<BookmarkCheck />}
         title={t.tableTitle}
         padded={false}
+        band
       >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">

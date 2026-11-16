@@ -144,7 +144,7 @@ export default async function VisitsPage({
         }
       />
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -175,6 +175,7 @@ export default async function VisitsPage({
             </span>
           }
           padded={false}
+        band
         >
           {requestsData.length === 0 ? (
             <PremiumEmptyState icon={<CalendarClock />} title={m.empty.noRequests} />
@@ -239,6 +240,7 @@ export default async function VisitsPage({
             </span>
           }
           padded={false}
+        band
         >
           {appointmentsData.length === 0 ? (
             <PremiumEmptyState icon={<CalendarDays />} title={m.empty.noVisits} />
