@@ -108,6 +108,14 @@ describe('ST1 — customer statement of account (e2e)', () => {
     await asAdmin(http().post('/v1/installment-plans'))
       .send({ contractId, totalMonths: 10, startsAt: '2027-02-01' })
       .expect(201);
+    // The down payment is due when the plan is made, not on the first instalment's day.
+    {
+      const plan = await raw.installment.findMany({ where: { plan: { contractId } }, orderBy: { dueDate: 'asc' } });
+      const down = plan.find((r) => r.type === PlanPaymentType.DOWN_PAYMENT)!;
+      const first = plan.find((r) => r.type === PlanPaymentType.INSTALLMENT)!;
+      expect(first.dueDate.toISOString().slice(0, 10)).toBe('2027-02-01');
+      expect(down.dueDate.getTime()).toBeLessThan(first.dueDate.getTime());
+    }
     await asAdmin(http().post(`/v1/contracts/${contractId}/sign`))
       .send({ signedAt: new Date().toISOString() })
       .expect(201);
