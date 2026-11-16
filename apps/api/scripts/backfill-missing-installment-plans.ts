@@ -48,6 +48,7 @@ async function main(): Promise<void> {
 
     const now = new Date();
     const startsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const toCents = (v: Prisma.Decimal | number | null) => Math.round(Number(v ?? 0) * 100);
     const money = (cents: number) => new Prisma.Decimal(cents).div(100);
 
@@ -78,7 +79,8 @@ async function main(): Promise<void> {
         });
         const rows: Prisma.InstallmentCreateManyInput[] = [];
         if (down > 0) {
-          rows.push({ planId: plan.id, companyId: c.companyId, type: PlanPaymentType.DOWN_PAYMENT, dueDate: startsAt, amount: money(down) });
+          // The down payment is due now; the instalments start on the 1st of next month.
+          rows.push({ planId: plan.id, companyId: c.companyId, type: PlanPaymentType.DOWN_PAYMENT, dueDate: today, amount: money(down) });
         }
         for (let i = 0; i < MONTHS; i++) {
           rows.push({ planId: plan.id, companyId: c.companyId, dueDate: addMonths(startsAt, i), amount: money(i === MONTHS - 1 ? last : monthly) });

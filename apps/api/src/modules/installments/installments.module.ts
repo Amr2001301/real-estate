@@ -379,9 +379,13 @@ export class InstallmentsService {
       });
       const rows: Prisma.InstallmentCreateManyInput[] = [];
       if (downCents > 0) {
+        // The down payment is due when the plan is made (as at a reservation's conversion) —
+        // or on the start date when that is earlier (a back-dated plan owed it then). It used
+        // to fall on the start date with the first instalment: two payments due the same day.
+        const today = new Date(new Date().toISOString().slice(0, 10));
         rows.push({
           planId: plan.id,
-          dueDate: new Date(startsAt),
+          dueDate: startsAt < today ? new Date(startsAt) : today,
           amount: money(downCents),
           type: PlanPaymentType.DOWN_PAYMENT,
         });
