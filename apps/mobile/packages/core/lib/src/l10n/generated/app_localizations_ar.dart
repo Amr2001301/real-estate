@@ -4591,7 +4591,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreUnitsDesc => 'ابحث وفلتر بالسعر والمساحة والمدينة';
 
   @override
-  String get exploreCompareDesc => 'قارن بين الوحدات اللي اخترتها';
+  String get exploreCompareDesc => 'قارن بين الوحدات التي اخترتها';
 
   @override
   String get explorePickProject => 'اختر المشروع';
