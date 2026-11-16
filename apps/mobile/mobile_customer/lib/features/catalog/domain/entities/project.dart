@@ -19,6 +19,8 @@ class ProjectListItem extends Equatable {
     this.lat,
     this.lng,
     this.coverImage,
+    this.startingPrice,
+    this.unitTypes = const [],
   });
 
   final String id;
@@ -32,8 +34,14 @@ class ProjectListItem extends Equatable {
   final String? coverImage;
   final int availableUnitsCount;
 
+  /// Lowest price of the available units (decimal string); null when none.
+  final String? startingPrice;
+
+  /// Types (codes) of the available units.
+  final List<String> unitTypes;
+
   @override
-  List<Object?> get props => [id, name, city, featured, coverImage];
+  List<Object?> get props => [id, name, city, featured, coverImage, startingPrice, unitTypes];
 }
 
 /// Full project detail (adds media gallery).

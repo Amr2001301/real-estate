@@ -24,6 +24,7 @@ import {
 import {
   serializePublicProjectDetail,
   serializePublicProjectListItem,
+  type PublicProjectUnitSummary,
   serializeStaffProjectListItem,
   type StaffProjectSummary,
 } from './public-project.serializer';
@@ -178,9 +179,9 @@ export class ProjectsService {
     ]);
 
     if (publicOnly) {
-      const counts = await this.availableUnitCounts(data.map((p) => p.id));
+      const summaries = await this.publicUnitSummaries(data.map((p) => p.id));
       const serialized = data.map((p) =>
-        serializePublicProjectListItem(p, counts.get(p.id) ?? 0),
+        serializePublicProjectListItem(p, summaries.get(p.id)),
       );
       return paginate(serialized, total, { page, pageSize });
     }
@@ -240,6 +241,43 @@ export class ProjectsService {
       }
     }
 
+    return summaries;
+  }
+
+  /**
+   * What a buyer sees on a project card: per project, the AVAILABLE units'
+   * count, lowest price and types (one query, the same building → phase →
+   * projectId walk). Sold or reserved units say nothing about what is on
+   * offer, so they are left out.
+   */
+  private async publicUnitSummaries(projectIds: string[]): Promise<Map<string, PublicProjectUnitSummary>> {
+    const summaries = new Map<string, PublicProjectUnitSummary>();
+    if (projectIds.length === 0) return summaries;
+    const units = await this.prisma.unit.findMany({
+      where: {
+        status: 'AVAILABLE',
+        building: { phase: { projectId: { in: projectIds } } },
+      },
+      select: {
+        price: true,
+        type: true,
+        building: { select: { phase: { select: { projectId: true } } } },
+      },
+    });
+    for (const u of units) {
+      const pid = u.building.phase.projectId;
+      let s = summaries.get(pid);
+      if (!s) {
+        s = { availableUnitsCount: 0, startingPrice: null, unitTypes: new Set() };
+        summaries.set(pid, s);
+      }
+      s.availableUnitsCount++;
+      if (u.type) s.unitTypes.add(u.type);
+      if (u.price != null) {
+        const p = new Prisma.Decimal(u.price);
+        if (s.startingPrice === null || p.lessThan(s.startingPrice)) s.startingPrice = p;
+      }
+    }
     return summaries;
   }
 

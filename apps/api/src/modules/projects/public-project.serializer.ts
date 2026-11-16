@@ -1,4 +1,4 @@
-import type { Project, ProjectMedia } from '@prisma/client';
+import type { Prisma, Project, ProjectMedia } from '@prisma/client';
 import { asArray, serializeProgress } from './project-details';
 
 /**
@@ -18,6 +18,15 @@ export interface StaffProjectSummary {
   /** Min price (as JS number) of all AVAILABLE units, or null if no units. */
   startingPrice: number | null;
   /** Distinct unit type strings across all units in the project. */
+  unitTypes: Set<string>;
+}
+
+/** The AVAILABLE units of a project, as its public card shows them. */
+export interface PublicProjectUnitSummary {
+  availableUnitsCount: number;
+  /** Lowest price among the AVAILABLE units; null when none is available. */
+  startingPrice: Prisma.Decimal | null;
+  /** Distinct types of the AVAILABLE units. */
   unitTypes: Set<string>;
 }
 
@@ -53,7 +62,7 @@ function serializeMedia(media: MediaLike[] | undefined) {
 
 export function serializePublicProjectListItem(
   project: ProjectListInput,
-  availableUnitsCount: number,
+  units?: PublicProjectUnitSummary,
 ) {
   const media = serializeMedia(project.media);
   return {
@@ -69,7 +78,10 @@ export function serializePublicProjectListItem(
     featured: project.featured,
     status: project.status,
     coverImage: media[0]?.url ?? null,
-    availableUnitsCount,
+    availableUnitsCount: units?.availableUnitsCount ?? 0,
+    // A decimal string, like a public unit's price.
+    startingPrice: units?.startingPrice?.toString() ?? null,
+    unitTypes: units ? [...units.unitTypes].sort() : [],
     updatedAt: project.updatedAt.toISOString(),
   };
 }
