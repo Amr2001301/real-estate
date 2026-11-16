@@ -4618,6 +4618,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onTrackBadge => 'On track';
 
   @override
+  String homePaidOfTotal(int paid, int total, int percent) {
+    return '$paid of $total paid · $percent%';
+  }
+
+  @override
+  String get homeScheduleLink => 'Schedule';
+
+  @override
   String get paymentProgress => 'Payment progress';
 
   @override

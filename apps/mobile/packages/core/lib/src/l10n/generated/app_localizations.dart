@@ -8600,6 +8600,18 @@ abstract class AppLocalizations {
   /// **'On track'**
   String get onTrackBadge;
 
+  /// No description provided for @homePaidOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{paid} of {total} paid · {percent}%'**
+  String homePaidOfTotal(int paid, int total, int percent);
+
+  /// No description provided for @homeScheduleLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get homeScheduleLink;
+
   /// No description provided for @paymentProgress.
   ///
   /// In en, this message translates to:

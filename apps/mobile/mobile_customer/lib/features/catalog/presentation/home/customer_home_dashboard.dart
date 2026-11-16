@@ -131,7 +131,7 @@ class _Body extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          _FinancialCard(installments: summary.installments),
+          HomeFinancialCard(installments: summary.installments),
           const SizedBox(height: AppSpacing.md),
 
           // 4 · Maintenance
@@ -1066,13 +1066,12 @@ class _EmptyProperty extends StatelessWidget {
 // 3 · Financial snapshot — light white card, secondary to the action card
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _FinancialCard extends StatelessWidget {
-  const _FinancialCard({required this.installments});
+class HomeFinancialCard extends StatelessWidget {
+  const HomeFinancialCard({super.key, required this.installments});
   final HomeSummaryInstallments installments;
 
   static Color get _navyDark => AppPalette.navyDarkest;
   static Color get _navyMid => AppPalette.navyMid2;
-  static Color get _navyFoot => AppPalette.navyFoot;
 
   @override
   Widget build(BuildContext context) {
@@ -1086,18 +1085,11 @@ class _FinancialCard extends StatelessWidget {
     final total     = installments.totalCount;
     final paid      = installments.paidCount;
     final overdue   = installments.overdueCount;
-    final remaining = installments.remainingCount;
-    final pending   = (remaining - overdue).clamp(0, remaining);
     final progress  = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
     final isOverdue = overdue > 0;
-
-    final mainColor = isOverdue
-        ? const Color(0xFFEF4444)
-        : const Color(0xFF34C77B);
-
-    final amountLabel = isOverdue
-        ? l10n.overdueInstallments(overdue)
-        : l10n.homeNextInstallment;
+    const red   = Color(0xFFEF4444);
+    const green = Color(0xFF34C77B);
+    final muted = Colors.white.withValues(alpha: 0.48);
 
     return Container(
       decoration: BoxDecoration(
@@ -1106,294 +1098,164 @@ class _FinancialCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: isOverdue
-              ? const Color(0xFFEF4444).withValues(alpha: 0.20)
+              ? red.withValues(alpha: 0.20)
               : Colors.white.withValues(alpha: 0.06),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.26),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
             spreadRadius: -4,
           ),
-          if (isOverdue)
-            BoxShadow(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.16),
-              blurRadius: 40,
-              offset: const Offset(0, 6),
-            ),
         ],
       ),
-      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
       child: Column(
+        key: const Key('home-financial-card'),
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
-          // ── Header ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-            child: Row(
-              children: [
-                // Icon + title
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: AppPalette.gold400.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppPalette.gold400.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: AppPalette.gold400,
-                    size: 17,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  context.l10n.financialPanel,
+          // ── Label + status ─────────────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.homeNextInstallment,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
+                    color: muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const Spacer(),
-                // Status badge
-                if (isOverdue)
-                  _HeaderBadge(
-                    icon: Icons.warning_amber_rounded,
-                    label: context.l10n.overdueCountBadge(overdue),
-                    color: const Color(0xFFEF4444),
-                  )
-                else
-                  _HeaderBadge(
-                    label: context.l10n.onTrackBadge,
-                    color: const Color(0xFF34C77B),
-                    dot: true,
-                  ),
-              ],
-            ),
+              ),
+              if (isOverdue)
+                _HeaderBadge(
+                  icon: Icons.warning_amber_rounded,
+                  label: l10n.overdueCountBadge(overdue),
+                  color: red,
+                )
+              else
+                _HeaderBadge(label: l10n.onTrackBadge, color: green, dot: true),
+            ],
           ),
+          const SizedBox(height: 8),
 
-          // separator
-          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
-
-          // ── Main amount ───────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-            child: Row(
+          // ── Amount + date ──────────────────────────────────────────────
+          if (nextDue != null)
+            Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        amountLabel,
-                        style: TextStyle(
-                          color: isOverdue
-                              ? const Color(0xFFEF4444).withValues(alpha: 0.72)
-                              : Colors.white.withValues(alpha: 0.48),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.5,
-                        ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      PriceFormatter.formatString(
+                        nextDue.amount,
+                        languageCode: lang,
                       ),
-                      const SizedBox(height: 7),
-                      if (nextDue != null)
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            PriceFormatter.formatString(
-                              nextDue.amount,
-                              languageCode: lang,
-                            ),
-                            style: TextStyle(
-                              color: isOverdue
-                                  ? const Color(0xFFEF4444)
-                                  : Colors.white,
-                              fontSize: 38,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.8,
-                              height: 1.0,
-                            ),
-                          ),
-                        )
-                      else
-                        Text(
-                          l10n.homeNoDuePayments,
-                          style: const TextStyle(
-                            color: Color(0xFF34C77B),
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      if (nextDue != null) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isOverdue
-                                ? const Color(0xFFEF4444).withValues(alpha: 0.09)
-                                : Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(
-                              color: isOverdue
-                                  ? const Color(0xFFEF4444).withValues(alpha: 0.22)
-                                  : Colors.white.withValues(alpha: 0.10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.calendar_month_rounded,
-                                size: 13,
-                                color: isOverdue
-                                    ? const Color(0xFFEF4444).withValues(alpha: 0.65)
-                                    : Colors.white.withValues(alpha: 0.45),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                DateFormatter.mediumDate(
-                                  nextDue.dueDate,
-                                  languageCode: lang,
-                                ),
-                                style: TextStyle(
-                                  color: isOverdue
-                                      ? const Color(0xFFEF4444)
-                                      : Colors.white.withValues(alpha: 0.80),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 14),
-                // Status icon circle
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: mainColor.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: mainColor.withValues(alpha: 0.24),
-                      width: 1.5,
+                      style: TextStyle(
+                        color: isOverdue ? red : Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        height: 1.1,
+                      ),
                     ),
                   ),
-                  child: Icon(
-                    isOverdue
-                        ? Icons.warning_amber_rounded
-                        : (nextDue != null
-                            ? Icons.schedule_rounded
-                            : Icons.check_circle_rounded),
-                    color: mainColor,
-                    size: 25,
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: (isOverdue ? red : AppPalette.gold400)
+                          .withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    DateFormatter.mediumDate(nextDue.dueDate, languageCode: lang),
+                    style: TextStyle(
+                      color: isOverdue
+                          ? red
+                          : AppPalette.gold400.withValues(alpha: 0.95),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
+            )
+          else
+            Text(
+              l10n.homeNoDuePayments,
+              style: const TextStyle(
+                color: green,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
 
-          // ── Progress ──────────────────────────────────────────────────
+          // ── Progress + footer ──────────────────────────────────────────
           if (total > 0) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.paymentProgress,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.38),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      Text(
-                        '$paid / $total  ·  ${(progress * 100).round()}%',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.38),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 7),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isOverdue
-                            ? const Color(0xFFEF4444)
-                            : const Color(0xFF34C77B),
-                      ),
-                      minHeight: 5,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isOverdue ? red : AppPalette.gold400,
+                ),
+                minHeight: 4,
               ),
             ),
           ],
-
-          // ── Stats footer ──────────────────────────────────────────────
-          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
-          Container(
-            color: _navyFoot,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  _NStat(
-                    label: context.l10n.installmentStatusPaid,
-                    value: '$paid',
-                    color: const Color(0xFF34C77B),
-                  ),
-                  _NVLine(),
-                  _NStat(
-                    label: context.l10n.installmentStatusOverdue,
-                    value: '$overdue',
-                    color: overdue > 0
-                        ? const Color(0xFFEF4444)
-                        : Colors.white.withValues(alpha: 0.28),
-                  ),
-                  _NVLine(),
-                  _NStat(
-                    label: context.l10n.installmentStatusPending,
-                    value: '$pending',
-                    color: AppPalette.gold400,
-                  ),
-                  _NVLine(),
-                  _NStat(
-                    label: context.l10n.remainingLabel,
-                    value: '$remaining',
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ],
+          if (isOverdue) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.overdueInstallments(overdue),
+              style: const TextStyle(
+                color: red,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: total > 0
+                    ? Text(
+                        l10n.homePaidOfTotal(
+                            paid, total, (progress * 100).round()),
+                        style: TextStyle(color: muted, fontSize: 12),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              InkWell(
+                onTap: () => context.push('/account/installments'),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    '${l10n.homeScheduleLink} ›',
+                    style: TextStyle(
+                      color: AppPalette.gold400,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1518,57 +1380,6 @@ class _FinancialEmpty extends StatelessWidget {
       ),
     );
   }
-}
-
-class _NStat extends StatelessWidget {
-  const _NStat({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-  final String label;
-  final String value;
-  final Color  color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.38),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NVLine extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 0.5,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        color: Colors.white.withValues(alpha: 0.08),
-      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
