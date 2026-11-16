@@ -225,7 +225,7 @@ export function CompanyMigrationMapping({ companyId }: { companyId: string }) {
           <p className="text-[13px] text-slate-500">{m.empty}</p>
         ) : (
           [...sections.entries()].map(([title, groups]) => (
-            <div key={title} className="rounded-[20px] border border-hairline">
+            <div key={title} className="rounded-card border border-hairline">
               <p className="border-b border-hairline px-4 py-2.5 text-[12.5px] font-bold text-slate-700">{title}</p>
               <ul className="divide-y divide-hairline">
                 {groups.map((g) => {

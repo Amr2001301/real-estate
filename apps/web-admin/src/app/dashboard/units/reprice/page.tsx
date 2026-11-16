@@ -40,7 +40,7 @@ export default async function RepriceUnitsPage() {
         ]}
       />
       {projects.error && (
-        <div className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           {projects.error}
         </div>
       )}

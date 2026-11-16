@@ -255,7 +255,7 @@ function SalesFunnelCard({
   const f = m.home.funnel;
   if (pipeline.length === 0) {
     return (
-      <div className="bg-surface border border-hairline rounded-[20px] p-10 shadow-soft flex flex-col items-center gap-3">
+      <div className="bg-surface border border-hairline rounded-card p-10 shadow-soft flex flex-col items-center gap-3">
         <TrendingUp className="h-10 w-10 text-slate-200" />
         <p className="text-sm text-slate-400">{f.emptyTitle}</p>
         <p className="text-xs text-slate-300">{f.emptyHint}</p>

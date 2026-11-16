@@ -128,7 +128,7 @@ export default async function LeadDetailPage({
 
   if (leadRes.error || !leadRes.data) {
     return (
-      <div className="flex items-start gap-3 rounded-[20px] bg-danger-500/10 text-danger-600 p-6 text-sm">
+      <div className="flex items-start gap-3 rounded-card bg-danger-500/10 text-danger-600 p-6 text-sm">
         {m.errorLoad} {leadRes.error ?? m.errorNotFound}
       </div>
     );
@@ -219,7 +219,7 @@ export default async function LeadDetailPage({
   return (
     <div className="space-y-6">
       {/* ── Hero ──────────────────────────────────────────────────── */}
-      <section data-testid="lead-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
+      <section data-testid="lead-hero" className="relative overflow-hidden rounded-card border border-hairline bg-surface">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
         <div className="relative space-y-6 p-6 sm:p-8">
           <nav aria-label="breadcrumb">

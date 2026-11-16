@@ -397,6 +397,9 @@
   .card-head p {
     color: #6b7280 !important;
   }
+  .card-head p.font-heading {
+    color: #0f1e33 !important;
+  }
   .card-head a {
     color: #8a6a1f !important;
   }

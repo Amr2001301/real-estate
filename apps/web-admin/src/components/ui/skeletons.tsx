@@ -84,7 +84,7 @@ export function FilterBarSkeleton({ fields = 3 }: { fields?: number }) {
   return (
     <div
       aria-hidden
-      className="flex flex-wrap items-center gap-2.5 rounded-[28px] border border-hairline bg-surface p-2 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)] sm:p-2.5"
+      className="flex flex-wrap items-center gap-2.5 rounded-card border border-hairline bg-surface p-2 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)] sm:p-2.5"
     >
       <Skeleton className="h-11 min-w-[160px] flex-1 rounded-full" />
       {Array.from({ length: Math.max(0, fields - 1) }).map((_, i) => (

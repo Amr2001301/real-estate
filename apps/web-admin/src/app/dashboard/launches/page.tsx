@@ -69,7 +69,7 @@ export default async function LaunchesPage() {
                     l.status === 'CLOSED' && 'opacity-70',
                   )}
                 >
-                  <div className="bg-navy-band px-5 py-4 text-[#F4ECD8]">
+                  <div className="card-head px-5 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[12px] text-[#A9B0BD]">{l.developerName}{l.developerProject ? ` — ${l.developerProject.name}` : ''}</p>

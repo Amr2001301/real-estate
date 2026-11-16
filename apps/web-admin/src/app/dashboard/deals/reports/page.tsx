@@ -197,7 +197,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {r.byKind.map((k) => {
                 const Icon = KIND_ICON[k.kind];
                 return (
-                  <div key={k.kind} className="rounded-[20px] border border-hairline bg-surface p-5" data-testid={`report-kind-${k.kind}`}>
+                  <div key={k.kind} className="rounded-card border border-hairline bg-surface p-5" data-testid={`report-kind-${k.kind}`}>
                     <div className="flex items-center justify-between gap-3">
                       <span className="flex items-center gap-2.5 text-[14px] font-bold text-slate-900">
                         <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8B66A]/45 bg-[#0E1626] text-[#E6C77E]"><Icon className="h-4 w-4" /></span>

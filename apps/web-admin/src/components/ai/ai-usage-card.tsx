@@ -19,7 +19,7 @@ export function AiUsageCard({ usage, locale }: { usage: AiUsage | null; locale: 
     <section
       aria-label={m.usageCardTitle}
       data-testid="ai-usage-card"
-      className="flex flex-wrap items-center gap-4 rounded-[20px] border border-hairline bg-surface px-5 py-4 shadow-soft"
+      className="flex flex-wrap items-center gap-4 rounded-card border border-hairline bg-surface px-5 py-4 shadow-soft"
     >
       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline text-brand-700">
         <Sparkles className="h-4 w-4" />

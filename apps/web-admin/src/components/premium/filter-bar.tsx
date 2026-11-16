@@ -64,7 +64,7 @@ export function PremiumFilterBar({
         onChange={handleChange}
         className={cn(
           'flex flex-wrap items-center gap-2.5',
-          'rounded-[28px] border border-hairline bg-surface p-2 sm:p-2.5',
+          'rounded-card border border-hairline bg-surface p-2 sm:p-2.5',
           'shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]',
           autoSubmit && '[&_button[type=submit]]:hidden',
           className,

@@ -47,7 +47,7 @@ export default async function IntakePage({ searchParams }: { searchParams?: Prom
       />
 
       {/* How a lead arrives */}
-      <ol className="relative grid grid-cols-1 gap-px overflow-hidden rounded-[24px] bg-[#D8B66A]/20 shadow-[0_24px_60px_-34px_rgba(14,22,38,0.9)] sm:grid-cols-2 xl:grid-cols-4">
+      <ol className="relative grid grid-cols-1 gap-px overflow-hidden rounded-card bg-[#D8B66A]/20 shadow-[0_24px_60px_-34px_rgba(14,22,38,0.9)] sm:grid-cols-2 xl:grid-cols-4">
         {m.flow.map((step, i) => (
           <li key={step.title} className="bg-navy-band p-5 text-white">
             <span className="num text-[30px] leading-none text-[#D8B66A]">0{i + 1}</span>
@@ -82,7 +82,7 @@ export default async function IntakePage({ searchParams }: { searchParams?: Prom
         />
       )}
 
-      <section className="rounded-[24px] border border-hairline bg-surface p-5 sm:p-6">
+      <section className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
         <h2 className="font-heading text-[18px] font-bold text-slate-900">{m.guide.title}</h2>
         <p className="mt-1 text-[12.5px] text-slate-500">{m.guide.desc}</p>
         <div className="mt-5 grid grid-cols-1 gap-6 xl:grid-cols-2">

@@ -372,7 +372,7 @@ export function ProjectHealthPanel({
           <Link
             key={p.id}
             href={`/dashboard/projects/${p.id}` as never}
-            className="rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
+            className="rounded-card border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
           >
             <div className="flex items-start justify-between gap-3">
               <span className="font-heading text-[16px] font-bold text-slate-900">{p.name}</span>

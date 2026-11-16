@@ -67,7 +67,7 @@ export default async function ProjectPricesPage({
       />
 
       {!enabled && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
           <span>{t.off}</span>
           <Link href={'/dashboard/settings?q=unitValue' as never} className="font-semibold underline">
             {t.settingsLink}
@@ -75,15 +75,15 @@ export default async function ProjectPricesPage({
         </div>
       )}
       {sp.err && (
-        <div role="alert" className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div role="alert" className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           {sp.err}
         </div>
       )}
       {sp.ok && !sp.err && (
-        <div className="rounded-[20px] bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">{t.saved}</div>
+        <div className="rounded-card bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">{t.saved}</div>
       )}
       {ratesRes.error && (
-        <div className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">{ratesRes.error}</div>
+        <div className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">{ratesRes.error}</div>
       )}
 
       <PremiumSectionCard title={t.title} icon={<TrendingUp />}>

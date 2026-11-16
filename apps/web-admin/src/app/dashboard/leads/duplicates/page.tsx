@@ -31,7 +31,7 @@ export default async function DuplicateLeadsPage() {
       />
 
       {res.error ? (
-        <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>
+        <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>
       ) : groups.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center" data-testid="duplicates-empty">
           <CheckCircle2 className="h-8 w-8 text-emerald-500" />

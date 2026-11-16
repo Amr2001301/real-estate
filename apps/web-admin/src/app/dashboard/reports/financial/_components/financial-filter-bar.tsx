@@ -107,7 +107,7 @@ export function FinancialFilterBar({
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-hairline bg-surface shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
+    <div className="overflow-hidden rounded-card border border-hairline bg-surface shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
       <form onSubmit={(e) => e.preventDefault()}>
 
         {/* ── The period, and the advanced filters ───────────────────── */}

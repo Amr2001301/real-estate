@@ -147,7 +147,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
       ) : (
         <>
           {/* Filters */}
-          <div className="rounded-[20px] border border-hairline bg-surface p-4">
+          <div className="rounded-card border border-hairline bg-surface p-4">
             <div className="flex flex-wrap gap-2">
               {presets.map((p) => {
                 const on = p.from === from && p.to === to;
@@ -203,7 +203,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
           </div>
 
           {reportRes.error ? (
-            <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {reportRes.error}</div>
+            <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {reportRes.error}</div>
           ) : !r || r.totals.lost === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center">
               <CheckCircle2 className="h-8 w-8 text-emerald-500" />

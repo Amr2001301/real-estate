@@ -185,15 +185,15 @@ export default async function SettingsPage({
 
       {/* ── Toast banners ───────────────────────────────────────────────── */}
       {sp.err && (
-        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">{sp.err}</div>
+        <div className="rounded-card border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">{sp.err}</div>
       )}
       {sp.ok && (
-        <div className="rounded-[20px] border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
+        <div className="rounded-card border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
           {m.savedToast.replace('{key}', keyLabel(sp.ok))}
         </div>
       )}
       {res.error && (
-        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
+        <div className="rounded-card border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
           {m.errorPrefix} {res.error}
         </div>
       )}

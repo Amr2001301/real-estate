@@ -88,7 +88,7 @@ export default async function FollowUpsPage({
       <p className="text-[13px] text-slate-500">{f.page.hint[bucket]}</p>
 
       {listRes.error ? (
-        <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">
+        <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">
           {f.page.error}: {listRes.error}
         </div>
       ) : rows.length === 0 ? (
@@ -111,7 +111,7 @@ export default async function FollowUpsPage({
                 key={l.id}
                 data-testid="follow-row"
                 className={cn(
-                  'grid grid-cols-1 gap-4 rounded-[20px] border border-hairline bg-surface p-4 sm:p-5 lg:grid-cols-[1.3fr_1.2fr_1.3fr_auto] lg:items-center',
+                  'grid grid-cols-1 gap-4 rounded-card border border-hairline bg-surface p-4 sm:p-5 lg:grid-cols-[1.3fr_1.2fr_1.3fr_auto] lg:items-center',
                   bucket === 'overdue' && 'border-s-4 border-s-danger-500',
                 )}
               >

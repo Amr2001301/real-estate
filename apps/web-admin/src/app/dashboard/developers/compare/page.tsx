@@ -69,7 +69,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
                   className={cn('flex flex-col overflow-hidden rounded-card border bg-surface', best ? 'border-[#D8B66A]/70 shadow-[0_18px_36px_-24px_rgb(184_140_58/0.7)]' : 'border-hairline')}
                   data-testid={`compare-card-${p.id}`}
                 >
-                  <header className="bg-navy-band px-5 py-4 text-[#F4ECD8]">
+                  <header className="card-head px-5 py-4">
                     <p className="truncate text-[12px] text-[#A9B0BD]">{p.project.developer.name} — {p.project.name}</p>
                     <p className="mt-1 truncate font-heading text-[18px] font-bold">{p.name}</p>
                     <p className="num mt-0.5 text-[12px] text-[#D8B66A]">

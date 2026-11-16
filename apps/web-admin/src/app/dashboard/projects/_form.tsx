@@ -162,7 +162,7 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
           {/* ── Panel 1: Basic Information ── */}
           <section
             id="section-basic"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
           >
             <PanelHeader
               number="01"
@@ -230,7 +230,7 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
           {/* ── Panel 2: Location ── */}
           <section
             id="section-location"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
           >
             <PanelHeader
               number="02"
@@ -328,7 +328,7 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
           {/* ── Panel 3: Amenities ── */}
           <section
             id="section-amenities"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
           >
             <PanelHeader
               number="03"
@@ -358,7 +358,7 @@ export default function ProjectForm({ project, locale = 'ar' }: Props) {
           {/* ── Panel 4: Media ── */}
           <section
             id="section-media"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]"
           >
             <PanelHeader
               number="04"

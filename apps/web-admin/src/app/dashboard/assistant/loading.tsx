@@ -13,7 +13,7 @@ function Bar({ className }: { className: string }) {
 export default function Loading() {
   return (
     <div aria-hidden className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="overflow-hidden rounded-[28px] bg-navy-band p-6 sm:p-8">
+      <section className="overflow-hidden rounded-card bg-navy-band p-6 sm:p-8">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 shrink-0 animate-pulse rounded-full bg-white/10 ring-1 ring-[#D8B66A]/30" />
           <div className="flex-1 space-y-3">

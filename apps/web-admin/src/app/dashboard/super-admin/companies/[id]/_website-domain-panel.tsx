@@ -102,7 +102,7 @@ export function CompanyWebsiteDomainPanel({ companyId }: { companyId: string }) 
           <form
             onSubmit={add}
             data-testid="website-domain-add"
-            className="rounded-[20px] border border-dashed border-brand-400/40 bg-brand-50/30 p-5"
+            className="rounded-card border border-dashed border-brand-400/40 bg-brand-50/30 p-5"
           >
             {domains !== null && custom.length === 0 && (
               <p className="mb-3 text-[13px] text-slate-600">{m.empty}</p>

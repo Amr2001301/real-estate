@@ -439,7 +439,7 @@ function SummaryCard({
     <div
       data-testid={testId}
       className={cn(
-        'flex flex-col gap-4 rounded-[20px] border bg-surface p-5',
+        'flex flex-col gap-4 rounded-card border bg-surface p-5',
         tone === 'warn' ? 'border-amber-500/40' : tone === 'good' ? 'border-emerald-500/25' : 'border-hairline',
       )}
     >

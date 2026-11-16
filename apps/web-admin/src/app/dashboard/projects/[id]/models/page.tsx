@@ -114,17 +114,17 @@ export default async function ProjectModelsPage({
       />
 
       {sp.err && (
-        <div role="alert" className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div role="alert" className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           {sp.err}
         </div>
       )}
       {sp.ok && !sp.err && (
-        <div className="rounded-[20px] bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">
+        <div className="rounded-card bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">
           {m.saved}
         </div>
       )}
       {(modelsRes.error || projectRes.error) && (
-        <div className="rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+        <div className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           {modelsRes.error ?? projectRes.error}
         </div>
       )}

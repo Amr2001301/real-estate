@@ -363,7 +363,7 @@ export default async function FinancialReportsPage({
       {!showCompare && (
       <>
       {/* ─── Hero: what came in, the rate, the months ───────────────────── */}
-      <section data-testid="fin-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
+      <section data-testid="fin-hero" className="relative overflow-hidden rounded-card border border-hairline bg-surface">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
         <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />
         <div className="relative grid grid-cols-1 gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-10">
@@ -1127,7 +1127,7 @@ function FigureCard({
     <div
       data-testid={testId}
       className={cn(
-        'flex flex-col gap-3 overflow-hidden rounded-[20px] border bg-surface p-5 transition-colors',
+        'flex flex-col gap-3 overflow-hidden rounded-card border bg-surface p-5 transition-colors',
         tone === 'warn' ? 'border-danger-500/30' : tone === 'good' ? 'border-emerald-500/25' : 'border-hairline hover:border-brand-500/30',
       )}
     >

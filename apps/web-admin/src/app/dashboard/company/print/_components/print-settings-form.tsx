@@ -448,7 +448,7 @@ export function PrintSettingsForm({
         {(dirty || note) && (
           <div
             className={cn(
-              'sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-[20px] border bg-surface/95 p-3.5 ps-5 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur',
+              'sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-card border bg-surface/95 p-3.5 ps-5 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur',
               dirty ? 'border-brand-400/50' : 'border-hairline',
             )}
           >

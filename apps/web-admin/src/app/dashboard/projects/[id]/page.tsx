@@ -63,7 +63,7 @@ export default async function ProjectDetailPage({
 
   if (projectRes.error || !projectRes.data) {
     return (
-      <div className="rounded-[18px] bg-danger-500/10 p-6 text-sm text-danger-600">
+      <div className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">
         {m.loadError(projectRes.error ?? m.loadErrorDefault)}
       </div>
     );
@@ -113,7 +113,7 @@ export default async function ProjectDetailPage({
       {/* ── Hero: the cover across the page ─────────────────────────────── */}
       <section
         data-testid="project-hero"
-        className="relative isolate overflow-hidden rounded-[26px] border border-hairline bg-surface"
+        className="relative isolate overflow-hidden rounded-card border border-hairline bg-surface"
       >
         {cover ? (
           <>

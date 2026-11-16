@@ -302,7 +302,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
       </PremiumPageHero>
 
       {error && (
-        <div className="rounded-[18px] bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
+        <div className="rounded-card bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">{m.errorTitle}</p>

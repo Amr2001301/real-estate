@@ -213,7 +213,7 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
           {/* 01 */}
           <section
             id="section-location"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="01"
@@ -238,7 +238,7 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
           {/* 02 */}
           <section
             id="section-basic"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="02"
@@ -315,7 +315,7 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
           {/* 03 */}
           <section
             id="section-specs"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="03"
@@ -389,7 +389,7 @@ export default function UnitForm({ unit, projects, types, locale = 'ar' }: Props
           {/* 04 */}
           <section
             id="section-financial"
-            className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
+            className="bg-surface border border-hairline rounded-card overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="04"

@@ -65,7 +65,7 @@ export default async function PrintSettingsPage({ searchParams }: { searchParams
               aria-current={active ? 'page' : undefined}
               data-testid={`print-tab-${t}`}
               className={cn(
-                'group flex items-center gap-3 rounded-[20px] border bg-surface p-4 transition-all',
+                'group flex items-center gap-3 rounded-card border bg-surface p-4 transition-all',
                 active
                   ? 'border-brand-500 shadow-[0_0_0_3px_rgb(200_162_75/0.15),0_18px_40px_-28px_rgb(20_26_38/0.45)]'
                   : 'border-hairline hover:border-brand-400/50',

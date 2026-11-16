@@ -26,7 +26,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const symbol = currencySymbol(currency, locale);
   const res = await safe(api.get<CampaignDetail>(`/campaigns/${id}`));
   if (!res.data) {
-    return <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>;
+    return <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>;
   }
   const c = res.data;
   const s = c.stats;
@@ -70,7 +70,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-[28px] bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)]">
+      <section className="relative overflow-hidden rounded-card bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)]">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_0%_0%,rgba(216,182,106,0.22),transparent_60%),radial-gradient(50%_80%_at_100%_100%,rgba(38,64,95,0.9),transparent)]" />
         <div className="relative grid grid-cols-1 items-center gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_auto]">
           <div className="min-w-0">

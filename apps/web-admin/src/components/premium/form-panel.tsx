@@ -24,7 +24,7 @@ export function PremiumFormPanel({
     <section
       id={id}
       className={cn(
-        'bg-surface border border-hairline rounded-[20px] overflow-hidden',
+        'bg-surface border border-hairline rounded-card overflow-hidden',
         'shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)]',
         className,
       )}

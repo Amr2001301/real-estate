@@ -78,7 +78,7 @@ export function IntakeSources({
     });
 
   return (
-    <section data-testid="intake-sources" className="rounded-[24px] border border-hairline bg-surface p-5 sm:p-6">
+    <section data-testid="intake-sources" className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-heading text-[18px] font-bold text-slate-900">{k.title}</h2>

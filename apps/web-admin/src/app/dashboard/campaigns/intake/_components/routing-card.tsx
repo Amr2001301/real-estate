@@ -33,7 +33,7 @@ export function RoutingCard({ initial, canManage, m }: { initial: LeadRoutingSet
   };
 
   return (
-    <section data-testid="routing-card" className="rounded-[24px] border border-hairline bg-surface p-5 sm:p-6">
+    <section data-testid="routing-card" className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-heading text-[18px] font-bold text-slate-900">{m.title}</h2>
         <p className="text-[12px] text-slate-500">

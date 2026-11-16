@@ -133,7 +133,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         breadcrumbs={[{ label: uiT(locale).common.breadcrumbHome, href: '/dashboard' }, { label: m.title }]}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-hairline bg-surface p-3">
         <div className="flex items-center gap-2">
           <Link href={link({ month: prevMonth, day: undefined })} aria-label={m.prev} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline hover:border-brand-500/50">
             <ChevronRight className="h-4 w-4 ltr:rotate-180" />
@@ -160,7 +160,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
-      {res.error && <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {res.error}</div>}
+      {res.error && <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {res.error}</div>}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
         <section className="overflow-hidden rounded-card border border-hairline bg-surface" data-testid="calendar-grid">

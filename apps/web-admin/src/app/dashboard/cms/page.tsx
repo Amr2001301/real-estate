@@ -160,7 +160,7 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
               href={(t.key === 'articles' ? '/dashboard/cms' : `/dashboard/cms?tab=${t.key}`) as never}
               aria-current={on ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-4 rounded-[20px] border px-5 py-4 transition-colors',
+                'flex items-center gap-4 rounded-card border px-5 py-4 transition-colors',
                 on ? 'border-[#C9A24E]/60 bg-[#D8B66A]/[0.10]' : 'border-hairline bg-surface hover:border-[#C9A24E]/40',
               )}
             >

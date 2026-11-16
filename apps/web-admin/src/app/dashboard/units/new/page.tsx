@@ -71,7 +71,7 @@ export default async function NewUnitPage() {
       </div>
 
       {r.error ? (
-        <div className="rounded-[18px] bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-card bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           {r.error}
         </div>
       ) : (
