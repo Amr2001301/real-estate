@@ -902,6 +902,12 @@ abstract class AppLocalizations {
   /// **'View full map'**
   String get mapExpand;
 
+  /// No description provided for @actionDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get actionDownload;
+
   /// No description provided for @projectAvailableUnits.
   ///
   /// In en, this message translates to:

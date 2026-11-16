@@ -144,7 +144,7 @@ class _Body extends StatelessWidget {
             trailing: summary.maintenance.recentRequests.isNotEmpty
                 ? _Link(
                     label: l10n.viewAll,
-                    onTap: () => context.push('/account/maintenance'),
+                    onTap: () => context.go('/account/maintenance'),
                   )
                 : null,
           ),
@@ -624,7 +624,7 @@ class _PropertyUnit extends StatelessWidget {
         children: [
           // Navy header — tap navigates to property detail
           InkWell(
-            onTap: () => context.push('/account/property'),
+            onTap: () => context.go('/account/property'),
             child: _CardHeader(
               projectName: property.projectName.resolve(lang),
               unitType: unitTypeLabel(property.unitType, languageCode: lang),
@@ -1657,7 +1657,7 @@ class _MaintenanceCard extends StatelessWidget {
             if (i > 0) Divider(height: 1, color: colors.hairline),
             _MRow(
               item: maintenance.recentRequests[i],
-              onTap: () => context.push('/account/maintenance'),
+              onTap: () => context.go('/account/maintenance'),
             ),
           ],
         ],

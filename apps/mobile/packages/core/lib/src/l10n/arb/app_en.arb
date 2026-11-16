@@ -151,6 +151,7 @@
   "projectLocation": "Location",
   "openInMaps": "Open in Maps",
   "mapExpand": "View full map",
+  "actionDownload": "Download",
   "projectAvailableUnits": "Available units",
   "availableUnitsCount": "{count, plural, =0{No available units} =1{1 available unit} other{{count} available units}}",
   "@availableUnitsCount": { "placeholders": { "count": { "type": "int" } } },
