@@ -565,7 +565,7 @@ async function main() {
     descriptionAr: 'مجتمع سكني فاخر بإطلالات خلابة ومرافق متكاملة.',
     descriptionEn:
       'A luxurious residential community with stunning views and full amenities.',
-    city: 'Riyadh',
+    city: 'الرياض',
     lat: 24.7136,
     lng: 46.6753,
     status: ProjectStatus.PUBLISHED,
@@ -609,7 +609,7 @@ async function main() {
     nameEn: 'Golf Villas',
     descriptionAr: 'فيلات راقية بإطلالة على الجولف.',
     descriptionEn: 'Premium villas overlooking the golf course.',
-    city: 'Jeddah',
+    city: 'جدة',
     lat: 21.4858,
     lng: 39.1925,
     status: ProjectStatus.DRAFT,
