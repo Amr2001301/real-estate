@@ -42,7 +42,7 @@ class HomeScreen extends StatelessWidget {
     final comparing = context.watch<CompareCubit>().state.isNotEmpty;
     // Clear the floating tab bar (and the compare dock above it), like the other
     // tabs do — the last banner used to end up underneath it.
-    final bottomPad = MediaQuery.paddingOf(context).bottom + (comparing ? 176.0 : 110.0);
+    final bottomPad = MediaQuery.paddingOf(context).bottom + (comparing ? 160.0 : 88.0);
 
     final sessionListener = BlocListener<SessionCubit, SessionState>(
       listenWhen: (prev, curr) {
@@ -88,7 +88,8 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       SliverPadding(
-                        padding: EdgeInsets.only(bottom: bottomPad),
+                        // A gap under the header: the first card used to touch its rounded edge.
+                        padding: EdgeInsets.only(top: AppSpacing.md, bottom: bottomPad),
                         sliver: SliverToBoxAdapter(
                           child: CustomerHomeDashboard(
                             name: displayName,
