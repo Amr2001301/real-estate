@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../documents/domain/entities/customer_document.dart';
 import '../../documents/presentation/document_download_cubit.dart';
 import '../../documents/presentation/documents_list_cubit.dart';
+import '../../documents/presentation/widgets/document_tile.dart';
 import '../domain/entities/maintenance_request.dart';
 import 'maintenance_detail_cubit.dart';
 import 'maintenance_format.dart';
@@ -575,6 +576,12 @@ class _AttachmentTile extends StatelessWidget {
           (a.downloadingId == document.id) != (b.downloadingId == document.id),
       builder: (context, state) {
         final downloading = state.downloadingId == document.id;
+        if (document.isImage) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+            child: DocumentImageTile(document: document),
+          );
+        }
         return InkWell(
           onTap: downloading
               ? null

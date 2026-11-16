@@ -1167,6 +1167,19 @@ export class ContractsService {
       throw new ConflictException('Cannot sign a cancelled contract');
     }
 
+    // A signed contract must say how it is paid: an instalment plan, or a cash plan (one payment).
+    // Without one the customer sees no schedule and the company has nothing to collect against.
+    const plan = await this.prisma.installmentPlan.findFirst({
+      where: { contractId: id, cancelledAt: null },
+      select: { id: true },
+    });
+    if (!plan) {
+      throw new BadRequestException({
+        message: 'لا يمكن توقيع العقد قبل تحديد طريقة السداد — أضف خطة تقسيط أو سداداً نقدياً أولاً',
+        code: 'PAYMENT_PLAN_REQUIRED',
+      });
+    }
+
     // FG-27 — signing sets the status too. It used to set only signedAt, so
     // every signed contract stayed UNSIGNED and anything reading `status`
     // (reports, exports, filters) saw signed contracts as unsigned.

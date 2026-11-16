@@ -104,11 +104,12 @@ describe('ST1 — customer statement of account (e2e)', () => {
         .send({ customerId: owner, unitId, totalAmount: 1_000_000, downPayment: 100_000 })
         .expect(201)
     ).body.id;
-    await asAdmin(http().post(`/v1/contracts/${contractId}/sign`))
-      .send({ signedAt: new Date().toISOString() })
-      .expect(201);
+    // The plan comes first: a contract is signed only with a payment plan.
     await asAdmin(http().post('/v1/installment-plans'))
       .send({ contractId, totalMonths: 10, startsAt: '2027-02-01' })
+      .expect(201);
+    await asAdmin(http().post(`/v1/contracts/${contractId}/sign`))
+      .send({ signedAt: new Date().toISOString() })
       .expect(201);
 
     // A payment recorded, then reversed by staff: the reversal carries a staff name.

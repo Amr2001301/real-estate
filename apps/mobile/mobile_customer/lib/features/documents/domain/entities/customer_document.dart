@@ -30,6 +30,14 @@ class CustomerDocument extends Equatable {
   final String? category;
   final DateTime? createdAt;
 
+  /// A picture the app can draw (HEIC is not drawn by the engine, so it stays a file).
+  bool get isImage {
+    final mime = (mimeType ?? '').toLowerCase();
+    if (mime.startsWith('image/')) return !mime.contains('heic') && !mime.contains('heif');
+    final name = (fileName ?? '').toLowerCase();
+    return name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp') || name.endsWith('.gif');
+  }
+
   bool get isPdf => (mimeType ?? '').contains('pdf') ||
       (fileName ?? '').toLowerCase().endsWith('.pdf');
 

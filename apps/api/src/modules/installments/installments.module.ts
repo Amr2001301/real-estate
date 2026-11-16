@@ -135,7 +135,12 @@ const LATE_FEE_CLOCK_STOPPED = {
 
 class CreatePlanDto {
   @IsUUID() contractId!: string;
-  @IsInt() @Min(1) @Max(360) totalMonths!: number;
+  /**
+   * A cash sale: no instalments — one payment for what the price leaves after the booking, due on
+   * `startsAt`. `totalMonths` and `monthlyAmount` are not sent.
+   */
+  @IsOptional() @IsBoolean() cash?: boolean;
+  @ValidateIf((o: CreatePlanDto) => !o.cash) @IsInt() @Min(1) @Max(360) totalMonths?: number;
   /** Optional: computed from the contract (total − down payment) ÷ months when omitted. */
   @IsOptional() @IsNumber() @IsPositive() monthlyAmount?: number;
   @IsDateString() startsAt!: string;
@@ -332,6 +337,9 @@ export class InstallmentsService {
     const startsAt = new Date(dto.startsAt);
     if (Number.isNaN(startsAt.getTime())) throw new BadRequestException('Invalid startsAt');
 
+    if (dto.cash) return this.createCashPlan(contract, startsAt, actorId);
+    const totalMonths = dto.totalMonths!;
+
     // The schedule must add up to the contract: a down-payment row (so it can
     // be recorded at all — a payment needs an installment) plus the monthly
     // rows covering the rest. A typed monthly amount that does not fit is
@@ -345,26 +353,26 @@ export class InstallmentsService {
     if (remainingCents <= 0) {
       throw new BadRequestException('لا يتبقى مبلغ للتقسيط بعد الحجز والمقدّم');
     }
-    const expectedMonthlyCents = Math.floor(remainingCents / dto.totalMonths);
+    const expectedMonthlyCents = Math.floor(remainingCents / totalMonths);
     const monthlyCents = dto.monthlyAmount != null ? toCents(dto.monthlyAmount) : expectedMonthlyCents;
     // Only rounding is fine, and the last row settles it: it must stay a real
     // instalment, within a piaster a month of the others. A pound a month of
     // slack let the last row absorb up to n pounds — or go negative when the
     // typed amount was under n.
-    const lastIfTyped = remainingCents - monthlyCents * (dto.totalMonths - 1);
-    if (lastIfTyped <= 0 || Math.abs(lastIfTyped - monthlyCents) >= dto.totalMonths) {
+    const lastIfTyped = remainingCents - monthlyCents * (totalMonths - 1);
+    if (lastIfTyped <= 0 || Math.abs(lastIfTyped - monthlyCents) >= totalMonths) {
       throw new BadRequestException(
-        `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد الحجز والمقدّم ${(remainingCents / 100).toFixed(2)} على ${dto.totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
+        `القسط الشهري لا يطابق قيمة العقد — المتبقي بعد الحجز والمقدّم ${(remainingCents / 100).toFixed(2)} على ${totalMonths} شهراً = ${(expectedMonthlyCents / 100).toFixed(2)} شهرياً`,
       );
     }
-    const lastCents = remainingCents - monthlyCents * (dto.totalMonths - 1);
+    const lastCents = remainingCents - monthlyCents * (totalMonths - 1);
     const money = (cents: number) => new Prisma.Decimal(cents).div(100);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlan.create({
         data: {
           contractId: dto.contractId,
-          totalMonths: dto.totalMonths,
+          totalMonths: totalMonths,
           monthlyAmount: money(monthlyCents),
           startsAt,
         },
@@ -378,12 +386,12 @@ export class InstallmentsService {
           type: PlanPaymentType.DOWN_PAYMENT,
         });
       }
-      for (let i = 0; i < dto.totalMonths; i++) {
+      for (let i = 0; i < totalMonths; i++) {
         const due = addMonths(startsAt, i);
         rows.push({
           planId: plan.id,
           dueDate: due,
-          amount: money(i === dto.totalMonths - 1 ? lastCents : monthlyCents),
+          amount: money(i === totalMonths - 1 ? lastCents : monthlyCents),
         });
       }
       await tx.installment.createMany({ data: rows });
@@ -397,7 +405,7 @@ export class InstallmentsService {
     const payload = {
       contractNumber: contract.contractNumber ?? '',
       unitCode: contract.unit?.code ?? '',
-      totalMonths: dto.totalMonths,
+      totalMonths: totalMonths,
       monthlyAmount: monthlyCents / 100,
       startsAt: startsAt.toISOString().slice(0, 10),
       contractId: contract.id,
@@ -413,6 +421,47 @@ export class InstallmentsService {
       payload,
       { except: actorId },
     );
+    return created;
+  }
+
+  /**
+   * A cash plan (the same shape a cash plan chosen at the reservation has): no instalments, one
+   * DOWN_PAYMENT row for what the price leaves after the booking, due on the start date. It is how
+   * a cash sale says "paid in one go" — a payment needs a row to be recorded against.
+   */
+  private async createCashPlan(
+    contract: { id: string; contractNumber: string | null; customerId: string; totalAmount: Prisma.Decimal; unit: { code: string } | null; reservation: { salesId: string | null; bookingAmount: Prisma.Decimal | null } | null },
+    startsAt: Date,
+    actorId?: string,
+  ) {
+    const cents = (v: Prisma.Decimal | number | null | undefined) => Math.round(Number(v ?? 0) * 100);
+    const dueCents = cents(contract.totalAmount) - cents(contract.reservation?.bookingAmount);
+    if (dueCents <= 0) throw new BadRequestException('لا يتبقى مبلغ للسداد بعد الحجز');
+    const amount = new Prisma.Decimal(dueCents).div(100);
+    const created = await this.prisma.$transaction(async (tx) => {
+      const plan = await tx.installmentPlan.create({
+        data: { contractId: contract.id, totalMonths: 0, monthlyAmount: new Prisma.Decimal(0), startsAt },
+      });
+      await tx.installment.create({
+        data: { planId: plan.id, type: PlanPaymentType.DOWN_PAYMENT, dueDate: startsAt, amount },
+      });
+      return tx.installmentPlan.findUnique({
+        where: { id: plan.id },
+        include: { installments: { orderBy: { dueDate: 'asc' } } },
+      });
+    });
+    const payload = {
+      contractNumber: contract.contractNumber ?? '',
+      unitCode: contract.unit?.code ?? '',
+      totalMonths: 0,
+      monthlyAmount: 0,
+      startsAt: startsAt.toISOString().slice(0, 10),
+      contractId: contract.id,
+      entityType: 'contract',
+      entityId: contract.id,
+    };
+    await this.notifications?.sendToUser(contract.customerId, 'installment_schedule_ready', payload, { except: actorId });
+    await this.notifications?.sendToUser(contract.reservation?.salesId, 'installment_schedule_ready_staff', payload, { except: actorId });
     return created;
   }
 

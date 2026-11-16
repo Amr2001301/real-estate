@@ -35,6 +35,8 @@
     "smoke:broker": "tsx scripts/smoke-broker-module.ts",
     "dedupe:generic-leads:dry-run": "tsx scripts/dedupe-generic-leads.ts",
     "backfill:broker-commissions:dry-run": "tsx scripts/backfill-broker-commissions.ts",
+    "contracts:backfill-plans:dry-run": "tsx scripts/backfill-missing-installment-plans.ts",
+    "contracts:backfill-plans": "tsx scripts/backfill-missing-installment-plans.ts --execute",
     "contracts:backfill-documents:dry-run": "tsx scripts/backfill-contract-documents.ts",
     "contracts:backfill-documents": "tsx scripts/backfill-contract-documents.ts --execute",
     "deposits:backfill-booking-status:dry-run": "tsx scripts/backfill-booking-payment-status.ts",

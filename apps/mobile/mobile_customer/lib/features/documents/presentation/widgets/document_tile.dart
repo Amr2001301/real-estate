@@ -20,6 +20,7 @@ class DocumentTile extends StatelessWidget {
           (a.downloadingId == document.id) != (b.downloadingId == document.id),
       builder: (context, state) {
         final downloading = state.downloadingId == document.id;
+        if (document.isImage) return DocumentImageTile(document: document);
         return AppCard(
           onTap: downloading
               ? null
@@ -85,6 +86,123 @@ class DocumentsSection extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
           ],
         ],
+      ),
+    );
+  }
+}
+
+
+/// A picture document shown as the picture itself (not a download row). Tap opens it full
+/// screen to zoom; the download button there (and on the tile) saves/opens the file.
+class DocumentImageTile extends StatefulWidget {
+  const DocumentImageTile({super.key, required this.document});
+
+  final CustomerDocument document;
+
+  @override
+  State<DocumentImageTile> createState() => _DocumentImageTileState();
+}
+
+class _DocumentImageTileState extends State<DocumentImageTile> {
+  late final Future<Result<DocumentDownloadLink>> _link;
+
+  @override
+  void initState() {
+    super.initState();
+    // One fresh signed link per tile; the picture is drawn from it.
+    _link = context.read<DocumentDownloadCubit>().link(widget.document.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final doc = widget.document;
+    final title = doc.title.isNotEmpty ? doc.title : (doc.fileName ?? '');
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FutureBuilder<Result<DocumentDownloadLink>>(
+            future: _link,
+            builder: (context, snap) {
+              final url = snap.data?.dataOrNull?.url;
+              if (snap.connectionState != ConnectionState.done) {
+                return const AspectRatio(aspectRatio: 16 / 10, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+              }
+              if (url == null) {
+                return AspectRatio(
+                  aspectRatio: 16 / 6,
+                  child: Center(child: Icon(Icons.broken_image_outlined, color: colors.inkMuted, size: 32)),
+                );
+              }
+              return GestureDetector(
+                key: Key('document-image-${doc.id}'),
+                onTap: () => _openViewer(context, url, title),
+                child: AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Center(child: Icon(Icons.broken_image_outlined, color: colors.inkMuted, size: 32)),
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                ),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(14, 8, 6, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleSmall),
+                ),
+                IconButton(
+                  tooltip: context.l10n.actionDownload,
+                  icon: Icon(Icons.download_rounded, color: colors.inkMuted),
+                  onPressed: () => context.read<DocumentDownloadCubit>().open(doc.id),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openViewer(BuildContext context, String url, String title) {
+    final cubit = context.read<DocumentDownloadCubit>();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            actions: [
+              IconButton(
+                tooltip: context.l10n.actionDownload,
+                icon: const Icon(Icons.download_rounded),
+                onPressed: () => cubit.open(widget.document.id),
+              ),
+            ],
+          ),
+          body: InteractiveViewer(
+            minScale: 1,
+            maxScale: 6,
+            child: Center(child: Image.network(url, fit: BoxFit.contain)),
+          ),
+        ),
       ),
     );
   }

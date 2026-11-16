@@ -5116,6 +5116,11 @@ const UI = {
       cancelledBadge: 'ملغي',
       preSystemBadge: 'عقد سابق على النظام',
       planBackdated: 'تاريخ البداية في الماضي: الأقساط المستحقة قبل اليوم ستظهر متأخرة (دون غرامات تأخير) — سجّل ما دُفع منها.',
+      paymentMethodLabel: 'طريقة السداد',
+      payInstallments: 'تقسيط',
+      payCash: 'سداد نقدي (دفعة واحدة)',
+      cashHint: 'دفعة واحدة بما تبقّى من الثمن بعد الحجز، تستحق في تاريخ البداية.',
+      signNeedsPlan: 'حدّد طريقة السداد (خطة تقسيط أو سداد نقدي) في قسم الخطة أولاً — لا يُوقَّع عقد بدونها.',
       planBackdatedPreSystem: 'تاريخ البداية في الماضي: بعد إنشاء الخطة علّم ما دُفع قبل إدخال العقد من «ما دُفع قبل إدخال العقد» (دون غرامات تأخير على ما سبق).',
       paidBeforeTitle: 'ما دُفع قبل إدخال العقد',
       paidBeforeHint: (count: number, total: string, day: string) =>
@@ -11110,6 +11115,11 @@ const UI = {
       cancelledBadge: 'Cancelled',
       preSystemBadge: 'Signed before the system',
       planBackdated: 'The start date is in the past: instalments due before today come in overdue (with no late fees) — record what was already paid.',
+      paymentMethodLabel: 'Payment method',
+      payInstallments: 'Instalments',
+      payCash: 'Cash (one payment)',
+      cashHint: 'One payment for what the price leaves after the booking, due on the start date.',
+      signNeedsPlan: 'Set how it is paid (an instalment plan or cash) in the plan section first — a contract is not signed without one.',
       planBackdatedPreSystem: 'The start date is in the past: once the plan is created, mark what was paid before the contract was entered under “Paid before the contract was entered” (no late fees on those).',
       paidBeforeTitle: 'Paid before the contract was entered',
       paidBeforeHint: (count: number, total: string, day: string) =>

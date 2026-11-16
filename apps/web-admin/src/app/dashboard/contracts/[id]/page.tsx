@@ -73,10 +73,10 @@ export default async function ContractDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; signAt?: string }>;
 }) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, signAt } = await searchParams;
   const locale = await getLocale();
   const m = uiT(locale).contractDetailPage;
 
@@ -269,8 +269,10 @@ export default async function ContractDetailPage({
                       <SignContract
                         contractId={contract.id}
                         today={todayIn(timeZone)}
+                        initialDate={signAt && /^\d{4}-\d{2}-\d{2}$/.test(signAt) ? signAt : undefined}
                         deliveryDefault={contract.expectedDeliveryDate}
                         locale={locale}
+                        hasPlan={!!plan}
                       />
                     )}
                   </>
@@ -710,6 +712,10 @@ export default async function ContractDetailPage({
                   monthly: m.formMonthlyAmountPlaceholder,
                   submit: m.btnCreatePlan,
                   backdated: contract.preSystem ? m.planBackdatedPreSystem : m.planBackdated,
+                  method: m.paymentMethodLabel,
+                  installments: m.payInstallments,
+                  cash: m.payCash,
+                  cashHint: m.cashHint,
                 }}
                 today={todayIn(timeZone)}
               />

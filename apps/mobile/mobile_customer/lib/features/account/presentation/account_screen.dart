@@ -66,11 +66,9 @@ class _AccountScreenState extends State<AccountScreen> {
           icon: Icons.home_work_rounded,
           title: l10n.accountSectionServices,
           items: [
-            ProfileItem(id: 'property', icon: AppIcons.property, label: l10n.accountMyProperty, subtitle: l10n.accountMyPropertySubtitle, onTap: () => context.push('/account/property')),
             ProfileItem(id: 'contracts', icon: AppIcons.contract, label: l10n.accountContracts, subtitle: l10n.financeContractsDesc, onTap: () => context.push('/account/contracts')),
             ProfileItem(id: 'installments', icon: AppIcons.installments, label: l10n.installmentsTitle, subtitle: l10n.financeInstallmentsDesc, onTap: () => context.push('/account/installments')),
             ProfileItem(id: 'deposits', icon: AppIcons.deposit, label: l10n.accountDeposits, subtitle: l10n.financeDepositsDesc, onTap: () => context.push('/account/deposits')),
-            ProfileItem(id: 'maintenance', icon: AppIcons.maintenance, label: l10n.accountMaintenance, subtitle: l10n.accountMaintenanceSubtitle, onTap: () => context.push('/account/maintenance')),
           ],
         ),
         // The company's published pages (CMS1).

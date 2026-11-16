@@ -432,6 +432,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapExpand => 'View full map';
 
   @override
+  String get actionDownload => 'Download';
+
+  @override
   String get projectAvailableUnits => 'Available units';
 
   @override

@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../domain/entities/customer_document.dart';
 import '../domain/usecases/get_document_download_link.dart';
 
 class DocumentDownloadState extends Equatable {
@@ -19,6 +20,9 @@ class DocumentDownloadCubit extends Cubit<DocumentDownloadState> {
   DocumentDownloadCubit(this._getLink) : super(const DocumentDownloadState());
 
   final GetDocumentDownloadLink _getLink;
+
+  /// A fresh signed link for showing a picture inline — nothing is launched.
+  Future<Result<DocumentDownloadLink>> link(String documentId) => _getLink(documentId);
 
   Future<void> open(String documentId) async {
     if (state.downloadingId != null) return; // ignore double taps

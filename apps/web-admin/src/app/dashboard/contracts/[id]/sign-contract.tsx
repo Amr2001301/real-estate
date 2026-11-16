@@ -12,18 +12,24 @@ import { signContractAction } from '../actions';
 export function SignContract({
   contractId,
   today,
+  initialDate,
   deliveryDefault,
   locale = 'ar',
+  hasPlan = true,
 }: {
   contractId: string;
   today: string;
+  /** The signing date typed on the new-contract form, carried here. */
+  initialDate?: string;
   /** The unit's handover date now — what the contract promises unless changed. */
   deliveryDefault?: string | null;
   locale?: Locale;
+  /** The contract has a payment plan (instalments or cash); without one it cannot be signed. */
+  hasPlan?: boolean;
 }) {
   const m = uiT(locale).contractDetailPage;
   const router = useRouter();
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(initialDate ?? today);
   const [delivery, setDelivery] = useState(deliveryDefault ?? '');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -36,6 +42,14 @@ export function SignContract({
       if (res.error) setError(res.error);
       else router.refresh();
     });
+  }
+
+  if (!hasPlan) {
+    return (
+      <p className="mt-2 text-xs text-warning-700" data-testid="sign-needs-plan">
+        {m.signNeedsPlan}
+      </p>
+    );
   }
 
   return (

@@ -59,9 +59,7 @@ test('instalments paid before the contract was entered are marked in one go', as
   });
   expect(created.status()).toBe(201);
   const contractId = (await created.json()).id as string;
-  expect(
-    (await request.post(`${API_BASE}/v1/contracts/${contractId}/sign`, { headers, data: { signedAt: '2025-01-15' } })).ok(),
-  ).toBeTruthy();
+  // The schedule first: a contract is signed only with a payment plan.
   expect(
     (
       await request.post(`${API_BASE}/v1/installment-plans`, {
@@ -69,6 +67,9 @@ test('instalments paid before the contract was entered are marked in one go', as
         data: { contractId, totalMonths: 40, startsAt: '2025-02-01T00:00:00.000Z' },
       })
     ).ok(),
+  ).toBeTruthy();
+  expect(
+    (await request.post(`${API_BASE}/v1/contracts/${contractId}/sign`, { headers, data: { signedAt: '2025-01-15' } })).ok(),
   ).toBeTruthy();
 
   await gotoReady(page, `/dashboard/contracts/${contractId}?tab=installments`);

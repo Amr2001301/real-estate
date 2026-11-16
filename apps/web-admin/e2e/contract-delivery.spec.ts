@@ -32,6 +32,15 @@ test('a contract shows its promised handover date and when it is late', async ({
   });
   expect(created.status()).toBe(201);
   const id = (await created.json()).id as string;
+  // A contract is signed only with a payment plan: a cash one here.
+  expect(
+    (
+      await request.post(`${API_BASE}/v1/installment-plans`, {
+        headers,
+        data: { contractId: id, cash: true, startsAt: new Date().toISOString() },
+      })
+    ).ok(),
+  ).toBeTruthy();
 
   // Signed from its page: the promised date defaults to the unit's.
   await gotoReady(page, `/dashboard/contracts/${id}`);
