@@ -194,7 +194,7 @@ export default async function BrokerPerformancePage({
         </div>
       </form>
 
-      <section data-testid="perf-figures" className={cn(CARD, 'overflow-hidden')}>
+      <section data-testid="perf-figures" className={'overflow-hidden'}>
         <FigureBar
           bare
           figures={[

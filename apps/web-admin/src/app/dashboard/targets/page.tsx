@@ -242,7 +242,7 @@ export default async function TargetsPage({
       </PremiumFilterBar>
 
       {/* ── Key figures ───────────────────────────────────────────────────── */}
-      <section data-testid="targets-kpis" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section data-testid="targets-kpis" className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}

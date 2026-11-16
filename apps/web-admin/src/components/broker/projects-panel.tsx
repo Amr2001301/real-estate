@@ -140,7 +140,7 @@ export function ProjectsPanel({
     <div className="flex flex-col gap-5">
 
       {/* ── Figures ───────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}

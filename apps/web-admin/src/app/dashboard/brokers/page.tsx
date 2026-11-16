@@ -113,7 +113,7 @@ export default async function BrokersPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -182,6 +182,7 @@ export default async function BrokersPage({
         title={m.sectionTitle}
         description={m.sectionDesc}
         padded={false}
+        band
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
             {total.toLocaleString(intlLocale(locale))} {m.brokerSuffix}

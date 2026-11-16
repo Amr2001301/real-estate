@@ -139,6 +139,9 @@ export function PremiumFilterField({ label, htmlFor, children, className, neutra
         '[&_select]:h-9 [&_select]:w-auto [&_select]:min-w-0 [&_select]:border-0 [&_select]:bg-transparent [&_select]:shadow-none',
         '[&_select]:py-0 [&_select]:ps-1 [&_select]:pe-8 [&_select]:text-[13.5px] [&_select]:font-bold [&_select]:text-slate-900',
         '[&_select]:ring-0 [&_select]:focus:ring-0 [&_select]:bg-none [&_select]:appearance-none',
+        // Focus shows ONCE, on the pill itself: the inner select draws no ring of its own.
+        '[&_select]:![box-shadow:none] [&_select:focus]:![box-shadow:none] [&_select:focus-visible]:![box-shadow:none]',
+        'has-[select:focus-visible]:border-brand-500/70',
         '[&_input]:h-9 [&_input]:border-0 [&_input]:bg-transparent [&_input]:shadow-none [&_input]:font-bold [&_input]:text-slate-900 [&_input]:focus:ring-0',
         className,
       )}

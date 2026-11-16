@@ -154,7 +154,7 @@ export default async function AdminBrokerLeadsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -279,6 +279,7 @@ export default async function AdminBrokerLeadsPage({
         title={m.tableTitle}
         description={m.tableDescription}
         padded={false}
+        band
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
             {totalLeads.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}

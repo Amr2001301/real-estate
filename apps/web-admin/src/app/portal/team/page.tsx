@@ -126,7 +126,7 @@ export default async function PortalTeamPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -177,6 +177,7 @@ export default async function PortalTeamPage({
         icon={<Users />}
         title={t.tableTitle}
         padded={false}
+        band
         trailing={
           meta ? (
             <span className="text-xs tabular-nums text-slate-400">

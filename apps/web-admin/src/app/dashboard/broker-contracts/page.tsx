@@ -138,7 +138,7 @@ export default async function AdminBrokerContractsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
@@ -254,6 +254,7 @@ export default async function AdminBrokerContractsPage({
         title={m.tableTitle}
         description={m.tableDescription}
         padded={false}
+        band
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">

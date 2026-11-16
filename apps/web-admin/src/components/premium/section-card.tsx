@@ -27,6 +27,11 @@ export interface PremiumSectionCardProps {
   tone?: Tone;
   /** Whether to apply default padding to the content area. Default: true */
   padded?: boolean;
+  /**
+   * A navy title band — the header row of a list that is made of rows rather than a table, so it reads
+   * like the navy header row every table has.
+   */
+  band?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -38,6 +43,7 @@ export function PremiumSectionCard({
   trailing,
   tone = 'default',
   padded = true,
+  band = false,
   children,
   className,
 }: PremiumSectionCardProps) {
@@ -50,8 +56,8 @@ export function PremiumSectionCard({
     >
       <header
         className={cn(
-          'flex items-start justify-between gap-3 px-5 sm:px-6 pt-5',
-          padded ? 'pb-1' : 'pb-4 border-b border-hairline',
+          'flex items-start justify-between gap-3 px-5 sm:px-6',
+          band ? 'items-center bg-navy-band py-4 text-[#F4ECD8]' : cn('pt-5', padded ? 'pb-1' : 'pb-4 border-b border-hairline'),
         )}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -59,15 +65,15 @@ export function PremiumSectionCard({
             <span
               className={cn(
                 'inline-flex h-10 w-10 items-center justify-center rounded-full border shrink-0 [&_svg]:h-4 [&_svg]:w-4',
-                ICON_TONE[tone],
+                band ? 'border-[#D8B66A]/45 text-[#D8B66A]' : ICON_TONE[tone],
               )}
             >
               {icon}
             </span>
           )}
           <div className="min-w-0">
-            <h3 className={cn('font-heading text-[18px] font-bold leading-snug', TITLE_TONE[tone])}>{title}</h3>
-            {description && <p className="text-[13px] text-slate-500 mt-0.5 leading-snug">{description}</p>}
+            <h3 className={cn('font-heading text-[18px] font-bold leading-snug', band ? 'text-[#F4ECD8]' : TITLE_TONE[tone])}>{title}</h3>
+            {description && <p className={cn('text-[13px] mt-0.5 leading-snug', band ? 'text-[#A9B0BD]' : 'text-slate-500')}>{description}</p>}
           </div>
         </div>
         {trailing && <div className="shrink-0">{trailing}</div>}

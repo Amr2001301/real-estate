@@ -171,7 +171,7 @@ export default async function BrokerDetailPage({
 
       {broker.status === 'PENDING' && <ActivateBrokerNotice brokerId={broker.id} locale={locale} />}
 
-      <section data-testid="broker-figures" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section data-testid="broker-figures" className="overflow-hidden rounded-[22px]">
         <FigureBar
           bare
           cols={4}
