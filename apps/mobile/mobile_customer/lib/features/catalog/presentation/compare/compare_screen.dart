@@ -10,6 +10,17 @@ import '../../domain/entities/unit.dart';
 import '../widgets/unit_status_chip.dart';
 import 'compare_cubit.dart';
 
+/// The units list. A signed-in customer has no units tab, so it opens over
+/// this page (and comes back here); a guest switches to the units tab.
+void _openUnits(BuildContext context, String guestTab) {
+  final session = context.read<SessionCubit>().state;
+  if (session.isAuthenticated && session.role.isCustomerSide) {
+    context.push('/explore/units');
+  } else {
+    context.go(guestTab);
+  }
+}
+
 // Navy depth tokens — match the projects/units screen language.
 Color get _navyDeep => AppPalette.navyDeep;
 
@@ -90,7 +101,7 @@ class _CompareContent extends StatelessWidget {
                 const SizedBox(height: AppSpacing.lg),
                 _AddUnitCard(
                   text: l10n.compareAddUnit,
-                  onTap: () => context.go('/units?compare=true'),
+                  onTap: () => _openUnits(context, '/units?compare=true'),
                 ),
               ],
             ],
@@ -625,7 +636,7 @@ class _CompareEmptyView extends StatelessWidget {
                   icon: Icons.add_rounded,
                   variant: AppButtonVariant.gold,
                   expand: true,
-                  onPressed: () => context.go('/units?compare=true'),
+                  onPressed: () => _openUnits(context, '/units?compare=true'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 AppButton(
@@ -633,7 +644,7 @@ class _CompareEmptyView extends StatelessWidget {
                   icon: Icons.grid_view_rounded,
                   variant: AppButtonVariant.outline,
                   expand: true,
-                  onPressed: () => context.go('/units'),
+                  onPressed: () => _openUnits(context, '/units'),
                 ),
               ],
             ),

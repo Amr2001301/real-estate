@@ -99,6 +99,34 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                 ],
               ),
+              // The company's catalog: a customer's tab bar has no catalog tabs.
+              ProfileSection(
+                icon: Icons.travel_explore_rounded,
+                title: l10n.accountSectionExplore,
+                items: [
+                  ProfileItem(
+                    id: 'explore-projects',
+                    icon: Icons.location_city_rounded,
+                    label: l10n.navProjects,
+                    subtitle: l10n.exploreProjectsDesc,
+                    onTap: () => context.push('/explore/projects'),
+                  ),
+                  ProfileItem(
+                    id: 'explore-units',
+                    icon: Icons.grid_view_rounded,
+                    label: l10n.navUnits,
+                    subtitle: l10n.exploreUnitsDesc,
+                    onTap: () => context.push('/explore/units'),
+                  ),
+                  ProfileItem(
+                    id: 'explore-compare',
+                    icon: Icons.compare_arrows_rounded,
+                    label: l10n.navCompare,
+                    subtitle: l10n.exploreCompareDesc,
+                    onTap: () => context.push('/explore/compare'),
+                  ),
+                ],
+              ),
               ProfileSection(
                 icon: Icons.home_work_rounded,
                 title: l10n.accountSectionServices,

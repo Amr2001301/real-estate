@@ -266,6 +266,13 @@ GoRouter createCustomerRouter(
                           return cubit;
                         },
                       ),
+                      // The customer home's «استكشف مشاريعنا»; created (and
+                      // loaded) the first time the dashboard reads it.
+                      BlocProvider(
+                        create: (ctx) => ProjectsCubit(
+                          GetProjects(ctx.read<CatalogRepository>()),
+                        ),
+                      ),
                       BlocProvider(
                         create: (ctx) {
                           final cubit = HomeSummaryCubit(
@@ -668,6 +675,26 @@ GoRouter createCustomerRouter(
         path: '/pages/:slug',
         builder: (context, state) => ContentPageScreen(slug: state.pathParameters['slug']!),
       ),
+
+      // ── Explore: the catalog lists for a signed-in customer, whose tab bar
+      // has no catalog tabs. Root pages, so they open over the shell with a
+      // back button (pushing the shell tabs themselves would put the shell in
+      // the stack twice).
+      GoRoute(
+        path: '/explore/projects',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => ProjectsCubit(GetProjects(ctx.read<CatalogRepository>())),
+          child: const ProjectsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/explore/units',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => UnitsCubit(GetUnits(ctx.read<CatalogRepository>())),
+          child: const UnitsScreen(),
+        ),
+      ),
+      GoRoute(path: '/explore/compare', builder: (_, _) => const CompareScreen()),
 
       // ── Public catalog (details — list/compare are shell branches above) ─
       GoRoute(
