@@ -163,7 +163,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       {res.error && <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {res.error}</div>}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
-        <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="calendar-grid">
+        <section className="overflow-hidden rounded-card border border-hairline bg-surface" data-testid="calendar-grid">
           <div className="grid grid-cols-7 border-b border-hairline bg-navy-band">
             {m.weekdays.map((w) => (
               <div key={w} className="px-2 py-2.5 text-center text-[11.5px] font-semibold text-[#F4ECD8]">{w}</div>

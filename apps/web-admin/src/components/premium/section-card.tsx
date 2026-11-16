@@ -50,14 +50,14 @@ export function PremiumSectionCard({
   return (
     <section
       className={cn(
-        'bg-surface border border-hairline rounded-[22px] overflow-hidden',
+        'bg-surface border border-hairline rounded-card overflow-hidden',
         className,
       )}
     >
       <header
         className={cn(
           'flex items-start justify-between gap-3 px-5 sm:px-6',
-          band ? 'items-center bg-navy-band py-4 text-[#F4ECD8]' : cn('pt-5', padded ? 'pb-1' : 'pb-4 border-b border-hairline'),
+          band ? 'items-center card-head py-4' : cn('pt-5', padded ? 'pb-1' : 'pb-4 border-b border-hairline'),
         )}
       >
         <div className="flex items-center gap-3 min-w-0">

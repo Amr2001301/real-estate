@@ -37,7 +37,7 @@ export default async function ProjectContentPage({
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8">
-      <div className="relative overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <div className="relative overflow-hidden rounded-card border border-hairline bg-surface">
         <div className="px-7 pb-7 pt-8 sm:px-9">
           <nav className="mb-3 flex items-center gap-1.5 text-[12px] text-slate-400">
             <Link href="/dashboard" className="transition-colors hover:text-navy">{m.common.breadcrumbHome}</Link>

@@ -92,7 +92,7 @@ export default async function FollowUpsPage({
           {f.page.error}: {listRes.error}
         </div>
       ) : rows.length === 0 ? (
-        <div data-testid="follow-empty" className="flex flex-col items-center gap-2 rounded-[22px] border border-dashed border-hairline bg-surface px-6 py-14 text-center">
+        <div data-testid="follow-empty" className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center">
           <CheckCircle2 className="h-8 w-8 text-emerald-500" />
           <p className="font-heading text-[16px] font-semibold text-slate-800">{f.page.empty[bucket]}</p>
           <p className="max-w-md text-[13px] text-slate-500">{f.page.emptyHint}</p>

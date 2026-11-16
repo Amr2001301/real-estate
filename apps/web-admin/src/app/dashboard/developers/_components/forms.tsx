@@ -87,7 +87,7 @@ export function AddDeveloperButton({ locale }: { locale: Locale }) {
   if (open) {
     return (
       <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A1120]/55 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-label={f.form.newTitle}>
-        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[22px] border border-hairline bg-surface p-6 shadow-2xl">
+        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-card border border-hairline bg-surface p-6 shadow-2xl">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-heading text-[18px] font-bold text-slate-900">{f.form.newTitle}</h2>
             <button type="button" onClick={() => setOpen(false)} className="rounded-full p-1 text-slate-400 hover:bg-slate-500/10" aria-label={f.form.cancel}>

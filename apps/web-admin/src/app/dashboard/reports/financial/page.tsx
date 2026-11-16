@@ -431,7 +431,7 @@ export default async function FinancialReportsPage({
       {/* ─── This month: what fell due, where each part stands (the parts add
            add up), and apart from it the money that came in — which pays any
            month's rows and bookings, so it is not compared with it. ───── */}
-      <section data-testid="fin-month" data-amount={monthDue} className="rounded-[22px] border border-hairline bg-surface px-6 py-5">
+      <section data-testid="fin-month" data-amount={monthDue} className="rounded-card border border-hairline bg-surface px-6 py-5">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:gap-10">
           <div className="min-w-0">
             <div className="flex items-baseline justify-between gap-3">
@@ -660,7 +660,7 @@ export default async function FinancialReportsPage({
       {allClear ? (
         <div
           data-testid="fin-all-clear"
-          className="flex items-center gap-4 rounded-[22px] border border-emerald-500/25 bg-emerald-500/[0.06] px-6 py-5"
+          className="flex items-center gap-4 rounded-card border border-emerald-500/25 bg-emerald-500/[0.06] px-6 py-5"
         >
           <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600">
             <BadgeCheck className="h-5 w-5" />

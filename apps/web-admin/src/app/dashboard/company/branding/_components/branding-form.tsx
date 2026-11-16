@@ -146,7 +146,7 @@ function AssetTile({
 
 function Section({ icon, title, description, children }: { icon: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[22px] border border-hairline bg-surface">
+    <section className="rounded-card border border-hairline bg-surface">
       <header className="flex items-center gap-3 border-b border-hairline px-6 py-5">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">
           {icon}
@@ -398,7 +398,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
 
       {/* Live preview + save, kept in view */}
       <aside className="space-y-4 xl:sticky xl:top-24">
-        <section data-testid="brand-preview" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <section data-testid="brand-preview" className="overflow-hidden rounded-card border border-hairline bg-surface">
           <header className="flex items-center gap-2 px-5 pb-3 pt-4">
             <Eye className="h-4 w-4 text-[#B8913F] dark:text-[#D8B66A]" />
             <p className="text-[13px] font-bold text-slate-900">معاينة مباشرة</p>
@@ -464,7 +464,7 @@ export function BrandingForm({ initial }: { initial: RawBranding }) {
           </div>
         </section>
 
-        <div className="space-y-3 rounded-[22px] border border-hairline bg-surface p-4">
+        <div className="space-y-3 rounded-card border border-hairline bg-surface p-4">
           {result?.ok === false && (
             <p className="flex items-start gap-2 rounded-xl bg-danger-500/10 px-3 py-2.5 text-[12.5px] text-danger-600">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />

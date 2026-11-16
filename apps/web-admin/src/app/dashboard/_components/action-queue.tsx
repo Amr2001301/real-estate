@@ -68,7 +68,7 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
   const total = items.reduce((s, i) => s + i.value, 0);
 
   return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-card overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline">

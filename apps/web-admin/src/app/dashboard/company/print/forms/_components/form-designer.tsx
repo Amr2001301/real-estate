@@ -269,7 +269,7 @@ export function FormDesigner({
     setPageIndex(0);
   };
 
-  const card = 'rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+  const card = 'rounded-card border border-hairline bg-surface p-5 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
   const chip =
     'rounded-full bg-surface-muted px-2.5 py-1 text-[11.5px] font-medium text-slate-700 ring-1 ring-inset ring-hairline hover:bg-brand-50 hover:text-brand-700';
   const page = pages[pageIndex];

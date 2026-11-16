@@ -167,7 +167,7 @@ export function PremiumMetricStrip({
     <section
       data-testid="metric-strip"
       className={cn(
-        'overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
+        'overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
         className,
       )}

@@ -14,7 +14,7 @@ export function MetricGrid({
   return (
     <div
       className={cn(
-        'grid gap-px overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16]',
+        'grid gap-px overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
         cols === 2 && 'grid-cols-2',
         cols === 3 && 'grid-cols-3',

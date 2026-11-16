@@ -139,6 +139,8 @@ const config: Config = {
         xl: '0.875rem',
         '2xl': '1.125rem',
         '3xl': '1.5rem',
+        // The one corner for cards and bands: calm, not pill-like.
+        card: '14px',
       },
 
       boxShadow: {

@@ -376,3 +376,31 @@
     background: transparent;
   }
 }
+
+/* Card look: 14px corners, a soft shadow, and a white title row ruled in gold.
+   The navy stays on KPI bands and table headers. */
+@layer components {
+  section.rounded-card {
+    box-shadow: 0 1px 2px rgb(15 30 51 / 0.05), 0 10px 28px -14px rgb(15 30 51 / 0.18);
+  }
+  .card-head {
+    background: #fff;
+    color: #0f1e33;
+    border-bottom: 1px solid #e7dfc9;
+    box-shadow: inset 0 -2px 0 #d8b66a;
+  }
+  .card-head h2,
+  .card-head h3,
+  .card-head h2 * {
+    color: #0f1e33 !important;
+  }
+  .card-head p {
+    color: #6b7280 !important;
+  }
+  .card-head a {
+    color: #8a6a1f !important;
+  }
+  .card-head [class*='border-[#D8B66A]'] {
+    color: #9a7a2e !important;
+  }
+}

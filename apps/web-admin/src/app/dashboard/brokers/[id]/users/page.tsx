@@ -86,7 +86,7 @@ export default async function BrokerUsersPage({
       )}
 
       {/* ── Add employee: closed until asked for (open when there is nobody yet) ── */}
-      <details data-testid="add-employee" open={users.length === 0} className="group rounded-[22px] border border-hairline bg-surface">
+      <details data-testid="add-employee" open={users.length === 0} className="group rounded-card border border-hairline bg-surface">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 [&::-webkit-details-marker]:hidden">
           <div className="flex items-center gap-3">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#D8B66A]/[0.16] text-[#B8913F] dark:text-[#D8B66A]">
@@ -116,7 +116,7 @@ export default async function BrokerUsersPage({
       </details>
 
       {/* ── Employees: one row each, editing opens in place ─────────────────── */}
-      <section data-testid="broker-employees" className="rounded-[22px] border border-hairline bg-surface">
+      <section data-testid="broker-employees" className="rounded-card border border-hairline bg-surface">
         <header className="flex items-center justify-between gap-4 px-6 py-5">
           <div className="flex items-center gap-3">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#D8B66A]/[0.16] text-[#B8913F] dark:text-[#D8B66A]">

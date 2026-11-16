@@ -218,7 +218,7 @@ export default async function ProjectDetailPage({
 
       {/* ── Key figures ─────────────────────────────────────────────────── */}
       <div data-testid="project-kpis" className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <div className="grid grid-cols-3 overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <div className="grid grid-cols-3 overflow-hidden rounded-card border border-hairline bg-surface">
           {[
             { label: m.statTotalUnits, value: totalUnits, icon: <Building2 /> },
             { label: m.statPhases, value: phaseCount, icon: <Layers /> },
@@ -236,7 +236,7 @@ export default async function ProjectDetailPage({
           ))}
         </div>
 
-        <div className="flex flex-col justify-between gap-4 rounded-[22px] border border-hairline bg-surface p-5">
+        <div className="flex flex-col justify-between gap-4 rounded-card border border-hairline bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[12.5px] font-semibold text-slate-500">{m.statOccupancy}</p>

@@ -176,7 +176,7 @@ export default async function PrintSettingsPage({ searchParams }: { searchParams
   );
 }
 
-const CARD = 'rounded-[22px] border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const CARD = 'rounded-card border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 
 function SectionHead({ title, hint, steps, href, add, testId }: { title: string; hint: string; steps: string[]; href: string; add: string; testId: string }) {
   return (

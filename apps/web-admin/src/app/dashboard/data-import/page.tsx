@@ -522,7 +522,7 @@ export default function DataImportPage() {
 
 // ── Pieces ────────────────────────────────────────────────────────────────────
 
-const CARD = 'rounded-[22px] border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const CARD = 'rounded-card border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 
 const SHEETS = [
   { name: 'Projects', Icon: Building2 },

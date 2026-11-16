@@ -70,7 +70,7 @@ export function LostReasonsManager({ locale, reasons }: { locale: Locale; reason
   );
 
   return (
-    <section data-testid="lost-reasons-manager" className="rounded-[22px] border border-hairline bg-surface p-5 sm:p-6">
+    <section data-testid="lost-reasons-manager" className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-heading text-[18px] font-semibold text-slate-900">{m.title}</h2>

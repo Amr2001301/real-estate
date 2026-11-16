@@ -80,7 +80,7 @@ function noteLines(notes: string, locale: 'ar' | 'en'): Array<{ text: string; at
     });
 }
 
-const CARD = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';
+const CARD = 'overflow-hidden rounded-card border border-hairline bg-surface';
 
 function Row({ label, value, ltr }: { label: string; value?: string | null; ltr?: boolean }) {
   return (
@@ -94,7 +94,7 @@ function Row({ label, value, ltr }: { label: string; value?: string | null; ltr?
 }
 
 function CardTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="bg-navy-band px-6 py-4 font-heading text-[18px] font-bold text-[#F4ECD8]">{children}</h2>;
+  return <h2 className="card-head px-6 py-4 font-heading text-[18px] font-bold text-[#F4ECD8]">{children}</h2>;
 }
 
 // ── Page ────────────────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ export default async function BrokerDetailPage({
 
       {broker.status === 'PENDING' && <ActivateBrokerNotice brokerId={broker.id} locale={locale} />}
 
-      <section data-testid="broker-figures" className="overflow-hidden rounded-[22px]">
+      <section data-testid="broker-figures" className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}

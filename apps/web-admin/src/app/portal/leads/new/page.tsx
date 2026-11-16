@@ -18,7 +18,7 @@ export default async function NewPortalLeadPage() {
     <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Premium header card ── */}
-      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-card overflow-hidden">
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav aria-label="breadcrumb" className="mb-5">
             <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">

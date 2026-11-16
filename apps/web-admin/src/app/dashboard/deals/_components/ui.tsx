@@ -31,7 +31,7 @@ export function Panel({ icon, title, sub, action, children, className, testId }:
   testId?: string;
 }) {
   return (
-    <section className={cn('rounded-[22px] border border-hairline bg-surface p-5 sm:p-6', className)} data-testid={testId}>
+    <section className={cn('rounded-card border border-hairline bg-surface p-5 sm:p-6', className)} data-testid={testId}>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#D8B66A]/45 bg-[#0E1626] text-[#E6C77E] [&_svg]:h-[18px] [&_svg]:w-[18px]">

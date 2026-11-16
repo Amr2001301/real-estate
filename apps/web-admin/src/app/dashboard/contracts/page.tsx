@@ -120,7 +120,7 @@ export default async function ContractsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px]">
+      <section className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}

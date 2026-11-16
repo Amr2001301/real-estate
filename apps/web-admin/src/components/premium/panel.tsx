@@ -24,7 +24,7 @@ export interface PremiumPanelProps {
  */
 export function PremiumPanel({ title, sub, link, trailing, children, className, padding = 'normal', bodyClassName }: PremiumPanelProps) {
   return (
-    <section className={cn('flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface', className)}>
+    <section className={cn('flex flex-col overflow-hidden rounded-card border border-hairline bg-surface', className)}>
       <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
         <div className="min-w-0">
           <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>

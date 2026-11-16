@@ -175,7 +175,7 @@ export default async function ClientDetailPage({
       </section>
 
       {/* ── Key figures ───────────────────────────────────────────── */}
-      <div data-testid="client-kpis" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+      <div data-testid="client-kpis" className="grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div
             key={k.label}

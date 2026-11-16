@@ -43,7 +43,7 @@ export function MoneyBand({ deal, locale, currency, canFinance }: { deal: Deal; 
   const direct = deal.kind !== 'PRIMARY' && deal.status === 'CLOSED' && canFinance;
 
   return (
-    <section className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band p-6 text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]" data-testid="deal-money">
+    <section className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band p-6 text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]" data-testid="deal-money">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[13px] text-[#A9B0BD]">{t.money}</p>
@@ -370,7 +370,7 @@ export function CancelDealButton({ dealId, locale }: { dealId: string; locale: L
       </Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A1120]/55 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-label={t.cancelDeal}>
-          <form action={action} className="w-full max-w-md space-y-4 rounded-[22px] border border-hairline bg-surface p-6 shadow-2xl" data-testid="deal-cancel-form">
+          <form action={action} className="w-full max-w-md space-y-4 rounded-card border border-hairline bg-surface p-6 shadow-2xl" data-testid="deal-cancel-form">
             <div className="flex items-start justify-between gap-3">
               <h2 className="font-heading text-[18px] font-bold text-slate-900">{t.cancelDeal}</h2>
               <button type="button" onClick={() => setOpen(false)} className="rounded-full p-1 text-slate-400 hover:bg-slate-500/10" aria-label={t.close}>

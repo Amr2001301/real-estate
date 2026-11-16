@@ -118,7 +118,7 @@ export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 |
     <dl
       data-testid="figure-bar"
       className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16] text-[#F4ECD8]',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16] text-[#F4ECD8]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
         FIGURE_COLS[Math.min(cols, Math.max(2, figures.length))] ?? 'xl:grid-cols-4',
         // An odd count: the first figure spans the phone row, no empty cell.
@@ -192,8 +192,8 @@ export function Panel({
   band?: boolean;
 }) {
   return (
-    <section data-testid={testId} className={cn('flex flex-col rounded-[22px] border border-hairline bg-surface', band && 'overflow-hidden', className)}>
-      <header className={cn('flex items-start justify-between gap-4 px-6', band ? 'items-center bg-navy-band py-4 text-[#F4ECD8]' : 'pb-4 pt-5')}>
+    <section data-testid={testId} className={cn('flex flex-col rounded-card border border-hairline bg-surface', band && 'overflow-hidden', className)}>
+      <header className={cn('flex items-start justify-between gap-4 px-6', band ? 'items-center card-head py-4' : 'pb-4 pt-5')}>
         <div className="min-w-0">
           <h2 className={cn('font-heading text-[19px] font-bold leading-snug', band ? 'text-[#F4ECD8]' : 'text-slate-900')}>{title}</h2>
           {sub && <p className={cn('mt-0.5 text-[12.5px]', band ? 'text-[#A9B0BD]' : 'text-slate-500')}>{sub}</p>}

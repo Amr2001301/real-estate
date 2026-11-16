@@ -96,7 +96,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         <div className="relative overflow-hidden rounded-[28px] border border-hairline bg-surface px-6 py-16 text-center">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(216,182,106,0.16),transparent)]" />
           <div className="relative mx-auto flex max-w-lg flex-col items-center gap-4">
-            <span className="inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-brand-400 to-brand-700 text-[#1a1408] shadow-[0_12px_30px_-10px_rgba(184,140,58,0.6)]">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-card bg-gradient-to-br from-brand-400 to-brand-700 text-[#1a1408] shadow-[0_12px_30px_-10px_rgba(184,140,58,0.6)]">
               <Megaphone className="h-7 w-7" />
             </span>
             <p className="font-heading text-[22px] font-bold text-slate-900">{L.empty}</p>

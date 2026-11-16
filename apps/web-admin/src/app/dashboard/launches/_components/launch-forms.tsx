@@ -47,7 +47,7 @@ export function NewLaunchButton({ locale, projects, today }: { locale: Locale; p
       </Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#0A1120]/55 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-label={t.form.title}>
-          <form action={action} className="w-full max-w-xl space-y-4 rounded-[22px] border border-hairline bg-surface p-6 shadow-2xl" data-testid="launch-form">
+          <form action={action} className="w-full max-w-xl space-y-4 rounded-card border border-hairline bg-surface p-6 shadow-2xl" data-testid="launch-form">
             <div className="flex items-center justify-between">
               <h2 className="font-heading text-[18px] font-bold text-slate-900">{t.form.title}</h2>
               <button type="button" onClick={() => setOpen(false)} className="rounded-full p-1 text-slate-400 hover:bg-slate-500/10" aria-label={t.form.cancel}>

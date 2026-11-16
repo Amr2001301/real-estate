@@ -57,7 +57,7 @@ function Switch({ name, label, defaultChecked }: { name: string; label: string; 
 
 function Section({ icon, title, note, trailing, children }: { icon: React.ReactNode; title: string; note?: string; trailing?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-[22px] border border-hairline bg-surface">
+    <section className="rounded-card border border-hairline bg-surface">
       <header className="flex items-center gap-3 px-6 py-5">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/[0.14] text-[#B8913F] dark:text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">
           {icon}
@@ -163,7 +163,7 @@ export default async function BrokerAccessPage({
       />
 
       {accessRes.error && (
-        <div className="rounded-[22px] border border-danger-500/25 bg-danger-500/10 p-4 text-sm text-danger-600">
+        <div className="rounded-card border border-danger-500/25 bg-danger-500/10 p-4 text-sm text-danger-600">
           {m.errorLoad}{accessRes.error}
         </div>
       )}

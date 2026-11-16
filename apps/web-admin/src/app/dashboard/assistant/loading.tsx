@@ -25,7 +25,7 @@ export default function Loading() {
           <Bar className="h-6 w-60" />
           <Bar className="h-3.5 w-3/4" />
         </div>
-        <div className="mt-6 h-[92px] animate-pulse rounded-[22px] bg-white/[0.07] ring-1 ring-inset ring-white/10" />
+        <div className="mt-6 h-[92px] animate-pulse rounded-card bg-white/[0.07] ring-1 ring-inset ring-white/10" />
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, k) => (
             <div key={k} className="h-[62px] animate-pulse rounded-2xl bg-white/[0.04] ring-1 ring-inset ring-white/10" />

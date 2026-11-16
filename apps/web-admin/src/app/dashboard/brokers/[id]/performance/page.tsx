@@ -49,7 +49,7 @@ interface Search {
   brokerAgentId?: string;
 }
 
-const CARD = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';
+const CARD = 'overflow-hidden rounded-card border border-hairline bg-surface';
 
 /** Funnel stages, each with its tone; the rate is against the stage before it. */
 const STAGES: Array<{ key: keyof BrokerReportsSummary; icon: ReactNode; tile: string; bar: string }> = [
@@ -85,7 +85,7 @@ function Code({
 
 function SectionHead({ icon, title, sub, children }: { icon?: ReactNode; title: string; sub?: string; children?: ReactNode }) {
   return (
-    <header className="flex items-center justify-between gap-3 bg-navy-band px-6 py-4 text-[#F4ECD8]">
+    <header className="flex items-center justify-between gap-3 card-head px-6 py-4">
       <div className="flex min-w-0 items-center gap-2.5">
         {icon && <span className="text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px]">{icon}</span>}
         <div className="min-w-0">

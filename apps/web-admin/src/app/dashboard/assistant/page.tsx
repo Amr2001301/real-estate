@@ -160,7 +160,7 @@ export default function AssistantPage() {
       )}
       <div
         className={cn(
-          'flex items-end gap-2 rounded-[22px] p-2 transition',
+          'flex items-end gap-2 rounded-card p-2 transition',
           onDark
             ? 'bg-white/[0.07] ring-1 ring-inset ring-white/15 focus-within:ring-[#D8B66A]/60'
             : 'border border-hairline bg-surface shadow-soft focus-within:border-brand-400',

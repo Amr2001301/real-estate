@@ -87,7 +87,7 @@ export default async function TargetsPage({ searchParams }: { searchParams: Prom
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<Target />} title={t.empty} />
         </div>
       ) : (

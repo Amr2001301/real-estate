@@ -66,7 +66,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
               return (
                 <article
                   key={p.id}
-                  className={cn('flex flex-col overflow-hidden rounded-[22px] border bg-surface', best ? 'border-[#D8B66A]/70 shadow-[0_18px_36px_-24px_rgb(184_140_58/0.7)]' : 'border-hairline')}
+                  className={cn('flex flex-col overflow-hidden rounded-card border bg-surface', best ? 'border-[#D8B66A]/70 shadow-[0_18px_36px_-24px_rgb(184_140_58/0.7)]' : 'border-hairline')}
                   data-testid={`compare-card-${p.id}`}
                 >
                   <header className="bg-navy-band px-5 py-4 text-[#F4ECD8]">

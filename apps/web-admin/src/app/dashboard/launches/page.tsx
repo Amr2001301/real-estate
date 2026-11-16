@@ -53,7 +53,7 @@ export default async function LaunchesPage() {
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<Rocket />} title={t.list.empty} description={t.list.emptyHint} action={addButton} />
         </div>
       ) : (
@@ -65,7 +65,7 @@ export default async function LaunchesPage() {
                 <Link
                   href={`/dashboard/launches/${l.id}` as never}
                   className={cn(
-                    'flex h-full flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]',
+                    'flex h-full flex-col overflow-hidden rounded-card border border-hairline bg-surface transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]',
                     l.status === 'CLOSED' && 'opacity-70',
                   )}
                 >

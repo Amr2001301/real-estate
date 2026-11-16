@@ -164,8 +164,8 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 xl:items-stretch">
         {/* This month's target, its pace and the month's activity */}
-        <section data-testid="month-target" className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface xl:col-span-3">
-          <header className="flex items-center justify-between gap-3 bg-navy-band px-6 py-4 text-[#F4ECD8] sm:px-7">
+        <section data-testid="month-target" className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface xl:col-span-3">
+          <header className="flex items-center justify-between gap-3 card-head px-6 py-4 sm:px-7">
             <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.monthTarget} · {periodLabel(currentPeriod)}</h2>
             {target && (
               <span data-testid="month-status" className={cn('rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
@@ -212,8 +212,8 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
         </section>
 
         {/* What the rep has earned */}
-        <section data-testid="earnings" className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface xl:col-span-2">
-          <header className="bg-navy-band px-6 py-4 text-[#F4ECD8] sm:px-7">
+        <section data-testid="earnings" className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface xl:col-span-2">
+          <header className="card-head px-6 py-4 sm:px-7">
             <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.earningsTitle}</h2>
           </header>
           <div className="flex flex-1 flex-col p-6 sm:p-7">

@@ -264,7 +264,7 @@ function SalesFunnelCard({
   }
 
   return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-card overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
@@ -471,7 +471,7 @@ export default async function PortalDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 items-stretch gap-5">
 
         {/* Recent leads — 2/3 */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[22px] overflow-hidden">
+        <div className="lg:col-span-2 bg-surface border border-hairline rounded-card overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
@@ -553,7 +553,7 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Sidebar — 1/3: projects card fills full height */}
-        <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
+        <div className="bg-surface border border-hairline rounded-card overflow-hidden flex flex-col">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-hairline shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="h-7 w-7 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
@@ -633,7 +633,7 @@ export default async function PortalDashboard() {
       {activity.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{m.home.activity.section}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-card overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">

@@ -165,7 +165,7 @@ export default async function DealsPage({
       </PremiumFilterBar>
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState
             icon={<Handshake />}
             title={filtered ? m.list.noMatch : m.list.empty}
@@ -174,7 +174,7 @@ export default async function DealsPage({
           />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <div className="overflow-hidden rounded-card border border-hairline bg-surface">
           {/* Column heads on wide screens; each row reads as a card on a phone. */}
           <div className="hidden grid-cols-[1.1fr_1.5fr_1fr_1fr_1.3fr] gap-4 border-b border-hairline bg-surface-muted/40 px-6 py-3 text-[11.5px] font-bold uppercase tracking-wide text-slate-500 lg:grid">
             <span>{m.list.colDeal}</span>

@@ -91,7 +91,7 @@ export function TargetsManagementClient({
   return (
     <>
       {/* ── Targets table card ──────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+      <section className="overflow-hidden rounded-card border border-hairline bg-surface">
         <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
           <div className="flex items-center gap-2.5 min-w-0">
               <h2 className="font-heading text-[19px] font-bold text-slate-900">{m.tableTitle}</h2>

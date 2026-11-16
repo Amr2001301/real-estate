@@ -169,7 +169,7 @@ const lines = (v: string) =>
     .map((s) => s.trim())
     .filter(Boolean);
 
-const card = 'rounded-[22px] border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const card = 'rounded-card border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 const inputCls =
   'h-11 w-full rounded-xl border border-hairline bg-surface px-3.5 text-[13.5px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-400/70 focus:ring-4 focus:ring-brand-500/10';
 const primaryBtn =

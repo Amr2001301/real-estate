@@ -15,7 +15,7 @@ export async function MaintenanceItemsCard({ unitId, locale = 'ar' }: { unitId: 
   ]);
 
   return (
-    <Card className="rounded-[22px] p-6">
+    <Card className="rounded-card p-6">
       <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{m.title}</h2>
       <p className="mb-5 mt-0.5 text-[13px] text-slate-500">
         {m.description}

@@ -138,7 +138,7 @@ export default async function AdminBrokerContractsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px]">
+      <section className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}

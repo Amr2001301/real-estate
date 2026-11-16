@@ -21,7 +21,7 @@ function NavySkeleton({ className }: SkeletonProps) {
   return <div aria-hidden className={cn('animate-pulse rounded-md bg-[#D8B66A]/15', className)} />;
 }
 
-const card = 'overflow-hidden rounded-[22px] border border-hairline bg-surface';
+const card = 'overflow-hidden rounded-card border border-hairline bg-surface';
 
 // ── Page parts ──────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ export function MetricStripSkeleton({ count = 4 }: { count?: number }) {
   return (
     <section
       aria-hidden
-      className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
+      className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
     >
       <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', cols)}>
         {Array.from({ length: count }).map((_, i) => (
@@ -352,7 +352,7 @@ export type SkeletonPart =
 export function FigureBarSkeleton({ count = 4 }: { count?: number }) {
   const cols = count >= 6 ? 'sm:grid-cols-3 xl:grid-cols-6' : count === 5 ? 'sm:grid-cols-3 xl:grid-cols-5' : count === 3 ? 'sm:grid-cols-3' : 'xl:grid-cols-4';
   return (
-    <div aria-hidden className={cn('grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface', cols)}>
+    <div aria-hidden className={cn('grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface', cols)}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="space-y-3 border-hairline px-5 py-5 xl:[&:not(:last-child)]:border-e max-xl:border-b">
           <Skeleton className="h-3 w-20" />

@@ -12,7 +12,7 @@ import { removeSealAction, savePrintSettingsAction, uploadSealAction } from '../
 const MODES: LetterheadMode[] = ['BUILT_IN', 'HEADER_FOOTER', 'FULL_PAGE'];
 const DOCS: SealDocument[] = ['CONTRACT', 'RESERVATION', 'RECEIPT', 'STATEMENT'];
 
-const card = 'rounded-[22px] border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const card = 'rounded-card border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 const label = 'text-[12px] font-semibold text-slate-600';
 const input =
   'h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-[13px] text-slate-800 outline-none transition-colors focus:border-brand-400/60';

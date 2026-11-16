@@ -21,7 +21,7 @@ export const fetchCache = 'force-no-store';
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[22px] border border-hairline bg-surface p-5 sm:p-6">
+    <section className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <h2 className="font-heading text-[17px] font-bold text-slate-900">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -112,7 +112,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <div className="flex flex-col gap-6 lg:col-span-2">
           {/* The cover, then the rest as a strip of thumbnails. */}
-          <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <div className="overflow-hidden rounded-card border border-hairline bg-surface">
             {cover ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={cover} alt={l.title} className="aspect-[16/10] w-full object-cover" />
@@ -167,7 +167,7 @@ export default async function ListingPage({ params }: { params: Promise<{ id: st
 
         <aside className="flex flex-col gap-6 lg:sticky lg:top-6">
           {/* The price on the navy band, as on the homes. */}
-          <section className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band p-6 text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]">
+          <section className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band p-6 text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]">
             <p className="text-[13px] text-[#A9B0BD]">{l.kind === 'RENT' ? m.form.rent : m.form.price}</p>
             <div className="mt-2">
               <ListingPrice listing={l} symbol={symbol} locale={locale} size="lg" onNavy />

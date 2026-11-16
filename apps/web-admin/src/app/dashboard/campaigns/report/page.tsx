@@ -225,7 +225,7 @@ export default async function CampaignReportPage({ searchParams }: { searchParam
       {res.error ? (
         <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {res.error}</div>
       ) : !r || !hasData ? (
-        <div className="flex flex-col items-center gap-2 rounded-[22px] border border-dashed border-hairline bg-surface px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center">
           <BarChart3 className="h-8 w-8 text-brand-600" />
           <p className="font-heading text-[17px] font-semibold text-slate-800">{m.empty}</p>
           <p className="max-w-md text-[13px] text-slate-500">{m.emptyHint}</p>

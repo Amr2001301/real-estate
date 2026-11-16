@@ -205,7 +205,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
           {reportRes.error ? (
             <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {reportRes.error}</div>
           ) : !r || r.totals.lost === 0 ? (
-            <div className="flex flex-col items-center gap-2 rounded-[22px] border border-dashed border-hairline bg-surface px-6 py-14 text-center">
+            <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center">
               <CheckCircle2 className="h-8 w-8 text-emerald-500" />
               <p className="font-heading text-[16px] font-semibold text-slate-800">{m.empty}</p>
             </div>
