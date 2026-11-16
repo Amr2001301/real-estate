@@ -4568,6 +4568,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get onTrackBadge => 'منتظم';
 
   @override
+  String homePaidOfTotal(int paid, int total, int percent) {
+    return '$paid من $total مدفوع · $percent%';
+  }
+
+  @override
+  String get homeScheduleLink => 'الجدول';
+
+  @override
   String get paymentProgress => 'تقدّم السداد';
 
   @override
