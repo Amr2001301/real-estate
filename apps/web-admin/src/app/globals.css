@@ -406,4 +406,24 @@
   .card-head [class*='border-[#D8B66A]'] {
     color: #9a7a2e !important;
   }
+
+  /* Dark mode: the title row follows the card's own surface instead of white. */
+  .dark .card-head {
+    background: rgb(var(--tw-surface));
+    color: #eee8da;
+    border-bottom-color: rgb(var(--tw-hairline));
+  }
+  .dark .card-head h2,
+  .dark .card-head h3,
+  .dark .card-head h2 *,
+  .dark .card-head p.font-heading {
+    color: #eee8da !important;
+  }
+  .dark .card-head p {
+    color: #9aa3b2 !important;
+  }
+  .dark .card-head a,
+  .dark .card-head [class*='border-[#D8B66A]'] {
+    color: #d8b66a !important;
+  }
 }
