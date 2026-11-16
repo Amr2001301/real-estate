@@ -40,17 +40,20 @@ test('a contract is signed only once it has a payment plan — cash here', async
   expect((await refused.json()).code).toBe('PAYMENT_PLAN_REQUIRED');
 
   // The page says what is missing instead of offering to sign.
-  await gotoReady(page, `/dashboard/contracts/${contractId}?tab=installments`);
+  await gotoReady(page, `/dashboard/contracts/${contractId}`);
   await expect(page.getByTestId('sign-needs-plan')).toBeVisible();
   await expect(page.getByTestId('sign-contract')).toHaveCount(0);
 
-  // A cash plan: one payment, no months.
+  // A cash plan, set in the plan section: one payment, no months.
+  await gotoReady(page, `/dashboard/contracts/${contractId}?tab=installments`);
   const form = page.getByTestId('create-plan-form');
   await form.getByTestId('plan-method').selectOption('cash');
   await expect(form.locator('input[name="totalMonths"]')).toHaveCount(0);
   await form.locator('input[name="startsAt"]').fill(new Date().toISOString().slice(0, 10));
   await form.getByRole('button').click();
+  await expect(page.getByTestId('create-plan-form')).toHaveCount(0);
 
+  await gotoReady(page, `/dashboard/contracts/${contractId}`);
   await expect(page.getByTestId('sign-contract')).toBeVisible();
   await expect(page.getByTestId('sign-needs-plan')).toHaveCount(0);
 

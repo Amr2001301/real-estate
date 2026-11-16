@@ -53,6 +53,15 @@ test('an admin signs an unsigned contract from its page', async ({ page, request
   });
   expect(created.status()).toBe(201);
   const contractId = (await created.json()).id as string;
+  // A contract is signed only with a payment plan: a cash one here.
+  expect(
+    (
+      await request.post(`${API_BASE}/v1/installment-plans`, {
+        headers,
+        data: { contractId: contractId, cash: true, startsAt: new Date().toISOString() },
+      })
+    ).ok(),
+  ).toBeTruthy();
 
   await gotoReady(page, `/dashboard/contracts/${contractId}`);
   const sign = page.getByTestId('sign-contract');
