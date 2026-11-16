@@ -539,10 +539,10 @@ export function LeadSourcesPanel({
             <span className="mt-1 text-[11px] text-slate-500">{centerSub}</span>
           </div>
           <ul className="min-w-0 flex-1 space-y-3">
-            {rows.map((s) => {
+            {rows.map((s, i) => {
               const pct = Math.round((s.value / total) * 100);
               return (
-                <li key={s.label}>
+                <li key={`${s.label}-${i}`}>
                   <div className="flex items-center justify-between text-[13.5px]">
                     <span className="flex items-center gap-2 font-bold text-slate-900">
                       <span className="h-2 w-2 rounded-full bg-[#C79A3B]" aria-hidden />
