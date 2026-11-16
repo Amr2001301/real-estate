@@ -171,7 +171,7 @@ export default async function ReservationDetailPage({
         {/* Key figures */}
         <div
           data-testid="reservation-kpis"
-          className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4"
+          className="grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface lg:grid-cols-4"
         >
           <Kpi label={m.kpiUnitPrice} icon={<Home />}>
             {reservation.unit ? (
@@ -528,7 +528,7 @@ export default async function ReservationDetailPage({
             {isAdmin && reservation.status === 'APPROVED' && (
               <section
                 data-testid="reservation-convert"
-                className="relative overflow-hidden rounded-[22px] border border-brand-500/30 bg-surface"
+                className="relative overflow-hidden rounded-card border border-brand-500/30 bg-surface"
               >
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.14] via-transparent to-transparent" />
                 <div className="relative p-6">

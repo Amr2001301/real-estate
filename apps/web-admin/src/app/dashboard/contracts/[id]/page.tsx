@@ -971,7 +971,7 @@ export default async function ContractDetailPage({
         {/* Key figures */}
         <div
           data-testid="contract-kpis"
-          className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4"
+          className="grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface lg:grid-cols-4"
         >
           <Kpi label={m.kpiTotal} icon={<FileText />}>
             <Money value={formatCurrency(contract.totalAmount, currency, locale)} />

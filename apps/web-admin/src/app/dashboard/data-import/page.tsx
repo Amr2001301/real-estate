@@ -255,7 +255,7 @@ export default function DataImportPage() {
                 if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
               }}
               className={cn(
-                'group relative m-2 flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[20px] border-2 border-dashed px-6 py-14 text-center transition-colors',
+                'group relative m-2 flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-card border-2 border-dashed px-6 py-14 text-center transition-colors',
                 dragging ? 'border-brand-500 bg-brand-50' : 'border-brand-400/40 bg-canvas/40 hover:border-brand-500/70 hover:bg-brand-50/50',
               )}
             >
@@ -434,7 +434,7 @@ export default function DataImportPage() {
           )}
 
           {/* Sticky confirm bar */}
-          <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-[20px] border border-hairline bg-surface/95 p-4 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur">
+          <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-card border border-hairline bg-surface/95 p-4 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur">
             <button
               type="button"
               onClick={runImport}
@@ -522,7 +522,7 @@ export default function DataImportPage() {
 
 // ── Pieces ────────────────────────────────────────────────────────────────────
 
-const CARD = 'rounded-[22px] border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const CARD = 'rounded-card border border-hairline bg-surface shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 
 const SHEETS = [
   { name: 'Projects', Icon: Building2 },

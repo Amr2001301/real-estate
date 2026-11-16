@@ -160,7 +160,7 @@ export default function AssistantPage() {
       )}
       <div
         className={cn(
-          'flex items-end gap-2 rounded-[22px] p-2 transition',
+          'flex items-end gap-2 rounded-card p-2 transition',
           onDark
             ? 'bg-white/[0.07] ring-1 ring-inset ring-white/15 focus-within:ring-[#D8B66A]/60'
             : 'border border-hairline bg-surface shadow-soft focus-within:border-brand-400',
@@ -220,7 +220,7 @@ export default function AssistantPage() {
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex min-w-0 flex-col gap-6">
         {/* The console: navy, gold glow; the greeting, the box and the suggestions before the first question. */}
-        <section className="relative overflow-hidden rounded-[28px] bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)]">
+        <section className="relative overflow-hidden rounded-card bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)]">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_90%_at_100%_0%,rgba(216,182,106,0.20),transparent_60%),radial-gradient(55%_80%_at_0%_100%,rgba(38,64,95,0.85),transparent)]" />
           <div className={cn('relative p-6 sm:p-8', started && 'sm:py-6')}>
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -294,7 +294,7 @@ export default function AssistantPage() {
 
         {/* The conversation, once it has begun. */}
         {started && (
-          <section className="flex min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-hairline bg-surface shadow-soft">
+          <section className="flex min-h-[460px] flex-col overflow-hidden rounded-card border border-hairline bg-surface shadow-soft">
             <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 py-6 sm:px-7" aria-live="polite" data-testid="ai-chat">
               {turns.map((t, k) =>
                 t.role === 'user' ? (
@@ -314,7 +314,7 @@ export default function AssistantPage() {
                       <div
                         dir="auto"
                         aria-label={c.assistant}
-                        className="rounded-[20px] rounded-se-md border border-hairline bg-surface-sunken px-5 py-4 text-[14.5px] leading-relaxed text-slate-800"
+                        className="rounded-card rounded-se-md border border-hairline bg-surface-sunken px-5 py-4 text-[14.5px] leading-relaxed text-slate-800"
                       >
                         <AnswerText text={t.content} />
                       </div>
@@ -325,7 +325,7 @@ export default function AssistantPage() {
               )}
               {pending && (
                 <div className="flex items-start justify-end gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-[20px] rounded-se-md border border-hairline bg-surface-sunken px-4 py-3 text-[13.5px] text-slate-500">
+                  <div className="inline-flex items-center gap-2 rounded-card rounded-se-md border border-hairline bg-surface-sunken px-4 py-3 text-[13.5px] text-slate-500">
                     <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
                     {c.thinking}
                   </div>

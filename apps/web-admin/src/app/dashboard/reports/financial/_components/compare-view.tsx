@@ -73,7 +73,7 @@ const INSIGHT_TEXT = { bad: 'text-danger-600', warn: 'text-warning-600', good: '
 function Insight({ i }: { i: CompareInsight }) {
   const Icon = INSIGHT_ICON[i.tone];
   return (
-    <div className="rounded-[22px] border border-hairline bg-surface p-5">
+    <div className="rounded-card border border-hairline bg-surface p-5">
       <div className="flex items-center gap-3">
         <span className={cn('inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border', INSIGHT_RING[i.tone])}>
           <Icon className="h-[17px] w-[17px]" strokeWidth={1.6} aria-hidden />

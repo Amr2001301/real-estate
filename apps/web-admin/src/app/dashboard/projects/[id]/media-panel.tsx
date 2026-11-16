@@ -17,7 +17,7 @@ export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project
   const m = uiT(locale).projectDetailPage;
 
   return (
-    <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-card overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 px-6 pb-4 pt-5">
         <div className="flex items-center gap-3">

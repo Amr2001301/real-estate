@@ -109,7 +109,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
         <aside className="order-first flex flex-col gap-6 lg:order-none lg:sticky lg:top-6">
           <MoneyBand deal={d} locale={locale} currency={currency} canFinance={isAdmin} />
-          <section className="rounded-[22px] border border-hairline bg-surface p-5 sm:p-6">
+          <section className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
             <dl className="space-y-4">
               {facts.map((f) => (
                 <div key={f.label} className="flex items-start gap-3">

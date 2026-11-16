@@ -227,7 +227,7 @@ export function CompanyMigrationPanel({ companyId }: { companyId: string }) {
     <PremiumSectionCard title={m.title} description={m.description} icon={<ArrowLeftRight className="h-4 w-4" />}>
       <div data-testid="migration-panel" className="flex flex-col gap-4">
         {newKey && (
-          <div data-testid="migration-new-key" className="rounded-[20px] border border-amber-200 bg-amber-50/60 p-4 text-[13px]">
+          <div data-testid="migration-new-key" className="rounded-card border border-amber-200 bg-amber-50/60 p-4 text-[13px]">
             <p className="mb-2 font-semibold text-amber-800">{m.keyOnce}</p>
             <div className="mb-2 flex items-center gap-2">
               <code dir="ltr" className="flex-1 truncate rounded-xl bg-white px-3 py-2 font-mono text-[12.5px] text-slate-800 ring-1 ring-hairline">
@@ -253,7 +253,7 @@ export function CompanyMigrationPanel({ companyId }: { companyId: string }) {
           <p className="text-[13px] text-slate-500">{m.empty}</p>
         ) : (
           runs.map((run) => (
-            <div key={run.id} data-testid="migration-run" className="rounded-[20px] border border-hairline p-4">
+            <div key={run.id} data-testid="migration-run" className="rounded-card border border-hairline p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <KeyRound className="h-4 w-4 text-slate-400" />
                 <span className="font-semibold text-slate-900">{run.sourceLabel}</span>
@@ -325,7 +325,7 @@ export function CompanyMigrationPanel({ companyId }: { companyId: string }) {
         )}
 
         {adding ? (
-          <form onSubmit={create} data-testid="migration-add" className="rounded-[20px] border border-dashed border-brand-400/40 bg-brand-50/30 p-5">
+          <form onSubmit={create} data-testid="migration-add" className="rounded-card border border-dashed border-brand-400/40 bg-brand-50/30 p-5">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={m.label} hint={m.labelHint}>
                 <Input value={form.sourceLabel} onChange={(e) => setForm({ ...form, sourceLabel: e.target.value })} required maxLength={80} />

@@ -30,7 +30,7 @@ export function StageColumn({ label, count, tone, isOver, isEmpty, emptyLabel = 
     <div className="flex w-[288px] shrink-0 flex-col">
       <div
         className={cn(
-          'relative flex min-h-[460px] flex-col overflow-hidden rounded-[22px] border bg-surface transition-all duration-150',
+          'relative flex min-h-[460px] flex-col overflow-hidden rounded-card border bg-surface transition-all duration-150',
           isOver ? 'border-brand-400/60 shadow-[0_0_0_3px_rgb(200_162_75/0.15)]' : 'border-hairline',
         )}
       >

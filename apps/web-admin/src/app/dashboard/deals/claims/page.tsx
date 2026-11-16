@@ -88,7 +88,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<FileClock />} title={t.empty} description={t.emptyHint} />
         </div>
       ) : (
@@ -97,7 +97,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
             <li key={c.id}>
               <Link
                 href={`/dashboard/deals/${c.deal.id}` as never}
-                className="group flex h-full flex-col rounded-[22px] border border-hairline bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]"
+                className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">

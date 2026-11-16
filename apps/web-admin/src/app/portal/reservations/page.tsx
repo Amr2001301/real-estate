@@ -92,7 +92,7 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-[22px]">
+      <section className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}

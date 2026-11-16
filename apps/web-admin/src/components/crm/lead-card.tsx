@@ -50,7 +50,7 @@ function LeadCardBody({ lead, dragging, showGrip, locale = 'ar' }: InnerProps) {
   return (
     <div
       className={cn(
-        'group relative rounded-[18px] border border-hairline bg-surface-muted transition-all duration-150',
+        'group relative rounded-card border border-hairline bg-surface-muted transition-all duration-150',
         'hover:border-brand-400/50',
         dragging && 'shadow-[0_16px_36px_-12px_rgb(20_26_38/0.35)] rotate-[0.6deg]',
       )}
@@ -141,7 +141,7 @@ export function LeadCard({ lead, locale = 'ar' }: { lead: Lead; locale?: Locale 
     <Link
       href={`/dashboard/leads/${lead.id}` as never}
       prefetch={false}
-      className="block hover:-translate-y-0.5 hover:shadow-card transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-[18px]"
+      className="block hover:-translate-y-0.5 hover:shadow-card transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-card"
     >
       <LeadCardBody lead={lead} locale={locale} />
     </Link>

@@ -195,7 +195,7 @@ export default async function PortalProfilePage() {
       </section>
 
       {/* ── Account ───────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="profile-account">
+      <section className="overflow-hidden rounded-card border border-hairline bg-surface" data-testid="profile-account">
         <PanelHead icon={<UserCircle />} title={t.accountSection} />
         <dl className="grid grid-cols-1 gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2 xl:grid-cols-4">
           <Field icon={<Mail />} label={t.accountEmail}>
@@ -224,7 +224,7 @@ export default async function PortalProfilePage() {
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3 lg:gap-6">
 
         {/* ── Firm ────────────────────────────────────────────────────── */}
-        <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface lg:col-span-2" data-testid="profile-firm">
+        <section className="overflow-hidden rounded-card border border-hairline bg-surface lg:col-span-2" data-testid="profile-firm">
           <PanelHead
             icon={
               me.broker.logoUrl
@@ -347,7 +347,7 @@ export default async function PortalProfilePage() {
         </section>
 
         {/* ── Permissions ─────────────────────────────────────────────── */}
-        <section className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="profile-permissions">
+        <section className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface" data-testid="profile-permissions">
           <PanelHead icon={<ShieldCheck />} title={t.permissionsTitle} sub={t.permissionsDescription} />
           <ul className="divide-y divide-hairline">
             <PermissionRow icon={<Star />} label={t.perms.primaryContact} allowed={me.permissions.isPrimaryContact} allowedText={t.allowed} deniedText={t.denied} />

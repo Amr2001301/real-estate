@@ -12,7 +12,7 @@ export default async function NewProjectPage() {
     <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Premium Command Header Card ── */}
-      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-card overflow-hidden">
         {/* Gold accent strip */}
 
         <div className="px-7 sm:px-9 pt-8 pb-7">

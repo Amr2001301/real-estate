@@ -55,7 +55,7 @@ export function ProjectCard({
   return (
     <article
       data-testid="portal-project-card"
-      className="group flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface transition-colors hover:border-[#C9A24E]/50"
+      className="group flex flex-col overflow-hidden rounded-card border border-hairline bg-surface transition-colors hover:border-[#C9A24E]/50"
     >
       {/* Cover */}
       <div className="relative h-52 shrink-0 overflow-hidden bg-navy-band">

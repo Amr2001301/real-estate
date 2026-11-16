@@ -30,7 +30,7 @@ export function AssetActionCard({ title, actions, icon, className }: Props) {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-soft',
+        'overflow-hidden rounded-card border border-hairline bg-surface shadow-soft',
         className,
       )}
     >

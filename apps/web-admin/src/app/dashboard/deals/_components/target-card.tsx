@@ -52,7 +52,7 @@ export function TargetCard({ row, period, locale, currency, canEdit }: { row: Ta
   return (
     <article
       className={cn(
-        'flex flex-col rounded-[22px] border bg-surface p-5 sm:p-6',
+        'flex flex-col rounded-card border bg-surface p-5 sm:p-6',
         achieved ? 'border-[#D8B66A]/60 shadow-[0_18px_36px_-24px_rgb(184_140_58/0.7)]' : 'border-hairline',
       )}
       data-testid={`target-${row.user.id}`}

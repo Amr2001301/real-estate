@@ -365,7 +365,7 @@ function ListPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-4 rounded-[22px] border border-hairline bg-surface p-5 sm:p-7">
+    <section className="flex flex-col gap-4 rounded-card border border-hairline bg-surface p-5 sm:p-7">
       <p className="text-sm text-slate-500">{hint}</p>
       {header}
       {count === 0 ? <p className="rounded-xl border border-dashed border-hairline px-4 py-8 text-center text-sm text-slate-400">{empty}</p> : <ol className="flex flex-col gap-3">{children}</ol>}

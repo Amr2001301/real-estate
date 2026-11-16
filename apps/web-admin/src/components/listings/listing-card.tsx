@@ -74,7 +74,7 @@ export function ListingCard({ listing, symbol, locale, typeName }: { listing: Li
     <Link
       href={`/dashboard/listings/${listing.id}` as never}
       data-testid="listing-card"
-      className="group flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_22px_44px_-28px_rgb(10_17_32/0.45)]"
+      className="group flex flex-col overflow-hidden rounded-card border border-hairline bg-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_22px_44px_-28px_rgb(10_17_32/0.45)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         {cover ? (

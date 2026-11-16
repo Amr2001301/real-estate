@@ -76,6 +76,7 @@ const LEAD_SPAN: Record<number, string> = {
 };
 
 const COLS: Record<number, string> = {
+  1: 'grid-cols-1',
   2: 'grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 lg:grid-cols-4',
@@ -157,7 +158,8 @@ export function PremiumMetricStrip({
   formatCount = (n) => String(n),
   className,
 }: PremiumMetricStripProps) {
-  const effectiveCols = cols ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6 | 8);
+  // Fewer figures than columns (3 in a 4-column band) fill the row; a fourth empty cell showed as a grey block.
+  const effectiveCols = (cols !== undefined && metrics.length < cols && COLS[metrics.length] ? metrics.length : cols) ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6 | 8);
   const compact = variant === 'compact';
   const total = distribution?.reduce((a, s) => a + s.value, 0) ?? 0;
 
@@ -165,7 +167,7 @@ export function PremiumMetricStrip({
     <section
       data-testid="metric-strip"
       className={cn(
-        'overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
+        'overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
         'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
         className,
       )}

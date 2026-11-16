@@ -221,7 +221,7 @@ export default async function SalesPerformancePage({
 
       {/* ── Team overview ─────────────────────────────────────────────── */}
       <div data-testid="team-overview" className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <section className="relative overflow-hidden rounded-[22px] border border-hairline bg-surface p-6">
+        <section className="relative overflow-hidden rounded-card border border-hairline bg-surface p-6">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
             <div className="relative h-[124px] w-[124px] shrink-0">
@@ -276,7 +276,7 @@ export default async function SalesPerformancePage({
           </div>
         </section>
 
-        <div className="grid grid-cols-1 overflow-hidden rounded-[22px] border border-hairline bg-surface sm:grid-cols-3 xl:grid-cols-1">
+        <div className="grid grid-cols-1 overflow-hidden rounded-card border border-hairline bg-surface sm:grid-cols-3 xl:grid-cols-1">
           {[
             { label: m.kpiTotalSales, value: formatCurrency(totalAchieved, currency, locale), sub: m.kpiTotalSalesSub(rows.length), icon: <Wallet /> },
             { label: m.kpiContracts, value: String(totalContracts), sub: m.kpiContractsSub(totalLeads), icon: <FileText /> },

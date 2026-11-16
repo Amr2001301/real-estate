@@ -49,7 +49,7 @@ const ACTION_ICON: Record<ActionItem['icon'], ReactNode> = {
 export function NeedsActionPanel({ title, allClear, items }: { title: string; allClear: string; items: ActionItem[] }) {
   const total = items.reduce((a, i) => a + i.value, 0);
   return (
-    <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+    <section className="overflow-hidden rounded-card border border-hairline bg-surface">
       <header className="flex flex-wrap items-center gap-3 px-6 py-4">
         <h2 className="font-heading text-[19px] font-bold text-slate-900">{title}</h2>
         {total === 0 ? (
@@ -372,7 +372,7 @@ export function ProjectHealthPanel({
           <Link
             key={p.id}
             href={`/dashboard/projects/${p.id}` as never}
-            className="rounded-[18px] border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
+            className="rounded-card border border-hairline bg-surface-muted p-5 transition-colors hover:border-brand-400/50"
           >
             <div className="flex items-start justify-between gap-3">
               <span className="font-heading text-[16px] font-bold text-slate-900">{p.name}</span>

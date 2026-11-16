@@ -29,7 +29,7 @@ export function RuleCard({ rule, locale, currency, canEdit }: { rule: Commission
   const over = a + mg > 100;
 
   return (
-    <form action={action} className="flex flex-col rounded-[22px] border border-hairline bg-surface p-5 sm:p-6" data-testid={`rule-${rule.kind}`}>
+    <form action={action} className="flex flex-col rounded-card border border-hairline bg-surface p-5 sm:p-6" data-testid={`rule-${rule.kind}`}>
       <header className="flex items-start gap-3">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#D8B66A]/45 bg-[#0E1626] text-[#E6C77E]">
           <Icon className="h-[18px] w-[18px] stroke-[1.6]" />

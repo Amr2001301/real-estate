@@ -185,21 +185,21 @@ export default async function SettingsPage({
 
       {/* ── Toast banners ───────────────────────────────────────────────── */}
       {sp.err && (
-        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">{sp.err}</div>
+        <div className="rounded-card border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">{sp.err}</div>
       )}
       {sp.ok && (
-        <div className="rounded-[20px] border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
+        <div className="rounded-card border border-success-100 bg-success-50 px-4 py-3 text-sm text-success-700">
           {m.savedToast.replace('{key}', keyLabel(sp.ok))}
         </div>
       )}
       {res.error && (
-        <div className="rounded-[20px] border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
+        <div className="rounded-card border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
           {m.errorPrefix} {res.error}
         </div>
       )}
 
       {/* ── Search + sections ───────────────────────────────────────────── */}
-      <section className="rounded-[22px] border border-hairline bg-surface">
+      <section className="rounded-card border border-hairline bg-surface">
         <form method="get" action="/dashboard/settings" className="flex flex-wrap items-center gap-2 px-4 py-3">
           <div className="min-w-[200px] flex-1">
             <Input
@@ -246,7 +246,7 @@ export default async function SettingsPage({
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-[22px] border border-hairline bg-surface px-5 py-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-card border border-hairline bg-surface px-5 py-12 text-center">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-slate-400">
             <Settings className="h-6 w-6" />
           </span>
@@ -268,7 +268,7 @@ export default async function SettingsPage({
           key={group}
           id={`group-${group}`}
           data-testid="settings-group"
-          className="scroll-mt-24 overflow-hidden rounded-[22px] border border-hairline bg-surface"
+          className="scroll-mt-24 overflow-hidden rounded-card border border-hairline bg-surface"
         >
           <header className="flex items-center gap-3 px-6 pb-4 pt-5">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">

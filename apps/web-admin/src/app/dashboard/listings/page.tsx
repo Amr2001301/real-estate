@@ -155,7 +155,7 @@ export default async function ListingsPage({
       </PremiumFilterBar>
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState
             icon={<Building2 />}
             title={filtered ? m.list.noMatch : m.list.empty}

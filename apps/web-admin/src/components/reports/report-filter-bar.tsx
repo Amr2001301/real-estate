@@ -131,7 +131,7 @@ export function ReportFilterBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 rounded-[28px] border border-hairline bg-surface p-2 sm:p-2.5 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
+    <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-hairline bg-surface p-2 sm:p-2.5 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
       <div role="radiogroup" aria-label={isAr ? 'نوع الفترة' : 'Period type'} className="inline-flex items-center gap-1 rounded-full bg-surface-sunken/60 p-1">
         {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
           <button

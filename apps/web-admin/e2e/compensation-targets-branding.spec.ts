@@ -13,8 +13,8 @@ test.describe('my compensation', () => {
     await gotoReady(page, '/dashboard/my-compensation');
     await expect(page.getByTestId('month-target')).toBeVisible();
     await expect(page.getByTestId('earnings')).toContainText('مستحق لك');
-    // The month's activity sits under the target as four figures.
-    await expect(page.getByTestId('month-target').getByTestId('figure')).toHaveCount(4);
+    // The month's activity is its own band of four figures above the target.
+    await expect(page.getByTestId('figure')).toHaveCount(4);
   });
 
   test('earnings list shows at most six until "show all"', async ({ page }) => {

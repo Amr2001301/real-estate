@@ -62,7 +62,7 @@ export default async function DevelopersPage({ searchParams }: { searchParams: P
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<Briefcase />} title={t.list.empty} description={q ? undefined : t.list.emptyHint} action={canEdit && !q ? <AddDeveloperButton locale={locale} /> : undefined} />
         </div>
       ) : (
@@ -72,7 +72,7 @@ export default async function DevelopersPage({ searchParams }: { searchParams: P
               <Link
                 href={`/dashboard/developers/${d.id}` as never}
                 className={cn(
-                  'group flex h-full flex-col rounded-[22px] border border-hairline bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]',
+                  'group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-[#D8B66A]/50 hover:shadow-[0_18px_36px_-22px_rgb(10_17_32/0.45)]',
                   !d.active && 'opacity-60',
                 )}
               >

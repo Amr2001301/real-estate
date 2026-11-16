@@ -59,7 +59,7 @@ export default async function UserPermissionsPage({
       {/* ── Who, and how much of the catalogue they hold ──────────────────── */}
       <section
         data-testid="user-permissions-hero"
-        className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface"
+        className="relative overflow-hidden rounded-card border border-hairline bg-surface"
       >
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
         <div className="pointer-events-none absolute -top-24 start-1/4 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />

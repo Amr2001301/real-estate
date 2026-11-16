@@ -152,56 +152,71 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
         breadcrumbs={[{ label: m.breadcrumbDashboard, href: '/dashboard' }, { label: m.breadcrumbSelf }]}
       />
 
+      <FigureBar
+        cols={4}
+        figures={[
+          { label: m.activityOpenLeads, value: openLeads, href: '/dashboard/leads' },
+          { label: m.activityUpcomingVisits, value: upcomingVisits, href: '/dashboard/visits?tab=appointments' },
+          { label: m.activityActiveReservations, value: activeReservations, href: '/dashboard/reservations' },
+          { label: m.perfClosedContractsLabel, value: perf?.signedContractsCount ?? 0, href: '/dashboard/contracts' },
+        ]}
+      />
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-5 xl:items-stretch">
         {/* This month's target, its pace and the month's activity */}
-        <section data-testid="month-target" className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface xl:col-span-3">
+        <section data-testid="month-target" className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface xl:col-span-3">
+          <header className="flex items-center justify-between gap-3 card-head px-6 py-4 sm:px-7">
+            <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.monthTarget} · {periodLabel(currentPeriod)}</h2>
+            {target && (
+              <span data-testid="month-status" className={cn('rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
+                {t.common.targetStatus[status]}
+              </span>
+            )}
+          </header>
           <div className="flex-1 p-6 sm:p-7">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] font-bold text-[#B8913F] dark:text-[#D8B66A]">{m.monthTarget} · {periodLabel(currentPeriod)}</p>
-              {target && (
-                <span data-testid="month-status" className={cn('rounded-full px-2.5 py-1 text-[11.5px] font-bold', STATUS_CHIP[status])}>
-                  {t.common.targetStatus[status]}
-                </span>
-              )}
-            </div>
             {target ? (
               <>
                 <div className="mt-4 flex flex-wrap items-end gap-x-5 gap-y-2">
                   <p className="font-heading text-[56px] font-bold leading-none tabular-nums text-slate-900">
                     {att === null ? '—' : `${att > 999 ? '+999' : att}%`}
                   </p>
-                  <div className="pb-1.5 text-[13px] text-slate-500">
-                    <p className="font-semibold text-slate-700">{m.ofTarget(money(perf?.achievedAmount ?? 0), money(target.amountTarget))}</p>
-                    <p>{m.unitsOf(perf?.achievedUnits ?? 0, target.unitsTarget)}</p>
-                  </div>
                 </div>
                 <PaceBar className="mt-5" pct={att} expected={expected} tone={STATUS_BAR[status]} />
                 <div className="mt-2 flex justify-between text-[12px] text-slate-500">
                   <span>{t.common.targetExpected(expected)}</span>
                   <span>{m.daysLeft(daysLeft)}</span>
                 </div>
+                <div className="mt-6 grid gap-x-8 gap-y-5 border-t border-hairline pt-5 sm:grid-cols-2">
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                      <span className="font-semibold text-slate-500">{m.valueLabel}</span>
+                      <b className="font-bold tabular-nums text-slate-900">{perf?.targetAmountPercent == null ? '—' : `${perf.targetAmountPercent > 999 ? '+999' : perf.targetAmountPercent}%`}</b>
+                    </div>
+                    <PaceBar className="mt-2" pct={perf?.targetAmountPercent ?? null} expected={expected} tone={STATUS_BAR[status]} />
+                    <p className="mt-2 text-[12px] tabular-nums text-slate-500">{m.ofTarget(money(perf?.achievedAmount ?? 0), money(target.amountTarget))}</p>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between gap-2 text-[12.5px]">
+                      <span className="font-semibold text-slate-500">{m.unitsLabel}</span>
+                      <b className="font-bold tabular-nums text-slate-900">{perf?.targetUnitsPercent == null ? '—' : `${perf.targetUnitsPercent > 999 ? '+999' : perf.targetUnitsPercent}%`}</b>
+                    </div>
+                    <PaceBar className="mt-2" pct={perf?.targetUnitsPercent ?? null} expected={expected} tone={STATUS_BAR[status]} />
+                    <p className="mt-2 text-[12px] tabular-nums text-slate-500">{m.unitsOf(perf?.achievedUnits ?? 0, target.unitsTarget)}</p>
+                  </div>
+                </div>
               </>
             ) : (
               <p className="mt-6 rounded-2xl border border-dashed border-hairline px-4 py-8 text-center text-[13px] text-slate-500">{m.noMonthTarget}</p>
             )}
           </div>
-          <div className="border-t border-hairline">
-            <FigureBar
-              bare
-              cols={4}
-              figures={[
-                { label: m.activityOpenLeads, value: openLeads, href: '/dashboard/leads' },
-                { label: m.activityUpcomingVisits, value: upcomingVisits, href: '/dashboard/visits?tab=appointments' },
-                { label: m.activityActiveReservations, value: activeReservations, href: '/dashboard/reservations' },
-                { label: m.perfClosedContractsLabel, value: perf?.signedContractsCount ?? 0, href: '/dashboard/contracts' },
-              ]}
-            />
-          </div>
         </section>
 
         {/* What the rep has earned */}
-        <section data-testid="earnings" className="flex flex-col rounded-[22px] border border-hairline bg-surface p-6 sm:p-7 xl:col-span-2">
-          <p className="text-[13px] font-bold text-[#B8913F] dark:text-[#D8B66A]">{m.earningsTitle}</p>
+        <section data-testid="earnings" className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface xl:col-span-2">
+          <header className="card-head px-6 py-4 sm:px-7">
+            <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{m.earningsTitle}</h2>
+          </header>
+          <div className="flex flex-1 flex-col p-6 sm:p-7">
           {bonusRes.error ? (
             <div className="mt-4"><SectionError msg={m.errorSection} /></div>
           ) : (
@@ -231,12 +246,14 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
               </p>
             </>
           )}
+          </div>
         </section>
       </div>
 
       {/* Earnings, one per line */}
       {entries.length > 0 && (
         <Panel
+          band
           testId="entries"
           title={m.entriesSectionTitle}
           sub={m.entriesCountSuffix(entries.length)}
@@ -268,7 +285,7 @@ export default async function MyCompensationPage({ searchParams }: { searchParam
       )}
 
       {/* Every month against its target */}
-      <Panel testId="target-history" title={m.historyTitle} sub={m.historySub}>
+      <Panel band testId="target-history" title={m.historyTitle} sub={m.historySub}>
         {targetsRes.error ? (
           <SectionError msg={m.errorSection} />
         ) : targets.length === 0 ? (

@@ -91,12 +91,12 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
       </PremiumPageHero>
 
       {res.error ? (
-        <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>
+        <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{res.error}</div>
       ) : all.length === 0 ? (
-        <div className="relative overflow-hidden rounded-[28px] border border-hairline bg-surface px-6 py-16 text-center">
+        <div className="relative overflow-hidden rounded-card border border-hairline bg-surface px-6 py-16 text-center">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_0%,rgba(216,182,106,0.16),transparent)]" />
           <div className="relative mx-auto flex max-w-lg flex-col items-center gap-4">
-            <span className="inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-brand-400 to-brand-700 text-[#1a1408] shadow-[0_12px_30px_-10px_rgba(184,140,58,0.6)]">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-card bg-gradient-to-br from-brand-400 to-brand-700 text-[#1a1408] shadow-[0_12px_30px_-10px_rgba(184,140,58,0.6)]">
               <Megaphone className="h-7 w-7" />
             </span>
             <p className="font-heading text-[22px] font-bold text-slate-900">{L.empty}</p>
@@ -112,7 +112,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         <>
           {/* Channel performance */}
           {byChannel.length > 0 && (
-            <section className="rounded-[24px] border border-hairline bg-surface p-5 sm:p-6">
+            <section className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-heading text-[17px] font-bold text-slate-900">{L.mix}</h2>
                 <p className="text-[12px] text-slate-500">{L.mixSub}</p>
@@ -187,7 +187,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                 <li key={c.id} data-testid="campaign-card">
                   <Link
                     href={`/dashboard/campaigns/${c.id}` as never}
-                    className="group flex h-full flex-col rounded-[24px] border border-hairline bg-surface p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D8B66A]/60 hover:shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] sm:p-6"
+                    className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#D8B66A]/60 hover:shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] sm:p-6"
                   >
                     <div className="flex items-start gap-3.5">
                       <ChannelMark channel={c.channel} size={46} />
@@ -254,7 +254,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               <li>
                 <Link
                   href={'/dashboard/campaigns/new' as never}
-                  className="flex h-full min-h-[260px] flex-col items-center justify-center gap-3 rounded-[24px] border-2 border-dashed border-hairline text-center transition-colors hover:border-[#D8B66A]/70 hover:bg-[#D8B66A]/[0.04]"
+                  className="flex h-full min-h-[260px] flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed border-hairline text-center transition-colors hover:border-[#D8B66A]/70 hover:bg-[#D8B66A]/[0.04]"
                 >
                   <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D8B66A]/15 text-brand-700"><Plus className="h-5 w-5" /></span>
                   <span className="font-heading text-[16px] font-bold text-slate-800">{L.newTile}</span>

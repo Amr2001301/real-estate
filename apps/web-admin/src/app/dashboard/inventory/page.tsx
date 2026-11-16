@@ -225,7 +225,7 @@ export default async function InventoryPage({
 
       {/* ── 5. Inventory matrix ─────────────────────────────────────────────── */}
       {projectBuckets.length === 0 ? (
-        <div className="bg-surface border border-hairline rounded-[22px]">
+        <div className="bg-surface border border-hairline rounded-card">
           <PremiumEmptyState
             icon={<Boxes />}
             title={q || projectId || status !== 'all' ? m.empty.filteredTitle : m.empty.emptyTitle}
@@ -283,7 +283,7 @@ function ProjectMatrixCard({
   const [num, unit] = compactParts(proj.totalValue, symbol, locale);
 
   return (
-    <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+    <div className="overflow-hidden rounded-card border border-hairline bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
         <RowTitle
           title={proj.name}

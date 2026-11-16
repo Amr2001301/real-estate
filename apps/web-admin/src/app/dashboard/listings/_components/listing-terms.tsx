@@ -50,7 +50,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] border border-hairline bg-surface p-5 sm:p-6">
+    <section className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#D8B66A]/45 bg-[#0E1626] text-[#E6C77E] [&_svg]:h-[18px] [&_svg]:w-[18px]">

@@ -79,11 +79,11 @@ function FunnelPanel({ summary, title, locale }: { summary: BrokerReportsSummary
   const stages = STAGES.map((s) => ({ ...s, label: t.stages[s.key] ?? String(s.key), value: Number(summary[s.key] ?? 0) }));
   const max = Math.max(1, ...stages.map((s) => s.value));
   return (
-    <section className="flex flex-col rounded-[22px] border border-hairline bg-surface" data-testid="portal-funnel">
-      <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-5">
+    <section className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface" data-testid="portal-funnel">
+      <header className="mb-4 flex items-start justify-between gap-4 card-head px-6 py-4">
         <div>
-          <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
-          <p className="mt-0.5 text-[12.5px] text-slate-500">{t.stagesCount(stages.length)}</p>
+          <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{title}</h2>
+          <p className="mt-0.5 text-[12.5px] text-[#A9B0BD]">{t.stagesCount(stages.length)}</p>
         </div>
       </header>
       <ul className="flex-1 space-y-4 px-6 pb-5">
@@ -131,13 +131,13 @@ function FunnelPanel({ summary, title, locale }: { summary: BrokerReportsSummary
 
 function PanelHead({ icon, title, sub }: { icon: ReactNode; title: string; sub?: string }) {
   return (
-    <div className="flex items-center gap-3 px-6 pb-4 pt-5">
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/50 text-brand-700 [&_svg]:h-4 [&_svg]:w-4">
+    <div className="flex items-center gap-3 card-head px-6 py-4">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D8B66A]/45 text-[#D8B66A] [&_svg]:h-4 [&_svg]:w-4">
         {icon}
       </span>
       <div>
-        <h2 className="font-heading text-[19px] font-bold leading-snug text-slate-900">{title}</h2>
-        {sub && <p className="mt-0.5 text-[12.5px] text-slate-500">{sub}</p>}
+        <h2 className="font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]">{title}</h2>
+        {sub && <p className="mt-0.5 text-[12.5px] text-[#A9B0BD]">{sub}</p>}
       </div>
     </div>
   );
@@ -254,7 +254,7 @@ export default async function PortalPerformancePage({
       </PremiumFilterBar>
 
       {/* ── Figures ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px]">
+      <section className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={6}
@@ -276,7 +276,7 @@ export default async function PortalPerformancePage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <FunnelPanel summary={summary} title={t.funnelTitle} locale={locale} />
 
-          <div className="bg-surface border border-hairline rounded-[22px] overflow-hidden flex flex-col">
+          <div className="bg-surface border border-hairline rounded-card overflow-hidden flex flex-col">
             <PanelHead icon={<TrendingUp />} title={t.trendTitle} sub={t.trendSubtitle} />
             <div className="flex-1 px-5 pb-5">
               <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} locale={locale} />
@@ -288,7 +288,7 @@ export default async function PortalPerformancePage({
       {/* ── Project breakdown ───────────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionLabel>{t.projects.title}</SectionLabel>
-        <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <div className="overflow-hidden rounded-card border border-hairline bg-surface">
           <PanelHead icon={<Building2 />} title={t.projects.title} sub={t.projects.countFn(perf.projectBreakdown.length)} />
           {perf.projectBreakdown.length === 0 ? (
             <EmptyState icon={<Building2 />} title={t.projects.empty} description="—" />
@@ -335,7 +335,7 @@ export default async function PortalPerformancePage({
       {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{t.agents.title}</SectionLabel>
-          <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <div className="overflow-hidden rounded-card border border-hairline bg-surface">
             <PanelHead icon={<UsersIcon />} title={t.agents.title} sub={t.agents.countFn(perf.agentBreakdown.length)} />
             <ul className="divide-y divide-hairline border-t border-hairline" data-testid="perf-agent-rows">
               {perf.agentBreakdown.map((a) => (

@@ -68,7 +68,7 @@ export default async function DocumentDetailPage({
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
         <div className="space-y-6 xl:col-span-2">
           {/* The file */}
-          <section data-testid="document-file" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <section data-testid="document-file" className="overflow-hidden rounded-card border border-hairline bg-surface">
             {kind === 'image' && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={doc.fileUrl} alt={doc.title} className="max-h-[420px] w-full border-b border-hairline bg-surface-muted object-contain" />
@@ -99,7 +99,7 @@ export default async function DocumentDetailPage({
           </section>
 
           {/* Details, 2×2 */}
-          <section className="rounded-[22px] border border-hairline bg-surface">
+          <section className="rounded-card border border-hairline bg-surface">
             <h2 className="px-6 pb-3 pt-5 font-heading text-[18px] font-bold text-slate-900">{m.sectionDetails}</h2>
             <dl data-testid="document-details" className="grid grid-cols-1 border-t border-hairline sm:grid-cols-2">
               {[
@@ -150,7 +150,7 @@ export default async function DocumentDetailPage({
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-[22px] border border-hairline bg-surface p-6">
+          <section className="rounded-card border border-hairline bg-surface p-6">
             <p className="text-[12px] font-semibold text-slate-500">{m.panelUploadedBy}</p>
             {doc.uploadedBy ? (
               <div className="mt-3 flex items-center gap-3">
@@ -168,7 +168,7 @@ export default async function DocumentDetailPage({
             )}
           </section>
 
-          <section className="rounded-[22px] border border-danger-500/25 bg-surface p-6">
+          <section className="rounded-card border border-danger-500/25 bg-surface p-6">
             <p className="text-[14px] font-bold text-slate-900">{m.dangerTitle}</p>
             <p className="mt-1 text-[12.5px] text-slate-500">{m.dangerDesc}</p>
             <ConfirmingForm action={softDeleteDocumentAction} confirmMessage={m.deleteConfirm(doc.title)}>

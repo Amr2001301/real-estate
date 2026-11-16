@@ -102,11 +102,11 @@ export default async function PayoutsPage({ searchParams }: { searchParams: Prom
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {rows.length === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<Wallet />} title={t.empty} description={t.emptyHint} />
         </div>
       ) : (
-        <ul className="divide-y divide-hairline overflow-hidden rounded-[22px] border border-hairline bg-surface" data-testid="payouts-list">
+        <ul className="divide-y divide-hairline overflow-hidden rounded-card border border-hairline bg-surface" data-testid="payouts-list">
           {rows.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-6">
               <div className="flex min-w-0 flex-1 items-center gap-3">

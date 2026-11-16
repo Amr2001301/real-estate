@@ -123,7 +123,7 @@ export default function PricingPage() {
           {loading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-[20px] bg-slate-100 animate-pulse" />
+                <div key={i} className="h-24 rounded-card bg-slate-100 animate-pulse" />
               ))}
             </div>
           )}
@@ -206,7 +206,7 @@ function PricingCard({ pkg, locale, m, onEdit, onDelete, pending }: {
   const desc = locale === 'en' ? pkg.descEn : pkg.descAr;
 
   return (
-    <div className={`bg-surface border border-hairline rounded-[20px] shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)] overflow-hidden transition-all ${!pkg.isActive ? 'opacity-60' : ''}`}>
+    <div className={`bg-surface border border-hairline rounded-card shadow-[0_1px_4px_0_rgb(15_30_51_/_0.05),0_6px_28px_-6px_rgb(15_30_51_/_0.09)] overflow-hidden transition-all ${!pkg.isActive ? 'opacity-60' : ''}`}>
       {/* Header row */}
       <div className="flex items-center gap-4 px-5 py-4">
         <div className="flex-1 min-w-0">

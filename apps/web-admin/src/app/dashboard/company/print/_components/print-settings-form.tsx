@@ -12,7 +12,7 @@ import { removeSealAction, savePrintSettingsAction, uploadSealAction } from '../
 const MODES: LetterheadMode[] = ['BUILT_IN', 'HEADER_FOOTER', 'FULL_PAGE'];
 const DOCS: SealDocument[] = ['CONTRACT', 'RESERVATION', 'RECEIPT', 'STATEMENT'];
 
-const card = 'rounded-[22px] border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
+const card = 'rounded-card border border-hairline bg-surface p-6 shadow-[0_18px_40px_-30px_rgb(20_26_38/0.35)]';
 const label = 'text-[12px] font-semibold text-slate-600';
 const input =
   'h-10 w-full rounded-xl border border-hairline bg-surface px-3 text-[13px] text-slate-800 outline-none transition-colors focus:border-brand-400/60';
@@ -448,7 +448,7 @@ export function PrintSettingsForm({
         {(dirty || note) && (
           <div
             className={cn(
-              'sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-[20px] border bg-surface/95 p-3.5 ps-5 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur',
+              'sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-card border bg-surface/95 p-3.5 ps-5 shadow-[0_24px_60px_-28px_rgb(14_22_38/0.55)] backdrop-blur',
               dirty ? 'border-brand-400/50' : 'border-hairline',
             )}
           >

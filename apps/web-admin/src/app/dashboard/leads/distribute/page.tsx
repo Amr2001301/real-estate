@@ -45,7 +45,7 @@ export default async function DistributePage() {
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 
       {data.unassigned === 0 ? (
-        <div className="rounded-[22px] border border-dashed border-hairline bg-surface">
+        <div className="rounded-card border border-dashed border-hairline bg-surface">
           <PremiumEmptyState icon={<Shuffle />} title={t.nothing} />
         </div>
       ) : (

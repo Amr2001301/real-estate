@@ -160,7 +160,7 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
               href={(t.key === 'articles' ? '/dashboard/cms' : `/dashboard/cms?tab=${t.key}`) as never}
               aria-current={on ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-4 rounded-[20px] border px-5 py-4 transition-colors',
+                'flex items-center gap-4 rounded-card border px-5 py-4 transition-colors',
                 on ? 'border-[#C9A24E]/60 bg-[#D8B66A]/[0.10]' : 'border-hairline bg-surface hover:border-[#C9A24E]/40',
               )}
             >
@@ -185,7 +185,7 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
       )}
 
       {tab === 'articles' && (
-        <section data-testid="cms-articles" className="rounded-[22px] border border-hairline bg-surface">
+        <section data-testid="cms-articles" className="rounded-card border border-hairline bg-surface">
           <SectionHead title={m.sectionArticlesTitle} action={
             <Link href="/dashboard/cms/articles/new" className={ADD_BTN}>
               <Plus className="h-3.5 w-3.5" />
@@ -227,7 +227,7 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
       )}
 
       {tab === 'pages' && (
-        <section data-testid="cms-pages" className="rounded-[22px] border border-hairline bg-surface">
+        <section data-testid="cms-pages" className="rounded-card border border-hairline bg-surface">
           <details className="group" open={editing ? true : undefined}>
             <SectionHead title={m.sectionPagesTitle} summary action={<span className={ADD_BTN}><Plus className="h-3.5 w-3.5 transition-transform group-open:rotate-45" />{m.createPageLabel}</span>} />
             <p className="px-6 pb-4 text-[12.5px] text-slate-500">{m.pagesHint}</p>
@@ -291,7 +291,7 @@ export default async function CmsPage({ searchParams }: { searchParams: Promise<
       )}
 
       {tab === 'banners' && (
-        <section data-testid="cms-banners" className="rounded-[22px] border border-hairline bg-surface">
+        <section data-testid="cms-banners" className="rounded-card border border-hairline bg-surface">
           <details className="group">
             <SectionHead title={m.sectionBannersTitle} summary action={<span className={ADD_BTN}><Plus className="h-3.5 w-3.5 transition-transform group-open:rotate-45" />{m.addBannerLabel}</span>} />
             <p className="px-6 pb-4 text-[12.5px] text-slate-500">{m.bannersHint}</p>

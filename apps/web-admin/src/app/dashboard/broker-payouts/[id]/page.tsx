@@ -61,7 +61,7 @@ export default async function AdminBrokerPayoutDetailPage({
   const STEPS = ['DRAFT', 'APPROVED', 'PROCESSING', 'PAID'] as const;
   const stepAt = STEPS.indexOf(payout.status as (typeof STEPS)[number]);
   const cancelled = payout.status === 'CANCELLED';
-  const card = 'rounded-[22px] border border-hairline bg-surface';
+  const card = 'rounded-card border border-hairline bg-surface';
   const word = (ar: string, en: string) => (locale === 'en' ? en : ar);
   const timeline = [
     { text: m.createdEvent, at: payout.createdAt },
@@ -84,7 +84,7 @@ export default async function AdminBrokerPayoutDetailPage({
       />
 
       {cancelled && payout.cancelReason && (
-        <div className="flex items-start gap-3 rounded-[22px] border border-danger-500/25 bg-danger-500/10 p-5 text-sm text-danger-600">
+        <div className="flex items-start gap-3 rounded-card border border-danger-500/25 bg-danger-500/10 p-5 text-sm text-danger-600">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-bold">{m.cancelledTitle}</p>

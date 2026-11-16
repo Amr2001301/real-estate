@@ -98,7 +98,7 @@ export function MetaConnectCard({
   );
 
   return (
-    <section data-testid="meta-card" className="rounded-[24px] border border-hairline bg-surface p-5 sm:p-6">
+    <section data-testid="meta-card" className="rounded-card border border-hairline bg-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex gap-3">
           <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#1877F2]/10 text-[#1877F2]"><Facebook className="h-5 w-5" /></span>

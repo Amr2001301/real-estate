@@ -135,7 +135,7 @@ export function DomainCard({
     <article
       data-testid="domain-card"
       className={cn(
-        'overflow-hidden rounded-[20px] border bg-surface',
+        'overflow-hidden rounded-card border bg-surface',
         d.isPrimary ? 'border-brand-400/50 shadow-[0_18px_40px_-30px_rgb(176_138_58/0.6)]' : 'border-hairline',
       )}
     >

@@ -72,7 +72,7 @@ export default function ArticleForm({ initial = {}, mode }: Props) {
     });
   }
 
-  const card = 'rounded-[22px] border border-hairline bg-surface';
+  const card = 'rounded-card border border-hairline bg-surface';
   const label = 'text-[12.5px] font-semibold text-slate-700';
 
   return (

@@ -39,7 +39,7 @@ export function CampaignForm({
   const label = 'block text-[12.5px] font-semibold text-slate-600';
 
   return (
-    <form action={formAction} data-testid="campaign-form" className="space-y-6 rounded-[22px] border border-hairline bg-surface p-5 sm:p-7">
+    <form action={formAction} data-testid="campaign-form" className="space-y-6 rounded-card border border-hairline bg-surface p-5 sm:p-7">
       {state.error && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-danger-500/10 px-4 py-3 text-[13px] font-medium text-danger-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> {state.error}

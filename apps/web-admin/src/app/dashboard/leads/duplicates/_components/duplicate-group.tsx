@@ -41,7 +41,7 @@ export function DuplicateGroupCard({ group, locale }: { group: DuplicateGroup; l
   };
 
   return (
-    <section data-testid="duplicate-group" className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+    <section data-testid="duplicate-group" className="overflow-hidden rounded-card border border-hairline bg-surface">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline px-5 py-4">
         <div className="min-w-0">
           <h2 className="truncate font-heading text-[18px] font-bold text-slate-900">{group.client.fullName}</h2>

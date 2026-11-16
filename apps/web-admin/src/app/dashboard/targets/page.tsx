@@ -242,7 +242,7 @@ export default async function TargetsPage({
       </PremiumFilterBar>
 
       {/* ── Key figures ───────────────────────────────────────────────────── */}
-      <section data-testid="targets-kpis" className="overflow-hidden rounded-[22px]">
+      <section data-testid="targets-kpis" className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}
@@ -274,7 +274,7 @@ export default async function TargetsPage({
           )}
         </div>
       ) : targets.length > 0 ? (
-        <div className="flex items-center gap-3 rounded-[22px] border border-dashed border-hairline px-5 py-4">
+        <div className="flex items-center gap-3 rounded-card border border-dashed border-hairline px-5 py-4">
           <TrendingUp className="h-4 w-4 shrink-0 text-slate-400" />
           <p className="text-[13px] text-slate-500">
             {m.noAchievedYet} <span className="text-slate-400">{m.noAchievedSub}</span>
@@ -312,7 +312,7 @@ function Insight({
   tone?: 'good' | 'warn';
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-[22px] border border-hairline bg-surface p-5">
+    <div className="flex items-center gap-4 rounded-card border border-hairline bg-surface p-5">
       <span
         className={cn(
           'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full [&_svg]:h-5 [&_svg]:w-5',

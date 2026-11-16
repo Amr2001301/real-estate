@@ -19,7 +19,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ i
     safe(api.get<LeadSource[]>('/lead-sources')),
   ]);
   if (!campaignRes.data) {
-    return <div className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">{campaignRes.error}</div>;
+    return <div className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{campaignRes.error}</div>;
   }
   return (
     <div className="space-y-6">

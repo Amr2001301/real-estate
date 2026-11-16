@@ -140,7 +140,7 @@ export function ProjectsPanel({
     <div className="flex flex-col gap-5">
 
       {/* ── Figures ───────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-[22px]">
+      <section className="overflow-hidden rounded-card">
         <FigureBar
           bare
           cols={4}
@@ -154,7 +154,7 @@ export function ProjectsPanel({
       </section>
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 rounded-[22px] border border-hairline bg-surface px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-card border border-hairline bg-surface px-4 py-3">
 
         {/* Search */}
         <Input

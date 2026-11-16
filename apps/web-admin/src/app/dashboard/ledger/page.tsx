@@ -206,7 +206,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
     return (
       <section
         data-testid={`ledger-side-${sd}`}
-        className="flex flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_18px_40px_-28px_rgb(20_26_38/0.35)]"
+        className="flex flex-col overflow-hidden rounded-card border border-hairline bg-surface shadow-[0_18px_40px_-28px_rgb(20_26_38/0.35)]"
       >
         <header className="flex items-start justify-between gap-4 px-6 pb-5 pt-6">
           <div className="flex items-center gap-3">
@@ -312,7 +312,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       {s && (
         <section
           data-testid="metric-strip"
-          className="overflow-hidden rounded-[22px] border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
+          className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
         >
           <div className="grid gap-px bg-[#D8B66A]/[0.16] md:grid-cols-3">
             {(['receivables', 'net', 'payables'] as const).map((k) => {
@@ -403,7 +403,7 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
       <section
         id="ledger-detail"
         data-testid="ledger-rows"
-        className="scroll-mt-6 overflow-hidden rounded-[22px] border border-hairline bg-surface"
+        className="scroll-mt-6 overflow-hidden rounded-card border border-hairline bg-surface"
       >
         <header className="flex flex-col gap-4 border-b border-hairline px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
           <div>

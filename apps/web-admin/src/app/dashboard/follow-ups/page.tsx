@@ -88,11 +88,11 @@ export default async function FollowUpsPage({
       <p className="text-[13px] text-slate-500">{f.page.hint[bucket]}</p>
 
       {listRes.error ? (
-        <div role="alert" className="rounded-[20px] bg-danger-500/10 p-6 text-sm text-danger-600">
+        <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">
           {f.page.error}: {listRes.error}
         </div>
       ) : rows.length === 0 ? (
-        <div data-testid="follow-empty" className="flex flex-col items-center gap-2 rounded-[22px] border border-dashed border-hairline bg-surface px-6 py-14 text-center">
+        <div data-testid="follow-empty" className="flex flex-col items-center gap-2 rounded-card border border-dashed border-hairline bg-surface px-6 py-14 text-center">
           <CheckCircle2 className="h-8 w-8 text-emerald-500" />
           <p className="font-heading text-[16px] font-semibold text-slate-800">{f.page.empty[bucket]}</p>
           <p className="max-w-md text-[13px] text-slate-500">{f.page.emptyHint}</p>
@@ -111,7 +111,7 @@ export default async function FollowUpsPage({
                 key={l.id}
                 data-testid="follow-row"
                 className={cn(
-                  'grid grid-cols-1 gap-4 rounded-[20px] border border-hairline bg-surface p-4 sm:p-5 lg:grid-cols-[1.3fr_1.2fr_1.3fr_auto] lg:items-center',
+                  'grid grid-cols-1 gap-4 rounded-card border border-hairline bg-surface p-4 sm:p-5 lg:grid-cols-[1.3fr_1.2fr_1.3fr_auto] lg:items-center',
                   bucket === 'overdue' && 'border-s-4 border-s-danger-500',
                 )}
               >

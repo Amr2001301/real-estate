@@ -119,10 +119,10 @@ export default function CompanyDetailPage() {
   if (loading) {
     return (
       <div className="space-y-5 animate-pulse">
-        <div className="h-40 rounded-[20px] bg-slate-100" />
+        <div className="h-40 rounded-card bg-slate-100" />
         <div className="grid xl:grid-cols-3 gap-5">
-          <div className="xl:col-span-2 h-64 rounded-[20px] bg-slate-100" />
-          <div className="h-40 rounded-[20px] bg-slate-100" />
+          <div className="xl:col-span-2 h-64 rounded-card bg-slate-100" />
+          <div className="h-40 rounded-card bg-slate-100" />
         </div>
       </div>
     );

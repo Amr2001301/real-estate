@@ -24,7 +24,7 @@ export default async function EditProjectPage({
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8">
-      <div className="relative bg-surface border border-hairline rounded-[22px] overflow-hidden">
+      <div className="relative bg-surface border border-hairline rounded-card overflow-hidden">
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-3">
             <Link href="/dashboard" className="hover:text-navy transition-colors">{m.common.breadcrumbHome}</Link>

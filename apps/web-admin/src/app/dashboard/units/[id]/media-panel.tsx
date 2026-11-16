@@ -20,7 +20,7 @@ export function UnitMediaPanel({ unit, locale = 'ar' }: { unit: Unit; locale?: L
   const floorplans = media.filter((item) => item.type === 'FLOORPLAN');
 
   return (
-    <Card className="rounded-[22px] p-6">
+    <Card className="rounded-card p-6">
       <div className="flex items-center gap-2">
         <h3 className="font-heading text-[19px] font-bold leading-snug text-slate-900">
           {m.title}

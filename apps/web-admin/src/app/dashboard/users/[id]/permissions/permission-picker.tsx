@@ -154,7 +154,7 @@ export function PermissionPicker({ userId, userName, assigned, available, target
       )}
 
       {/* ── Toolbar: search, bulk actions, a chip per section ─────────────── */}
-      <div className="sticky top-2 z-10 rounded-[22px] border border-hairline bg-surface/95 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.55)] backdrop-blur">
+      <div className="sticky top-2 z-10 rounded-card border border-hairline bg-surface/95 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.55)] backdrop-blur">
         <div className="flex flex-wrap items-center gap-2.5 px-4 py-3">
           <div className="min-w-[220px] flex-1">
             <Input
@@ -209,7 +209,7 @@ export function PermissionPicker({ userId, userName, assigned, available, target
 
       {/* ── Sections ──────────────────────────────────────────────────────── */}
       {groups.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2.5 rounded-[22px] border border-hairline bg-surface py-16">
+        <div className="flex flex-col items-center justify-center gap-2.5 rounded-card border border-hairline bg-surface py-16">
           <ShieldCheck className="h-10 w-10 text-slate-300" />
           <p className="text-[13px] font-semibold text-slate-500">{m.noMatchTitle}</p>
           {query && (
@@ -228,7 +228,7 @@ export function PermissionPicker({ userId, userName, assigned, available, target
             <section
               key={group}
               id={`perm-${group}`}
-              className="scroll-mt-40 overflow-hidden rounded-[24px] border border-hairline bg-surface"
+              className="scroll-mt-40 overflow-hidden rounded-card border border-hairline bg-surface"
             >
               <header className="flex flex-wrap items-center gap-4 px-6 pb-4 pt-5">
                 <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400/25 to-brand-600/10 text-brand-700 ring-1 ring-inset ring-brand-500/25 [&_svg]:h-5 [&_svg]:w-5">

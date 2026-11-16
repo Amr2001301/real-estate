@@ -480,7 +480,7 @@ export default function BroadcastForm({ locale = 'ar', users = [] }: Props) {
 
       {/* ── Side: preview, summary, send ───────────────────────────────── */}
       <aside className="flex flex-col gap-5 xl:sticky xl:top-6">
-        <section className="relative overflow-hidden rounded-[22px] border border-hairline bg-surface p-6">
+        <section className="relative overflow-hidden rounded-card border border-hairline bg-surface p-6">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.12] via-transparent to-transparent" />
           <div className="relative">
             <h2 className="font-heading text-[19px] font-bold text-slate-900">{cm.previewTitle}</h2>
@@ -503,7 +503,7 @@ export default function BroadcastForm({ locale = 'ar', users = [] }: Props) {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <section className="overflow-hidden rounded-card border border-hairline bg-surface">
           <h2 className="px-6 pb-3 pt-5 font-heading text-[19px] font-bold text-slate-900">{cm.summaryTitle}</h2>
           <dl className="divide-y divide-hairline border-y border-hairline text-[13px]">
             <SummaryRow label={cm.summaryChannel}>{CHANNELS.find((c) => c.value === channel)?.label}</SummaryRow>

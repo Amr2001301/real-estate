@@ -117,7 +117,7 @@ export function SignatureCard({
     'inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-[12.5px] font-semibold transition-colors disabled:opacity-50';
 
   return (
-    <section data-testid="signature-card" className="rounded-[22px] border border-hairline bg-surface p-6">
+    <section data-testid="signature-card" className="rounded-card border border-hairline bg-surface p-6">
       <div className="flex items-center gap-3">
         <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#C9A24E]/50 text-[#B08A3A]">
           <PenLine className="h-[18px] w-[18px] stroke-[1.6]" />

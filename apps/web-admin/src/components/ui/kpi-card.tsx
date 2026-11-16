@@ -18,7 +18,7 @@ export interface KpiCardProps {
 
 export function KpiCard({ label, value, sub, icon, delta, className }: KpiCardProps) {
   return (
-    <div className={cn('relative overflow-hidden rounded-[18px] border border-[#D8B66A]/[0.28] bg-navy-band', className)}>
+    <div className={cn('relative overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band', className)}>
 
       <div className="px-5 py-4">
         {icon && (

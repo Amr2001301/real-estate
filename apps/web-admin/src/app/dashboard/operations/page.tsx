@@ -265,7 +265,7 @@ function InsightCard({
     <div
       data-testid={testId}
       className={cn(
-        'group relative flex flex-col gap-3 overflow-hidden rounded-[20px] border bg-surface p-5 transition-colors',
+        'group relative flex flex-col gap-3 overflow-hidden rounded-card border bg-surface p-5 transition-colors',
         tone === 'good' && 'border-emerald-500/25',
         tone === 'warn' && 'border-amber-500/40',
         tone === 'neutral' && 'border-hairline hover:border-brand-500/30',
@@ -370,7 +370,7 @@ export default async function OperationsCenterPage() {
           {/* ── Hero: today, the trend, the totals ─────────────────────────── */}
           <section
             data-testid="ops-hero"
-            className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface"
+            className="relative overflow-hidden rounded-card border border-hairline bg-surface"
           >
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.09] via-transparent to-transparent" />
             <div className="pointer-events-none absolute -top-24 start-1/3 h-56 w-56 rounded-full bg-brand-500/10 blur-3xl" />

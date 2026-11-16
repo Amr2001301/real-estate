@@ -17,7 +17,7 @@ export interface PageKpiCardProps {
 
 export function PageKpiCard({ label, value, sub, icon, compact = false }: PageKpiCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-[18px] border border-[#D8B66A]/[0.28] bg-navy-band">
+    <div className="relative overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band">
 
       <div className="flex items-start justify-between gap-3 px-5 py-4">
         <div className="min-w-0 flex-1">

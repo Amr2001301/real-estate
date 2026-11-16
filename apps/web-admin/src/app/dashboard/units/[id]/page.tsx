@@ -138,7 +138,7 @@ export default async function UnitDetailPage({
   return (
     <div className="space-y-6">
       {/* ── Hero ───────────────────────────────────────────────────────── */}
-      <section data-testid="unit-hero" className="relative isolate overflow-hidden rounded-[26px] border border-hairline bg-surface">
+      <section data-testid="unit-hero" className="relative isolate overflow-hidden rounded-card border border-hairline bg-surface">
         {cover ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -201,7 +201,7 @@ export default async function UnitDetailPage({
       </section>
 
       {/* ── Facts ──────────────────────────────────────────────────────── */}
-      <div data-testid="unit-facts" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+      <div data-testid="unit-facts" className="grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface lg:grid-cols-4">
         {facts.map((f, i) => (
           <div
             key={f.label}

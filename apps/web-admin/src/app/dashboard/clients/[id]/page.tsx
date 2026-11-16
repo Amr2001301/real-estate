@@ -123,7 +123,7 @@ export default async function ClientDetailPage({
   return (
     <div className="space-y-6">
       {/* ── Hero ──────────────────────────────────────────────────── */}
-      <section data-testid="client-hero" className="relative overflow-hidden rounded-[26px] border border-hairline bg-surface">
+      <section data-testid="client-hero" className="relative overflow-hidden rounded-card border border-hairline bg-surface">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
         <div className="relative space-y-6 p-6 sm:p-8">
           <nav aria-label="breadcrumb">
@@ -175,7 +175,7 @@ export default async function ClientDetailPage({
       </section>
 
       {/* ── Key figures ───────────────────────────────────────────── */}
-      <div data-testid="client-kpis" className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-hairline bg-surface lg:grid-cols-4">
+      <div data-testid="client-kpis" className="grid grid-cols-2 overflow-hidden rounded-card border border-hairline bg-surface lg:grid-cols-4">
         {kpis.map((k, i) => (
           <div
             key={k.label}
