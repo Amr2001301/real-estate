@@ -17,6 +17,8 @@ class ProjectListItemDto {
     this.lat,
     this.lng,
     this.coverImage,
+    this.startingPrice,
+    this.unitTypes = const [],
   });
 
   final String id;
@@ -29,6 +31,8 @@ class ProjectListItemDto {
   final bool featured;
   final int availableUnitsCount;
   final String? coverImage;
+  final String? startingPrice;
+  final List<String> unitTypes;
 
   factory ProjectListItemDto.fromJson(Map<String, dynamic> json) {
     return ProjectListItemDto(
@@ -44,6 +48,12 @@ class ProjectListItemDto {
       featured: json['featured'] as bool? ?? false,
       availableUnitsCount: (json['availableUnitsCount'] as num?)?.toInt() ?? 0,
       coverImage: json['coverImage'] as String?,
+      // Tolerant: a number or a decimal string; absent on older APIs.
+      startingPrice: json['startingPrice']?.toString(),
+      unitTypes: [
+        for (final t in json['unitTypes'] as List? ?? const [])
+          if (t is String && t.isNotEmpty) t,
+      ],
     );
   }
 }

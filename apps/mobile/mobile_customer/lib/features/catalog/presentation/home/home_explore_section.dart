@@ -61,22 +61,34 @@ class HomeExploreSection extends StatelessWidget {
               ),
             ],
           ),
-        // The guest home's project cards: up to three, one under another.
+        // The projects' cards (the guest home's and the list's) side by side.
         if (projects.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
-          for (final p in projects.take(3))
-            Padding(
-              key: Key('home-explore-project-${p.id}'),
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ProjectCard(
-                project: p,
-                onTap: () => context.push('/projects/${p.id}'),
-              ),
+          SizedBox(
+            height: 284,
+            child: ListView.separated(
+              key: const Key('home-explore-slider'),
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: projects.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (_, i) {
+                final p = projects[i];
+                return SizedBox(
+                  key: Key('home-explore-project-${p.id}'),
+                  width: 290,
+                  child: ProjectCard(
+                    project: p,
+                    onTap: () => context.push('/projects/${p.id}'),
+                  ),
+                );
+              },
             ),
+          ),
         ] else if (state.status == DataStatus.loading ||
             state.status == DataStatus.initial)
           const SizedBox(
-            height: 200,
+            height: 284,
             child: Center(child: CircularProgressIndicator.adaptive()),
           ),
         const SizedBox(height: AppSpacing.sm),

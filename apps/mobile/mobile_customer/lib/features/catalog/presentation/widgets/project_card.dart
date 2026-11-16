@@ -6,7 +6,8 @@ import '../../domain/entities/project.dart';
 import 'glass.dart';
 
 /// A project as the staff app shows it: the cover with its name and city on
-/// it, then what is free and what it offers.
+/// it, then «يبدأ من» the lowest available price, the available units and
+/// their types.
 class ProjectCard extends StatelessWidget {
   const ProjectCard({super.key, required this.project, this.onTap, this.width, this.index = 0});
 
@@ -25,7 +26,12 @@ class ProjectCard extends StatelessWidget {
     final name = project.name.resolve(lang).trim();
     final city = project.city.trim();
     final units = project.availableUnitsCount;
-    final services = [for (final s in project.services) s.resolve(lang).trim()].where((s) => s.isNotEmpty).take(3).toList();
+    // What is on offer, not the project's amenities: the lowest price and
+    // the types of the available units (three, then «+N»).
+    final from = project.startingPrice;
+    final types = [for (final t in project.unitTypes) unitTypeLabel(t, languageCode: lang)];
+    final shownTypes = types.take(3).toList();
+    final moreTypes = types.length - shownTypes.length;
     return Material(
       color: colors.surface,
       borderRadius: BorderRadius.circular(24),
@@ -64,17 +70,34 @@ class ProjectCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(13, 11, 13, 12),
               child: Row(children: [
                 Expanded(
-                  child: Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    if (units > 0)
-                      CatalogBadge.status(l10n.availableUnitsCount(units), catalogAvailable, icon: Icons.apartment_rounded)
-                    else
-                      CatalogBadge.status(l10n.statusSold, colors.inkMuted),
-                    for (final s in services)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
-                        child: Text(s, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (from != null) ...[
+                      Text.rich(
+                        key: const Key('project-card-from'),
+                        TextSpan(children: [
+                          TextSpan(text: '${l10n.projectStartingFrom} ', style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+                          TextSpan(
+                            text: PriceFormatter.formatString(from, languageCode: lang),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: colors.inkStrong),
+                          ),
+                        ]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 7),
+                    ],
+                    Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                      if (units > 0)
+                        CatalogBadge.status(l10n.availableUnitsCount(units), catalogAvailable, icon: Icons.apartment_rounded)
+                      else
+                        CatalogBadge.status(l10n.statusSold, colors.inkMuted),
+                      for (final t in [...shownTypes, if (moreTypes > 0) '+$moreTypes'])
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                          decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
+                          child: Text(t, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+                        ),
+                    ]),
                   ]),
                 ),
                 const SizedBox(width: 8),

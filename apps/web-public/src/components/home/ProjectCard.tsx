@@ -2,7 +2,8 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { MapPin } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { pickAr, formatNumber, projectPlace } from '@/lib/format';
+import { pickAr, formatNumber, projectPlace, unitTypeLabel } from '@/lib/format';
+import { Price } from '@/components/currency/CurrencyProvider';
 import type { PublicProjectListItem } from '@/lib/api-types';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
@@ -12,8 +13,9 @@ import type { Locale } from '@/lib/locale';
 
 /**
  * The project card (projects list, favourites): photo with «مميز» and the
- * project type; then place, name, a two-line description, three services,
- * and the available units with a link at the foot.
+ * project type; then place, name, «تبدأ من» the lowest available price, the
+ * available unit types, a two-line description, three services, and the
+ * available units with a link at the foot.
  */
 export function ProjectCard({ project, locale = 'ar' }: { project: PublicProjectListItem; locale?: Locale }) {
   const t = extraT(locale).projectCard;
@@ -24,6 +26,7 @@ export function ProjectCard({ project, locale = 'ar' }: { project: PublicProject
   const typeLabel = project.type ? s.projectTypes[project.type] : null;
   const services = (project.services ?? []).map((x) => pickAr(x, '', locale)).filter(Boolean).slice(0, 3);
   const units = project.availableUnitsCount;
+  const types = (project.unitTypes ?? []).map((ty) => unitTypeLabel(ty, null, locale));
 
   return (
     <div className="relative h-full">
@@ -49,6 +52,17 @@ export function ProjectCard({ project, locale = 'ar' }: { project: PublicProject
             </p>
           )}
           <h3 className="mt-1 line-clamp-1 font-display text-[1.375rem] font-semibold leading-normal text-ink-strong">{name}</h3>
+          {project.startingPrice && (
+            <p className="mt-1.5 text-sm text-ink-muted" data-testid="project-card-from">
+              {t.from}{' '}
+              <b className="font-display text-lg font-semibold text-navy dark:text-gold-300">
+                <Price value={project.startingPrice} />
+              </b>
+            </p>
+          )}
+          {types.length > 0 && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted" data-testid="project-card-types">{types.join(' · ')}</p>
+          )}
           {description && <p className="mt-1.5 line-clamp-2 text-sm leading-[1.8] text-ink-muted">{description}</p>}
           {services.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">

@@ -75,10 +75,10 @@ function makePrismaMock() {
       ),
     },
     unit: {
-      // availableUnitCounts: two AVAILABLE units under the published project.
+      // Two AVAILABLE units under the published project.
       findMany: jest.fn().mockResolvedValue([
-        { building: { phase: { projectId: PUBLISHED_ID } } },
-        { building: { phase: { projectId: PUBLISHED_ID } } },
+        { price: '4320000.00', type: 'Villa', building: { phase: { projectId: PUBLISHED_ID } } },
+        { price: '2950000.50', type: '2BR', building: { phase: { projectId: PUBLISHED_ID } } },
       ]),
       count: jest.fn().mockResolvedValue(0),
     },
@@ -151,6 +151,16 @@ describe('Public projects · response contract', () => {
     // publicOnly forces status=PUBLISHED in the where-clause.
     const whereArg = mock.project.findMany.mock.calls[0][0].where;
     expect(whereArg.status).toBe('PUBLISHED');
+  });
+
+  it('list item carries the starting price and unit types of the AVAILABLE units', async () => {
+    const res = await request(app.getHttpServer()).get('/public/projects').expect(200);
+    const item = res.body.data[0];
+    expect(item.startingPrice).toBe('2950000.5');
+    expect(item.unitTypes).toEqual(['2BR', 'Villa']);
+    // Only AVAILABLE units count towards what is on offer.
+    const unitWhere = mock.unit.findMany.mock.calls[0][0].where;
+    expect(unitWhere.status).toBe('AVAILABLE');
   });
 
   it('list item leaks no sensitive relations/timestamps', async () => {

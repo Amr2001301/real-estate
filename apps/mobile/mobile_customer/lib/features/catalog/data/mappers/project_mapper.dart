@@ -20,6 +20,8 @@ extension ProjectListItemDtoMapper on ProjectListItemDto {
         featured: featured,
         availableUnitsCount: availableUnitsCount,
         coverImage: coverImage,
+        startingPrice: startingPrice,
+        unitTypes: unitTypes,
       );
 }
 

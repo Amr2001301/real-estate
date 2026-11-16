@@ -30,6 +30,10 @@ export interface PublicProjectListItem {
   status: string;
   coverImage: string | null;
   availableUnitsCount: number;
+  /** Lowest price of the available units (decimal string); null when none. */
+  startingPrice?: string | null;
+  /** Types of the available units (codes). */
+  unitTypes?: string[];
   updatedAt: string;
 }
 

@@ -19,7 +19,8 @@ import 'package:mobile_customer/features/favorites/presentation/favorites_cubit.
 import 'package:mobile_customer/features/catalog/presentation/widgets/project_card.dart';
 
 /// An owner's tab bar has no catalog tabs; «استكشف مشاريعنا» on their home
-/// leads to the company's projects (the guest home's project cards), units,
+/// leads to the company's projects (the guest home's project cards, in a
+/// horizontal slider), units,
 /// compare and a visit request.
 
 class _Favorites implements FavoritesRepository {
@@ -142,8 +143,10 @@ void main() {
     final visited = await _pump(tester);
     expect(find.text('استكشف مشاريعنا'), findsOneWidget);
     expect(find.byKey(const Key('home-explore-project-a')), findsOneWidget);
-    // The same card as the guest home and the projects list, three at most.
-    expect(find.byType(ProjectCard), findsNWidgets(3));
+    // The same card as the guest home and the projects list, in a slider.
+    final slider = tester.widget<ListView>(find.byKey(const Key('home-explore-slider')));
+    expect(slider.scrollDirection, Axis.horizontal);
+    expect(find.byType(ProjectCard), findsWidgets);
 
     await _tap(tester, find.byKey(const Key('home-explore-units')));
     await tester.pumpAndSettle();
