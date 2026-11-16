@@ -136,18 +136,16 @@ export default async function BrokersPage({
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/brokers">
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="brk-q" className="sr-only">{m.filter.searchLabel}</label>
-          <Input
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="brk-q">
+<Input
             id="brk-q"
             name="q"
             inputSize="sm"
             placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="brk-status">
           <Select id="brk-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
             <option value="">{m.filter.allStatuses}</option>

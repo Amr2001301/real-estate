@@ -76,15 +76,6 @@ const ROLE_CHIP: Partial<Record<UserRole, string>> = {
 };
 
 /** The role chips under the summary, in this order, each with its colour. */
-const ROLE_DOT: Partial<Record<UserRole, string>> = {
-  ADMIN:                  'bg-brand-500',
-  SALES_MANAGER:          'bg-sky-500',
-  SALES:                  'bg-emerald-500',
-  MAINTENANCE_SUPERVISOR: 'bg-orange-500',
-  BROKER:                 'bg-indigo-500',
-  CUSTOMER:               'bg-teal-500',
-  CLIENT:                 'bg-slate-400',
-};
 
 function initials(name: string): string {
   return sharedInitials(name, { single: 2, fallback: '·' });
@@ -217,9 +208,6 @@ export default async function UsersPage({
   const allFacets = (allRolesRes ?? kpiRes).data?.meta;
   const allByRole = allFacets?.facets?.counts?.role ?? {};
   const allTotal = allFacets?.total ?? total;
-  const roleMix = (Object.keys(ROLE_DOT) as UserRole[])
-    .map((r) => [r, allByRole[r] ?? 0] as const)
-    .filter(([, n]) => n > 0);
 
   return (
     <div className="flex flex-col gap-5 pb-2 lg:gap-6">
@@ -264,35 +252,6 @@ export default async function UsersPage({
           </p>
         </SummaryCard>
       </div>
-
-      {/* ── Roles: a chip per role, each a filter ─────────────────────────── */}
-      {roleMix.length > 0 && (
-        <nav className="flex flex-wrap items-center gap-2" data-testid="users-roles">
-          {[['', allTotal] as const, ...roleMix].map(([r, n]) => {
-            const on = (sp.role ?? '') === r;
-            const p = new URLSearchParams();
-            if (r) p.set('role', r);
-            if (sp.status) p.set('status', sp.status);
-            const qs = p.toString();
-            return (
-              <Link
-                key={r || 'all'}
-                href={`/dashboard/users${qs ? `?${qs}` : ''}` as never}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors',
-                  on
-                    ? 'border-brand-500/50 bg-brand-500/12 text-brand-700'
-                    : 'border-hairline bg-surface text-slate-600 hover:border-brand-500/30 hover:text-slate-900',
-                )}
-              >
-                {r && <span className={cn('h-2 w-2 rounded-full', ROLE_DOT[r as UserRole])} />}
-                {r ? ROLE_LABEL[r as UserRole] : m.kpi.allRoles}
-                <span className={cn('tabular-nums', on ? 'text-brand-700' : 'text-slate-400')}>{num(n)}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
 
       {/* ── Create user (collapsible via showCreate=1) ──────────────────── */}
       {showCreate && (
@@ -349,15 +308,13 @@ export default async function UsersPage({
       >
         {showCreate && <input type="hidden" name="showCreate" value="1" />}
         <PremiumFilterField label={m.filter.searchLabel}>
-          <div className="w-60">
-            <Input name="q" inputSize="sm" placeholder={m.filter.searchPlaceholder} defaultValue={sp.q ?? ''} leftAddon={<Search />} />
-          </div>
+          <Input name="q" inputSize="sm" placeholder={m.filter.searchPlaceholder} defaultValue={sp.q ?? ''} leftAddon={<Search />} />
         </PremiumFilterField>
         <PremiumFilterField label={m.filter.roleLabel}>
           <Select name="role" inputSize="sm" defaultValue={sp.role ?? ''} className="w-40">
-            <option value="">{m.filter.allRoles}</option>
+            <option value="">{m.filter.allRoles} ({num(allTotal)})</option>
             {FILTERABLE_ROLES.map((r) => (
-              <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+              <option key={r} value={r}>{ROLE_LABEL[r]}{allByRole[r] !== undefined ? ` (${num(allByRole[r])})` : ''}</option>
             ))}
           </Select>
         </PremiumFilterField>

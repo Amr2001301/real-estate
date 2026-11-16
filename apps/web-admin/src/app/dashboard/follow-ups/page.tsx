@@ -7,7 +7,8 @@ import { formatDateTime, tx } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumPageHero, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
 import { KIND_ICON, RESULT_TONE } from '@/components/crm/follow-up-icons';
@@ -56,34 +57,15 @@ export default async function FollowUpsPage({
         breadcrumbs={[{ label: uiT(locale).common.breadcrumbHome, href: '/dashboard' }, { label: f.page.title }]}
       />
 
-      <nav role="tablist" aria-label={f.page.title} className="flex flex-wrap gap-2 border-b border-hairline">
-        {BUCKETS.map((b) => {
-          const on = b === bucket;
-          return (
-            <Link
-              key={b}
-              role="tab"
-              aria-selected={on}
-              data-testid={`follow-tab-${b}`}
-              href={`/dashboard/follow-ups?bucket=${b}` as never}
-              className={cn(
-                '-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors',
-                on ? TONE[b].tab : 'border-transparent text-slate-500 hover:text-slate-800',
-              )}
-            >
-              {f.page.tabs[b]}
-              <span
-                className={cn(
-                  'inline-flex min-w-[22px] justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums',
-                  summary[b] > 0 ? TONE[b].count : 'bg-surface-muted text-slate-500',
-                )}
-              >
-                {summary[b]}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+      <PremiumFilterBar method="get" action="/dashboard/follow-ups">
+        <PremiumFilterField neutral label={f.page.title} htmlFor="follow-bucket">
+          <Select id="follow-bucket" name="bucket" inputSize="sm" defaultValue={bucket} data-testid="follow-bucket">
+            {BUCKETS.map((b) => (
+              <option key={b} value={b}>{f.page.tabs[b]} ({summary[b]})</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
       <p className="text-[13px] text-slate-500">{f.page.hint[bucket]}</p>
 

@@ -40,9 +40,9 @@ class HomeScreen extends StatelessWidget {
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
     final comparing = context.watch<CompareCubit>().state.isNotEmpty;
-    final bottomPad = comparing
-        ? (context.isApplePlatform ? 112.0 : 84.0)
-        : AppSpacing.xl;
+    // Clear the floating tab bar (and the compare dock above it), like the other
+    // tabs do — the last banner used to end up underneath it.
+    final bottomPad = MediaQuery.paddingOf(context).bottom + (comparing ? 176.0 : 110.0);
 
     final sessionListener = BlocListener<SessionCubit, SessionState>(
       listenWhen: (prev, curr) {

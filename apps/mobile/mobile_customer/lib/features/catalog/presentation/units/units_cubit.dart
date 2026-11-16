@@ -17,7 +17,12 @@ class UnitsCubit extends Cubit<UnitsState> {
   static const _pageSize = 12;
 
   Future<void> load() async {
-    emit(state.copyWith(status: DataStatus.loading, page: 1));
+    // With a list already on screen (a filter changed) keep it there and mark
+    // the reload, instead of swapping the page for a skeleton.
+    final keepItems = state.status == DataStatus.success && state.items.isNotEmpty;
+    emit(keepItems
+        ? state.copyWith(isRefreshing: true, page: 1)
+        : state.copyWith(status: DataStatus.loading, page: 1));
     final result = await _fetch(1);
     result.when(
       ok: (page) => emit(state.copyWith(
@@ -25,9 +30,10 @@ class UnitsCubit extends Cubit<UnitsState> {
         items: page.data,
         page: 1,
         hasMore: page.hasMore,
+        isRefreshing: false,
       )),
-      err: (failure) =>
-          emit(state.copyWith(status: DataStatus.failure, failure: failure)),
+      err: (failure) => emit(
+          state.copyWith(status: DataStatus.failure, failure: failure, isRefreshing: false)),
     );
   }
 

@@ -29,11 +29,12 @@ export {
   PremiumFilterBar,
   PremiumFilterField,
   PremiumRangeField,
-  PremiumFilterChips,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
   PremiumFilterDivider,
   PremiumViewToggle,
 } from './filter-bar';
-export type { PremiumFilterBarProps, PremiumFilterFieldProps, FilterChip, ViewOption } from './filter-bar';
+export type { PremiumFilterBarProps, PremiumFilterFieldProps, ViewOption } from './filter-bar';
 
 export { PremiumPanel, PremiumEmptyNote } from './panel';
 export type { PremiumPanelProps } from './panel';

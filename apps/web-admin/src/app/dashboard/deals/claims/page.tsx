@@ -8,7 +8,8 @@ import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
-import { PremiumPageHero, PremiumMetricStrip, PremiumEmptyState } from '@/components/premium';
+import { PremiumPageHero, PremiumMetricStrip, PremiumEmptyState, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Select } from '@/components/ui/select';
 import { dealsT, CLAIM_STATUSES, type ClaimsPayload, type ClaimStatus } from '@/components/deals/messages';
 import { CLAIM_TONE, CollectedBar, DealsTabs, Pill } from '../_components/ui';
 
@@ -62,28 +63,16 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
 
       <DealsTabs active="claims" locale={locale} isAdmin />
 
-      <nav aria-label={t.colStatus} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {[undefined, ...CLAIM_STATUSES].map((s) => {
-          const active = s === status;
-          const n = s ? counts[s] ?? 0 : Object.values(counts).reduce((a, x) => a + x, 0);
-          return (
-            <Link
-              key={s ?? 'all'}
-              href={(s ? `/dashboard/deals/claims?status=${s}` : '/dashboard/deals/claims') as never}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[13px] font-bold transition-colors',
-                active
-                  ? 'border-[#0E1626] bg-[#0E1626] text-[#F4ECD8] dark:border-[#D8B66A] dark:bg-[#D8B66A] dark:text-[#0E1626] dark:[&>span]:text-[#0E1626]/70'
-                  : 'border-hairline bg-surface text-slate-600 hover:border-[#D8B66A]/50 hover:text-slate-900',
-              )}
-            >
-              {s ? m.claimStatus[s] : m.list.all}
-              <span className={cn('num text-[12px]', active ? 'text-[#D8B66A]' : 'text-slate-400')}>{n}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <PremiumFilterBar method="get" action="/dashboard/deals/claims">
+        <PremiumFilterField label={t.colStatus} htmlFor="claims-status">
+          <Select id="claims-status" name="status" inputSize="sm" defaultValue={status ?? ''}>
+            <option value="">{m.list.all} ({Object.values(counts).reduce((a, x) => a + x, 0)})</option>
+            {CLAIM_STATUSES.map((s) => (
+              <option key={s} value={s}>{m.claimStatus[s]} ({counts[s] ?? 0})</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
       {res.error && <div role="alert" className="rounded-2xl border border-danger-100 bg-danger-50 p-4 text-sm text-danger-700">{res.error}</div>}
 

@@ -145,6 +145,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       ),
                     ),
 
+                  // A reload keeps the list in place; this line (always 2px, so nothing
+                  // moves) shows it is working.
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 2,
+                      child: state.isRefreshing ? const LinearProgressIndicator(minHeight: 2) : null,
+                    ),
+                  ),
+
                   // ── Main content ──────────────────────────────────────────
                   ..._buildContent(context, state, l10n),
                 ],

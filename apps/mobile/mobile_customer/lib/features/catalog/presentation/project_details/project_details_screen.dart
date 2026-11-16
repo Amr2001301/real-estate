@@ -196,17 +196,6 @@ class _DetailPageState extends State<_DetailPage> {
       ),
       slivers: [
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-        AppSectionTabsSliver(
-          tabs: [
-            AppSectionTab(l10n.detailTabOverview, _aboutKey),
-            if (state.previewUnits.isNotEmpty) AppSectionTab(l10n.detailTabUnits, _unitsKey),
-            if (amenities.isNotEmpty) AppSectionTab(l10n.detailTabAmenities, _amenitiesKey),
-            if (progress != null) AppSectionTab(l10n.detailTabProgress, _progressKey),
-            if (!_plans.isEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
-            if (project.hasLocation) AppSectionTab(l10n.detailTabLocation, _locationKey),
-            if (faqs.isNotEmpty) AppSectionTab(l10n.detailTabFaq, _faqKey),
-          ],
-        ),
         section(
           l10n.projectAbout,
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -400,10 +389,9 @@ class _LocationTile extends StatelessWidget {
               options: MapOptions(
                 initialCenter: point,
                 initialZoom: 15,
-                interactionOptions: const InteractionOptions(
-                  flags:
-                      InteractiveFlag.pinchZoom | InteractiveFlag.doubleTapZoom,
-                ),
+                // A preview: any touch opens the full map (below), which pans and zooms.
+                interactionOptions: const InteractionOptions(flags: InteractiveFlag.none),
+                onTap: (_, _) => _openProjectMap(context, point, label),
               ),
               children: [
                 TileLayer(
@@ -433,11 +421,7 @@ class _LocationTile extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         OutlinedButton.icon(
-          onPressed: () => ContactActions.openMap(
-            lat: project.lat!,
-            lng: project.lng!,
-            label: label,
-          ),
+          onPressed: () => _openProjectMap(context, point, label),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppPalette.gold500,
             side: BorderSide(color: AppPalette.gold400, width: 1.2),
@@ -446,12 +430,39 @@ class _LocationTile extends StatelessWidget {
             ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          icon: const Icon(Icons.open_in_new_rounded, size: 16),
-          label: Text(l10n.openInMaps),
+          icon: const Icon(Icons.map_outlined, size: 18),
+          label: Text(l10n.mapExpand),
         ),
       ],
     );
   }
+}
+
+/// The project's location on a full-screen map inside the app: pan, zoom, the pin.
+void _openProjectMap(BuildContext context, LatLng point, String title) {
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: Text(title)),
+        body: FlutterMap(
+          options: MapOptions(initialCenter: point, initialZoom: 15, minZoom: 3, maxZoom: 19),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              subdomains: const ['a', 'b', 'c'],
+              userAgentPackageName: 'com.devora.customer',
+              maxZoom: 19,
+            ),
+            MarkerLayer(markers: [Marker(point: point, width: 48, height: 48, child: const _MapPin())]),
+            const RichAttributionWidget(
+              attributions: [TextSourceAttribution('© OpenStreetMap contributors')],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _MapPin extends StatelessWidget {

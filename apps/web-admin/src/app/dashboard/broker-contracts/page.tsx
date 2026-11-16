@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, Eye, CheckCircle2, ArrowRightLeft, AlertCircle, SlidersHorizontal } from 'lucide-react';
+import { FileText, Eye, CheckCircle2, ArrowRightLeft, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerContract, Paged } from '@/lib/types';
@@ -18,6 +18,8 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
 
@@ -186,65 +188,42 @@ export default async function AdminBrokerContractsPage({
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-          <Link
-            href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
-              showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filterHideFilters : m.filterAdvanced}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
-                !
-              </span>
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
         </div>
 
         {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
         {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bc-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
-                <Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+          <PremiumFilterAdvancedPanel>
+              <PremiumFilterField label={m.filterProject}>
+<Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
                   <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bc-sales" className="text-[11px] font-medium text-slate-400">{m.filterSalesRep}</label>
-                <Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterSalesRep}>
+<Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
                   <option value="">{m.filterAllSalesReps}</option>
                   {salesUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName}</option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bc-signed" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
-                <Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterStatus}>
+<Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
                   <option value="">{m.filterAllContracts}</option>
                   <option value="yes">{m.filterStatusSigned}</option>
                   <option value="no">{m.filterStatusPending}</option>
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bc-datefrom" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
-                <Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="bc-dateto" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
-                <Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
-              </div>
-            </div>
-          </div>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateFrom}>
+<Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
+</PremiumFilterField>
+              <PremiumFilterField label={m.filterDateTo}>
+<Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
+</PremiumFilterField>
+            </PremiumFilterAdvancedPanel>
         )}
       </PremiumFilterBar>
 

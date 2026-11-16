@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/select';
-import { PremiumFilterField } from '@/components/premium/filter-bar';
+import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
 import { intlLocale } from '@/lib/format';
 import type { CompareMode, PeriodMode } from '@/lib/report-filter';
 import type { Locale } from '@/lib/locale';
@@ -131,25 +131,14 @@ export function ReportFilterBar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-hairline bg-surface p-2 sm:p-2.5 shadow-[0_10px_30px_-18px_rgb(20_26_38/0.25)]">
-      <div role="radiogroup" aria-label={isAr ? 'نوع الفترة' : 'Period type'} className="inline-flex items-center gap-1 rounded-full bg-surface-sunken/60 p-1">
-        {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="radio"
-            aria-checked={state.mode === m}
-            onClick={() => go({ mode: m })}
-            className={
-              state.mode === m
-                ? 'h-10 rounded-full bg-surface px-5 text-[14px] font-bold text-slate-900 shadow-sm'
-                : 'h-10 rounded-full px-5 text-[14px] text-slate-600 hover:text-slate-900'
-            }
-          >
-            {MODE_LABEL[m]}
-          </button>
-        ))}
-      </div>
+    <PremiumFilterBar autoSubmit={false} onSubmit={(e) => e.preventDefault()} trailing={<span className="pe-3 text-[13px] text-slate-500">{rangeText}</span>}>
+      <PremiumFilterField neutral label={isAr ? 'الفترة' : 'Period'} htmlFor="rf-mode">
+        <Select id="rf-mode" inputSize="sm" value={state.mode} onChange={(e) => go({ mode: e.target.value as PeriodMode })}>
+          {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
+            <option key={m} value={m}>{MODE_LABEL[m]}</option>
+          ))}
+        </Select>
+      </PremiumFilterField>
 
       {state.mode !== 'custom' && (
         <PremiumFilterField neutral label={isAr ? 'السنة' : 'Year'} htmlFor="rf-year">
@@ -195,8 +184,6 @@ export function ReportFilterBar({
           ))}
         </Select>
       </PremiumFilterField>
-
-      <span className="ms-auto pe-3 text-[13px] text-slate-500">{rangeText}</span>
-    </div>
+    </PremiumFilterBar>
   );
 }

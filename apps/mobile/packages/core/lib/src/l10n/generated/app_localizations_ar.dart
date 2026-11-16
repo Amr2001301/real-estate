@@ -423,6 +423,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get openInMaps => 'افتح في الخرائط';
 
   @override
+  String get mapExpand => 'عرض الخريطة بالكامل';
+
+  @override
   String get projectAvailableUnits => 'الوحدات المتاحة';
 
   @override

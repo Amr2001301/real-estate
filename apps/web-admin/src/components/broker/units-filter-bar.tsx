@@ -6,7 +6,7 @@ import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
+import { PremiumFilterBar, PremiumFilterField, PremiumFilterAdvancedPanel } from '@/components/premium/filter-bar';
 import type { Locale } from '@/lib/locale';
 import { portalSharedT } from '@/messages/portal/shared';
 import { MoreFiltersButton } from './reservations-filter-bar';
@@ -84,9 +84,8 @@ export function UnitsFilterBar({ projects, typeOptions, sp, locale = 'ar' }: Pro
         </Select>
       </PremiumFilterField>
       {showAdvanced && (
-        <div className="flex basis-full flex-wrap items-center gap-2.5 border-t border-hairline pt-2.5">
-          <span className="px-2 text-[13px] text-slate-500">{u.priceAndSpecs}</span>
-          <PremiumFilterField label={L.minPrice} htmlFor="uf-min">
+        <PremiumFilterAdvancedPanel>
+<PremiumFilterField label={L.minPrice} htmlFor="uf-min">
             <input id="uf-min" name="minPrice" type="number" min={0} dir="ltr" defaultValue={sp.minPrice ?? ''} className="w-28" />
           </PremiumFilterField>
           <PremiumFilterField label={L.maxPrice} htmlFor="uf-max">
@@ -108,7 +107,7 @@ export function UnitsFilterBar({ projects, typeOptions, sp, locale = 'ar' }: Pro
               ))}
             </Select>
           </PremiumFilterField>
-        </div>
+        </PremiumFilterAdvancedPanel>
       )}
     </PremiumFilterBar>
   );

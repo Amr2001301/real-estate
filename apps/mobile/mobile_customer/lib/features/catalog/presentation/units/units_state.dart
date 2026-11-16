@@ -64,6 +64,7 @@ class UnitsState extends Equatable {
     this.items = const [],
     this.failure,
     this.isLoadingMore = false,
+    this.isRefreshing = false,
     this.hasMore = false,
     this.page = 1,
     this.filter = const UnitsFilter(),
@@ -73,6 +74,10 @@ class UnitsState extends Equatable {
   final List<Unit> items;
   final AppFailure? failure;
   final bool isLoadingMore;
+
+  /// A filter change is reloading the list: the previous items stay on screen
+  /// (no skeleton flash, no layout jump) until the new page arrives.
+  final bool isRefreshing;
   final bool hasMore;
   final int page;
   final UnitsFilter filter;
@@ -82,6 +87,7 @@ class UnitsState extends Equatable {
     List<Unit>? items,
     AppFailure? failure,
     bool? isLoadingMore,
+    bool? isRefreshing,
     bool? hasMore,
     int? page,
     UnitsFilter? filter,
@@ -91,6 +97,7 @@ class UnitsState extends Equatable {
       items: items ?? this.items,
       failure: failure,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
       hasMore: hasMore ?? this.hasMore,
       page: page ?? this.page,
       filter: filter ?? this.filter,
@@ -99,5 +106,5 @@ class UnitsState extends Equatable {
 
   @override
   List<Object?> get props =>
-      [status, items, failure, isLoadingMore, hasMore, page, filter];
+      [status, items, failure, isLoadingMore, isRefreshing, hasMore, page, filter];
 }

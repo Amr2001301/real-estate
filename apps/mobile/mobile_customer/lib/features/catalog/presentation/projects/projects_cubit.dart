@@ -16,7 +16,12 @@ class ProjectsCubit extends Cubit<ProjectsState> {
   static const _pageSize = 12;
 
   Future<void> load() async {
-    emit(state.copyWith(status: DataStatus.loading, page: 1));
+    // With a list already on screen (a filter or search changed) keep it there
+    // and mark the reload, instead of swapping the page for a skeleton.
+    final keepItems = state.status == DataStatus.success && state.items.isNotEmpty;
+    emit(keepItems
+        ? state.copyWith(isRefreshing: true, page: 1)
+        : state.copyWith(status: DataStatus.loading, page: 1));
     final result = await _fetch(1);
     result.when(
       ok: (page) => emit(state.copyWith(
@@ -24,10 +29,13 @@ class ProjectsCubit extends Cubit<ProjectsState> {
         items: page.data,
         page: 1,
         hasMore: page.hasMore,
-        knownCities: _mergeCities(const [], page.data),
+        isRefreshing: false,
+        // The city chips are the cities seen so far, not only those of the
+        // current result: filtering to one city must not make the others vanish.
+        knownCities: _mergeCities(state.knownCities, page.data),
       )),
       err: (failure) =>
-          emit(state.copyWith(status: DataStatus.failure, failure: failure)),
+          emit(state.copyWith(status: DataStatus.failure, failure: failure, isRefreshing: false)),
     );
   }
 

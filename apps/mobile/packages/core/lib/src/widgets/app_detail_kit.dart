@@ -965,6 +965,21 @@ class AppDetailBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
+    // The home-indicator inset is kept only in part: a full inset left a wide
+    // empty strip under the button.
+    final bottom = 10 + MediaQuery.paddingOf(context).bottom * 0.45;
+
+    final buttons = <Widget>[
+      for (var i = 0; i < children.length; i++) ...[
+        if (i > 0) const SizedBox(width: AppSpacing.xs + 2),
+        // With a price, the main (last) button takes the room left beside it; without
+        // one, every button shares the row.
+        (price == null && children.length > 1) || i == children.length - 1
+            ? Expanded(child: children[i])
+            : children[i],
+      ],
+    ];
+
     return Container(
       key: const Key('detail-bottom-bar'),
       decoration: BoxDecoration(
@@ -972,38 +987,29 @@ class AppDetailBottomBar extends StatelessWidget {
         border: Border(top: BorderSide(color: colors.hairline)),
         boxShadow: [BoxShadow(color: AppPalette.navy.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -8))],
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-          child: Row(
-            children: [
-              if (price != null)
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (priceCaption != null)
-                        Text(priceCaption!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted)),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(price!,
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                    ],
-                  ),
-                ),
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0 || price != null) const SizedBox(width: AppSpacing.xs + 2),
-                price == null && children.length > 1 ? Expanded(child: children[i]) : children[i],
-              ],
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, bottom),
+        child: Row(
+          children: [
+            if (price != null) ...[
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (priceCaption != null)
+                    Text(priceCaption!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted)),
+                  Text(price!,
+                      maxLines: 1,
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: colors.inkStrong, height: 1.15)),
+                ],
+              ),
+              const SizedBox(width: AppSpacing.md),
             ],
-          ),
+            ...buttons,
+          ],
         ),
       ),
     );

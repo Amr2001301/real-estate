@@ -48,7 +48,11 @@ class MoreScreen extends StatelessWidget {
             // ── Menu + footer ─────────────────────────────────────────────
             SliverPadding(
               padding: EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, dockClear),
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                dockClear,
+              ),
               sliver: SliverList.list(
                 children: [
                   // ── General ─────────────────────────────────────────────
@@ -71,7 +75,10 @@ class MoreScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   // CMS1 — the company's published pages (about, terms…).
-                  CompanyPagesCard(title: l10n.contentAboutCompany, horizontal: 0),
+                  CompanyPagesCard(
+                    title: l10n.contentAboutCompany,
+                    horizontal: 0,
+                  ),
                   const SizedBox(height: AppSpacing.xl),
 
                   // ── Settings ─────────────────────────────────────────────
@@ -164,7 +171,10 @@ class _MoreHero extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [AppPalette.gold400.withValues(alpha: 0.16), AppPalette.gold400.withValues(alpha: 0.00)],
+                  colors: [
+                    AppPalette.gold400.withValues(alpha: 0.16),
+                    AppPalette.gold400.withValues(alpha: 0.00),
+                  ],
                   stops: [0.0, 0.65],
                 ),
               ),
@@ -180,7 +190,10 @@ class _MoreHero extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [AppPalette.gold400.withValues(alpha: 0.09), AppPalette.gold400.withValues(alpha: 0.00)],
+                  colors: [
+                    AppPalette.gold400.withValues(alpha: 0.09),
+                    AppPalette.gold400.withValues(alpha: 0.00),
+                  ],
                   stops: [0.0, 0.7],
                 ),
               ),
@@ -188,8 +201,12 @@ class _MoreHero extends StatelessWidget {
           ),
           // Content
           Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.xl,
-                topInset + AppSpacing.lg, AppSpacing.xl, AppSpacing.xl),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              topInset + AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.xl,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -265,7 +282,11 @@ class _BenefitStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        0,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -273,6 +294,8 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.favorite_rounded,
               label: context.l10n.moreBenefitFavorites,
+              // A guest is sent to sign in by the router (the account area needs a session).
+              onTap: () => context.push('/account/favorites'),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -285,6 +308,7 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.compare_arrows_rounded,
               label: context.l10n.moreBenefitCompare,
+              onTap: () => context.go('/compare'),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -297,6 +321,7 @@ class _BenefitStrip extends StatelessWidget {
             child: _BenefitTile(
               icon: Icons.timeline_rounded,
               label: context.l10n.moreBenefitTrack,
+              onTap: () => context.go('/account/property'),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -315,51 +340,61 @@ class _BenefitTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.gradient,
+    required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final Gradient gradient;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.md, horizontal: AppSpacing.xs),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(
-          color: colors.hairline.withValues(alpha: 0.7),
-        ),
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-            ),
-            child: Icon(icon, size: 22, color: Colors.white),
+    final radius = BorderRadius.circular(AppRadii.md);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md,
+            horizontal: AppSpacing.xs,
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
+            boxShadow: colors.shadowSoft,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Icon(icon, size: 22, color: Colors.white),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w700,
                   height: 1.35,
                 ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -380,10 +415,10 @@ class _SectionLabel extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: context.appColors.inkMuted,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
+          color: context.appColors.inkMuted,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -410,10 +445,7 @@ class _MenuGroup extends StatelessWidget {
         boxShadow: colors.shadowSoft,
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: children,
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }
@@ -449,7 +481,9 @@ class _MenuTile extends StatelessWidget {
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
               child: Row(
                 children: [
                   // Icon container
@@ -491,8 +525,11 @@ class _MenuTile extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   // Directional chevron
-                  Icon(AppIcons.chevronForward,
-                      size: 18, color: colors.inkMuted),
+                  Icon(
+                    AppIcons.chevronForward,
+                    size: 18,
+                    color: colors.inkMuted,
+                  ),
                 ],
               ),
             ),
@@ -504,11 +541,7 @@ class _MenuTile extends StatelessWidget {
               start: AppSpacing.lg + 44 + AppSpacing.md,
               end: AppSpacing.sm,
             ),
-            child: Divider(
-              height: 0.5,
-              thickness: 0.5,
-              color: colors.hairline,
-            ),
+            child: Divider(height: 0.5, thickness: 0.5, color: colors.hairline),
           ),
       ],
     );
@@ -539,13 +572,7 @@ class _MoreFooter extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xxs),
-        Text(
-          'v1.0.0',
-          style: TextStyle(
-            color: colors.inkMuted,
-            fontSize: 12,
-          ),
-        ),
+        Text('v1.0.0', style: TextStyle(color: colors.inkMuted, fontSize: 12)),
         const SizedBox(height: AppSpacing.md),
       ],
     );

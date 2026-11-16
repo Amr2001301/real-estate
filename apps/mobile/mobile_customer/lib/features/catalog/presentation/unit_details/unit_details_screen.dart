@@ -177,14 +177,6 @@ class _DetailPageState extends State<_DetailPage> {
         AppDetailPage.box(
           Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: _SpecsRow(unit: unit)),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
-        AppSectionTabsSliver(
-          tabs: [
-            AppSectionTab(l10n.detailTabOverview, _overviewKey),
-            AppSectionTab(l10n.detailTabFloorPlan, _planKey),
-            if (_offers.isNotEmpty) AppSectionTab(l10n.detailTabPayment, _paymentKey),
-          ],
-        ),
         section(l10n.unitAbout, key: _overviewKey),
         AppDetailPage.box(_AboutCard(text: l10n.unitAboutGeneric)),
         // EE2/EE5 — the specs the website shows (only those it has).
@@ -441,11 +433,25 @@ class _UnitPlan extends StatelessWidget {
         unit.media.where((m) => m.type.toUpperCase() == 'FLOORPLAN').toList();
 
     if (plans.isNotEmpty) {
-      return LuxeCard(
-        child: AspectRatio(
-          aspectRatio: 4 / 3,
-          child: AppNetworkImage(url: plans.first.url, fit: BoxFit.contain),
-        ),
+      // Every uploaded plan is shown (a unit can have several), each opens full screen to zoom.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final plan in plans)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: GestureDetector(
+                key: const Key('unit-floorplan'),
+                onTap: () => _openPlanViewer(context, plan.url),
+                child: LuxeCard(
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: AppNetworkImage(url: plan.url, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     }
     return _BlueprintCard(
@@ -454,6 +460,23 @@ class _UnitPlan extends StatelessWidget {
       onRequest: onRequest,
     );
   }
+}
+
+void _openPlanViewer(BuildContext context, String url) {
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+        body: InteractiveViewer(
+          minScale: 1,
+          maxScale: 5,
+          child: Center(child: AppNetworkImage(url: url, fit: BoxFit.contain)),
+        ),
+      ),
+    ),
+  );
 }
 
 class _BlueprintCard extends StatelessWidget {
@@ -723,7 +746,9 @@ class _CompareButton extends StatelessWidget {
       action: result == CompareToggle.added
           ? SnackBarAction(
               label: l10n.compareTitle,
-              onPressed: () => context.push('/compare'),
+              // `go`, not `push`: /compare is a shell tab, and pushing a tab route over a
+              // root page puts the shell page in the stack twice (duplicate page key).
+              onPressed: () => context.go('/compare'),
             )
           : null,
     ));

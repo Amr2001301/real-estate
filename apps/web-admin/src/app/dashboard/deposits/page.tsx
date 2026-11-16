@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {
   DollarSign, CreditCard, Landmark, Hash,
-  SlidersHorizontal, ReceiptText,
+  ReceiptText,
   ExternalLink, Plus, AlertCircle, RotateCcw,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
@@ -26,6 +26,7 @@ import {
   PremiumRangeField,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
 } from '@/components/premium';
 import { CodeCell, PersonCell } from '@/components/premium/list-cells';
 import { uiT } from '@/messages/ui';
@@ -245,21 +246,7 @@ export default async function DepositsPage({
         {/* Row 1 ends with the actions; reset shows only when something is set */}
         <div className="flex items-center gap-1.5 shrink-0">
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          <Link
-            href={toggleFiltersUrl as never}
-            className={cn(
-              'relative inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[12.5px] font-semibold transition-colors',
-              showFilters
-                ? 'border-brand-500/50 bg-brand-500/10 text-brand-700'
-                : 'border-hairline text-slate-500 hover:border-brand-500/30 hover:text-slate-800',
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="absolute -top-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-brand-500 ring-2 ring-surface" />
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filter.advancedHide : m.filter.advancedShow} />
           {hasAnyFilter && (
             <Link
               href="/dashboard/deposits"

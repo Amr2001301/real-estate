@@ -182,18 +182,16 @@ export default async function ClientsPage({
           </Select>
         </PremiumFilterField>
 
-        <div className="flex-1 min-w-[180px]">
-          <label htmlFor="cli-q" className="sr-only">{m.filter.searchLabel}</label>
-          <Input
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="cli-q">
+<Input
             id="cli-q"
             name="q"
             inputSize="sm"
             defaultValue={q}
             placeholder={m.filter.searchPlaceholder}
             leftAddon={<Search />}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
         <div className="flex items-center gap-2 shrink-0">
           <Button type="submit" variant="primary" size="sm">{m.filter.searchLabel}</Button>
           {(q || role !== 'CLIENT') && (

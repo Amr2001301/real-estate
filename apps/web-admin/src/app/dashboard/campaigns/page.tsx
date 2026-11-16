@@ -8,7 +8,8 @@ import { getSession } from '@/lib/session';
 import { can } from '@/lib/permissions';
 import { currencySymbol, getReportsCurrency } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
-import { PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
+import { PremiumMetricStrip, PremiumPageHero, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { campaignT } from '@/components/campaigns/messages';
@@ -159,26 +160,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             </section>
           )}
 
-          {/* Status tabs */}
-          <nav className="flex flex-wrap items-center gap-1 rounded-full bg-surface p-1 ring-1 ring-inset ring-hairline w-fit">
-            {[null, ...STATUSES].map((s) => {
-              const on = s === status;
-              const count = s ? all.filter((c) => c.status === s).length : all.length;
-              return (
-                <Link
-                  key={s ?? 'all'}
-                  href={(s ? `/dashboard/campaigns?status=${s}` : '/dashboard/campaigns') as never}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-semibold transition-colors',
-                    on ? 'bg-navy-band text-white shadow-soft' : 'text-slate-600 hover:text-slate-900',
-                  )}
-                >
-                  {s ? m.status[s] : L.filters.all}
-                  <span className={cn('rounded-full px-1.5 text-[10.5px] tabular-nums', on ? 'bg-white/15 text-white' : 'bg-surface-muted text-slate-500')}>{count}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <PremiumFilterBar method="get" action="/dashboard/campaigns">
+            <PremiumFilterField label={L.filters.status} htmlFor="camp-status">
+              <Select id="camp-status" name="status" inputSize="sm" defaultValue={status ?? ''}>
+                <option value="">{L.filters.all} ({all.length})</option>
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>{m.status[s]} ({all.filter((c) => c.status === s).length})</option>
+                ))}
+              </Select>
+            </PremiumFilterField>
+          </PremiumFilterBar>
 
           <ul data-testid="campaign-list" className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
             {rows.map((c) => {

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, BookmarkCheck, AlertCircle, SlidersHorizontal, Phone, Building2 } from 'lucide-react';
+import { Plus, BookmarkCheck, AlertCircle, Phone, Building2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
@@ -20,6 +20,8 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
+  PremiumFilterAdvancedToggle,
+  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
@@ -175,17 +177,15 @@ export default async function ReservationsPage({
         {!showFilters && sp.dateTo   && <input type="hidden" name="dateTo"   value={sp.dateTo} />}
 
         {/* Search — flex-1 to fill available space */}
-        <div className="flex-1 min-w-[160px]">
-          <label htmlFor="res-q" className="sr-only">{m.filter.searchLabel}</label>
-          <Input
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="res-q">
+<Input
             id="res-q"
             name="q"
             inputSize="sm"
             defaultValue={sp.q ?? ''}
             placeholder={m.filter.searchPlaceholder}
-            className="w-full"
           />
-        </div>
+</PremiumFilterField>
 
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="res-status">
           <Select id="res-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
@@ -216,46 +216,27 @@ export default async function ReservationsPage({
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
-          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
-          <Link
-            href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
-              showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700'
-                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
-            {hasAdvancedFilters && !showFilters && (
-              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">!</span>
-            )}
-          </Link>
+          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filter.advancedHide : m.filter.advancedShow} />
         </div>
 
         {/* Advanced panel — basis-full forces row 2 */}
         {showFilters && (
-          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.filter.agentLabel}</label>
-                <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+          <PremiumFilterAdvancedPanel>
+              <PremiumFilterField label={m.filter.agentLabel}>
+<Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
                   <option value="">{m.filter.allAgents}</option>
                   {salesOptions.map((s) => (
                     <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
                   ))}
                 </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.filter.dateFrom}</label>
-                <Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">{m.filter.dateTo}</label>
-                <Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
-              </div>
-            </div>
-          </div>
+</PremiumFilterField>
+              <PremiumFilterField label={m.filter.dateFrom}>
+<Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
+</PremiumFilterField>
+              <PremiumFilterField label={m.filter.dateTo}>
+<Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
+</PremiumFilterField>
+            </PremiumFilterAdvancedPanel>
         )}
       </PremiumFilterBar>
 

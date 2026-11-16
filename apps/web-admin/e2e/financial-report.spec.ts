@@ -32,12 +32,10 @@ test('the financial report leads with collections, the rate and the months', asy
 
   await expect(page.locator('main')).not.toContainText('PENDING');
 
-  // The period fields share one row in equal columns (the "more filters"
-  // button no longer wraps onto a line of its own).
+  // The period fields share one row (the "more filters" toggle does not wrap onto a line of its own).
   const year = await page.locator('label[for="ff-year"]').boundingBox();
   const compare = await page.locator('label[for="ff-compare"]').boundingBox();
   expect(Math.abs(year!.y - compare!.y)).toBeLessThan(2);
-  expect(Math.abs(year!.width - compare!.width)).toBeLessThan(4);
 });
 
 /**
