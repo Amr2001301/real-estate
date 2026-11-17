@@ -23,7 +23,7 @@ import {
   PremiumFilterAdvancedToggle,
   PremiumFilterAdvancedPanel,
 } from '@/components/premium';
-import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
@@ -140,16 +140,17 @@ export default async function ReservationsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={5}
           figures={[
-            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations' },
-            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0 },
-            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED' },
-            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED' },
-            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—' },
+            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations', icon: FigIcons.total, pct: 100 },
+            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0, icon: FigIcons.pending, tone: 'amber', pct: stats?.total ? ((stats.pending ?? 0) / stats.total) * 100 : 0 },
+            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green', pct: stats?.total ? ((stats.approved ?? 0) / stats.total) * 100 : 0 },
+            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED', icon: FigIcons.rejected, tone: 'red', pct: stats?.total ? ((stats.rejected ?? 0) / stats.total) * 100 : 0 },
+            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—', icon: FigIcons.alert, tone: 'gray', pct: stats?.total ? (((stats.expired ?? 0) + (stats.cancelled ?? 0)) / stats.total) * 100 : 0 },
           ]}
         />
       </section>

@@ -5,7 +5,7 @@ import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerContract, Paged } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Amount, Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { Amount, Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -140,15 +140,16 @@ export default async function AdminBrokerContractsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: m.kpiTotal, value: totalContracts },
-            { label: m.kpiSigned, value: counts.signed, sub: m.kpiThisPage },
-            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0 },
-            { label: m.kpiTotalValue, value: totalValue > 0 ? <Amount parts={compactParts(totalValue, symbol, locale)} /> : '—', sub: m.kpiThisPage },
+            { label: m.kpiTotal, value: totalContracts, icon: FigIcons.total },
+            { label: m.kpiSigned, value: counts.signed, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green' },
+            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.sign },
+            { label: m.kpiTotalValue, value: totalValue > 0 ? <Amount parts={compactParts(totalValue, symbol, locale)} /> : '—', sub: m.kpiThisPage, icon: FigIcons.money, tone: 'blue' },
           ]}
         />
       </section>

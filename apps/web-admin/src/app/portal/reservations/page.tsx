@@ -4,7 +4,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
@@ -92,15 +92,16 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: paged?.meta.total ?? 0, href: '/portal/reservations' },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/reservations?status=PENDING', warn: pendingCount > 0 },
-            { label: t.metrics.approved, value: approvedCount, href: '/portal/reservations?status=APPROVED' },
-            { label: t.metrics.converted, value: convertedCount, href: '/portal/reservations?status=CONVERTED' },
+            { label: t.metrics.total, value: paged?.meta.total ?? 0, href: '/portal/reservations', icon: FigIcons.total },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/reservations?status=PENDING', warn: pendingCount > 0, icon: FigIcons.pending },
+            { label: t.metrics.approved, value: approvedCount, href: '/portal/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green' },
+            { label: t.metrics.converted, value: convertedCount, href: '/portal/reservations?status=CONVERTED', icon: FigIcons.sign, tone: 'blue' },
           ]}
         />
       </section>

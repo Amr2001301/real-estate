@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { EntityLink } from '@/components/entity-link';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -120,20 +120,24 @@ export default async function ContractsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts' },
-            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes' },
+            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts', icon: FigIcons.total, pct: 100 },
+            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes', icon: FigIcons.done, tone: 'green', pct: totalContracts ? ((signedCount ?? 0) / totalContracts) * 100 : 0 },
             {
               label: m.figures.unsigned,
               value: signedCount === undefined ? '—' : totalContracts - signedCount,
               href: '/dashboard/contracts?signed=no',
+              icon: FigIcons.sign,
+              tone: 'amber',
+              pct: totalContracts && signedCount !== undefined ? ((totalContracts - signedCount) / totalContracts) * 100 : 0,
               warn: signedCount !== undefined && totalContracts - signedCount > 0,
             },
-            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0 },
+            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0, icon: FigIcons.alert, tone: 'red', pct: totalContracts ? ((delayedCount ?? 0) / totalContracts) * 100 : 0 },
           ]}
         />
       </section>

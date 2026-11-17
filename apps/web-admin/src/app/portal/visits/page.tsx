@@ -11,7 +11,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
-import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
@@ -116,15 +116,16 @@ export default async function PortalVisitsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: totalCount, href: '/portal/visits' },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/visits?requestStatus=NEW', warn: pendingCount > 0 },
-            { label: t.metrics.scheduled, value: scheduledCount, href: '/portal/visits?requestStatus=CONVERTED' },
-            { label: t.metrics.rejected, value: rejectedCount, href: '/portal/visits?requestStatus=REJECTED' },
+            { label: t.metrics.total, value: totalCount, href: '/portal/visits', icon: FigIcons.total },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/visits?requestStatus=NEW', warn: pendingCount > 0, icon: FigIcons.pending },
+            { label: t.metrics.scheduled, value: scheduledCount, href: '/portal/visits?requestStatus=CONVERTED', icon: FigIcons.calendar, tone: 'green' },
+            { label: t.metrics.rejected, value: rejectedCount, href: '/portal/visits?requestStatus=REJECTED', icon: FigIcons.rejected, tone: 'red' },
           ]}
         />
       </section>

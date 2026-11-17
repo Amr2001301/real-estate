@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowUpRight, CalendarCheck2, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, CalendarCheck2, CalendarDays, CheckCircle2, Clock3, FileText, PenLine, Wallet, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/initials';
 
@@ -98,6 +98,76 @@ export interface Figure {
   sub?: string;
   href?: string;
   warn?: boolean;
+  /** `cards` variant: leading icon tile. */
+  icon?: ReactNode;
+  /** `cards` variant: colour of the icon tile and the share bar. */
+  tone?: 'gold' | 'green' | 'amber' | 'red' | 'blue' | 'gray';
+  /** `cards` variant: 0–100 share bar under the figure. */
+  pct?: number;
+}
+
+/** Ready-made icons for the `cards` figure variant. */
+export const FigIcons = {
+  total: <FileText />,
+  pending: <Clock3 />,
+  done: <CheckCircle2 />,
+  rejected: <XCircle />,
+  alert: <AlertTriangle />,
+  sign: <PenLine />,
+  calendar: <CalendarDays />,
+  confirm: <CalendarCheck2 />,
+  money: <Wallet />,
+};
+
+const FIGURE_TONES: Record<NonNullable<Figure['tone']>, { tile: string; bar: string; chip: string }> = {
+  gold: { tile: 'bg-[#C8A24B]/15 text-[#8A6823] dark:text-[#E2C792]', bar: 'bg-gradient-to-l from-[#EAD5A3] via-[#C8A24B] to-[#9E7A2B]', chip: 'bg-[#C8A24B]/15 text-[#8A6823] dark:text-[#E2C792]' },
+  green: { tile: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300', bar: 'bg-emerald-600', chip: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' },
+  amber: { tile: 'bg-amber-500/15 text-amber-700 dark:text-amber-300', bar: 'bg-amber-600', chip: 'bg-amber-500/15 text-amber-700 dark:text-amber-300' },
+  red: { tile: 'bg-rose-500/12 text-rose-700 dark:text-rose-300', bar: 'bg-rose-600', chip: 'bg-rose-500/12 text-rose-700 dark:text-rose-300' },
+  blue: { tile: 'bg-blue-500/12 text-blue-700 dark:text-blue-300', bar: 'bg-blue-700', chip: 'bg-blue-500/12 text-blue-700 dark:text-blue-300' },
+  gray: { tile: 'bg-slate-500/12 text-slate-600 dark:text-slate-300', bar: 'bg-slate-500', chip: 'bg-slate-500/12 text-slate-600 dark:text-slate-300' },
+};
+
+function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
+  return (
+    <dl
+      data-testid="figure-bar"
+      className={cn(
+        'grid grid-cols-2 gap-4',
+        FIGURE_COLS[Math.min(cols, Math.max(2, figures.length))] ?? 'xl:grid-cols-4',
+        figures.length % 2 === 1 && 'max-xl:[&>*:first-child]:col-span-2',
+      )}
+    >
+      {figures.map((f) => {
+        const tone = FIGURE_TONES[f.tone ?? (f.warn ? 'amber' : 'gold')];
+        const body = (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-[13px] font-medium text-slate-500">{f.label}</dt>
+              {f.icon && <span aria-hidden className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] [&_svg]:h-[19px] [&_svg]:w-[19px]', tone.tile)}>{f.icon}</span>}
+            </div>
+            <dd className="num mt-3.5 whitespace-nowrap text-[34px] font-semibold leading-none tracking-tight text-slate-900">{f.value}</dd>
+            <dd className="mt-3 flex min-h-[24px] items-center">
+              {(f.sub ?? (f.pct !== undefined && f.pct < 100 ? `${Math.round(f.pct)}%` : null)) && <span dir={f.sub ? undefined : 'ltr'} className={cn('inline-flex max-w-full items-center truncate rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums', tone.chip)}>{f.sub ?? `${Math.round(f.pct as number)}%`}</span>}
+            </dd>
+            {f.pct !== undefined && (
+              <div className="mt-3 h-1.5 rounded-full bg-slate-500/15">
+                <span className={cn('block h-full rounded-full', tone.bar)} style={{ width: `${Math.min(Math.max(f.pct, 3), 100)}%` }} />
+              </div>
+            )}
+          </>
+        );
+        const cls = 'block min-w-0 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none';
+        return f.href ? (
+          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-shadow hover:shadow-[0_14px_34px_-12px_rgb(11_18_32/0.18)]')}>
+            {body}
+          </Link>
+        ) : (
+          <div key={f.label} data-testid="figure" className={cls}>{body}</div>
+        );
+      })}
+    </dl>
+  );
 }
 
 /**
@@ -113,7 +183,8 @@ const FIGURE_COLS: Record<number, string> = {
   6: 'sm:grid-cols-3 xl:grid-cols-6',
 };
 
-export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean }) {
+export function FigureBar({ figures, cols = 6, variant = 'band' }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean; variant?: 'band' | 'cards' }) {
+  if (variant === 'cards') return <FigureCards figures={figures} cols={cols} />;
   return (
     <dl
       data-testid="figure-bar"
