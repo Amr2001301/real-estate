@@ -7,6 +7,7 @@ import type { Locale } from '@/lib/locale';
 import { formatDateTime } from '@/lib/format';
 import { PremiumPanel } from '@/components/premium';
 import { cn } from '@/lib/cn';
+import { Panel } from '@/components/dashboard/admin-home';
 import { KIND_ICON } from './follow-up-icons';
 import { followUpT } from './follow-up-messages';
 
@@ -14,7 +15,7 @@ import { followUpT } from './follow-up-messages';
  * «متابعات اليوم» on the dashboard home: how many follow-ups are overdue,
  * due today and upcoming, and the first few to act on now.
  */
-export async function FollowUpsPanel({ locale, limit = 5 }: { locale: Locale; limit?: number }) {
+export async function FollowUpsPanel({ locale, limit = 5, variant = 'default' }: { locale: Locale; limit?: number; variant?: 'default' | 'wide' }) {
   const f = followUpT(locale);
   const [summaryRes, overdueRes, todayRes] = await Promise.all([
     safe(api.get<FollowUpSummary>('/leads/follow-ups/summary')),
@@ -33,6 +34,75 @@ export async function FollowUpsPanel({ locale, limit = 5 }: { locale: Locale; li
     { key: 'today' as const, n: summary.today, on: 'bg-amber-500/12 text-amber-700' },
     { key: 'upcoming' as const, n: summary.upcoming, on: 'bg-brand-500/10 text-brand-800' },
   ];
+
+  if (variant === 'wide') {
+    // The redesigned admin home: the three counts stacked beside the list.
+    const tone = {
+      overdue: 'bg-danger-600/[0.08] text-danger-700 dark:text-[#F06A6A]',
+      today: 'bg-amber-500/[0.11] text-[#94650A] dark:text-[#E9B44C]',
+      upcoming: 'bg-[#C8A24B]/[0.12] text-[#8A6823] dark:text-[#E2C792]',
+    } as const;
+    return (
+      <div data-testid="follow-ups-panel">
+        <Panel title={f.panel.title} sub={f.panel.desc} link={{ href: '/dashboard/follow-ups', label: f.panel.all }}>
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.2fr)]">
+            <div className="grid grid-cols-3 gap-2.5 lg:grid-cols-1">
+              {tiles.map((t) => (
+                <Link
+                  key={t.key}
+                  href={`/dashboard/follow-ups?bucket=${t.key}` as never}
+                  data-testid={`follow-count-${t.key}`}
+                  className={cn(
+                    'flex min-h-[64px] items-center justify-between rounded-2xl px-[18px] transition-opacity hover:opacity-85',
+                    t.n > 0 ? tone[t.key] : 'bg-surface-muted text-slate-500',
+                  )}
+                >
+                  <span className="text-[14px] font-semibold">{f.page.tabs[t.key]}</span>
+                  <span className="num text-[26px] font-semibold leading-none">{t.n}</span>
+                </Link>
+              ))}
+            </div>
+            {rows.length === 0 ? (
+              <p className="flex items-center gap-2 self-center text-[13px] text-slate-500">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {f.panel.clear}
+              </p>
+            ) : (
+              <ul className="-my-1 flex flex-col">
+                {rows.map(({ l, overdue }, i) => {
+                  const phone = l.client?.phone ?? l.phone;
+                  const Icon = KIND_ICON[l.nextActionType ?? 'FOLLOW_UP'];
+                  return (
+                    <li key={l.id} className={cn('flex items-center gap-3 py-[11px]', i > 0 && 'border-t border-hairline')}>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full',
+                          overdue ? 'bg-danger-500/10 text-danger-600' : 'bg-amber-500/12 text-amber-600',
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/dashboard/leads/${l.id}` as never} className="block truncate text-[13.5px] font-semibold text-slate-900 hover:text-[#8A6823]">
+                          {l.client?.fullName ?? l.fullName}
+                        </Link>
+                        <p className={cn('flex items-center gap-1 text-[12px]', overdue ? 'text-danger-600' : 'text-amber-600')}>
+                          <span className="num">{formatDateTime(l.nextActionAt, locale)}</span>
+                          <span className="truncate text-slate-500">· {f.nextType[l.nextActionType ?? 'FOLLOW_UP']}</span>
+                        </p>
+                      </div>
+                      <QuickContact leadId={l.id} phone={phone} kind="CALL" label={f.page.call} />
+                      <QuickContact leadId={l.id} phone={phone} kind="WHATSAPP" label={f.page.whatsapp} />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <div data-testid="follow-ups-panel">

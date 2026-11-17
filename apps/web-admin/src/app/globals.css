@@ -427,3 +427,29 @@
     color: #d8b66a !important;
   }
 }
+
+/* ── Redesigned admin home (.dash-v2) ───────────────────────────────────────
+   Scoped to the system admin's dashboard only: El Messiri headings, IBM Plex
+   Sans Arabic text and Inter figures. Other pages keep the current fonts. */
+.dash-v2 {
+  font-family: 'IBM Plex Sans Arabic', 'Inter', var(--font-sans);
+  --slice-0: #C8A24B;
+  --slice-1: #22355A;
+  --slice-2: #8A6823;
+  --slice-3: #4CC38A;
+  --slice-4: #94A3B8;
+}
+.dark .dash-v2 {
+  --slice-1: #7FA6E8;
+  --slice-2: #E2C792;
+}
+.dash-v2 .font-heading,
+.dash-v2 h1,
+.dash-v2 h2,
+.dash-v2 h3 {
+  font-family: 'El Messiri', 'IBM Plex Sans Arabic', serif;
+}
+.dash-v2 .num {
+  font-family: 'Inter', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+}

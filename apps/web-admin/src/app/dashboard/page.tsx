@@ -1,34 +1,34 @@
 import { Plus, AlertCircle } from 'lucide-react';
 import { activityActionLabel, monthChartLabel } from '@/lib/activity-labels';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { api, safe } from '@/lib/api';
 import { getSession, isBrokerage } from '@/lib/session';
 import { getDisabledFeatures } from '@/lib/capabilities';
-import { compactParts, intlLocale } from '@/lib/format';
+import { compactParts, intlLocale, tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone } from '@/lib/currency';
 import { getLocale, type Locale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
-import { Button } from '@/components/ui/button';
 import { ExportMenu } from '@/components/export-menu';
-import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { groupActivity } from '@/components/dashboard/admin-panels';
 import {
-  ActivityPanel,
-  CashFlowPanel,
-  FinancialHealthPanel,
-  FunnelPanel,
-  LeadSourcesPanel,
-  LeaderboardPanel,
-  MonthlyBarsPanel,
-  NeedsActionPanel,
-  ProjectHealthPanel,
-  groupActivity,
-} from '@/components/dashboard/admin-panels';
+  ActionTiles,
+  ActivityPanelV2,
+  CashFlowV2,
+  FinancialHealthV2,
+  FunnelV2,
+  HeroAction,
+  HeroV2,
+  LeadSourcesV2,
+  LeaderboardV2,
+  MonthlyBarsV2,
+  ProjectHealthV2,
+} from '@/components/dashboard/admin-home';
+
 import { SalesDashboard } from './_components/sales-home';
 import { BrokerageDashboard } from './_components/brokerage-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
-import type { TopBrokersResponse } from '@/lib/types';
+import type { Paged, Project, TopBrokersResponse } from '@/lib/types';
 import { AiUsageCard, type AiUsage } from '@/components/ai/ai-usage-card';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -199,12 +199,14 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const [r, topSalesRes, topBrokersRes, aiUsageRes] = await Promise.all([
+  const [r, topSalesRes, topBrokersRes, aiUsageRes, projectsRes] = await Promise.all([
     safe(api.get<AdminSummary>('/reports/admin-summary')),
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
     safe(api.get<TopBrokersResponse>('/broker-reports/top-brokers?limit=5&metric=salesGross')),
     // The AI assistant package — shown only when enabled for the company.
     session?.role === 'ADMIN' ? safe(api.get<AiUsage>('/ai/usage')) : Promise.resolve({ data: null }),
+    // The project rows show each project's cover photo and city (from the projects list).
+    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
   ]);
 
   const summary = r.data;
@@ -250,12 +252,19 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   // Overdue is one figure on the page: towards the price, fees out.
   const forecastTotal = forecast ? forecast.next30 + forecast.next3160 + forecast.next6190 + overdue : 0;
 
+  const projectInfo = new Map(
+    (projectsRes.data?.data ?? []).map((p) => [p.id, { cover: p.media?.[0]?.url, city: p.city, name: tx(p.name, locale) }]),
+  );
+  // The hero shows the leading project's photo; a bundled architectural photo without one.
+  const heroImage = topProjects.map((p) => projectInfo.get(p.id)?.cover).find(Boolean) ?? '/images/dashboard-hero.jpg';
+
   return (
-    <div className="flex flex-col gap-6">
-      <PremiumPageHero
+    <div className="dash-v2 flex flex-col gap-6">
+      <HeroV2
         eyebrow={date}
         title={greeting}
         description={m.description}
+        image={heroImage}
         actions={
           <>
             <ExportMenu
@@ -264,42 +273,37 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               pdfPath="/reports/admin-summary/export.pdf"
               xlsxPath="/reports/admin-summary/export.xlsx"
               filenameBase="dashboard-report"
+              buttonClassName="h-11 rounded-full border-white/25 bg-white/10 text-[#F7F3EA] backdrop-blur-md hover:border-white/40 hover:bg-white/15 hover:text-[#F7F3EA]"
             />
-            <Link href={'/dashboard/reservations/new' as never}>
-              <Button variant="outline" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.u5.newBooking}</Button>
-            </Link>
-            <Link href={'/dashboard/deposits/new' as never}>
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>{m.u5.recordPayment}</Button>
-            </Link>
+            <HeroAction href="/dashboard/reservations/new" icon={<Plus />}>{m.u5.newBooking}</HeroAction>
+            <HeroAction href="/dashboard/deposits/new" icon={<Plus />} gold>{m.u5.recordPayment}</HeroAction>
           </>
         }
-      >
-        {summary && (
-          <PremiumMetricStrip
-            cols={5}
-            metrics={[
-              { label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub },
-              {
-                label: m.u5.collected, value: colNum, unit: colUnit,
-                sub: fees > 0 ? m.u5.feesSub(compactParts(fees, symbol, locale).join(' ')) : undefined,
-                trend: collectionDelta !== null ? m.deltaLabel(collectionDelta) : undefined,
-                trendCls: collectionDelta !== null && collectionDelta >= 0 ? 'success' : 'danger',
-              },
-              {
-                label: m.kpi.collectionRate, value: rate !== null ? rate : '—', unit: rate !== null ? '%' : '',
-                ring: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
-                trend: rate !== null ? rateNote : undefined,
-                trendCls: rate === null ? undefined : rate >= 90 ? 'success' : rate >= 70 ? 'warning' : 'danger',
-              },
-              { label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone },
-              {
-                label: m.kpi.monthContracts, value: fin?.signedContractsThisMonth ?? 0,
-                sub: kpis ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits) : undefined,
-              },
-            ]}
-          />
-        )}
-      </PremiumPageHero>
+        metrics={
+          summary
+            ? [
+                { label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub },
+                {
+                  label: m.u5.collected, value: colNum, unit: colUnit,
+                  sub: fees > 0 ? m.u5.feesSub(compactParts(fees, symbol, locale).join(' ')) : undefined,
+                  trend: collectionDelta !== null ? m.deltaLabel(collectionDelta) : undefined,
+                  tone: collectionDelta !== null && collectionDelta >= 0 ? 'success' : 'danger',
+                },
+                {
+                  label: m.kpi.collectionRate, value: rate !== null ? rate : '—', unit: rate !== null ? '%' : '',
+                  ring: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
+                  trend: rate !== null ? rateNote : undefined,
+                  tone: rate === null ? undefined : rate >= 90 ? 'success' : rate >= 70 ? 'warning' : 'danger',
+                },
+                { label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone },
+                {
+                  label: m.kpi.monthContracts, value: fin?.signedContractsThisMonth ?? 0,
+                  sub: kpis ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits) : undefined,
+                },
+              ]
+            : []
+        }
+      />
 
       {error && (
         <div className="rounded-card bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
@@ -311,7 +315,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      <NeedsActionPanel
+      <ActionTiles
         title={m.actionBar.header}
         allClear={m.actionBar.allClear}
         items={[
@@ -337,16 +341,14 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         ]}
       />
 
-      <FollowUpsPanel locale={locale} />
+      <FollowUpsPanel locale={locale} variant="wide" />
 
       <AiUsageCard usage={aiUsageRes.data ?? null} locale={locale} />
 
-      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-        {/* Both columns stretch to one height and their last panel fills the
-            rest, so neither side leaves an empty gap under it. */}
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <ActivityPanel
-            className="flex-1"
+      {/* Two columns of one height: the bars stretch to meet the leaderboards. */}
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <ActivityPanelV2
             title={m.activityFeed.title}
             sub={m.activityCount(summary?.recentActivity.length ?? 0)}
             link={{ href: '/dashboard/audit', label: m.viewAllFull }}
@@ -354,16 +356,15 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
             items={activity}
             money={money}
           />
-          <MonthlyBarsPanel
+          <MonthlyBarsV2
             title={m.charts.reservationTrend}
             sub={m.charts.reservationDesc}
-            badge={m.charts.reservationBadge}
             empty={m.charts.empty}
             data={(summary?.reservationTrend ?? []).map((t) => ({ label: monthChartLabel(t.month, t.label, locale), value: t.value }))}
           />
         </div>
-        <div className="flex flex-col gap-6">
-          <LeaderboardPanel
+        <div className="flex min-w-0 flex-col gap-5">
+          <LeaderboardV2
             title={m.topSales.title}
             sub={m.topSales.sub}
             link={{ href: '/dashboard/sales/performance', label: m.viewAll }}
@@ -374,7 +375,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               .slice(0, 5)
               .map((x) => ({ id: x.salesId, name: x.salesName, sub: `${x.signedContractsCount} ${m.topSales.contractSuffix}`, value: x.achievedAmount }))}
           />
-          <LeaderboardPanel
+          <LeaderboardV2
+            className="flex-1"
             title={m.topBrokers.title}
             sub={m.topBrokers.sub}
             link={{ href: '/dashboard/broker-reports', label: m.viewAll }}
@@ -384,9 +386,27 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               .slice(0, 5)
               .map((b) => ({ id: b.brokerId, name: b.companyName, sub: `${b.contractsSigned} ${m.topBrokers.contractSuffix}`, value: Number(b.salesGross) }))}
           />
+        </div>
+      </div>
+
+      {(topProjects.length > 0 || funnel) && (
+        <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          {topProjects.length > 0 && (
+            <ProjectHealthV2
+              title={m.projectHealth.title}
+              sub={`${topProjects.length} ${m.projectHealth.activeSuffix}`}
+              link={{ href: '/dashboard/projects', label: m.projectHealth.viewAll }}
+              labels={m.u5.projects}
+              money={money}
+              projects={topProjects.map((p) => ({
+                id: p.id, name: projectInfo.get(p.id)?.name || p.name, city: projectInfo.get(p.id)?.city, cover: projectInfo.get(p.id)?.cover,
+                sold: p.soldUnits, reserved: p.reservedUnits, available: p.availableUnits,
+                signed: p.signedContracts, value: p.contractValue,
+              }))}
+            />
+          )}
           {funnel && (
-            <FunnelPanel
-              className="flex-1"
+            <FunnelV2
               title={m.u5.funnel.title}
               sub={m.u5.funnel.sub}
               footnote={m.u5.funnelNote}
@@ -406,40 +426,23 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
             />
           )}
         </div>
-      </div>
-
-      {topProjects.length > 0 && (
-        <ProjectHealthPanel
-          title={m.projectHealth.title}
-          sub={`${topProjects.length} ${m.projectHealth.activeSuffix}`}
-          link={{ href: '/dashboard/projects', label: m.projectHealth.viewAll }}
-          labels={m.u5.projects}
-          money={money}
-          projects={topProjects.map((p) => ({
-            id: p.id, name: p.name, sold: p.soldUnits, reserved: p.reservedUnits, available: p.availableUnits,
-            signed: p.signedContracts, value: p.contractValue,
-          }))}
-        />
       )}
 
-      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {fin && (
-          <div className="lg:col-span-2">
-            <FinancialHealthPanel
-              className="h-full"
-              title={m.u5.healthTitle}
-              sub={m.u5.healthSub}
-              total={total}
-              collected={collected}
-              overdue={overdue}
-              fees={fees}
-              portfolio={summary?.portfolio}
-              labels={m.u5.health}
-              money={money}
-            />
-          </div>
+          <FinancialHealthV2
+            title={m.u5.healthTitle}
+            sub={m.u5.healthSub}
+            total={total}
+            collected={collected}
+            overdue={overdue}
+            fees={fees}
+            portfolio={summary?.portfolio}
+            labels={m.u5.health}
+            money={money}
+          />
         )}
-        <LeadSourcesPanel
+        <LeadSourcesV2
           title={m.charts.leadSources}
           sub={m.charts.leadSourcesDesc}
           centerSub={m.charts.donutSub}
@@ -450,7 +453,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
       </div>
 
       {forecast && (
-        <CashFlowPanel
+        <CashFlowV2
           title={m.cashFlow.title}
           sub={<>{m.u5.next90} · {m.cashFlow.totalSub} {compactParts(forecastTotal, symbol, locale).join(' ')}</>}
           link={{ href: '/dashboard/reports/financial', label: m.cashFlow.detailLink }}
