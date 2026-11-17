@@ -118,7 +118,7 @@ export default async function ReservationsPage({
   const salesOptions: SalesUser[] = salesRes.data?.data ?? [];
 
   return (
-    <ListPage>
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero

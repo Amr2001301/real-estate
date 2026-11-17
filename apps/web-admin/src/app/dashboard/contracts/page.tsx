@@ -98,7 +98,7 @@ export default async function ContractsPage({
   const ofTotal = locale === 'ar' ? 'من الإجمالي' : 'of total';
 
   return (
-    <ListPage>
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero

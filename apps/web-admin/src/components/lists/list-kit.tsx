@@ -45,9 +45,54 @@ export function ListTableCard({
   );
 }
 
-/** The page: on large screens it fills the viewport, so only the table scrolls and the pager stays put. */
-export function ListPage({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-5 lg:h-[calc(100dvh-76px-4rem)] lg:min-h-[640px]">{children}</div>;
+/**
+ * The page: on large screens it fills the viewport, so only the table scrolls and the pager stays put.
+ * `minHeight` keeps the table usable on short screens (the page then scrolls instead of squeezing it).
+ */
+export function ListPage({ children, minHeight = 900 }: { children: ReactNode; minHeight?: number }) {
+  return (
+    <div
+      className="flex flex-col gap-5 lg:h-[max(calc(100dvh-76px-4rem),var(--list-min))]"
+      style={{ ['--list-min' as string]: `${minHeight}px` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Underline tabs with a count chip (the visits page). */
+export function ListTabs({ items, activeHref }: { items: { label: string; href: string; count?: number }[]; activeHref: string }) {
+  return (
+    <div role="tablist" className="flex shrink-0 gap-7 overflow-x-auto border-b border-hairline">
+      {items.map((it) => {
+        const active = it.href === activeHref;
+        return (
+          <Link
+            key={it.href}
+            href={it.href as never}
+            role="tab"
+            aria-selected={active}
+            className={cn(
+              '-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 text-[14px] transition-colors',
+              active ? 'border-[#C8A24B] font-semibold text-slate-900' : 'border-transparent font-medium text-slate-500 hover:text-slate-900',
+            )}
+          >
+            {it.label}
+            {typeof it.count === 'number' && it.count > 0 && (
+              <span
+                className={cn(
+                  'inline-flex h-5 min-w-[22px] items-center justify-center rounded-full px-1.5 text-[11.5px] font-semibold tabular-nums',
+                  active ? 'bg-[#C8A24B]/20 text-[#8A6823] dark:text-[#E2C792]' : 'bg-slate-500/12 text-slate-500',
+                )}
+              >
+                {it.count}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </div>
+  );
 }
 
 export function DataTable({ children, testId }: { children: ReactNode; testId?: string }) {

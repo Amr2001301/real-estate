@@ -7,8 +7,7 @@ import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, Project, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, ListPage, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
-import { Tabs } from '@/components/ui/tabs';
+import { AgentCell, ListPage, ListTabs, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
@@ -129,7 +128,7 @@ export default async function VisitsPage({
   const activeHref = `/dashboard/visits?tab=${tab}`;
 
   return (
-    <ListPage>
+    <ListPage minHeight={980}>
       <PremiumPageHero
         title={m.title}
         description={m.description}
@@ -163,7 +162,7 @@ export default async function VisitsPage({
         />
       </section>
 
-      <div className="shrink-0"><Tabs items={tabs} activeHref={activeHref} /></div>
+      <ListTabs items={tabs} activeHref={activeHref} />
 
       {fetchError && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
