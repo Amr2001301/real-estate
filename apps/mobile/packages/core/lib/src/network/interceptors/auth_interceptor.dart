@@ -15,9 +15,14 @@ typedef SessionRefresher = Future<String?> Function();
 typedef SessionInvalidator = Future<void> Function();
 
 /// Injects `Authorization: Bearer <token>` and transparently retries once on a
-/// 401 after refreshing. Uses [QueuedInterceptorsWrapper] so concurrent 401s
-/// trigger a single refresh, not a stampede.
-class AuthInterceptor extends QueuedInterceptorsWrapper {
+/// 401 after refreshing. Concurrent 401s share one in-flight refresh, not a
+/// stampede.
+///
+/// Not a `QueuedInterceptorsWrapper`: that queues every error, and the apps
+/// send `/auth/refresh` through this same client — a refused refresh then
+/// waited behind the 401 that started it, and every request on the screen
+/// hung for good (the staff dashboard stuck on its loading cards).
+class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required Dio retryClient,
     required AccessTokenReader readAccessToken,
@@ -38,6 +43,24 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
 
   /// Internal flag to prevent infinite refresh→retry loops.
   static const String _retriedExtra = 'authRetried';
+
+  /// The refresh under way, shared by every 401 that arrives meanwhile.
+  Future<String?>? _refreshing;
+
+  Future<String?> _refreshOnce() {
+    return _refreshing ??= () async {
+      try {
+        final token = await _refreshSession!();
+        if (token == null || token.isEmpty) await _invalidateSession?.call();
+        return token;
+      } catch (_) {
+        await _invalidateSession?.call();
+        return null;
+      } finally {
+        _refreshing = null;
+      }
+    }();
+  }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -63,9 +86,8 @@ class AuthInterceptor extends QueuedInterceptorsWrapper {
       return handler.next(err);
     }
 
-    final newToken = await _refreshSession();
+    final newToken = await _refreshOnce();
     if (newToken == null || newToken.isEmpty) {
-      await _invalidateSession?.call();
       return handler.next(err);
     }
 
