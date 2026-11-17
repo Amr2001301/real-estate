@@ -265,8 +265,8 @@ export default async function ReservationsPage({
         ) : (
           <>
 <ListHeader
-            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_130px_190px_170px]"
-            labels={locale === 'ar' ? ['', 'العميل / رقم الحجز', 'المشروع / الوحدة', 'المندوب', 'مبلغ الحجز', 'الحالة / الانتهاء', ''] : ['', 'Client / reservation', 'Project / unit', 'Agent', 'Booking amount', 'Status / expiry', '']}
+            template="lg:grid-cols-[116px_minmax(0,1.2fr)_minmax(0,1.25fr)_minmax(0,0.8fr)_104px_100px_92px_176px]"
+            labels={locale === 'ar' ? ['رقم الحجز / الإنشاء', 'العميل', 'المشروع / الوحدة', 'المندوب', 'مبلغ الحجز', 'الحالة', 'تاريخ الانتهاء', ''] : ['Reservation / created', 'Client', 'Project / unit', 'Agent', 'Booking amount', 'Status', 'Expires', '']}
           />
           <ul className="divide-y divide-hairline" data-testid="reservation-rows">
             {reservations.map((r) => {
@@ -278,24 +278,25 @@ export default async function ReservationsPage({
                 <li
                   key={r.id}
                   data-testid="reservation-row"
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_130px_190px_170px]"
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-4 py-3.5 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[116px_minmax(0,1.2fr)_minmax(0,1.25fr)_minmax(0,0.8fr)_104px_100px_92px_176px]"
                 >
-                  <Avatar name={name} />
-
-                  {/* Client + reservation code */}
-                  <div className="min-w-0">
-                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
-                      {name}
+                  {/* Reservation code */}
+                  <div className="col-start-2 row-start-1 min-w-0 lg:col-start-auto lg:row-start-auto">
+                    <Link href={href as never} data-testid="list-code" className="block whitespace-nowrap font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
+                      {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
                     </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
-                      <Link href={href as never} data-testid="list-code" className="whitespace-nowrap hover:text-brand-700">
-                        <span className="me-1 text-slate-400">{m.reservationWord}</span>
-                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
-                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                        </span>
+                    <p className="mt-0.5 hidden whitespace-nowrap text-[11.5px] tabular-nums text-slate-500 lg:block">{formatDate(r.createdAt, locale)}</p>
+                  </div>
+
+                  {/* Client */}
+                  <div className="col-span-3 flex min-w-0 items-center gap-2.5 lg:col-span-1">
+                    <Avatar name={name} className="h-8 w-8 text-[11px]" />
+                    <div className="min-w-0">
+                      <Link href={href as never} className="block truncate text-[13.5px] font-bold text-slate-900 hover:text-brand-700">
+                        {name}
                       </Link>
                       {(r.client?.phone ?? r.lead?.phone) && (
-                        <span className="inline-flex items-center gap-1 tabular-nums">
+                        <span className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] tabular-nums text-slate-500">
                           <Phone className="h-3 w-3 shrink-0" />
                           <span dir="ltr">{r.client?.phone ?? r.lead?.phone}</span>
                         </span>
@@ -309,7 +310,7 @@ export default async function ReservationsPage({
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-slate-800">{project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : '—'}</p>
                       {r.unit && (
-                        <p className="mt-0.5 text-slate-500">
+                        <p className="mt-0.5 truncate text-slate-500">
                           <span className="me-1 text-slate-400">{m.unitWord}</span>
                           <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap">{r.unit.code}</EntityLink>
                         </p>
@@ -317,19 +318,16 @@ export default async function ReservationsPage({
                     </div>
                   </div>
 
-                  {/* Agent + created */}
+                  {/* Agent */}
                   <div className="hidden min-w-0 text-[12.5px] lg:block">
                     <p className={cn('truncate font-semibold', r.sales ? 'text-slate-800' : 'text-slate-400')}>
                       {r.sales?.fullName ?? m.noAgent}
-                    </p>
-                    <p className="mt-0.5 whitespace-nowrap text-slate-500">
-                      {m.createdOn} {formatDate(r.createdAt, locale)}
                     </p>
                   </div>
 
                   {/* Booking amount + payment */}
                   <div className="hidden flex-col items-start gap-1 lg:flex">
-                    <span className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
+                    <span className="whitespace-nowrap text-[14px] font-bold tabular-nums text-slate-900">
                       {Number.isFinite(amount)
                         ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
                         : '—'}
@@ -337,12 +335,15 @@ export default async function ReservationsPage({
                     <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
                   </div>
 
-                  {/* Status + expiry */}
-                  <div className="hidden flex-col items-start gap-1 lg:flex">
+                  {/* Status */}
+                  <div className="hidden lg:block">
                     <ReservationStatusBadge status={r.status} locale={locale} />
-                    <span className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
-                      {m.expiresOn} {formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)} · <span dir="ltr">{formatTime(r.expiresAt, locale)}</span>
-                    </span>
+                  </div>
+
+                  {/* Expiry */}
+                  <div className="hidden text-[12px] tabular-nums text-slate-600 lg:block">
+                    <p className="whitespace-nowrap">{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</p>
+                    <p className="mt-0.5 whitespace-nowrap text-slate-400" dir="ltr">{formatTime(r.expiresAt, locale)}</p>
                   </div>
 
                   <ReservationActions
