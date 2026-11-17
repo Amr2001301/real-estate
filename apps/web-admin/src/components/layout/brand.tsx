@@ -35,22 +35,22 @@ export function Brand({
         width={40}
         height={40}
         priority
-        className="h-10 w-10 rounded-xl object-cover shadow-md ring-1 ring-inset ring-white/15"
+        className="h-[42px] w-[42px] rounded-[13px] object-cover ring-1 ring-inset ring-[#E2C792]/25"
       />
       {!compact && (
         <span className="flex flex-col leading-tight">
           <span
             className={cn(
-              'text-[16px] font-bold tracking-tight',
-              isDark ? 'text-white' : 'text-slate-900',
+              'font-[Inter,system-ui,sans-serif] text-[14px] font-medium tracking-[0.32em]',
+              isDark ? 'text-[#F7F3EA]' : 'text-slate-900',
             )}
           >
-            ديفورا
+            DEVORA
           </span>
           <span
             className={cn(
-              'text-[10.5px] mt-0.5 tracking-wide',
-              isDark ? 'text-sidebar-text-muted/70' : 'text-slate-500',
+              'text-[11.5px] mt-[3px]',
+              isDark ? 'text-[#9A9486]' : 'text-slate-500',
             )}
           >
             {subtitle}

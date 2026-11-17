@@ -20,6 +20,8 @@ interface Props {
   sections: NavSectionView[];
   searchPlaceholder: string;
   noResults: string;
+  /** The small caption above the sections («القائمة»). */
+  menuLabel?: string;
   onNavigate?: () => void;
 }
 
@@ -56,7 +58,7 @@ function Icon({ name }: { name: IconKey }) {
  * Closed sections keep their links in the page, hidden, so nothing that
  * counts on them changes.
  */
-export function NavSections({ sections, searchPlaceholder, noResults, onNavigate }: Props) {
+export function NavSections({ sections, searchPlaceholder, noResults, menuLabel, onNavigate }: Props) {
   const pathname = usePathname() ?? '';
   const current = useMemo(
     () => sections.find((s) => !s.flat && s.items.some((i) => isNavActive(pathname, i.href, i.matches)))?.key,
@@ -99,8 +101,8 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
 
   return (
     <div className="space-y-3">
-      <label className="relative block px-1">
-        <Search aria-hidden className="pointer-events-none absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-text-muted" />
+      <label className="relative block">
+        <Search aria-hidden className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8F897C]" />
         <input
           ref={input}
           type="search"
@@ -110,9 +112,11 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
           data-testid="nav-search"
-          className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] ps-10 pe-3 text-[13px] text-white placeholder:text-sidebar-text-muted focus:border-[#D8B66A]/50 focus:outline-none"
+          className="h-[42px] w-full rounded-[13px] border border-[#E2C792]/[0.10] bg-[#F4EFE4]/[0.05] ps-9 pe-12 text-[13px] text-[#F4EFE4] placeholder:text-[#8F897C] focus:border-[#C8A24B]/50 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
+        <kbd aria-hidden className="pointer-events-none absolute end-2.5 top-1/2 -translate-y-1/2 rounded-md border border-[#E2C792]/[0.14] px-1.5 py-px font-[Inter,system-ui,sans-serif] text-[10.5px] text-[#8F897C]">⌘K</kbd>
       </label>
+      {menuLabel && <p className="px-3 pt-2 text-[11px] font-semibold tracking-[0.08em] text-[#6F6A60]">{menuLabel}</p>}
 
       {q ? (
         <div className="space-y-0.5" data-testid="nav-search-results">
@@ -139,7 +143,7 @@ export function NavSections({ sections, searchPlaceholder, noResults, onNavigate
       ) : null}
 
       {/* The sections stay in the page while searching (hidden), so their links stay findable by tests and tools. */}
-      <div className={cn('space-y-1', q && 'hidden')}>
+      <div className={cn('-mt-1 space-y-[3px]', q && 'hidden')}>
         {sections.map((section) =>
           section.flat ? (
             <div key={section.key} className="space-y-1">
@@ -184,26 +188,26 @@ function Section({
         aria-controls={panel}
         data-testid="nav-section"
         className={cn(
-          'flex h-11 w-full items-center gap-2.5 rounded-xl px-2 text-start text-[14px] transition-colors duration-150',
+          'flex h-[42px] w-full items-center gap-3 rounded-xl px-3 text-start text-[13.5px] transition-colors duration-150',
           'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-          isOpen ? 'font-bold text-white' : 'font-medium text-sidebar-text hover:bg-white/[0.04] hover:text-white/90',
+          isOpen ? 'bg-[#F4EFE4]/[0.04] font-semibold text-[#F4EFE4]' : 'font-medium text-[#B5AE9F] hover:bg-white/[0.04] hover:text-[#F4EFE4]',
         )}
       >
         <span
           aria-hidden
           className={cn(
-            'grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors duration-150',
-            isOpen ? 'text-[#D8B66A]' : 'text-sidebar-text-muted',
+            'grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] transition-colors duration-150 [&_svg]:h-[17px] [&_svg]:w-[17px]',
+            isOpen ? 'bg-[linear-gradient(135deg,rgba(234,213,163,0.22),rgba(200,162,75,0.08))] text-[#E2C792]' : 'text-[#8F897C]',
           )}
         >
           <Icon name={section.iconKey} />
         </span>
         <span className="flex-1 truncate">{section.title}</span>
-        {!isOpen && waiting && <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-[#D8B66A]" />}
+        {!isOpen && waiting && <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-[#C8A24B]" />}
         <ChevronDown
           aria-hidden
           className={cn(
-            'h-[15px] w-[15px] shrink-0 text-sidebar-text-muted transition-transform duration-200',
+            'h-[14px] w-[14px] shrink-0 text-[#8F897C] transition-transform duration-200',
             !isOpen && 'ltr:-rotate-90 rtl:rotate-90',
           )}
         />
@@ -214,7 +218,7 @@ function Section({
       >
         {/* Closed: hidden for the eye and for tab / screen readers, after the fold has finished. */}
         <div className={cn('overflow-hidden', !isOpen && 'invisible transition-[visibility] delay-200 duration-0')}>
-          <div className="ms-[22px] me-1.5 space-y-px border-s border-white/[0.08] py-1 ps-2 pe-1">
+          <div className="ms-[26px] space-y-0.5 border-s border-[#E2C792]/[0.10] pt-1 pb-2.5">
             {section.items.map((item) => (
               <NavLink key={item.href} {...item} dense icon={<Icon name={item.iconKey} />} onNavigate={onNavigate} />
             ))}

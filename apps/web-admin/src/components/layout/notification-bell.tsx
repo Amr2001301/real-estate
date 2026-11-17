@@ -56,13 +56,13 @@ export function NotificationBell({
 
   return (
     <Link href={href as never} className="relative inline-flex">
-      <IconButton label="الإشعارات" variant="ghost" size="md" className="h-10 w-10 rounded-full border border-hairline bg-surface text-slate-700 hover:border-brand-400/50 hover:bg-surface">
+      <IconButton label="الإشعارات" variant="ghost" size="md" className="h-[42px] w-[42px] rounded-full border border-hairline bg-surface text-slate-900 hover:border-[#C8A24B]/60 hover:bg-surface [&_svg]:h-[18px] [&_svg]:w-[18px]">
         <Bell />
       </IconButton>
       {count > 0 && (
         <span
           aria-label={`${count} إشعار غير مقروء`}
-          className="absolute -top-1 -end-1 min-w-[20px] h-[20px] px-1 inline-flex items-center justify-center rounded-full bg-brand-500 text-white text-[10px] font-bold ring-2 ring-surface tabular-nums shadow-sm"
+          className="absolute -top-1 -end-1 min-w-[20px] h-[20px] px-1 inline-flex items-center justify-center rounded-full bg-[#C8A24B] text-[#0B1220] font-[Inter,system-ui,sans-serif] text-[10px] font-semibold ring-2 ring-surface tabular-nums"
         >
           {count > 99 ? '99+' : count}
         </span>

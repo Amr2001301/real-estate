@@ -25,6 +25,7 @@ export async function AppShell({ user, navSections, children }: Props) {
           <Topbar
             user={user}
             locale={locale}
+            sections={navSections}
             notificationsHref={user.role === 'BROKER' ? '/portal/notifications' : '/dashboard/notifications'}
             leading={<MobileNav user={user} sections={navSections} locale={locale} />}
           />

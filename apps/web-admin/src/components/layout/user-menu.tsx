@@ -55,7 +55,7 @@ export function UserMenu({ name, role, initials, settings, security, logout, onN
         <div
           role="menu"
           data-testid="user-menu"
-          className="absolute inset-x-0 bottom-full mb-2 overflow-hidden rounded-2xl border border-[#D8B66A]/25 bg-[#101B30] p-1.5 shadow-[0_18px_40px_-12px_rgb(0_0_0/0.6)]"
+          className="absolute inset-x-0 bottom-full mb-2 overflow-hidden rounded-2xl border border-[#E2C792]/20 bg-[#142036] p-1.5 shadow-[0_18px_40px_-12px_rgb(0_0_0/0.6)]"
         >
           {settings && (
             <Link
@@ -89,18 +89,21 @@ export function UserMenu({ name, role, initials, settings, security, logout, onN
         aria-label={name}
         data-testid="user-menu-button"
         className={cn(
-          'flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:bg-white/[0.08]',
-          open ? 'bg-white/[0.07]' : 'hover:bg-white/[0.05]',
+          'flex w-full items-center gap-2.5 rounded-2xl border border-[#E2C792]/[0.10] p-2.5 text-start transition-colors duration-150 focus-visible:outline-none focus-visible:bg-white/[0.08]',
+          open ? 'bg-[#F4EFE4]/[0.08]' : 'bg-[#F4EFE4]/[0.05] hover:bg-[#F4EFE4]/[0.08]',
         )}
       >
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] text-[13px] font-bold text-[#1A1408]">
+        <span className="relative inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-[#E2C792]/25 bg-[linear-gradient(135deg,#C8A24B,#8A6A23)] text-[13px] font-semibold text-[#F4EFE4]">
           {initials}
+          <span aria-hidden className="absolute bottom-0 start-0 h-2.5 w-2.5 rounded-full border-2 border-[#0B1220] bg-[#4CC38A] dark:border-[#0A101D]" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-bold leading-snug text-white">{name}</span>
-          <span className="block truncate text-[11px] text-[#D8B66A]/85">{role}</span>
+          <span className="block truncate text-[13px] font-semibold leading-snug text-[#F7F3EA]">{name}</span>
+          <span className="block truncate text-[11px] text-[#9A9486]">{role}</span>
         </span>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-sidebar-text-muted" aria-hidden />
+        <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-[#F4EFE4]/[0.06] text-[#B5AE9F]">
+          <ChevronsUpDown className="h-4 w-4" />
+        </span>
       </button>
     </div>
   );

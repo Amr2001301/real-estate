@@ -27,10 +27,11 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
     .filter((s) => s.items.length > 0);
 
   return (
-    <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text border-e border-[#D8B66A]/[0.18]">
+    <div className="relative flex h-full flex-col gap-5 overflow-hidden border-e border-[#E2C792]/[0.08] bg-[#0B1220] px-4 py-6 text-sidebar-text dark:bg-[#0A101D]">
+      {/* A soft gold glow behind the brand. */}
+      <div aria-hidden className="pointer-events-none absolute -top-36 -end-32 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,rgba(200,162,75,0.16)_0%,rgba(200,162,75,0)_65%)]" />
 
-      {/* Brand header — matches topbar height (72px) for visual alignment */}
-      <div className="px-5 h-[84px] flex items-center shrink-0">
+      <div className="relative flex shrink-0 items-center px-1.5">
         {/* A broker signs in to the brokers' portal, not the admins'. */}
         {user.role === 'BROKER' ? (
           <Brand theme="dark" href="/portal" subtitle={locale === 'en' ? 'Broker portal' : 'بوابة الوسطاء'} />
@@ -41,7 +42,7 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
 
       {/* Navigation */}
       {/* One section open at a time, each with its icon; a search box finds any page. */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3">
+      <nav className="relative -mx-1 flex-1 overflow-y-auto px-1 scrollbar-thin">
         <NavSections
           sections={resolved.map((section) => ({
             key: section.titleKey,
@@ -58,12 +59,13 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
           }))}
           searchPlaceholder={m.nav.search}
           noResults={m.nav.noResults}
+          menuLabel={locale === 'en' ? 'Menu' : 'القائمة'}
           onNavigate={onNavigate}
         />
       </nav>
 
       {/* One row at the foot: the person, and a menu with settings, security and sign out. */}
-      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0">
+      <div className="relative shrink-0">
         <UserMenu
           name={user.fullName}
           role={m.sidebar.roles[user.role as SessionRole]}
@@ -82,10 +84,7 @@ export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
 export function Sidebar({ user, locale, sections, className }: Omit<Props, 'onNavigate'>) {
   return (
     <aside
-      className={`hidden lg:flex w-[256px] shrink-0 relative z-20 ${className ?? ''}`}
-      style={{
-        boxShadow: '-16px 0 40px -16px rgb(15 30 51 / 0.28)',
-      }}
+      className={`hidden lg:flex w-[276px] shrink-0 relative z-20 ${className ?? ''}`}
     >
       <div className="h-full w-full">
         <SidebarContent user={user} locale={locale} sections={sections} />
