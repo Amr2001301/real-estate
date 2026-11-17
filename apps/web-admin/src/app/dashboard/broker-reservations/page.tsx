@@ -5,6 +5,7 @@ import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerReservation, Paged } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import { Pagination } from '@/components/ui/pagination';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
   PremiumSectionCard,
@@ -133,40 +133,18 @@ export default async function AdminBrokerReservationsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          {
-            label: m.kpiTotal,
-            value: totalReservations,
-            icon: <BookmarkCheck />,
-            tone: 'brand',
-            primary: true,
-          },
-          {
-            label: m.kpiPending,
-            value: counts.pending,
-            icon: <BookmarkCheck />,
-            tone: 'warning',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiApproved,
-            value: counts.approved,
-            icon: <BookmarkCheck />,
-            tone: 'success',
-            sub: m.kpiThisPage,
-          },
-          {
-            label: m.kpiConverted,
-            value: counts.converted,
-            icon: <BookmarkCheck />,
-            tone: 'info',
-            sub: m.kpiThisPage,
-          },
-        ]}
-      />
+      <section>
+        <FigureBar
+          variant="cards"
+          cols={4}
+          figures={[
+            { label: m.kpiTotal, value: totalReservations, icon: FigIcons.total, pct: 100 },
+            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.pending, pct: totalReservations ? (counts.pending / totalReservations) * 100 : 0 },
+            { label: m.kpiApproved, value: counts.approved, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green', pct: totalReservations ? (counts.approved / totalReservations) * 100 : 0 },
+            { label: m.kpiConverted, value: counts.converted, sub: m.kpiThisPage, icon: FigIcons.sign, tone: 'blue', pct: totalReservations ? (counts.converted / totalReservations) * 100 : 0 },
+          ]}
+        />
+      </section>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {resRes.error && (
@@ -293,7 +271,7 @@ export default async function AdminBrokerReservationsPage({
                     className="align-middle hover:bg-canvas/40 transition-colors duration-100"
                   >
                     {/* Reservation number — mono chip */}
-                    <td className="py-3.5 ps-5 pe-4">
+                    <td className="py-3.5 ps-5 pe-4 whitespace-nowrap">
                       {r.reservationNumber ? (
                         <EntityLink
                           kind="reservation"
@@ -384,27 +362,25 @@ export default async function AdminBrokerReservationsPage({
                     </td>
 
                     {/* Locked commission */}
-                    <td className="py-3.5 px-4">
-                      {r.commissionLockedPct != null ? (
-                        <>
-                          <p className="text-xs font-semibold text-slate-800 tabular-nums">
-                            {Number(r.commissionLockedPct).toFixed(2)}%
-                          </p>
-                          {r.commissionLockedAmount != null && (
-                            <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
-                              {formatCurrency(r.commissionLockedAmount, currency, locale)}
-                            </p>
-                          )}
-                        </>
-                      ) : r.commissionLockedAmount != null ? (
-                        <>
-                          <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-700">
-                            {m.commissionFixed}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {r.commissionLockedPct != null || r.commissionLockedAmount != null ? (
+                        <div className="flex min-w-[150px] items-center gap-2">
+                          <span
+                            className={
+                              r.commissionLockedPct != null
+                                ? 'inline-flex min-w-[56px] justify-center rounded-full bg-[#C8A24B]/15 px-2 py-1 text-[12px] font-semibold tabular-nums text-[#8A6823] dark:text-[#E2C792]'
+                                : 'inline-flex min-w-[56px] justify-center rounded-full bg-slate-500/12 px-2 py-1 text-[12px] font-semibold text-slate-600'
+                            }
+                            dir="ltr"
+                          >
+                            {r.commissionLockedPct != null ? `${Number(r.commissionLockedPct).toFixed(2)}%` : m.commissionFixed}
                           </span>
-                          <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
-                            {formatCurrency(r.commissionLockedAmount, currency, locale)}
-                          </p>
-                        </>
+                          {r.commissionLockedAmount != null && (
+                            <span className="text-[13px] font-semibold tabular-nums text-slate-800">
+                              {formatCurrency(r.commissionLockedAmount, currency, locale)}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-slate-400 text-xs">{m.commissionUnset}</span>
                       )}

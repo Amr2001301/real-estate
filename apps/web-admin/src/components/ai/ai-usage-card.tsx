@@ -19,19 +19,19 @@ export function AiUsageCard({ usage, locale }: { usage: AiUsage | null; locale: 
     <section
       aria-label={m.usageCardTitle}
       data-testid="ai-usage-card"
-      className="flex flex-wrap items-center gap-4 rounded-card border border-hairline bg-surface px-5 py-4 shadow-soft"
+      className="flex flex-wrap items-center gap-4 rounded-[22px] border border-hairline bg-surface px-6 py-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none"
     >
-      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline text-brand-700">
-        <Sparkles className="h-4 w-4" />
+      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)] text-[#0B1220]">
+        <Sparkles className="h-5 w-5" strokeWidth={2} />
       </span>
-      <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-sm font-bold text-slate-900">{m.usageCardTitle}</span>
+      <div className="flex min-w-[220px] flex-1 flex-col gap-2">
+        <div className="flex flex-wrap items-baseline gap-2.5">
+          <span className="font-heading text-[17px] font-semibold text-slate-900">{m.usageCardTitle}</span>
           {usage.packageName && <span className="text-xs text-slate-500">{usage.packageName}</span>}
-          <span className="ms-auto text-sm tabular-nums text-slate-700">{m.usageCardLine(usage.used, usage.quota)}</span>
+          <span className="ms-auto text-[13px] tabular-nums text-slate-600">{m.usageCardLine(usage.used, usage.quota)}</span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-sunken">
-          <div className={`h-full ${usageTone(usage)}`} style={{ width: `${usage.usedPct}%` }} />
+        <div className="h-[7px] overflow-hidden rounded-full bg-surface-sunken">
+          <div className={`h-full rounded-full ${usage.status === 'ACTIVE' && usage.usedPct < 80 ? 'bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)]' : usageTone(usage)}`} style={{ width: `${usage.usedPct}%` }} />
         </div>
         <span className={`text-xs ${usage.status === 'ACTIVE' ? 'text-slate-500' : 'font-semibold text-danger-700'}`}>{note}</span>
       </div>

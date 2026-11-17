@@ -7,17 +7,9 @@ import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { FollowUpsPanel } from '@/components/crm/follow-ups-panel';
 import { uiT } from '@/messages/ui';
-import {
-  DayHeader,
-  DayAction,
-  FigureBar,
-  Panel,
-  DayStrip,
-  Timeline,
-  TaskList,
-  PipelineSplit,
-  Amount,
-} from '@/components/cockpit/cockpit';
+import { Amount } from '@/components/cockpit/cockpit';
+import { Panel } from '@/components/dashboard/admin-home';
+import { DayHero, DayHeroAction, FigureCards, DayStripV2, TimelineV2, TasksV2, PipelineV2 } from '@/components/dashboard/day-home';
 import { STALE_AFTER_DAYS, AGENDA_DAYS, greeting, daysLeftInMonth, dayTitle, buildWeek } from './cockpit-data';
 
 interface PerformanceRow {
@@ -87,8 +79,8 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
   const hasTarget = !!me?.targetAmount;
 
   return (
-    <div className="space-y-6">
-      <DayHeader
+    <div className="dash-v2 flex flex-col gap-6">
+      <DayHero
         kicker={greeting(c, timeZone, session?.fullName ?? '')}
         title={head.weekday}
         date={`${head.date} · ${c.repSubtitle}`}
@@ -100,14 +92,14 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
         }}
         actions={
           <>
-            <DayAction primary href="/dashboard/leads/new" icon={<Plus />}>{m.btnAddLead}</DayAction>
-            <DayAction href="/dashboard/visits/new" icon={<CalendarPlus />}>{m.btnScheduleVisit}</DayAction>
-            <DayAction href="/dashboard/reservations/new" icon={<BookmarkCheck />}>{m.btnCreateReservation}</DayAction>
+            <DayHeroAction primary href="/dashboard/leads/new" icon={<Plus />}>{m.btnAddLead}</DayHeroAction>
+            <DayHeroAction href="/dashboard/visits/new" icon={<CalendarPlus />}>{m.btnScheduleVisit}</DayHeroAction>
+            <DayHeroAction href="/dashboard/reservations/new" icon={<BookmarkCheck />}>{m.btnCreateReservation}</DayHeroAction>
           </>
         }
       />
 
-      <FigureBar
+      <FigureCards
         figures={[
           { label: c.openLeads, value: openLeads, sub: c.staleHint(stale), warn: stale > 0, href: '/dashboard/leads' },
           { label: c.upcomingVisits, value: upcomingVisits, sub: c.todayCount(todayVisits), href: '/dashboard/visits?tab=appointments' },
@@ -121,16 +113,19 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
         ]}
       />
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3 xl:items-start">
+      <FollowUpsPanel locale={locale} variant="wide" />
+
+      {/* Two columns of one height: the agenda beside the tasks and the open leads. */}
+      <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel
           testId="agenda"
-          className="xl:col-span-2"
+          bodyClassName="gap-5"
           title={c.agenda}
           sub={c.dayEvents(selected.events.length)}
           link={{ href: '/dashboard/visits?tab=appointments', label: c.viewAll }}
         >
-          <DayStrip days={week} selected={selected.key} countLabel={c.dayEvents} />
-          <Timeline
+          <DayStripV2 days={week} selected={selected.key} countLabel={c.dayEvents} />
+          <TimelineV2
             events={selected.events}
             tags={{ visit: c.tagVisit, expiry: c.tagExpiry }}
             empty={{
@@ -140,10 +135,9 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
           />
         </Panel>
 
-        <div className="space-y-5">
-          <FollowUpsPanel locale={locale} />
+        <div className="flex min-w-0 flex-col gap-5">
           <Panel title={c.tasks}>
-            <TaskList
+            <TasksV2
               empty={c.tasksEmpty}
               tasks={[
                 { key: 'follow', icon: <AlertTriangle />, tone: 'amber', label: c.followUps, desc: c.followUpsDesc, count: stale, href: '/dashboard/leads?stage=NEW,INTERESTED' },
@@ -152,8 +146,8 @@ export async function SalesDashboard({ userId, day }: { userId: string; day?: st
               ]}
             />
           </Panel>
-          <Panel title={c.pipeline} link={{ href: '/dashboard/leads', label: c.viewAll }}>
-            <PipelineSplit
+          <Panel className="flex-1" title={c.pipeline} link={{ href: '/dashboard/leads', label: c.viewAll }}>
+            <PipelineV2
               stages={[
                 { stage: 'NEW', label: m.stageLabelNew, count: stages.NEW ?? 0 },
                 { stage: 'INTERESTED', label: m.stageLabelInterested, count: stages.INTERESTED ?? 0 },

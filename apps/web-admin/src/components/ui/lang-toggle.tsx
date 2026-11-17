@@ -23,7 +23,7 @@ export function LangToggle({ current }: { current: Locale }) {
       onClick={toggle}
       aria-label={current === 'ar' ? 'Switch to English' : 'التبديل للعربية'}
       title={current === 'ar' ? 'English' : 'عربي'}
-      className="inline-flex h-10 min-w-[40px] items-center justify-center rounded-full px-3 text-[12px] font-bold tracking-wide text-slate-500 transition-colors duration-150 hover:bg-surface hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45"
+      className="inline-flex h-[42px] min-w-[42px] items-center justify-center rounded-full border border-hairline bg-surface px-3 font-[Inter,system-ui,sans-serif] text-[13px] text-slate-900 transition-colors duration-150 hover:border-[#C8A24B]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45"
     >
       {current === 'ar' ? 'EN' : 'عر'}
     </button>

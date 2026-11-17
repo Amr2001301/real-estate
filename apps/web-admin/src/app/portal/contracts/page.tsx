@@ -13,7 +13,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
@@ -97,17 +97,20 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: totalAll, href: '/portal/contracts' },
-            { label: t.metrics.signed, value: signedCount, href: '/portal/contracts?signed=yes' },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/contracts?signed=no', warn: pendingCount > 0 },
+            { label: t.metrics.total, value: totalAll, href: '/portal/contracts', icon: FigIcons.total },
+            { label: t.metrics.signed, value: signedCount, href: '/portal/contracts?signed=yes', icon: FigIcons.done, tone: 'green' },
+            { label: t.metrics.pending, value: pendingCount, href: '/portal/contracts?signed=no', warn: pendingCount > 0, icon: FigIcons.sign },
             {
               label: t.pageValue.replace(/:\s*$/, ''),
               value: <Amount parts={compactParts(pageValue, symbol, locale)} />,
+              icon: FigIcons.money,
+              tone: 'blue',
             },
           ]}
         />

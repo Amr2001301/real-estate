@@ -42,23 +42,25 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, d
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-2.5 rounded-[10px] text-[13.5px] font-medium transition-colors duration-150 ease-smooth',
-        dense ? 'h-9 px-2.5' : wide ? 'h-11 px-2 text-[14px]' : 'h-10 px-3',
+        'group relative flex items-center gap-3 rounded-[10px] text-[13px] transition-colors duration-150 ease-smooth',
+        dense ? 'h-[38px] px-3.5' : wide ? 'h-[42px] px-3 text-[13.5px]' : 'h-10 px-3',
         'focus-visible:outline-none focus-visible:bg-white/[0.06]',
-        // Active: a gold wash and a gold bar on the guide line.
+        // Active: a gold wash fading from the guide line, and a gold bar on it.
         active
-          ? 'font-bold text-[#EBD29B] before:absolute before:bottom-2 before:top-2 before:w-[3px] before:rounded-full before:bg-[#D8B66A] ' +
-              (dense ? 'before:-start-[9px]' : 'before:-start-1')
-          : 'text-sidebar-text hover:bg-white/[0.06] hover:text-white/90',
+          ? 'font-semibold text-[#F7F3EA] rtl:bg-[linear-gradient(270deg,rgba(200,162,75,0.20)_0%,rgba(200,162,75,0.04)_100%)] ltr:bg-[linear-gradient(90deg,rgba(200,162,75,0.20)_0%,rgba(200,162,75,0.04)_100%)] ' +
+              'before:absolute before:bottom-[9px] before:top-[9px] before:w-[3px] before:rounded-full before:bg-[linear-gradient(135deg,#EAD5A3,#C8A24B,#9E7A2B)] ' +
+              (dense ? 'before:-start-px' : 'before:start-0')
+          : 'font-normal text-[#A39D90] hover:bg-white/[0.05] hover:text-[#F4EFE4]',
       )}
     >
-      {icon && (
+      {icon && !dense && (
         <span
           aria-hidden
           className={cn(
             'shrink-0 transition-colors duration-150 [&>svg]:h-4 [&>svg]:w-4',
-            wide ? 'grid h-7 w-7 place-items-center' : 'inline-flex',
-            active ? 'text-[#D8B66A]' : 'text-sidebar-text-muted group-hover:text-[#D8B66A]/80',
+            wide ? 'grid h-[30px] w-[30px] place-items-center rounded-[9px] [&>svg]:h-[17px] [&>svg]:w-[17px]' : 'inline-flex',
+            wide && active && 'bg-[linear-gradient(135deg,rgba(234,213,163,0.22),rgba(200,162,75,0.08))]',
+            active ? 'text-[#E2C792]' : 'text-[#8F897C] group-hover:text-[#C8A24B]/80',
           )}
         >
           {icon}
@@ -71,7 +73,7 @@ export function NavLink({ href, label, icon, onNavigate, badge, matches, hint, d
       {!!badge && badge > 0 && (
         <span
           data-testid="nav-badge"
-          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#D8B66A] px-1.5 text-[11px] font-bold tabular-nums text-[#1A1408]"
+          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#C8A24B] px-1.5 font-[Inter,system-ui,sans-serif] text-[11px] font-semibold tabular-nums text-[#0B1220]"
         >
           {badge}
         </span>

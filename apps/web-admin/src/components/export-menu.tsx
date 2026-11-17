@@ -39,6 +39,8 @@ interface ExportMenuProps extends Partial<ExportGroup> {
   /** Button label (defaults to "Export"). */
   label?: string;
   locale: Locale;
+  /** Extra classes for the button (the admin home's glass hero button). */
+  buttonClassName?: string;
 }
 
 const ICON: Record<ExportFormat, typeof FileText> = {
@@ -68,7 +70,7 @@ function optionsOf(group: ExportGroup): Option[] {
   return out;
 }
 
-export function ExportMenu({ groups, label, locale, ...single }: ExportMenuProps) {
+export function ExportMenu({ groups, label, locale, buttonClassName, ...single }: ExportMenuProps) {
   const t = portalSharedT(locale).exportMenu;
   const sections: ExportGroup[] =
     groups ?? (single.filenameBase ? [single as ExportGroup] : []);
@@ -140,6 +142,7 @@ export function ExportMenu({ groups, label, locale, ...single }: ExportMenuProps
         aria-haspopup={only ? undefined : 'menu'}
         aria-expanded={only ? undefined : open}
         data-testid="export-menu"
+        className={buttonClassName}
         onClick={() => (only ? download(only) : setOpen((v) => !v))}
       >
         {busy ? t.preparing : text}

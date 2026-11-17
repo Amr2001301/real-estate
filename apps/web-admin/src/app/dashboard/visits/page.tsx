@@ -7,7 +7,7 @@ import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Avatar, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 import { Tabs } from '@/components/ui/tabs';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
@@ -144,15 +144,16 @@ export default async function VisitsPage({
         }
       />
 
-      <section className="overflow-hidden rounded-card">
+      <section>
         <FigureBar
+          variant="cards"
           bare
           cols={4}
           figures={[
-            { label: m.kpi.newRequests, value: stats?.newRequests ?? '—', href: '/dashboard/visits?tab=requests', warn: (stats?.newRequests ?? 0) > 0 },
-            { label: m.kpi.today, value: stats?.todayVisits ?? '—', href: '/dashboard/visits?tab=today' },
-            { label: m.kpi.thisWeek, value: stats?.weekVisits ?? '—' },
-            { label: m.kpi.needConfirm, value: stats?.pendingConfirmation ?? '—', href: '/dashboard/visits?tab=appointments', warn: (stats?.pendingConfirmation ?? 0) > 0 },
+            { label: m.kpi.newRequests, value: stats?.newRequests ?? '—', href: '/dashboard/visits?tab=requests', warn: (stats?.newRequests ?? 0) > 0, icon: FigIcons.pending },
+            { label: m.kpi.today, value: stats?.todayVisits ?? '—', href: '/dashboard/visits?tab=today', icon: FigIcons.calendar, tone: 'blue' },
+            { label: m.kpi.thisWeek, value: stats?.weekVisits ?? '—', icon: FigIcons.calendar, tone: 'gold' },
+            { label: m.kpi.needConfirm, value: stats?.pendingConfirmation ?? '—', href: '/dashboard/visits?tab=appointments', warn: (stats?.pendingConfirmation ?? 0) > 0, icon: FigIcons.confirm },
           ]}
         />
       </section>

@@ -6,7 +6,6 @@ import {
   BookmarkCheck,
   FileText,
   Wallet,
-  TrendingUp,
   CalendarClock,
   BadgePercent,
   CheckCircle2,
@@ -18,9 +17,7 @@ import {
   Ban,
   Clock,
   MapPin,
-  ShieldCheck,
   ArrowUpRight,
-  ChevronLeft,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { api, safe } from '@/lib/api';
@@ -36,7 +33,7 @@ import type {
 } from '@/lib/types';
 import { Avatar } from '@/components/cockpit/cockpit';
 import { tx, formatDate, formatDateTime, formatCompact, compactParts } from '@/lib/format';
-import { PremiumMetricStrip } from '@/components/premium';
+import { FunnelV2, HeroAction, HeroV2, type HeroMetric } from '@/components/dashboard/admin-home';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
@@ -44,7 +41,6 @@ import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerStatusBadge, BrokerLeadStatusBadge } from '@/components/badges';
-import { initials as sharedInitials } from '@/lib/initials';
 import { brokerCommissionRange } from '@/lib/broker-commission-range';
 
 export const dynamic    = 'force-dynamic';
@@ -58,10 +54,6 @@ type Messages = ReturnType<typeof portalDashboardT>;
 function convPct(num: number, denom: number): string | null {
   if (denom <= 0) return null;
   return `${Math.round((num / denom) * 100)}%`;
-}
-
-function initials(name: string): string {
-  return sharedInitials(name, { single: 2, fallback: '·' });
 }
 
 function SectionLabel({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
@@ -122,9 +114,9 @@ function ActivityIcon({ type }: { type: PortalActivityType }) {
   }
 }
 
-// ── Broker KPI Strip ──────────────────────────────────────────────────────────
+// ── Broker figures (on the hero's glass strip) ─────────────────────────────────
 
-function BrokerKpiStrip({ perf, symbol, m, locale = 'ar' }: { perf: PerfSummary | undefined; symbol?: string; m: Messages; locale?: Locale }) {
+function brokerMetrics(perf: PerfSummary | undefined, symbol: string | undefined, m: Messages, locale: Locale): HeroMetric[] {
   const k = m.home.kpi;
   const submitted      = perf?.leadsSubmitted      ?? 0;
   const approved       = perf?.leadsApproved       ?? 0;
@@ -137,210 +129,28 @@ function BrokerKpiStrip({ perf, symbol, m, locale = 'ar' }: { perf: PerfSummary 
   const approvalRate = submitted    > 0 ? Math.round((approved   / submitted)    * 100) : null;
   const closingRate  = reservations > 0 ? Math.round((contracts  / reservations) * 100) : null;
   const payoutRate   = commissionsNet > 0 ? Math.round((payoutsNet / commissionsNet) * 100) : null;
+  const [salesNum, salesUnit] = perf ? compactParts(salesGross, symbol, locale) : ['—', ''];
+  const [comNum, comUnit] = perf ? compactParts(commissionsNet, symbol, locale) : ['—', ''];
 
-  const tiles = [
+  return [
+    { label: k.leadsSubmitted, value: perf ? submitted : '—', sub: approvalRate !== null ? k.leadsSubFn(approved, approvalRate) : k.noLeads },
+    { label: k.contractsSigned, value: perf ? contracts : '—', sub: closingRate !== null ? k.contractsSubFn(reservations, closingRate) : k.noContracts },
+    { label: k.salesVolume, value: salesNum, unit: salesUnit, sub: k.salesSub },
     {
-      label:    k.leadsSubmitted,
-      value:    perf ? String(submitted) : '—',
-      sub:      approvalRate !== null
-                  ? k.leadsSubFn(approved, approvalRate)
-                  : k.noLeads,
-      valueCls: 'text-brand-700',
-      topBar:   'from-brand-300 via-brand-500 to-brand-300',
-      icon:     <UserPlus />,
-      iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
+      label: k.myCommissions, value: comNum, unit: comUnit,
+      sub: payoutRate !== null ? k.commissionsSubFn(formatCompact(payoutsNet, symbol, locale), payoutRate) : k.noCommissions,
     },
     {
-      label:    k.contractsSigned,
-      value:    perf ? String(contracts) : '—',
-      sub:      closingRate !== null
-                  ? k.contractsSubFn(reservations, closingRate)
-                  : k.noContracts,
-      valueCls: 'text-emerald-700',
-      topBar:   'from-emerald-300 via-emerald-500 to-emerald-300',
-      icon:     <FilePen />,
-      iconCls:  'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
-    },
-    {
-      label:    k.salesVolume,
-      value:    perf ? formatCompact(salesGross, symbol, locale) : '—',
-      sub:      k.salesSub,
-      valueCls: 'text-slate-900',
-      topBar:   'from-slate-200 via-slate-400 to-slate-200',
-      icon:     <TrendingUp />,
-      iconCls:  'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
-    },
-    {
-      label:    k.myCommissions,
-      value:    perf ? formatCompact(commissionsNet, symbol, locale) : '—',
-      sub:      payoutRate !== null
-                  ? k.commissionsSubFn(formatCompact(payoutsNet, symbol, locale), payoutRate)
-                  : k.noCommissions,
-      valueCls: 'text-amber-700',
-      topBar:   'from-amber-300 via-amber-500 to-amber-300',
-      icon:     <BadgePercent />,
-      iconCls:  'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
-      featured: true,
-    },
-    {
-      label:    k.payoutRate,
-      value:    payoutRate !== null ? `${payoutRate}%` : '—',
-      sub:      payoutRate === null   ? '—'                    :
-                payoutRate >= 80      ? k.payoutAlmostFull :
-                payoutRate >= 50      ? k.payoutPartial          :
-                                        k.payoutProcessing,
-      valueCls: payoutRate === null   ? 'text-slate-400'   :
-                payoutRate >= 80      ? 'text-success-700'  :
-                payoutRate >= 50      ? 'text-brand-600'    :
-                                        'text-amber-600',
-      topBar:   payoutRate === null   ? 'from-slate-200 via-slate-300 to-slate-200' :
-                payoutRate >= 80      ? 'from-success-300 via-success-500 to-success-300' :
-                payoutRate >= 50      ? 'from-brand-300 via-brand-500 to-brand-300' :
-                                        'from-amber-300 via-amber-500 to-amber-300',
-      icon:     <Wallet />,
-      iconCls:  payoutRate === null   ? 'bg-slate-100 text-slate-400 ring-1 ring-slate-200'       :
-                payoutRate >= 80      ? 'bg-success-50 text-success-600 ring-1 ring-success-100' :
-                payoutRate >= 50      ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-100'       :
-                                        'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
+      label: k.payoutRate,
+      value: payoutRate !== null ? payoutRate : '—',
+      unit: payoutRate !== null ? '%' : '',
+      ring: payoutRate ?? undefined,
+      trend: payoutRate === null ? undefined : payoutRate >= 80 ? k.payoutAlmostFull : payoutRate >= 50 ? k.payoutPartial : k.payoutProcessing,
+      tone: payoutRate === null ? undefined : payoutRate >= 80 ? 'success' : 'warning',
     },
   ];
-
-  // U5: one navy band; the payout status is a coloured line, not a coloured card.
-  return (
-    <PremiumMetricStrip
-      variant="compact"
-      cols={5}
-      metrics={tiles.map((t) => {
-        const isMoney = t.label === k.salesVolume || t.label === k.myCommissions;
-        const raw = t.label === k.salesVolume ? salesGross : commissionsNet;
-        const [num, unit] = perf && isMoney ? compactParts(raw, symbol, locale) : [t.value, undefined];
-        return {
-          label: t.label,
-          value: num,
-          unit,
-          icon: t.icon,
-          sub: t.label === k.payoutRate ? undefined : t.sub,
-          ring: t.label === k.payoutRate && payoutRate !== null ? payoutRate : undefined,
-          trend: t.label === k.payoutRate ? t.sub : undefined,
-          trendCls:
-            t.label !== k.payoutRate || payoutRate === null ? undefined : payoutRate >= 80 ? 'success' : 'warning',
-        };
-      })}
-    />
-  );
 }
 
-
-// ── Sales Funnel Card ─────────────────────────────────────────────────────────
-
-interface FunnelStage {
-  Icon:      React.ComponentType<{ className?: string }>;
-  label:     string;
-  value:     number;
-  iconBg:    string;
-  iconText:  string;
-  valueCls:  string;
-  convRate:  string | null;
-}
-
-function SalesFunnelCard({
-  pipeline,
-  perf,
-  m,
-}: {
-  pipeline: FunnelStage[];
-  perf:     PerfSummary | undefined;
-  m:        Messages;
-}) {
-  const f = m.home.funnel;
-  if (pipeline.length === 0) {
-    return (
-      <div className="bg-surface border border-hairline rounded-card p-10 shadow-soft flex flex-col items-center gap-3">
-        <TrendingUp className="h-10 w-10 text-slate-200" />
-        <p className="text-sm text-slate-400">{f.emptyTitle}</p>
-        <p className="text-xs text-slate-300">{f.emptyHint}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-surface border border-hairline rounded-card overflow-hidden">
-
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
-            <TrendingUp className="h-4 w-4 text-brand-600" />
-          </div>
-          <div>
-            <h2 className="font-heading text-[18px] font-bold text-slate-900 leading-snug">{f.title}</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">{f.subtitle}</p>
-          </div>
-        </div>
-        <Link
-          href="/portal/performance"
-          className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
-        >
-          {f.detailsLink}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-
-      {/* Funnel stages */}
-      <div className="p-5">
-        <div className="flex items-stretch gap-2">
-          {pipeline.map((stage, i) => {
-            const Icon   = stage.Icon;
-            const isLast = i === pipeline.length - 1;
-
-            return (
-              <div key={stage.label} className="contents">
-                <div className="flex-1 flex flex-col items-center gap-2.5 bg-canvas/60 border border-hairline rounded-2xl px-2 py-4">
-                  <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center shrink-0', stage.iconBg)}>
-                    <Icon className={cn('h-4 w-4', stage.iconText)} />
-                  </div>
-                  <p className={cn('text-[22px] sm:text-[26px] font-black tabular-nums leading-none tracking-tight', stage.valueCls)}>
-                    {stage.value}
-                  </p>
-                  <p className="text-[10px] font-semibold text-slate-500 text-center leading-tight">
-                    {stage.label}
-                  </p>
-                </div>
-
-                {!isLast && (
-                  <div className="flex flex-col items-center justify-center gap-1 w-6 shrink-0">
-                    {stage.convRate && (
-                      <span className="text-[9px] font-bold text-slate-400 leading-none whitespace-nowrap">
-                        {stage.convRate}
-                      </span>
-                    )}
-                    <ChevronLeft className="h-3 w-3 text-slate-300" />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bottom conversion rates */}
-        {perf && (
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {([
-              { label: f.approvalRate, value: convPct(perf.leadsApproved, perf.leadsSubmitted)        ?? '—', cls: 'text-blue-700'    },
-              { label: f.contractRate, value: convPct(perf.contractsSigned, perf.reservationsCreated) ?? '—', cls: 'text-emerald-700' },
-              { label: f.payoutRate, value: convPct(perf.payoutsPaid, perf.contractsSigned)         ?? '—', cls: 'text-teal-700'    },
-            ] as const).map((s) => (
-              <div key={s.label} className="text-center bg-canvas/60 border border-hairline rounded-xl py-3.5">
-                <p className={cn('text-[22px] font-black tabular-nums leading-none', s.cls)}>{s.value}</p>
-                <p className="text-[10px] text-slate-400 font-medium mt-1.5 leading-tight">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -379,99 +189,48 @@ export default async function PortalDashboard() {
   const recentLeads  = leadsRes.data?.data ?? [];
   const hasContract  = !!(me.broker.contractStartAt && me.broker.contractEndAt);
 
-  const pipeline: FunnelStage[] = perf
+  const f = m.home.funnel;
+  const funnelStages = perf
     ? [
-        { Icon: UserPlus,         label: m.home.funnel.stages.submitted,  value: perf.leadsSubmitted,       iconBg: 'bg-brand-50',   iconText: 'text-brand-600',   valueCls: 'text-brand-700',   convRate: null },
-        { Icon: ShieldCheck,      label: m.home.funnel.stages.approved,  value: perf.leadsApproved,        iconBg: 'bg-blue-50',    iconText: 'text-blue-600',    valueCls: 'text-blue-700',    convRate: convPct(perf.leadsApproved, perf.leadsSubmitted) },
-        { Icon: BookmarkCheck,    label: m.home.funnel.stages.reservations,       value: perf.reservationsCreated,  iconBg: 'bg-violet-50',  iconText: 'text-violet-600',  valueCls: 'text-violet-700',  convRate: convPct(perf.reservationsCreated, perf.leadsApproved) },
-        { Icon: FilePen,          label: m.home.funnel.stages.contracts, value: perf.contractsSigned,      iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', valueCls: 'text-emerald-700', convRate: convPct(perf.contractsSigned, perf.reservationsCreated) },
-        { Icon: CircleDollarSign, label: m.home.funnel.stages.payouts,      value: perf.payoutsPaid,          iconBg: 'bg-teal-50',    iconText: 'text-teal-600',    valueCls: 'text-teal-700',    convRate: convPct(perf.payoutsPaid, perf.contractsSigned) },
+        { label: f.stages.submitted, value: perf.leadsSubmitted },
+        { label: f.stages.approved, value: perf.leadsApproved, note: convPct(perf.leadsApproved, perf.leadsSubmitted) ? `${f.approvalRate} ${convPct(perf.leadsApproved, perf.leadsSubmitted)}` : undefined },
+        { label: f.stages.reservations, value: perf.reservationsCreated },
+        { label: f.stages.contracts, value: perf.contractsSigned, note: convPct(perf.contractsSigned, perf.reservationsCreated) ? `${f.contractRate} ${convPct(perf.contractsSigned, perf.reservationsCreated)}` : undefined },
+        { label: f.stages.payouts, value: perf.payoutsPaid, note: convPct(perf.payoutsPaid, perf.contractsSigned) ? `${f.payoutRate} ${convPct(perf.payoutsPaid, perf.contractsSigned)}` : undefined },
       ]
     : [];
 
   return (
-    <div className="space-y-5">
+    <div className="dash-v2 space-y-5">
 
-      {/* ── 1. Hero ───────────────────────────────────────────────────────────── */}
-      {/* U5: on the page ground, like PremiumPageHero — no card, no gold top bar. */}
-      <div className="relative">
-        <div className="pt-2 pb-1">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-
-            {/* Avatar + info */}
-            <div className="flex items-start gap-4 min-w-0 flex-1">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-[#D8B66A] to-[#B38B3A] flex items-center justify-center shrink-0">
-                <span className="text-[#1A1408] font-extrabold text-base tracking-wide">
-                  {initials(me.user.fullName)}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                {/* Name + status row */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-heading text-[32px] sm:text-[36px] font-bold text-slate-900 leading-[1.3]">
-                    {m.home.greetingFn(me.user.fullName)}
-                  </h1>
-                  <BrokerStatusBadge status={me.broker.status} locale={locale} />
-                  <span
-                    className="font-mono text-2xs text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-hairline"
-                    dir="ltr"
-                  >
-                    {me.broker.code}
-                  </span>
-                </div>
-
-                {/* Details row */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-                  <span className="text-sm font-bold text-slate-700">{me.broker.companyName}</span>
-                  <span className="text-slate-200 select-none hidden sm:inline">·</span>
-                  {commissionRange && (
-                    <span className="inline-flex items-center gap-1">
-                      <BadgePercent className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                      <span className="text-sm font-extrabold text-amber-700 tabular-nums">{commissionRange}</span>
-                      <span className="text-xs text-slate-400">{m.home.commission}</span>
-                    </span>
-                  )}
-                  {hasContract && (
-                    <>
-                      <span className="text-slate-200 select-none hidden sm:inline">·</span>
-                      {/* Each date isolated: a dir="ltr" wrapper around Arabic dates
-                          scrambled them ("222028/02/22 – 2026/02/"). */}
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-500">
-                        <FileText className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span className="tabular-nums">
-                          <bdi>{formatDate(me.broker.contractStartAt, locale)}</bdi> – <bdi>{formatDate(me.broker.contractEndAt, locale)}</bdi>
-                        </span>
-                      </span>
-                    </>
-                  )}
-                  {me.permissions.isPrimaryContact && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 text-brand-700 px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ring-brand-100">
-                      <CheckCircle2 className="h-3 w-3" />
-                      {m.home.primaryContact}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <Link href="/portal/leads/new" className="shrink-0">
-              <Button variant="primary" size="md" leftIcon={<UserPlus className="h-4 w-4" />}>
-                {m.home.newLeadCta}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 2. KPI Strip ─────────────────────────────────────────────────────── */}
-      <BrokerKpiStrip perf={perf} symbol={symbol} m={m} locale={locale} />
+      {/* ── 1. Hero: the greeting over a photo, the broker's figures on glass ───── */}
+      <HeroV2
+        eyebrow={[me.broker.companyName, commissionRange ? `${m.home.commission} ${commissionRange}` : null].filter(Boolean).join(' · ')}
+        title={m.home.greetingFn(me.user.fullName)}
+        description={
+          [
+            hasContract ? `${formatDate(me.broker.contractStartAt, locale)} – ${formatDate(me.broker.contractEndAt, locale)}` : null,
+            me.permissions.isPrimaryContact ? m.home.primaryContact : null,
+          ].filter(Boolean).join(' · ')
+        }
+        image="/images/dashboard-hero.jpg"
+        actions={
+          <>
+            <span className="inline-flex h-11 items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 text-[12px] text-[#F7F3EA] backdrop-blur-md">
+              <BrokerStatusBadge status={me.broker.status} locale={locale} />
+              <bdi className="num">{me.broker.code}</bdi>
+            </span>
+            <HeroAction href="/portal/leads/new" icon={<UserPlus />} gold>{m.home.newLeadCta}</HeroAction>
+          </>
+        }
+        metrics={brokerMetrics(perf, symbol, m, locale)}
+      />
 
       {/* ── 3. Leads table + Sidebar ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 items-stretch gap-5">
 
         {/* Recent leads — 2/3 */}
-        <div className="lg:col-span-2 bg-surface border border-hairline rounded-card overflow-hidden">
+        <div className="lg:col-span-2 rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
@@ -553,7 +312,7 @@ export default async function PortalDashboard() {
         </div>
 
         {/* Sidebar — 1/3: projects card fills full height */}
-        <div className="bg-surface border border-hairline rounded-card overflow-hidden flex flex-col">
+        <div className="rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none overflow-hidden flex flex-col">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-hairline shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="h-7 w-7 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">
@@ -622,10 +381,10 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── 4. Sales Funnel ──────────────────────────────────────────────────── */}
-      {pipeline.length > 0 && (
+      {funnelStages.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{m.home.performanceSection}</SectionLabel>
-          <SalesFunnelCard pipeline={pipeline} perf={perf} m={m} />
+          <FunnelV2 title={f.title} sub={f.subtitle} stages={funnelStages} />
         </div>
       )}
 
@@ -633,7 +392,7 @@ export default async function PortalDashboard() {
       {activity.length > 0 && (
         <div className="space-y-3">
           <SectionLabel>{m.home.activity.section}</SectionLabel>
-          <div className="bg-surface border border-hairline rounded-card overflow-hidden">
+          <div className="rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-6 py-4 border-b border-hairline">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full border border-brand-400/50 flex items-center justify-center shrink-0">

@@ -44,14 +44,14 @@ export function ThemeToggle({ labels }: Props) {
       type="button"
       onClick={toggle}
       aria-label={toDark ? (labels?.toDark ?? 'Switch to dark mode') : (labels?.toLight ?? 'Switch to light mode')}
-      className="inline-flex h-10 items-center gap-2 rounded-full border border-hairline bg-surface px-4 text-[13px] font-bold text-slate-800 transition-colors duration-150 hover:border-brand-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45"
+      title={toDark ? labels?.toDark : labels?.toLight}
+      className="inline-flex h-[42px] w-[42px] items-center justify-center rounded-full border border-hairline bg-surface text-slate-900 transition-colors duration-150 hover:border-[#C8A24B]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45"
     >
       {toDark ? (
-        <Moon className="h-[15px] w-[15px]" aria-hidden />
+        <Moon className="h-[18px] w-[18px]" strokeWidth={1.6} aria-hidden />
       ) : (
-        <Sun className="h-[15px] w-[15px] text-brand-700" aria-hidden />
+        <Sun className="h-[18px] w-[18px]" strokeWidth={1.6} aria-hidden />
       )}
-      {labels && <span>{toDark ? labels.dark : labels.light}</span>}
     </button>
   );
 }
