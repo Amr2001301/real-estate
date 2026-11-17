@@ -13,7 +13,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, Amount, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
@@ -168,6 +168,11 @@ export default async function PortalContractsPage({
         {rows.length === 0 ? (
           <EmptyState icon={<FileText />} title={t.emptyTitle} description={t.emptyDescription} />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_160px_150px_36px]"
+            labels={locale === 'ar' ? ['', 'العميل / رقم العقد', 'المشروع / الوحدة', 'قيمة العقد', 'العمولة', 'التوقيع / التاريخ', ''] : ['', 'Client / contract', 'Project / unit', 'Contract value', 'Commission', 'Signature / date', '']}
+          />
           <ul className="divide-y divide-hairline" data-testid="portal-contract-rows">
             {rows.map((c) => {
               const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
@@ -282,6 +287,7 @@ export default async function PortalContractsPage({
               );
             })}
           </ul>
+</>
         )}
 
         {paged && paged.meta.total > PAGE_SIZE && (

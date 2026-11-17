@@ -11,7 +11,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
-import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
@@ -198,6 +198,11 @@ export default async function PortalVisitsPage({
             }
           />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_170px]"
+            labels={locale === 'ar' ? ['الموعد', 'العميل', 'المشروع / الوحدة', 'الحالة / الموعد', ''] : ['Appointment', 'Client', 'Project / unit', 'Status', '']}
+          />
           <ul className="divide-y divide-hairline" data-testid="portal-visit-rows">
             {rows.map((v) => {
               const clientName  = v.lead?.fullName ?? v.customerName;
@@ -284,6 +289,7 @@ export default async function PortalVisitsPage({
               );
             })}
           </ul>
+</>
         )}
 
         {paged && paged.meta.total > PAGE_SIZE && (

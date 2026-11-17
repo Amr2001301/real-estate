@@ -538,3 +538,26 @@ export function TeamList({ rows, empty }: { rows: TeamRow[]; empty: string }) {
     </ol>
   );
 }
+
+
+/**
+ * Column captions for a list of grid rows. `template` is the same
+ * `lg:grid-cols-[…]` class the rows use, so captions sit over their columns.
+ * Shown on large screens only (rows stack on small ones).
+ */
+export function ListHeader({ template, labels }: { template: string; labels: string[] }) {
+  return (
+    <div
+      data-testid="list-header"
+      aria-hidden
+      className={cn(
+        'hidden items-center gap-x-4 border-b border-hairline bg-slate-500/[0.06] px-6 py-3 text-[12px] font-semibold tracking-wide text-slate-500 lg:grid',
+        template,
+      )}
+    >
+      {labels.map((l, i) => (
+        <span key={i} className="truncate">{l}</span>
+      ))}
+    </div>
+  );
+}

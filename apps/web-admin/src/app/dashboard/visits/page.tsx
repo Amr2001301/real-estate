@@ -7,7 +7,7 @@ import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { Tabs } from '@/components/ui/tabs';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
@@ -181,6 +181,11 @@ export default async function VisitsPage({
           {requestsData.length === 0 ? (
             <PremiumEmptyState icon={<CalendarClock />} title={m.empty.noRequests} />
           ) : (
+            <>
+<ListHeader
+            template="lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1fr)_190px_170px]"
+            labels={locale === 'ar' ? ['التاريخ', 'العميل / رقم الطلب', 'المشروع / الوحدة', 'المصدر / الإنشاء', 'الحالة', ''] : ['Date', 'Client / request', 'Project / unit', 'Source / created', 'Status', '']}
+          />
             <ul className="divide-y divide-hairline" data-testid="visit-rows">
               {requestsData.map((r) => {
                 const { name, isFallback } = resolvedName(
@@ -228,6 +233,7 @@ export default async function VisitsPage({
                 );
               })}
             </ul>
+</>
           )}
         </PremiumSectionCard>
       )}
@@ -246,6 +252,11 @@ export default async function VisitsPage({
           {appointmentsData.length === 0 ? (
             <PremiumEmptyState icon={<CalendarDays />} title={m.empty.noVisits} />
           ) : (
+            <>
+<ListHeader
+            template="lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1fr)_190px_170px]"
+            labels={locale === 'ar' ? ['الموعد', 'العميل / رقم الزيارة', 'المشروع / الوحدة', 'المندوب', 'الحالة', ''] : ['Appointment', 'Client / visit', 'Project / unit', 'Agent', 'Status', '']}
+          />
             <ul className="divide-y divide-hairline" data-testid="visit-rows">
               {appointmentsData.map((a) => {
                 const { name, isFallback } = resolvedName(
@@ -298,6 +309,7 @@ export default async function VisitsPage({
                 );
               })}
             </ul>
+</>
           )}
         </PremiumSectionCard>
       )}

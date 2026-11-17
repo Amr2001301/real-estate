@@ -23,7 +23,7 @@ import {
   PremiumFilterAdvancedToggle,
   PremiumFilterAdvancedPanel,
 } from '@/components/premium';
-import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
@@ -263,6 +263,11 @@ export default async function ReservationsPage({
         {reservations.length === 0 ? (
           <PremiumEmptyState icon={<BookmarkCheck />} title={m.empty} />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_130px_190px_170px]"
+            labels={locale === 'ar' ? ['', 'العميل / رقم الحجز', 'المشروع / الوحدة', 'المندوب', 'مبلغ الحجز', 'الحالة / الانتهاء', ''] : ['', 'Client / reservation', 'Project / unit', 'Agent', 'Booking amount', 'Status / expiry', '']}
+          />
           <ul className="divide-y divide-hairline" data-testid="reservation-rows">
             {reservations.map((r) => {
               const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
@@ -349,6 +354,7 @@ export default async function ReservationsPage({
               );
             })}
           </ul>
+</>
         )}
       </PremiumSectionCard>
 

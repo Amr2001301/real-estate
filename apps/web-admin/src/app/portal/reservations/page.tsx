@@ -4,7 +4,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, Amount, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
@@ -139,6 +139,11 @@ export default async function PortalReservationsPage({
             }
           />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_150px_110px_36px]"
+            labels={locale === 'ar' ? ['', 'العميل / رقم الحجز', 'المشروع / الوحدة', 'العمولة المُقفلة', 'الحالة', 'تاريخ الإنشاء', ''] : ['', 'Client / reservation', 'Project / unit', 'Locked commission', 'Status', 'Created', '']}
+          />
           <ul className="divide-y divide-hairline" data-testid="portal-reservation-rows">
             {rows.map((r) => {
               const clientName  = r.lead?.fullName ?? r.client?.fullName ?? '—';
@@ -231,6 +236,7 @@ export default async function PortalReservationsPage({
               );
             })}
           </ul>
+</>
         )}
 
         {paged && paged.meta.total > PAGE_SIZE && (

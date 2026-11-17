@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { EntityLink } from '@/components/entity-link';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -209,6 +209,11 @@ export default async function ContractsPage({
         {contracts.length === 0 ? (
           <PremiumEmptyState icon={<FileText />} title={m.empty} />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_170px_minmax(0,1fr)_150px_36px]"
+            labels={locale === 'ar' ? ['', 'العميل / رقم العقد', 'المشروع / الوحدة', 'الإجمالي / المقدم', 'خطة التقسيط / المصدر', 'التوقيع', ''] : ['', 'Client / contract', 'Project / unit', 'Total / down payment', 'Plan / source', 'Signature', '']}
+          />
           <ul className="divide-y divide-hairline" data-testid="contract-rows">
             {contracts.map((c) => {
               const name = c.customer?.fullName ?? '—';
@@ -308,6 +313,7 @@ export default async function ContractsPage({
               );
             })}
           </ul>
+</>
         )}
       </PremiumSectionCard>
 

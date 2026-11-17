@@ -5,7 +5,7 @@ import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
 import type { AdminBrokerContract, Paged } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Amount, Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Amount, Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -266,6 +266,11 @@ export default async function AdminBrokerContractsPage({
             className="py-12"
           />
         ) : (
+          <>
+<ListHeader
+            template="lg:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_150px_120px_auto]"
+            labels={locale === 'ar' ? ['', 'العميل / رقم العقد', 'الوسيط / المندوب', 'الوحدة / المشروع', 'القيمة / العمولة', 'الحالة / التاريخ', ''] : ['', 'Customer / contract', 'Broker / agent', 'Unit / project', 'Value / commission', 'Status / date', '']}
+          />
           <ul className="divide-y divide-hairline">
             {rows.map((c) => {
               const name = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
@@ -367,6 +372,7 @@ export default async function AdminBrokerContractsPage({
               );
             })}
           </ul>
+</>
         )}
       </PremiumSectionCard>
 
