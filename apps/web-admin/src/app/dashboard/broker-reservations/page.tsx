@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { BookmarkCheck, Eye, Briefcase, Phone, Plus, AlertCircle } from 'lucide-react';
+import { BookmarkCheck, Eye, Plus, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
-import type { AdminBrokerReservation, Paged } from '@/lib/types';
+import type { AdminBrokerReservation, Paged, Project } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
-import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { AgentCell, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,6 @@ import {
   PremiumPageHero,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumSectionCard,
   PremiumEmptyState,
   PremiumFilterAdvancedToggle,
   PremiumFilterAdvancedPanel,
@@ -58,12 +58,14 @@ export default async function AdminBrokerReservationsPage({
     if (v) qs.set(key, v);
   }
 
-  const [resRes, brokersRes, projectsRes, salesRes] = await Promise.all([
+  const [resRes, brokersRes, projectsRes, salesRes, coverRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerReservation>>(`/broker-reservations?${qs.toString()}`)),
     safe(brokerOptions()),
     safe(projectOptions()),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
+    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
   ]);
+  const covers = new Map((coverRes.data?.data ?? []).map((p) => [p.id, p.media?.[0]?.url]));
 
   const paged = resRes.data;
   const rows = paged?.data ?? [];
@@ -217,18 +219,16 @@ export default async function AdminBrokerReservationsPage({
       </PremiumFilterBar>
 
       {/* ── Reservations table ───────────────────────────────────────────────── */}
-      <PremiumSectionCard
-        icon={<BookmarkCheck />}
+      <ListTableCard
         title={m.tableTitle}
-        description={m.tableDescription}
-        padded={false}
+        sub={m.tableDescription}
         trailing={
           totalCommission > 0 ? (
-            <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
+            <span className="tabular-nums whitespace-nowrap" dir="ltr">
               {m.tableTrailingCommission}{formatCurrency(totalCommission, currency, locale)}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 tabular-nums">
+            <span className="tabular-nums">
               {totalReservations.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
             </span>
           )
@@ -249,122 +249,74 @@ export default async function AdminBrokerReservationsPage({
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
-                <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colReservationNumber}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colClient}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colUnit}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colInternalRep}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colLockedCommission}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
-                  <th className="text-start py-3 ps-4 pe-5 w-px" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {rows.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="align-middle hover:bg-canvas/40 transition-colors duration-100"
-                  >
-                    {/* Reservation number — mono chip */}
-                    <td className="py-3.5 ps-5 pe-4 whitespace-nowrap">
+          <DataTable testId="broker-reservation-rows">
+            <thead>
+              <tr>
+                <Th>{m.colReservationNumber}</Th>
+                <Th>{m.colBroker}</Th>
+                <Th>{m.colClient}</Th>
+                <Th>{m.colUnit}</Th>
+                <Th>{m.colStatus}</Th>
+                <Th>{m.colInternalRep}</Th>
+                <Th>{m.colLockedCommission}</Th>
+                <Th>{m.colCreatedAt}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const project = r.unit?.building?.phase?.project;
+                return (
+                  <Tr key={r.id}>
+                    <Td>
                       {r.reservationNumber ? (
-                        <EntityLink
-                          kind="reservation"
-                          id={r.id}
-                          className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600 leading-none"
-                        >
+                        <EntityLink kind="reservation" id={r.id} className="font-mono text-[12.5px] font-semibold text-brand-700">
                           {r.reservationNumber}
                         </EntityLink>
                       ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                        <span className="text-xs text-slate-400">—</span>
                       )}
-                    </td>
-
-                    {/* Broker */}
-                    <td className="py-3.5 px-4">
+                    </Td>
+                    <Td>
                       {r.broker ? (
-                        <Link
-                          href={`/dashboard/brokers/${r.broker.id}` as never}
-                          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
-                        >
-                          <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[160px]">{r.broker.companyName}</span>
-                        </Link>
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={r.broker.companyName} className="h-8 w-8 text-[11px]" />
+                          <div className="min-w-0">
+                            <Link href={`/dashboard/brokers/${r.broker.id}` as never} className="block max-w-[140px] truncate text-[13.5px] font-semibold text-slate-900 hover:text-brand-700">
+                              {r.broker.companyName}
+                            </Link>
+                            {r.brokerAgent && <span className="block max-w-[140px] truncate text-[11.5px] text-slate-500">{r.brokerAgent.fullName}</span>}
+                          </div>
+                        </div>
                       ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                        <span className="text-xs text-slate-400">—</span>
                       )}
-                      {r.brokerAgent && (
-                        <p className="text-2xs text-slate-400 mt-0.5 truncate max-w-[180px] ps-5">
-                          {r.brokerAgent.fullName}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Client */}
-                    <td className="py-3.5 px-4">
-                      <p className="font-semibold text-slate-900 truncate max-w-[180px]">
-                        {r.lead ? (
-                          <EntityLink kind="lead" id={r.lead.id} mono={false}>{r.lead.fullName}</EntityLink>
-                        ) : r.client ? (
-                          <EntityLink kind="client" id={r.client.id} mono={false}>{r.client.fullName}</EntityLink>
-                        ) : '—'}
-                      </p>
-                      <span
-                        className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
-                        dir="ltr"
-                      >
-                        <Phone className="h-3 w-3 shrink-0" />
-                        {r.lead?.phone ?? r.client?.phone ?? '—'}
-                      </span>
-                    </td>
-
-                    {/* Unit */}
-                    <td className="py-3.5 px-4">
-                      {r.unit?.code ? (
-                        <EntityLink
-                          kind="unit"
-                          id={r.unit.id}
-                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 leading-none"
-                        >
-                          {r.unit.code}
-                        </EntityLink>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                      {r.unit?.building && (
-                        <p className="text-2xs text-slate-400 mt-1 truncate max-w-[160px]">
-                          <EntityLink kind="project" id={r.unit.building.phase.project.id} mono={false}>{tx(r.unit.building.phase.project.name)}</EntityLink>
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Status badge */}
-                    <td className="py-3.5 px-4">
+                    </Td>
+                    <Td>
+                      <PersonCell
+                        name={r.lead?.fullName ?? r.client?.fullName ?? '—'}
+                        phone={r.lead?.phone ?? r.client?.phone}
+                        href={r.lead ? `/dashboard/leads/${r.lead.id}` : r.client ? `/dashboard/clients/${r.client.id}` : undefined}
+                      />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : undefined}
+                        unit={r.unit?.code ? <EntityLink kind="unit" id={r.unit.id}>{r.unit.code}</EntityLink> : undefined}
+                        unitWord={m.colUnit + ':'}
+                      />
+                    </Td>
+                    <Td>
                       <ReservationStatusBadge status={r.status} />
-                    </td>
-
-                    {/* Sales admin */}
-                    <td className="py-3.5 px-4">
-                      {r.sales ? (
-                        <span className="block text-xs text-slate-600 truncate max-w-[140px]">
-                          {r.sales.fullName}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          {m.unassigned}
-                        </span>
-                      )}
-                    </td>
-
+                    </Td>
+                    <Td>
+                      <AgentCell name={r.sales?.fullName} empty={m.unassigned} />
+                    </Td>
                     {/* Locked commission */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <Td>
                       {r.commissionLockedPct != null || r.commissionLockedAmount != null ? (
-                        <div className="flex min-w-[150px] items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span
                             className={
                               r.commissionLockedPct != null
@@ -384,28 +336,24 @@ export default async function AdminBrokerReservationsPage({
                       ) : (
                         <span className="text-slate-400 text-xs">{m.commissionUnset}</span>
                       )}
-                    </td>
-
-                    {/* Date */}
-                    <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                      {formatDate(r.createdAt, locale)}
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3.5 ps-4 pe-5">
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(r.createdAt, locale)}</DateText>
+                    </Td>
+                    <Td>
                       <Link href={`/dashboard/reservations/${r.id}` as never}>
                         <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
-      </PremiumSectionCard>
+      </ListTableCard>
 
       {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {paged && paged.meta.total > PAGE_SIZE && (

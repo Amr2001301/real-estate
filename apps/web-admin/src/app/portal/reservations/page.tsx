@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { Plus, BookmarkCheck, Eye, Phone, AlertCircle, Building2 } from 'lucide-react';
+import { Plus, BookmarkCheck, Eye, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
+import { Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { DataTable, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export default async function PortalReservationsPage({
   const paged          = resRes.data;
   const rows           = paged?.data ?? [];
   const projects       = projectsRes.data ?? [];
+  const covers = new Map(projects.map((p) => [p.project.id, p.project.media?.[0]?.url]));
   const pendingCount   = rPending.data?.meta.total   ?? 0;
   const approvedCount  = rApproved.data?.meta.total  ?? 0;
   const convertedCount = rConverted.data?.meta.total ?? 0;
@@ -139,104 +141,82 @@ export default async function PortalReservationsPage({
             }
           />
         ) : (
-          <>
-<ListHeader
-            template="lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_150px_110px_36px]"
-            labels={locale === 'ar' ? ['', 'العميل / رقم الحجز', 'المشروع / الوحدة', 'العمولة المُقفلة', 'الحالة', 'تاريخ الإنشاء', ''] : ['', 'Client / reservation', 'Project / unit', 'Locked commission', 'Status', 'Created', '']}
-          />
-          <ul className="divide-y divide-hairline" data-testid="portal-reservation-rows">
-            {rows.map((r) => {
-              const clientName  = r.lead?.fullName ?? r.client?.fullName ?? '—';
-              const clientPhone = r.lead?.phone ?? r.client?.phone ?? undefined;
-              const href = `/portal/reservations/${r.id}`;
-              const commissionParts = r.commissionLockedAmount != null
-                ? compactParts(Number(r.commissionLockedAmount), symbol, locale)
-                : null;
-              return (
-                <li
-                  key={r.id}
-                  data-testid="portal-reservation-row"
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_150px_110px_36px]"
-                >
-                  <Avatar name={clientName} />
-
-                  {/* Client + reservation code */}
-                  <div className="min-w-0">
-                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
-                      {clientName}
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
-                      <Link href={href as never} className="whitespace-nowrap hover:text-brand-700">
-                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Reservation' : 'حجز'}</span>
-                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
-                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                        </span>
+          <DataTable testId="portal-reservation-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'رقم الحجز' : 'Reservation'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
+                <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
+                <Th>{m.common.lockedCommission}</Th>
+                <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const clientName  = r.lead?.fullName ?? r.client?.fullName ?? '—';
+                const clientPhone = r.lead?.phone ?? r.client?.phone ?? undefined;
+                const href = `/portal/reservations/${r.id}`;
+                const project = r.unit?.building?.phase?.project;
+                const commissionParts = r.commissionLockedAmount != null
+                  ? compactParts(Number(r.commissionLockedAmount), symbol, locale)
+                  : null;
+                return (
+                  <Tr key={r.id} testId="portal-reservation-row">
+                    <Td>
+                      <Link href={href as never} className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
+                        {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
                       </Link>
-                      {clientPhone && (
-                        <a href={`tel:${clientPhone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-brand-700">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <span dir="ltr">{clientPhone}</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project + unit */}
-                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">
-                        {r.unit?.building ? tx(r.unit.building.phase.project.name, locale) : '—'}
-                      </p>
-                      {r.unit && (
-                        <p className="mt-0.5 text-slate-500">
-                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{r.unit.code}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Locked commission */}
-                  <div className="hidden text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-400">{m.common.lockedCommission}</p>
-                    {r.commissionLockedPct != null ? (
-                      <p className="mt-0.5 whitespace-nowrap font-bold tabular-nums text-brand-700">
-                        {Number(r.commissionLockedPct).toFixed(2)}%
-                        {commissionParts && (
-                          <span className="ms-2 text-[12px] font-semibold text-slate-600">
-                            <Amount parts={commissionParts} />
+                    </Td>
+                    <Td>
+                      <PersonCell name={clientName} phone={clientPhone} href={href} />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? tx(project.name, locale) : undefined}
+                        unit={r.unit?.code}
+                        unitWord={locale === 'en' ? 'Unit:' : 'وحدة:'}
+                      />
+                    </Td>
+                    <Td>
+                      {r.commissionLockedPct != null ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex min-w-[56px] justify-center rounded-full bg-[#C8A24B]/15 px-2 py-1 text-[12px] font-semibold tabular-nums text-[#8A6823] dark:text-[#E2C792]" dir="ltr">
+                            {Number(r.commissionLockedPct).toFixed(2)}%
                           </span>
-                        )}
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-slate-400">—</p>
-                    )}
-                  </div>
-
-                  {/* Status */}
-                  <div className="hidden lg:block">
-                    <ReservationStatusBadge status={r.status} locale={locale} />
-                  </div>
-
-                  {/* Created */}
-                  <span className="hidden whitespace-nowrap text-[12px] tabular-nums text-slate-500 lg:block">
-                    <bdi>{formatDate(r.createdAt, locale)}</bdi>
-                  </span>
-
-                  <Link
-                    href={href as never}
-                    aria-label={m.common.view}
-                    title={m.common.view}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-</>
+                          {commissionParts && (
+                            <span className="text-[13px] font-semibold tabular-nums text-slate-800">
+                              <Amount parts={commissionParts} />
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <ReservationStatusBadge status={r.status} locale={locale} />
+                    </Td>
+                    <Td>
+                      <DateText><bdi>{formatDate(r.createdAt, locale)}</bdi></DateText>
+                    </Td>
+                    <Td>
+                      <Link
+                        href={href as never}
+                        aria-label={m.common.view}
+                        title={m.common.view}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
 
         {paged && paged.meta.total > PAGE_SIZE && (

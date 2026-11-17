@@ -2,16 +2,15 @@ import Link from 'next/link';
 import {
   Plus,
   CalendarClock,
-  Phone,
   Clock,
   AlertCircle,
-  Building2,
   Search,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Paged, PortalVisitRequest } from '@/lib/types';
+import type { Paged, PortalProject, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
-import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
+import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { DataTable, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
@@ -27,7 +26,6 @@ import {
   PremiumFilterField,
   PremiumSectionCard,
 } from '@/components/premium';
-import { EntityLink } from '@/components/entity-link';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -74,14 +72,16 @@ export default async function PortalVisitsPage({
   if (sp.requestStatus) qs.set('requestStatus', sp.requestStatus);
   if (sp.q) qs.set('q', sp.q);
 
-  const [r, rAll, rNew, rUnderReview, rConverted, rRejected] = await Promise.all([
+  const [r, rAll, rNew, rUnderReview, rConverted, rRejected, projectsRes] = await Promise.all([
     safe(api.get<Paged<PortalVisitRequest>>(`/portal/visits?${qs.toString()}`)),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=NEW')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=UNDER_REVIEW')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=CONVERTED')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=REJECTED')),
+    safe(api.get<PortalProject[]>('/portal/projects')),
   ]);
+  const covers = new Map((projectsRes.data ?? []).map((p) => [p.project.id, p.project.media?.[0]?.url]));
 
   const paged        = r.data;
   const rows         = paged?.data ?? [];
@@ -198,98 +198,77 @@ export default async function PortalVisitsPage({
             }
           />
         ) : (
-          <>
-<ListHeader
-            template="lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_170px]"
-            labels={locale === 'ar' ? ['الموعد', 'العميل', 'المشروع / الوحدة', 'الحالة / الموعد', ''] : ['Appointment', 'Client', 'Project / unit', 'Status', '']}
-          />
-          <ul className="divide-y divide-hairline" data-testid="portal-visit-rows">
-            {rows.map((v) => {
-              const clientName  = v.lead?.fullName ?? v.customerName;
-              const clientPhone = v.lead?.phone ?? v.customerPhone;
-              const appt        = v.appointments?.[0];
-              const urgency     = appointmentUrgency(appt?.scheduledAt, t.urgency);
-              const isToday     = urgency?.key === 'today';
-
-              return (
-                <li
-                  key={v.id}
-                  data-testid="portal-visit-row"
-                  className={cn(
-                    'grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors lg:grid-cols-[64px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1.2fr)_170px]',
-                    isToday ? 'bg-amber-500/[0.06] hover:bg-amber-500/10' : 'hover:bg-surface-muted/30',
-                  )}
-                >
-                  {/* The appointment once booked, else the preferred day (date-only, UTC). */}
-                  {appt ? (
-                    <DateTile value={appt.scheduledAt} time={formatTime(appt.scheduledAt, locale)} timeZone={DEFAULT_TIME_ZONE} locale={locale} />
-                  ) : (
-                    <DateTile value={v.preferredDate} timeZone="UTC" locale={locale} />
-                  )}
-
-                  {/* Client */}
-                  <div className="flex min-w-0 items-center gap-3">
-                    {clientName && <Avatar name={clientName} />}
-                    <div className="min-w-0">
-                      <p className={cn('truncate text-[14.5px] font-bold', clientName ? 'text-slate-900' : 'text-slate-400')}>
-                        {v.lead ? (
-                          <EntityLink kind="lead" id={v.lead.id} scope="portal" mono={false}>{clientName}</EntityLink>
-                        ) : (clientName ?? '—')}
+          <DataTable testId="portal-visit-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'الموعد' : 'Appointment'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
+                <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
+                <Th>{locale === 'ar' ? 'حالة الموعد' : 'Appointment status'}</Th>
+                <Th>{locale === 'ar' ? 'حالة الطلب' : 'Request status'}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((v) => {
+                const clientName  = v.lead?.fullName ?? v.customerName;
+                const clientPhone = v.lead?.phone ?? v.customerPhone;
+                const appt        = v.appointments?.[0];
+                const urgency     = appointmentUrgency(appt?.scheduledAt, t.urgency);
+                const isToday     = urgency?.key === 'today';
+                return (
+                  <Tr key={v.id} testId="portal-visit-row" className={isToday ? 'bg-amber-500/[0.06] hover:bg-amber-500/10' : undefined}>
+                    <Td>
+                      {/* The appointment once booked, else the preferred day (date-only, UTC). */}
+                      {appt ? (
+                        <DateTile value={appt.scheduledAt} time={formatTime(appt.scheduledAt, locale)} timeZone={DEFAULT_TIME_ZONE} locale={locale} />
+                      ) : (
+                        <DateTile value={v.preferredDate} timeZone="UTC" locale={locale} />
+                      )}
+                    </Td>
+                    <Td>
+                      <PersonCell
+                        name={clientName ?? '—'}
+                        muted={!clientName}
+                        phone={clientPhone}
+                        href={v.lead ? `/portal/leads/${v.lead.id}` : undefined}
+                      />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={v.project?.id ? covers.get(v.project.id) : undefined}
+                        project={v.project ? tx(v.project.name, locale) : undefined}
+                        unit={v.unit?.code}
+                        unitWord={locale === 'en' ? 'Unit:' : 'وحدة:'}
+                      />
+                    </Td>
+                    <Td>
+                      {appt ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {urgency && (
+                            <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', URGENCY_CHIP[urgency.key])}>
+                              {urgency.label}
+                            </span>
+                          )}
+                          <AppointmentStatusBadge status={appt.status} locale={locale} />
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[12.5px] text-slate-400">
+                          <Clock className="h-3.5 w-3.5" />
+                          {t.awaitingScheduling}
+                        </span>
+                      )}
+                      <p className="mt-1 text-[11.5px] text-slate-500">
+                        {t.cols.preferredDate}: <bdi>{formatDate(v.preferredDate, locale, 'UTC')}</bdi>
                       </p>
-                      {clientPhone && (
-                        <a href={`tel:${clientPhone}`} className="mt-1 inline-flex items-center gap-1 text-[12px] tabular-nums text-slate-500 hover:text-brand-700">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <span dir="ltr">{clientPhone}</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project + unit */}
-                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{v.project ? tx(v.project.name, locale) : '—'}</p>
-                      {v.unit?.code && (
-                        <p className="mt-0.5 text-slate-500">
-                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{v.unit.code}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Appointment */}
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    {appt ? (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {urgency && (
-                          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', URGENCY_CHIP[urgency.key])}>
-                            {urgency.label}
-                          </span>
-                        )}
-                        <AppointmentStatusBadge status={appt.status} locale={locale} />
-                      </div>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-slate-400">
-                        <Clock className="h-3.5 w-3.5" />
-                        {t.awaitingScheduling}
-                      </span>
-                    )}
-                    <p className="mt-1 whitespace-nowrap text-[11.5px] text-slate-500">
-                      {t.cols.preferredDate}: <bdi>{formatDate(v.preferredDate, locale, 'UTC')}</bdi>
-                    </p>
-                  </div>
-
-                  {/* Request status */}
-                  <div className="hidden lg:block">
-                    {v.requestStatus ? <VisitRequestStatusBadge status={v.requestStatus} locale={locale} /> : <span className="text-slate-400">—</span>}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-</>
+                    </Td>
+                    <Td>
+                      {v.requestStatus ? <VisitRequestStatusBadge status={v.requestStatus} locale={locale} /> : <span className="text-slate-400">—</span>}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
 
         {paged && paged.meta.total > PAGE_SIZE && (

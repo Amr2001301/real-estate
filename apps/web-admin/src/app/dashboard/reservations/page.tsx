@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { Plus, BookmarkCheck, AlertCircle, Phone, Building2 } from 'lucide-react';
+import { Plus, BookmarkCheck, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
-import type { Paged, Reservation } from '@/lib/types';
+import type { Paged, Project, Reservation } from '@/lib/types';
 import { formatDate, formatTime, tx, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
@@ -18,13 +18,12 @@ import {
   PremiumPageHero,
   PremiumFilterBar,
   PremiumFilterField,
-  PremiumSectionCard,
   PremiumEmptyState,
   PremiumFilterAdvancedToggle,
   PremiumFilterAdvancedPanel,
 } from '@/components/premium';
-import { Avatar, FigIcons, FigureBar, ListHeader } from '@/components/cockpit/cockpit';
-import { cn } from '@/lib/cn';
+import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { AgentCell, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
 
@@ -102,14 +101,16 @@ export default async function ReservationsPage({
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const isManager = session?.role === 'SALES_MANAGER';
-  const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale] = await Promise.all([
+  const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale, coverRes] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
     safe(projectOptions()),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     getReportsCurrency(),
     getLocale(),
+    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
   ]);
+  const covers = new Map((coverRes.data?.data ?? []).map((p) => [p.id, p.media?.[0]?.url]));
   const m = uiT(locale).pages.reservations;
   const symbol = currencySymbol(currency, locale);
 
@@ -250,12 +251,11 @@ export default async function ReservationsPage({
       )}
 
       {/* ── Rows ─────────────────────────────────────────────────────────────── */}
-      <PremiumSectionCard
+      <ListTableCard
         title={m.title}
-        padded={false}
-        band
+        sub={m.description}
         trailing={
-          <span className="text-xs text-slate-400 tabular-nums">
+          <span className="tabular-nums">
             {(paginationMeta?.total ?? reservations.length).toLocaleString(intlLocale(locale))} {m.countSuffix}
           </span>
         }
@@ -263,101 +263,81 @@ export default async function ReservationsPage({
         {reservations.length === 0 ? (
           <PremiumEmptyState icon={<BookmarkCheck />} title={m.empty} />
         ) : (
-          <>
-<ListHeader
-            template="lg:grid-cols-[116px_minmax(0,1.2fr)_minmax(0,1.25fr)_minmax(0,0.8fr)_104px_100px_92px_176px]"
-            labels={locale === 'ar' ? ['رقم الحجز / الإنشاء', 'العميل', 'المشروع / الوحدة', 'المندوب', 'مبلغ الحجز', 'الحالة', 'تاريخ الانتهاء', ''] : ['Reservation / created', 'Client', 'Project / unit', 'Agent', 'Booking amount', 'Status', 'Expires', '']}
-          />
-          <ul className="divide-y divide-hairline" data-testid="reservation-rows">
-            {reservations.map((r) => {
-              const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
-              const project = r.unit?.building?.phase?.project;
-              const amount = Number(r.bookingAmount);
-              const href = `/dashboard/reservations/${r.id}`;
-              return (
-                <li
-                  key={r.id}
-                  data-testid="reservation-row"
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-4 py-3.5 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[116px_minmax(0,1.2fr)_minmax(0,1.25fr)_minmax(0,0.8fr)_104px_100px_92px_176px]"
-                >
-                  {/* Reservation code */}
-                  <div className="col-start-2 row-start-1 min-w-0 lg:col-start-auto lg:row-start-auto">
-                    <Link href={href as never} data-testid="list-code" className="block whitespace-nowrap font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
-                      {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                    </Link>
-                    <p className="mt-0.5 hidden whitespace-nowrap text-[11.5px] tabular-nums text-slate-500 lg:block">{formatDate(r.createdAt, locale)}</p>
-                  </div>
-
-                  {/* Client */}
-                  <div className="col-span-3 flex min-w-0 items-center gap-2.5 lg:col-span-1">
-                    <Avatar name={name} className="h-8 w-8 text-[11px]" />
-                    <div className="min-w-0">
-                      <Link href={href as never} className="block truncate text-[13.5px] font-bold text-slate-900 hover:text-brand-700">
-                        {name}
+          <DataTable testId="reservation-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'رقم الحجز' : 'Reservation'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
+                <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
+                <Th>{locale === 'ar' ? 'المندوب' : 'Agent'}</Th>
+                <Th>{locale === 'ar' ? 'مبلغ الحجز' : 'Booking amount'}</Th>
+                <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الانتهاء' : 'Expires'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {reservations.map((r) => {
+                const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
+                const project = r.unit?.building?.phase?.project;
+                const amount = Number(r.bookingAmount);
+                const href = `/dashboard/reservations/${r.id}`;
+                return (
+                  <Tr key={r.id} testId="reservation-row">
+                    <Td>
+                      <Link href={href as never} data-testid="list-code" className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
+                        {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
                       </Link>
-                      {(r.client?.phone ?? r.lead?.phone) && (
-                        <span className="mt-0.5 inline-flex items-center gap-1 text-[11.5px] tabular-nums text-slate-500">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <span dir="ltr">{r.client?.phone ?? r.lead?.phone}</span>
+                    </Td>
+                    <Td>
+                      <PersonCell name={name} phone={r.client?.phone ?? r.lead?.phone} href={href} />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : undefined}
+                        unit={r.unit ? <EntityLink kind="unit" id={r.unit.id}>{r.unit.code}</EntityLink> : undefined}
+                        unitWord={`${m.unitWord}:`}
+                      />
+                    </Td>
+                    <Td>
+                      <AgentCell name={r.sales?.fullName} empty={m.noAgent} />
+                    </Td>
+                    <Td>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                          {Number.isFinite(amount)
+                            ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
+                            : '—'}
                         </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project + unit */}
-                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : '—'}</p>
-                      {r.unit && (
-                        <p className="mt-0.5 truncate text-slate-500">
-                          <span className="me-1 text-slate-400">{m.unitWord}</span>
-                          <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap">{r.unit.code}</EntityLink>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Agent */}
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    <p className={cn('truncate font-semibold', r.sales ? 'text-slate-800' : 'text-slate-400')}>
-                      {r.sales?.fullName ?? m.noAgent}
-                    </p>
-                  </div>
-
-                  {/* Booking amount + payment */}
-                  <div className="hidden flex-col items-start gap-1 lg:flex">
-                    <span className="whitespace-nowrap text-[14px] font-bold tabular-nums text-slate-900">
-                      {Number.isFinite(amount)
-                        ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
-                        : '—'}
-                    </span>
-                    <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
-                  </div>
-
-                  {/* Status */}
-                  <div className="hidden lg:block">
-                    <ReservationStatusBadge status={r.status} locale={locale} />
-                  </div>
-
-                  {/* Expiry */}
-                  <div className="hidden text-[12px] tabular-nums text-slate-600 lg:block">
-                    <p className="whitespace-nowrap">{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</p>
-                    <p className="mt-0.5 whitespace-nowrap text-slate-400" dir="ltr">{formatTime(r.expiresAt, locale)}</p>
-                  </div>
-
-                  <ReservationActions
-                    reservation={r}
-                    canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
-                    locale={locale}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-</>
+                        <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
+                      </div>
+                    </Td>
+                    <Td>
+                      <ReservationStatusBadge status={r.status} locale={locale} />
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</DateText>
+                      <span className="ms-1.5 text-[11.5px] tabular-nums text-slate-400" dir="ltr">{formatTime(r.expiresAt, locale)}</span>
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(r.createdAt, locale)}</DateText>
+                    </Td>
+                    <Td>
+                      <ReservationActions
+                        reservation={r}
+                        canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
+                        locale={locale}
+                      />
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
-      </PremiumSectionCard>
+      </ListTableCard>
 
       {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {paginationMeta && paginationMeta.totalPages > 1 && (
