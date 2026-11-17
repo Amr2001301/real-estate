@@ -7,7 +7,7 @@ import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, Project, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, ListPage, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { Tabs } from '@/components/ui/tabs';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
@@ -129,24 +129,27 @@ export default async function VisitsPage({
   const activeHref = `/dashboard/visits?tab=${tab}`;
 
   return (
-    <div className="space-y-5">
+    <ListPage>
       <PremiumPageHero
         title={m.title}
         description={m.description}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumb },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'المبيعات / الزيارات' : 'Sales / Visits'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           <Link href="/dashboard/visits/new">
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {m.addBtn}
             </Button>
           </Link>
         }
       />
 
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
@@ -160,7 +163,7 @@ export default async function VisitsPage({
         />
       </section>
 
-      <Tabs items={tabs} activeHref={activeHref} />
+      <div className="shrink-0"><Tabs items={tabs} activeHref={activeHref} /></div>
 
       {fetchError && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
@@ -232,7 +235,7 @@ export default async function VisitsPage({
                       </Td>
                       <Td>
                         {r.requestStatus ? (
-                          <VisitRequestStatusBadge status={r.requestStatus} locale={locale} />
+                          <VisitRequestStatusBadge status={r.requestStatus} locale={locale} dot />
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}
@@ -321,7 +324,7 @@ export default async function VisitsPage({
                         <AgentCell name={a.assignedSales?.fullName} empty={m.noAgent} />
                       </Td>
                       <Td>
-                        <AppointmentStatusBadge status={a.status} locale={locale} />
+                        <AppointmentStatusBadge status={a.status} locale={locale} dot />
                       </Td>
                       <Td>
                         <AppointmentActions appointment={a} salesOptions={salesOptions} locale={locale} />
@@ -334,7 +337,7 @@ export default async function VisitsPage({
           )}
         </ListTableCard>
       )}
-    </div>
+    </ListPage>
   );
 }
 

@@ -78,9 +78,9 @@ const RESERVATION: Record<ReservationStatus, { c: string; l: L }> = {
   EXPIRED:   { c: 'bg-warning-50 text-warning-700', l: l('منتهي', 'Expired') },
   CONVERTED: { c: 'bg-info-50 text-info-700',       l: l('محوّل إلى عقد', 'Converted') },
 };
-export function ReservationStatusBadge({ status, locale = 'ar' }: { status: ReservationStatus; locale?: Locale }) {
+export function ReservationStatusBadge({ status, locale = 'ar', dot }: { status: ReservationStatus; locale?: Locale; dot?: boolean }) {
   const x = RESERVATION[status];
-  return <span className={`${PILL} ${x.c}`}>{x.l[locale]}</span>;
+  return <span className={`${PILL} ${x.c}${dot ? ' gap-1.5' : ''}`}>{dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{x.l[locale]}</span>;
 }
 
 const MAINT: Record<MaintenanceStatus, { c: string; l: L }> = {
@@ -133,9 +133,9 @@ const VISIT_REQUEST: Record<VisitRequestStatus, { c: string; l: L }> = {
   REJECTED:     { c: 'bg-danger-50 text-danger-700',   l: l('مرفوض', 'Rejected') },
   CANCELLED:    { c: 'bg-surface-muted text-slate-500',l: l('ملغى', 'Cancelled') },
 };
-export function VisitRequestStatusBadge({ status, locale = 'ar' }: { status: VisitRequestStatus; locale?: Locale }) {
+export function VisitRequestStatusBadge({ status, locale = 'ar', dot }: { status: VisitRequestStatus; locale?: Locale; dot?: boolean }) {
   const x = VISIT_REQUEST[status];
-  return <span className={`${PILL} ${x.c}`}>{x.l[locale]}</span>;
+  return <span className={`${PILL} ${x.c}${dot ? ' gap-1.5' : ''}`}>{dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{x.l[locale]}</span>;
 }
 
 const APPOINTMENT: Record<AppointmentStatus, { c: string; l: L }> = {
@@ -147,9 +147,9 @@ const APPOINTMENT: Record<AppointmentStatus, { c: string; l: L }> = {
   NO_SHOW:           { c: 'bg-warning-50 text-warning-700', l: l('لم يحضر', 'No-show') },
   RESCHEDULED:       { c: 'bg-slate-100 text-slate-600',    l: l('معاد جدولتها', 'Rescheduled') },
 };
-export function AppointmentStatusBadge({ status, locale = 'ar' }: { status: AppointmentStatus; locale?: Locale }) {
+export function AppointmentStatusBadge({ status, locale = 'ar', dot }: { status: AppointmentStatus; locale?: Locale; dot?: boolean }) {
   const x = APPOINTMENT[status];
-  return <span className={`${PILL} ${x.c}`}>{x.l[locale]}</span>;
+  return <span className={`${PILL} ${x.c}${dot ? ' gap-1.5' : ''}`}>{dot && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />}{x.l[locale]}</span>;
 }
 
 const PLAN_TEMPLATE: Record<PlanTemplateStatus, { c: string; l: L }> = {

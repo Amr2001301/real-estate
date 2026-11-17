@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Eye, CheckCircle2, X, Ban } from 'lucide-react';
 import type { Reservation } from '@/lib/types';
 import type { Locale } from '@/lib/locale';
-import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import { uiT } from '@/messages/ui';
 import { StatusDialog } from './status-dialog';
 import {
@@ -40,20 +40,33 @@ export function ReservationActions({ reservation, canDecide = false, locale = 'a
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {/* Approve is the row's one main action; reject and cancel sit in the menu. */}
+      {/* Approve / reject as round buttons; cancel sits in the menu. */}
       {isPending && canDecide && (
-        <PrimaryAction icon={<CheckCircle2 />} onClick={handleApprove} disabled={approvePending}>
-          {m.listApproveShort}
-        </PrimaryAction>
+        <>
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={approvePending}
+            aria-label={m.listApproveShort}
+            title={m.listApproveShort}
+            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-emerald-500/12 text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-60"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setRejectOpen(true)}
+            aria-label={m.listRejectLabel}
+            title={m.listRejectLabel}
+            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-rose-500/12 text-rose-700 transition-colors hover:bg-rose-500/20"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </>
       )}
 
       {canCancel && (
         <RowMenu label={m.listMoreLabel}>
-          {isPending && canDecide && (
-            <MenuItem icon={<X />} tone="danger" onClick={() => setRejectOpen(true)}>
-              {m.listRejectLabel}
-            </MenuItem>
-          )}
           <MenuItem icon={<Ban />} onClick={() => setCancelOpen(true)}>
             {m.listCancelLabel}
           </MenuItem>

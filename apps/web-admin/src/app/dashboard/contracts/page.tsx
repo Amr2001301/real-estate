@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session';
 import type { Paged, Project } from '@/lib/types';
 import { formatCurrency, formatDate, intlLocale, tx } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { EntityLink } from '@/components/entity-link';
 import { getReportsCurrency } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
@@ -13,11 +13,8 @@ import { uiT } from '@/messages/ui';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
   PremiumEmptyState,
 } from '@/components/premium';
 
@@ -64,7 +61,7 @@ export default async function ContractsPage({
   const m = uiT(locale).pages.contracts;
   const sp = await searchParams;
   const page = Number(sp.page ?? 1);
-  const pageSize = 20;
+  const pageSize = 10;
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (sp.q) qs.set('q', sp.q);
@@ -97,22 +94,27 @@ export default async function ContractsPage({
 
   // Manual contract creation (contracts:upload) is ADMIN-only; SALES reads.
   const isAdmin = session?.role === 'ADMIN';
+  const share = (n: number) => (totalContracts ? Math.round((n / totalContracts) * 100) : 0);
+  const ofTotal = locale === 'ar' ? 'من الإجمالي' : 'of total';
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <ListPage>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.title}
         description={m.description}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumb },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'المبيعات / العقود' : 'Sales / Contracts'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           isAdmin ? (
             <Link href="/dashboard/contracts/new">
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+              <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.addBtn}
               </Button>
             </Link>
@@ -121,73 +123,58 @@ export default async function ContractsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
-          bare
           cols={4}
           figures={[
-            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts', icon: FigIcons.total, pct: 100 },
-            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes', icon: FigIcons.done, tone: 'green', pct: totalContracts ? ((signedCount ?? 0) / totalContracts) * 100 : 0 },
+            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts', icon: FigIcons.total, sub: locale === 'ar' ? 'كل العقود' : 'All contracts' },
+            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes', icon: FigIcons.done, tone: 'green', sub: `${share(signedCount ?? 0)}% ${ofTotal}` },
             {
               label: m.figures.unsigned,
               value: signedCount === undefined ? '—' : totalContracts - signedCount,
               href: '/dashboard/contracts?signed=no',
               icon: FigIcons.sign,
               tone: 'amber',
-              pct: totalContracts && signedCount !== undefined ? ((totalContracts - signedCount) / totalContracts) * 100 : 0,
               warn: signedCount !== undefined && totalContracts - signedCount > 0,
+              sub: `${share(signedCount === undefined ? 0 : totalContracts - signedCount)}% ${ofTotal}`,
             },
-            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0, icon: FigIcons.alert, tone: 'red', pct: totalContracts ? ((delayedCount ?? 0) / totalContracts) * 100 : 0 },
+            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0, icon: FigIcons.alert, tone: 'red', sub: `${share(delayedCount ?? 0)}% ${ofTotal}` },
           ]}
         />
       </section>
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/contracts">
-        {/* Search */}
-        <PremiumFilterField label={m.filter.searchLabel} htmlFor="con-q">
-<Input
-            id="con-q"
-            name="q"
-            inputSize="sm"
-            placeholder={m.filter.searchPlaceholder}
-            defaultValue={sp.q ?? ''}
-          />
-</PremiumFilterField>
-
-        <PremiumFilterField label={m.filter.signedLabel} htmlFor="con-signed">
-          <Select id="con-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
+      <ListFilterBar
+        action="/dashboard/contracts"
+        submitLabel={uiT(locale).common.filterBtn}
+        clearHref={sp.q || sp.signed || sp.hasReservation || sp.deliveryDelayed ? '/dashboard/contracts' : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+      >
+        <ListFilterField search label={m.filter.searchLabel} htmlFor="con-q">
+          <Input id="con-q" name="q" inputSize="sm" placeholder={m.filter.searchPlaceholder} defaultValue={sp.q ?? ''} />
+        </ListFilterField>
+        <ListFilterField label={m.filter.signedLabel} htmlFor="con-signed">
+          <Select id="con-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
             <option value="">{m.filter.allSigned}</option>
             <option value="yes">{m.filter.signed}</option>
             <option value="no">{m.filter.unsigned}</option>
           </Select>
-        </PremiumFilterField>
-
-        <PremiumFilterField label={m.filter.sourceLabel} htmlFor="con-hasReservation">
-          <Select id="con-hasReservation" name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''} className="w-36 shrink-0">
+        </ListFilterField>
+        <ListFilterField label={m.filter.sourceLabel} htmlFor="con-hasReservation">
+          <Select id="con-hasReservation" name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''}>
             <option value="">{m.filter.allSources}</option>
             <option value="yes">{m.filter.fromReservation}</option>
             <option value="no">{m.filter.manual}</option>
           </Select>
-        </PremiumFilterField>
-
-        <PremiumFilterField label={m.filter.deliveryLabel} htmlFor="con-delivery">
-          <Select id="con-delivery" name="deliveryDelayed" inputSize="sm" defaultValue={sp.deliveryDelayed ?? ''} className="w-40 shrink-0">
+        </ListFilterField>
+        <ListFilterField label={m.filter.deliveryLabel} htmlFor="con-delivery">
+          <Select id="con-delivery" name="deliveryDelayed" inputSize="sm" defaultValue={sp.deliveryDelayed ?? ''}>
             <option value="">{m.filter.deliveryAll}</option>
             <option value="true">{m.filter.deliveryDelayed}</option>
           </Select>
-        </PremiumFilterField>
-
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {(sp.q || sp.signed || sp.hasReservation || sp.deliveryDelayed) && (
-            <Link href="/dashboard/contracts">
-              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
-            </Link>
-          )}
-        </div>
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {contractsRes.error && (
@@ -198,8 +185,13 @@ export default async function ContractsPage({
 
       {/* ── Rows ─────────────────────────────────────────────────────────────── */}
       <ListTableCard
-        title={m.title}
-        sub={m.description}
+        title={locale === 'ar' ? 'قائمة العقود' : 'Contracts list'}
+        sub={locale === 'ar' ? 'مرتبة من الأحدث' : 'Newest first'}
+        footer={
+          meta ? (
+            <ListPager page={meta.page} pageSize={meta.pageSize} total={meta.total} basePath="/dashboard/contracts" params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation, deliveryDelayed: sp.deliveryDelayed }} locale={locale} />
+          ) : undefined
+        }
         trailing={
           <span className="tabular-nums">
             {(meta?.total ?? contracts.length).toLocaleString(intlLocale(locale))} {m.countSuffix}
@@ -304,17 +296,6 @@ export default async function ContractsPage({
         )}
       </ListTableCard>
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
-      {meta && (
-        <Pagination
-          page={meta.page}
-          pageSize={meta.pageSize}
-          total={meta.total}
-          basePath="/dashboard/contracts"
-          params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation, deliveryDelayed: sp.deliveryDelayed }}
-          locale={locale}
-        />
-      )}
-    </div>
+    </ListPage>
   );
 }
