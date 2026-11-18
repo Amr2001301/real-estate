@@ -5,28 +5,22 @@ import {
   CheckCircle2,
   FilePen,
   AlertCircle,
-  Phone,
   Search,
-  Building2,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
-import { Avatar, Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { DataTable, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
-  PremiumSectionCard,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +33,7 @@ interface Search {
   q?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function PortalContractsPage({
   searchParams,
@@ -70,6 +64,7 @@ export default async function PortalContractsPage({
   const paged        = contractsRes.data;
   const rows         = paged?.data ?? [];
   const projects     = projectsRes.data ?? [];
+  const covers = new Map(projects.map((p) => [p.project.id, p.project.media?.[0]?.url]));
   const totalAll     = rAll.data?.meta.total     ?? 0;
   const signedCount  = rSigned.data?.meta.total  ?? 0;
   const pendingCount = rPending.data?.meta.total  ?? 0;
@@ -79,15 +74,13 @@ export default async function PortalContractsPage({
   const isFiltered = !!(sp.projectId || sp.signed || sp.q);
 
   return (
-    <div className="space-y-5">
+    <ListPage minHeight={960}>
 
       <PremiumPageHero
+        className="shrink-0"
+        eyebrow={<span className="inline-flex items-center gap-2">{locale === 'ar' ? 'بوابة الوسيط / العقود' : 'Broker portal / Contracts'}<span aria-hidden className="h-px w-6 bg-brand-700/40" /></span>}
         title={t.title}
         description={t.description}
-        breadcrumbs={[
-          { label: m.common.portal, href: '/portal' },
-          { label: m.common.contracts },
-        ]}
       />
 
       {contractsRes.error && (
@@ -97,7 +90,7 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
@@ -116,32 +109,17 @@ export default async function PortalContractsPage({
         />
       </section>
 
-      <PremiumFilterBar
-        method="get"
+      <ListFilterBar
         action="/portal/contracts"
-        trailing={
-          <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
-            {isFiltered && (
-              <Link href="/portal/contracts">
-                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
-              </Link>
-            )}
-          </div>
-        }
+        submitLabel={t.filter}
+        clearHref={isFiltered ? '/portal/contracts' : undefined}
+        clearLabel={t.clearFilter}
       >
-        <PremiumFilterField label={t.search}>
-          <Input
-            inputSize="sm"
-            name="q"
-            leftAddon={<Search />}
-            placeholder={t.searchPlaceholder}
-            defaultValue={sp.q ?? ''}
-            className="flex-1 min-w-[180px]"
-          />
-        </PremiumFilterField>
-        <PremiumFilterField label={t.project}>
-          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
+        <ListFilterField search label={t.search}>
+          <Input name="q" inputSize="sm" placeholder={t.searchPlaceholder} defaultValue={sp.q ?? ''} />
+        </ListFilterField>
+        <ListFilterField label={t.project}>
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
             <option value="">{t.allProjects}</option>
             {projects.map((p) => (
               <option key={p.project.id} value={p.project.id}>
@@ -149,152 +127,126 @@ export default async function PortalContractsPage({
               </option>
             ))}
           </Select>
-        </PremiumFilterField>
-        <PremiumFilterField label={m.common.status}>
-          <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44">
+        </ListFilterField>
+        <ListFilterField label={m.common.status}>
+          <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
             <option value="">{t.allContracts}</option>
             <option value="yes">{t.signedOnly}</option>
             <option value="no">{t.pendingOnly}</option>
           </Select>
-        </PremiumFilterField>
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
-      <PremiumSectionCard
-        icon={<FileText />}
-        title={t.tableTitle}
-        padded={false}
-        band
+      <ListTableCard
+        title={locale === 'ar' ? 'قائمة العقود' : 'Contracts list'}
+        footer={paged && paged.meta.total > 0 ? <ListPager page={paged.meta.page} pageSize={paged.meta.pageSize} total={paged.meta.total} basePath="/portal/contracts" params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }} locale={locale} /> : undefined}
       >
         {rows.length === 0 ? (
           <EmptyState icon={<FileText />} title={t.emptyTitle} description={t.emptyDescription} />
         ) : (
-          <ul className="divide-y divide-hairline" data-testid="portal-contract-rows">
-            {rows.map((c) => {
-              const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
-              const phone = c.customer?.phone ?? c.reservation?.lead?.phone;
-              const isSigned = !!c.signedAt;
-              const href = `/portal/contracts/${c.id}`;
-              // Prefer the materialized commission (signed contracts); else the
-              // reservation's locked snapshot.
-              const comm = c.brokerCommission;
-              const pct = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
-              const amt = comm?.netAmount ?? c.reservation?.commissionLockedAmount;
-              return (
-                <li
-                  key={c.id}
-                  data-testid="portal-contract-row"
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_150px_160px_150px_36px]"
-                >
-                  <Avatar name={clientName} />
-
-                  {/* Client + contract code */}
-                  <div className="min-w-0">
-                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
-                      {clientName}
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
-                      <Link href={href as never} className="whitespace-nowrap hover:text-brand-700">
-                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Contract' : 'عقد'}</span>
-                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
-                          {c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
-                        </span>
+          <DataTable testId="portal-contract-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'رقم العقد' : 'Contract'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
+                <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
+                <Th>{t.cols.totalValue}</Th>
+                <Th>{m.common.lockedCommission}</Th>
+                <Th>{locale === 'ar' ? 'التوقيع' : 'Signature'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => {
+                const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
+                const phone = c.customer?.phone ?? c.reservation?.lead?.phone;
+                const isSigned = !!c.signedAt;
+                const href = `/portal/contracts/${c.id}`;
+                const project = c.unit?.building?.phase?.project;
+                // Prefer the materialized commission (signed contracts); else the
+                // reservation's locked snapshot.
+                const comm = c.brokerCommission;
+                const pct = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
+                const amt = comm?.netAmount ?? c.reservation?.commissionLockedAmount;
+                return (
+                  <Tr key={c.id} testId="portal-contract-row">
+                    <Td>
+                      <Link href={href as never} className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
+                        {c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
                       </Link>
-                      {phone && (
-                        <a href={`tel:${phone}`} className="inline-flex items-center gap-1 tabular-nums hover:text-brand-700">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <span dir="ltr">{phone}</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project + unit */}
-                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">
-                        {c.unit?.building ? tx(c.unit.building.phase.project.name, locale) : '—'}
-                      </p>
-                      {c.unit && (
-                        <p className="mt-0.5 text-slate-500">
-                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                          <span className="whitespace-nowrap font-mono" dir="ltr">{c.unit.code}</span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contract value */}
-                  <div className="hidden text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-400">{t.cols.totalValue}</p>
-                    <p className="mt-0.5 whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
-                      <Amount parts={compactParts(Number(c.totalAmount || 0), symbol, locale)} />
-                    </p>
-                  </div>
-
-                  {/* Commission */}
-                  <div className="hidden text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-400">{m.common.lockedCommission}</p>
-                    {pct != null ? (
-                      <p className="mt-0.5 whitespace-nowrap font-bold tabular-nums text-brand-700">
-                        {Number(pct).toFixed(2)}%
-                        {amt != null && (
-                          <span className="ms-2 text-[12px] font-semibold text-slate-600">
-                            <Amount parts={compactParts(Number(amt), symbol, locale)} />
+                    </Td>
+                    <Td>
+                      <PersonCell name={clientName} phone={phone} href={href} />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? tx(project.name, locale) : undefined}
+                        unit={c.unit?.code}
+                        unitWord={locale === 'en' ? 'Unit:' : 'وحدة:'}
+                      />
+                    </Td>
+                    <Td>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                        <Amount parts={compactParts(Number(c.totalAmount || 0), symbol, locale)} />
+                      </span>
+                    </Td>
+                    <Td>
+                      {pct != null || amt != null ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              pct != null
+                                ? 'inline-flex min-w-[56px] justify-center rounded-full bg-[#C8A24B]/15 px-2 py-1 text-[12px] font-semibold tabular-nums text-[#8A6823] dark:text-[#E2C792]'
+                                : 'inline-flex min-w-[56px] justify-center rounded-full bg-slate-500/12 px-2 py-1 text-[12px] font-semibold text-slate-600'
+                            }
+                            dir="ltr"
+                          >
+                            {pct != null ? `${Number(pct).toFixed(2)}%` : t.fixedAmount}
                           </span>
-                        )}
-                      </p>
-                    ) : amt != null ? (
-                      <p className="mt-0.5 whitespace-nowrap font-semibold tabular-nums text-slate-700">
-                        <span className="me-1 text-[11px] text-slate-400">{t.fixedAmount}</span>
-                        <Amount parts={compactParts(Number(amt), symbol, locale)} />
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-slate-400">{t.notSet}</p>
-                    )}
-                  </div>
-
-                  {/* Signature + created */}
-                  <div className="hidden flex-col items-start gap-1 lg:flex">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold',
-                        isSigned ? 'bg-emerald-500/12 text-emerald-600' : 'bg-amber-500/12 text-amber-600',
+                          {amt != null && (
+                            <span className="text-[13px] font-semibold tabular-nums text-slate-800">
+                              <Amount parts={compactParts(Number(amt), symbol, locale)} />
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">{t.notSet}</span>
                       )}
-                    >
-                      {isSigned ? <CheckCircle2 className="h-3 w-3" /> : <FilePen className="h-3 w-3" />}
-                      {isSigned ? t.signed : t.pending}
-                    </span>
-                    <span className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
-                      <bdi>{formatDate(c.createdAt, locale)}</bdi>
-                    </span>
-                  </div>
-
-                  <Link
-                    href={href as never}
-                    aria-label={m.common.view}
-                    title={m.common.view}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    </Td>
+                    <Td>
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold',
+                          isSigned ? 'bg-emerald-500/12 text-emerald-700' : 'bg-amber-500/12 text-amber-700',
+                        )}
+                      >
+                        {isSigned ? <CheckCircle2 className="h-3 w-3" /> : <FilePen className="h-3 w-3" />}
+                        {isSigned ? t.signed : t.pending}
+                      </span>
+                    </Td>
+                    <Td>
+                      <DateText><bdi>{formatDate(c.createdAt, locale)}</bdi></DateText>
+                    </Td>
+                    <Td>
+                      <Link
+                        href={href as never}
+                        aria-label={m.common.view}
+                        title={m.common.view}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
 
-        {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/portal/contracts"
-            locale={locale}
-            params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }}
-          />
-        )}
-      </PremiumSectionCard>
-    </div>
+      </ListTableCard>
+    </ListPage>
   );
 }

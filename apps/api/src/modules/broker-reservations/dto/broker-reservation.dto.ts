@@ -12,6 +12,12 @@ import {
 import { ReservationStatus } from '@prisma/client';
 
 export class BrokerReservationsQueryDto {
+  /** Free-text search: reservation number, client, phone, broker, unit. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @IsUUID()
   brokerId?: string;

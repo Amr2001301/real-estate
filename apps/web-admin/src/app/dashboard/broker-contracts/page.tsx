@@ -2,24 +2,19 @@ import Link from 'next/link';
 import { FileText, Eye, CheckCircle2, ArrowRightLeft, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, brokerOptions, staffOptions } from '@/lib/options';
-import type { AdminBrokerContract, Paged } from '@/lib/types';
+import type { AdminBrokerContract, Paged, Project } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Amount, Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { AgentCell, DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
-  PremiumSectionCard,
   PremiumEmptyState,
-  PremiumFilterAdvancedToggle,
-  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
 
@@ -28,6 +23,7 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   brokerId?: string;
   projectId?: string;
   salesId?: string;
@@ -37,7 +33,7 @@ interface Search {
   showFilters?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function AdminBrokerContractsPage({
   searchParams,
@@ -55,17 +51,19 @@ export default async function AdminBrokerContractsPage({
     page: String(page),
     pageSize: String(PAGE_SIZE),
   });
-  for (const key of ['brokerId', 'projectId', 'salesId', 'signed', 'dateFrom', 'dateTo'] as const) {
+  for (const key of ['q', 'brokerId', 'projectId', 'salesId', 'signed', 'dateFrom', 'dateTo'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
 
-  const [contractsRes, brokersRes, projectsRes, salesRes] = await Promise.all([
+  const [contractsRes, brokersRes, projectsRes, salesRes, coverRes] = await Promise.all([
     safe(api.get<Paged<AdminBrokerContract>>(`/broker-contracts?${qs.toString()}`)),
     safe(brokerOptions()),
     safe(projectOptions()),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
+    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
   ]);
+  const covers = new Map((coverRes.data?.data ?? []).map((p) => [p.id, p.media?.[0]?.url]));
 
   const paged = contractsRes.data;
   const rows = paged?.data ?? [];
@@ -91,10 +89,11 @@ export default async function AdminBrokerContractsPage({
   // Advanced filter state — URL-based toggle, auto-opens when advanced filters are active
   const hasAdvancedFilters = !!(sp.projectId || sp.salesId || sp.signed || sp.dateFrom || sp.dateTo);
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
-  const hasAnyFilter = !!(sp.brokerId || hasAdvancedFilters);
+  const hasAnyFilter = !!(sp.q || sp.brokerId || hasAdvancedFilters);
 
   function pageUrl(overrides: Record<string, string | undefined>): string {
     const base: Record<string, string | undefined> = {
+      q: sp.q,
       brokerId: sp.brokerId,
       projectId: sp.projectId,
       salesId: sp.salesId,
@@ -115,24 +114,22 @@ export default async function AdminBrokerContractsPage({
     : pageUrl({ showFilters: '1' });
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.heroTitle}
         description={m.heroDescription}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
-          { label: m.breadcrumbSelf },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'الوسطاء / عقود الوسطاء' : 'Brokers / Broker contracts'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-            >
+            <Button variant="secondary" size="md" leftIcon={<ArrowRightLeft className="h-4 w-4" />}>
               {m.convertBtn}
             </Button>
           </Link>
@@ -140,13 +137,13 @@ export default async function AdminBrokerContractsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
           cols={4}
           figures={[
-            { label: m.kpiTotal, value: totalContracts, icon: FigIcons.total },
+            { label: m.kpiTotal, value: totalContracts, icon: FigIcons.total, sub: locale === 'ar' ? 'كل العقود' : 'All contracts' },
             { label: m.kpiSigned, value: counts.signed, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green' },
             { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.sign },
             { label: m.kpiTotalValue, value: totalValue > 0 ? <Amount parts={compactParts(totalValue, symbol, locale)} /> : '—', sub: m.kpiThisPage, icon: FigIcons.money, tone: 'blue' },
@@ -163,7 +160,49 @@ export default async function AdminBrokerContractsPage({
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/broker-contracts">
+      <ListFilterBar
+        action="/dashboard/broker-contracts"
+        submitLabel={uiT(locale).common.filterBtn}
+        advancedHref={toggleFiltersUrl}
+        advancedLabel={showFilters ? m.filterHideFilters : m.filterAdvanced}
+        clearHref={hasAnyFilter ? '/dashboard/broker-contracts' : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+        advanced={
+          showFilters ? (
+            <>
+              <ListFilterField label={m.filterProject}>
+<Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+                  <option value="">{m.filterAllProjects}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{tx(p.name)}</option>
+                  ))}
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterSalesRep}>
+<Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+                  <option value="">{m.filterAllSalesReps}</option>
+                  {salesUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.fullName}</option>
+                  ))}
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterStatus}>
+<Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
+                  <option value="">{m.filterAllContracts}</option>
+                  <option value="yes">{m.filterStatusSigned}</option>
+                  <option value="no">{m.filterStatusPending}</option>
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterDateFrom}>
+<Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
+</ListFilterField>
+              <ListFilterField label={m.filterDateTo}>
+<Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
+</ListFilterField>
+            </>
+          ) : undefined
+        }
+      >
         {/* Hidden inputs preserve advanced values when the panel is collapsed */}
         {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
         {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
@@ -171,77 +210,42 @@ export default async function AdminBrokerContractsPage({
         {!showFilters && sp.dateFrom  && <input type="hidden" name="dateFrom"  value={sp.dateFrom} />}
         {!showFilters && sp.dateTo    && <input type="hidden" name="dateTo"    value={sp.dateTo} />}
 
-        {/* ── Row 1: main filter + actions (always visible) ─────────────────── */}
-        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
-          <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
+        <ListFilterField search label={locale === 'ar' ? 'بحث' : 'Search'} htmlFor="bc-q">
+          <Input id="bc-q" name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={locale === 'ar' ? 'ابحث برقم العقد أو العميل أو الوسيط أو الوحدة…' : 'Contract no., customer, broker or unit…'} />
+        </ListFilterField>
+        <ListFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
+          <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
             <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
           </Select>
-        </PremiumFilterField>
-
-        {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {hasAnyFilter && (
-            <Link href={'/dashboard/broker-contracts' as never}>
-              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
-            </Link>
-          )}
-          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
-        </div>
-
-        {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
-        {showFilters && (
-          <PremiumFilterAdvancedPanel>
-              <PremiumFilterField label={m.filterProject}>
-<Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">{m.filterAllProjects}</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{tx(p.name)}</option>
-                  ))}
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterSalesRep}>
-<Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">{m.filterAllSalesReps}</option>
-                  {salesUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.fullName}</option>
-                  ))}
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterStatus}>
-<Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
-                  <option value="">{m.filterAllContracts}</option>
-                  <option value="yes">{m.filterStatusSigned}</option>
-                  <option value="no">{m.filterStatusPending}</option>
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterDateFrom}>
-<Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterDateTo}>
-<Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
-</PremiumFilterField>
-            </PremiumFilterAdvancedPanel>
-        )}
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
       {/* ── Contracts table ──────────────────────────────────────────────────── */}
-      <PremiumSectionCard
-        icon={<FileText />}
+      <ListTableCard
+        footer={
+          paged && paged.meta.total > 0 ? (
+            <ListPager
+              page={paged.meta.page}
+              pageSize={paged.meta.pageSize}
+              total={paged.meta.total}
+              basePath="/dashboard/broker-contracts"
+              params={{ q: sp.q, brokerId: sp.brokerId, projectId: sp.projectId, salesId: sp.salesId, signed: sp.signed, dateFrom: sp.dateFrom, dateTo: sp.dateTo, showFilters: sp.showFilters }}
+              locale={locale}
+            />
+          ) : undefined
+        }
         title={m.tableTitle}
-        description={m.tableDescription}
-        padded={false}
-        band
+        sub={m.tableDescription}
         trailing={
           totalCommission > 0 ? (
-            <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
+            <span className="tabular-nums whitespace-nowrap" dir="ltr">
               {m.tableTrailingCommission}{formatCurrency(totalCommission, currency, locale)}
             </span>
           ) : (
-            <span className="text-xs text-slate-400 tabular-nums">
+            <span className="tabular-nums">
               {totalContracts.toLocaleString(intlLocale(locale))} {m.tableTrailingCount}
             </span>
           )
@@ -266,128 +270,124 @@ export default async function AdminBrokerContractsPage({
             className="py-12"
           />
         ) : (
-          <ul className="divide-y divide-hairline">
-            {rows.map((c) => {
-              const name = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
-              const phone = c.customer?.phone ?? c.reservation?.lead?.phone;
-              const comm = c.brokerCommission;
-              const pct = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
-              const amt = comm?.netAmount ?? c.reservation?.commissionLockedAmount;
-              return (
-                <li
-                  key={c.id}
-                  data-testid="broker-contract-row"
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_150px_120px_auto]"
-                >
-                  <Avatar name={name} />
-
-                  {/* Customer + contract number */}
-                  <div className="min-w-0">
-                    <Link href={`/dashboard/contracts/${c.id}` as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
-                      {name}
-                    </Link>
-                    <p className="mt-0.5 truncate text-[12px] text-slate-500">
-                      {c.contractNumber && (
-                        <>
-                          <span className="me-1 text-slate-400">{locale === 'en' ? 'Contract' : 'عقد'}</span>
-                          <EntityLink kind="contract" id={c.id} className="whitespace-nowrap">{c.contractNumber}</EntityLink>
-                        </>
+          <DataTable testId="broker-contract-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'رقم العقد' : 'Contract'}</Th>
+                <Th>{locale === 'ar' ? 'الوسيط' : 'Broker'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Customer'}</Th>
+                <Th>{locale === 'ar' ? 'الوحدة' : 'Unit'}</Th>
+                <Th>{locale === 'ar' ? 'القيمة' : 'Value'}</Th>
+                <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
+                <Th>{m.colSalesRep}</Th>
+                <Th>{locale === 'ar' ? 'العمولة المُقفلة' : 'Locked commission'}</Th>
+                <Th>{locale === 'ar' ? 'التاريخ' : 'Date'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => {
+                const name = c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—';
+                const phone = c.customer?.phone ?? c.reservation?.lead?.phone;
+                const comm = c.brokerCommission;
+                const pct = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
+                const amt = comm?.netAmount ?? c.reservation?.commissionLockedAmount;
+                const project = c.unit?.building?.phase?.project;
+                return (
+                  <Tr key={c.id} testId="broker-contract-row">
+                    <Td>
+                      {c.contractNumber ? (
+                        <EntityLink kind="contract" id={c.id} className="font-mono text-[12.5px] font-semibold text-brand-700">{c.contractNumber}</EntityLink>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
                       )}
-                      {c.contractNumber && phone && <span className="mx-1.5 text-slate-300">·</span>}
-                      {phone && <span className="whitespace-nowrap" dir="ltr">{phone}</span>}
-                    </p>
-                  </div>
-
-                  {/* Broker + agent */}
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    {c.broker ? (
-                      <Link href={`/dashboard/brokers/${c.broker.id}` as never} className="block truncate font-semibold text-slate-800 hover:text-brand-700">
-                        {c.broker.companyName}
+                    </Td>
+                    <Td>
+                      {c.broker ? (
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={c.broker.companyName} className="h-8 w-8 text-[11px]" />
+                          <div className="min-w-0">
+                            <Link href={`/dashboard/brokers/${c.broker.id}` as never} className="block max-w-[140px] truncate text-[13.5px] font-semibold text-slate-900 hover:text-brand-700">
+                              {c.broker.companyName}
+                            </Link>
+                            {c.brokerAgent && <span className="block max-w-[140px] truncate text-[11.5px] text-slate-500">{c.brokerAgent.fullName}</span>}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <PersonCell name={name} phone={phone} href={`/dashboard/contracts/${c.id}`} />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : undefined}
+                        unit={c.unit?.code ? <EntityLink kind="unit" id={c.unit.id}>{c.unit.code}</EntityLink> : undefined}
+                        unitWord={locale === 'en' ? 'Unit:' : 'وحدة:'}
+                      />
+                    </Td>
+                    <Td>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(c.totalAmount, currency, locale)}</span>
+                    </Td>
+                    <Td>
+                      {c.signedAt ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[12px] font-semibold text-emerald-700">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          {m.statusSigned}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-500/12 px-2.5 py-1 text-[12px] font-semibold text-amber-700">
+                          {m.statusPending}
+                        </span>
+                      )}
+                    </Td>
+                    <Td>
+                      <AgentCell name={c.reservation?.sales?.fullName} empty={m.unassigned} />
+                    </Td>
+                    <Td>
+                      {pct != null || amt != null ? (
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={
+                              pct != null
+                                ? 'inline-flex min-w-[56px] justify-center rounded-full bg-[#C8A24B]/15 px-2 py-1 text-[12px] font-semibold tabular-nums text-[#8A6823] dark:text-[#E2C792]'
+                                : 'inline-flex min-w-[56px] justify-center rounded-full bg-slate-500/12 px-2 py-1 text-[12px] font-semibold text-slate-600'
+                            }
+                            dir="ltr"
+                          >
+                            {pct != null ? `${Number(pct).toFixed(2)}%` : m.commissionFixed}
+                          </span>
+                          {amt != null && (
+                            <span className="text-[13px] font-semibold tabular-nums text-slate-800">{formatCurrency(amt, currency, locale)}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">{m.commissionUnset}</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(c.createdAt, locale)}</DateText>
+                    </Td>
+                    <Td>
+                      <Link
+                        href={`/dashboard/contracts/${c.id}` as never}
+                        aria-label={m.actionView}
+                        title={m.actionView}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900"
+                      >
+                        <Eye className="h-4 w-4" />
                       </Link>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                    {c.brokerAgent && <p className="mt-0.5 truncate text-slate-500">{c.brokerAgent.fullName}</p>}
-                    <p className="mt-0.5 truncate text-[11.5px] text-slate-400">
-                      {m.colSalesRep}: <span className="text-slate-600">{c.reservation?.sales?.fullName ?? m.unassigned}</span>
-                    </p>
-                  </div>
-
-                  {/* Unit + project */}
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    <p className="truncate font-semibold text-slate-800">
-                      {c.unit?.building ? (
-                        <EntityLink kind="project" id={c.unit.building.phase.project.id} mono={false}>{tx(c.unit.building.phase.project.name)}</EntityLink>
-                      ) : '—'}
-                    </p>
-                    {c.unit?.code && (
-                      <p className="mt-0.5 truncate text-slate-500">
-                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Unit' : 'وحدة'}</span>
-                        <EntityLink kind="unit" id={c.unit.id} className="whitespace-nowrap">{c.unit.code}</EntityLink>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Value + commission */}
-                  <div className="hidden text-end lg:block">
-                    <p className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(c.totalAmount, currency, locale)}</p>
-                    <p className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
-                      {pct != null
-                        ? `${Number(pct).toFixed(2)}%${amt != null ? ` · ${formatCurrency(amt, currency, locale)}` : ''}`
-                        : amt != null
-                          ? `${m.commissionFixed} · ${formatCurrency(amt, currency, locale)}`
-                          : m.commissionUnset}
-                    </p>
-                  </div>
-
-                  {/* Status + date */}
-                  <div className="flex flex-col items-end gap-1 justify-self-end lg:items-start lg:justify-self-start">
-                    {c.signedAt ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-[11.5px] font-bold text-emerald-600">
-                        <CheckCircle2 className="h-3 w-3 shrink-0" />
-                        {m.statusSigned}
-                      </span>
-                    ) : (
-                      <span className="whitespace-nowrap rounded-full bg-amber-500/12 px-2.5 py-0.5 text-[11.5px] font-bold text-amber-600">
-                        {m.statusPending}
-                      </span>
-                    )}
-                    <span className="whitespace-nowrap text-[11.5px] text-slate-500">{formatDate(c.createdAt, locale)}</span>
-                  </div>
-
-                  <Link
-                    href={`/dashboard/contracts/${c.id}` as never}
-                    aria-label={m.actionView}
-                    title={m.actionView}
-                    className="hidden h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 lg:inline-flex"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
-      </PremiumSectionCard>
+      </ListTableCard>
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
-      {paged && paged.meta.total > PAGE_SIZE && (
-        <Pagination
-          page={paged.meta.page}
-          pageSize={paged.meta.pageSize}
-          total={paged.meta.total}
-          basePath="/dashboard/broker-contracts"
-          params={{
-            brokerId: sp.brokerId,
-            projectId: sp.projectId,
-            salesId: sp.salesId,
-            signed: sp.signed,
-            dateFrom: sp.dateFrom,
-            dateTo: sp.dateTo,
-            showFilters: sp.showFilters,
-          }}
-        />
-      )}
-    </div>
+    </ListPage>
   );
 }

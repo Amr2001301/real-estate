@@ -1,30 +1,24 @@
 import Link from 'next/link';
-import { Plus, BookmarkCheck, AlertCircle, Phone, Building2 } from 'lucide-react';
+import { Plus, BookmarkCheck, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { getLocale } from '@/lib/locale';
-import type { Paged, Reservation } from '@/lib/types';
-import { formatDate, formatTime, tx, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
+import type { Paged, Project, Reservation } from '@/lib/types';
+import { formatDate, tx, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { salesActorLabel } from '@/lib/sales-actor';
-import { Pagination } from '@/components/ui/pagination';
-import { ReservationStatusBadge, ReservationBookingPaymentBadge } from '@/components/badges';
+import { ReservationStatusBadge } from '@/components/badges';
 import { ReservationActions } from './_components/reservation-actions';
 import { getSession } from '@/lib/session';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
-  PremiumSectionCard,
   PremiumEmptyState,
-  PremiumFilterAdvancedToggle,
-  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
-import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { cn } from '@/lib/cn';
+import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
+import { AgentCell, AlertStrip, DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
 
@@ -67,7 +61,7 @@ export default async function ReservationsPage({
 }) {
   const sp = await searchParams;
   const page = Number(sp.page ?? 1);
-  const pageSize = 20;
+  const pageSize = 10;
 
   const hasAdvancedFilters = !!(sp.salesId || sp.dateFrom || sp.dateTo);
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
@@ -102,37 +96,44 @@ export default async function ReservationsPage({
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const isManager = session?.role === 'SALES_MANAGER';
-  const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale] = await Promise.all([
+  const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale, coverRes] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
     safe(projectOptions()),
     safe(staffOptions(['SALES', 'SALES_MANAGER'])),
     getReportsCurrency(),
     getLocale(),
+    safe(api.get<Paged<Project>>('/projects?pageSize=100')),
   ]);
+  const covers = new Map((coverRes.data?.data ?? []).map((p) => [p.id, p.media?.[0]?.url]));
   const m = uiT(locale).pages.reservations;
   const symbol = currencySymbol(currency, locale);
 
   const stats = statsRes.data;
+  const share = (n: number) => (stats?.total ? Math.round((n / stats.total) * 100) : 0);
+  const ofTotal = locale === 'ar' ? 'من الإجمالي' : 'of total';
   const reservations = reservationsRes.data?.data ?? [];
   const paginationMeta = reservationsRes.data?.meta;
   const projects: ProjectOption[] = projectsRes.data?.data ?? [];
   const salesOptions: SalesUser[] = salesRes.data?.data ?? [];
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.title}
         description={m.description}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumb },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'المبيعات / الحجوزات' : 'Sales / Reservations'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           <Link href="/dashboard/reservations/new">
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {m.addBtn}
             </Button>
           </Link>
@@ -140,56 +141,72 @@ export default async function ReservationsPage({
       />
 
       {/* ── Figures ──────────────────────────────────────────────────────────── */}
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
-          bare
           cols={5}
           figures={[
-            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations', icon: FigIcons.total, pct: 100 },
-            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0, icon: FigIcons.pending, tone: 'amber', pct: stats?.total ? ((stats.pending ?? 0) / stats.total) * 100 : 0 },
-            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green', pct: stats?.total ? ((stats.approved ?? 0) / stats.total) * 100 : 0 },
-            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED', icon: FigIcons.rejected, tone: 'red', pct: stats?.total ? ((stats.rejected ?? 0) / stats.total) * 100 : 0 },
-            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—', icon: FigIcons.alert, tone: 'gray', pct: stats?.total ? (((stats.expired ?? 0) + (stats.cancelled ?? 0)) / stats.total) * 100 : 0 },
+            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations', icon: FigIcons.total, sub: locale === 'ar' ? 'كل الحجوزات' : 'All reservations' },
+            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0, icon: FigIcons.pending, tone: 'amber', sub: locale === 'ar' ? 'بانتظار اعتمادك' : 'Awaiting your approval' },
+            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green', sub: `${share(stats?.approved ?? 0)}% ${ofTotal}` },
+            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED', icon: FigIcons.rejected, tone: 'red', sub: `${share(stats?.rejected ?? 0)}% ${ofTotal}` },
+            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—', icon: FigIcons.alert, tone: 'gray', sub: `${share((stats?.expired ?? 0) + (stats?.cancelled ?? 0))}% ${ofTotal}` },
           ]}
         />
       </section>
 
       {(stats?.overdue ?? 0) > 0 && sp.status !== 'OVERDUE' && (
-        <div
-          data-testid="overdue-reservations-banner"
-          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-warning-100 bg-warning-50 px-4 py-3 text-[13px] text-warning-700"
+        <AlertStrip
+          testId="overdue-reservations-banner"
+          action={
+            <Link href={pageUrl({ status: 'OVERDUE', page: undefined })} className="shrink-0 text-[13px] font-semibold text-[#8A6823] hover:underline">
+              {m.overdueLink}
+            </Link>
+          }
         >
-          <span className="inline-flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {m.overdueBanner(stats!.overdue!)}
-          </span>
-          <Link href={pageUrl({ status: 'OVERDUE', page: undefined })} className="font-semibold underline">
-            {m.overdueLink}
-          </Link>
-        </div>
+          {m.overdueBanner(stats!.overdue!)}
+        </AlertStrip>
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/reservations">
-        {/* Preserve advanced filter values when panel is collapsed */}
+      <ListFilterBar
+        action="/dashboard/reservations"
+        submitLabel={uiT(locale).common.filterBtn}
+        advancedHref={toggleFiltersUrl}
+        advancedLabel={showFilters ? m.filter.advancedHide : m.filter.advancedShow}
+        clearHref={sp.q || sp.status || sp.projectId || hasAdvancedFilters ? '/dashboard/reservations' : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+        advanced={
+          showFilters ? (
+            <>
+              <ListFilterField label={m.filter.agentLabel}>
+                <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+                  <option value="">{m.filter.allAgents}</option>
+                  {salesOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
+                  ))}
+                </Select>
+              </ListFilterField>
+              <ListFilterField label={m.filter.dateFrom}>
+                <Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
+              </ListFilterField>
+              <ListFilterField label={m.filter.dateTo}>
+                <Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
+              </ListFilterField>
+            </>
+          ) : undefined
+        }
+      >
+        {/* Preserve advanced filter values when the panel is collapsed */}
         {!showFilters && sp.salesId  && <input type="hidden" name="salesId"  value={sp.salesId} />}
         {!showFilters && sp.dateFrom && <input type="hidden" name="dateFrom" value={sp.dateFrom} />}
         {!showFilters && sp.dateTo   && <input type="hidden" name="dateTo"   value={sp.dateTo} />}
 
-        {/* Search — flex-1 to fill available space */}
-        <PremiumFilterField label={m.filter.searchLabel} htmlFor="res-q">
-<Input
-            id="res-q"
-            name="q"
-            inputSize="sm"
-            defaultValue={sp.q ?? ''}
-            placeholder={m.filter.searchPlaceholder}
-          />
-</PremiumFilterField>
-
-        <PremiumFilterField label={m.filter.statusLabel} htmlFor="res-status">
-          <Select id="res-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
+        <ListFilterField search label={m.filter.searchLabel} htmlFor="res-q">
+          <Input id="res-q" name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={m.filter.searchPlaceholder} />
+        </ListFilterField>
+        <ListFilterField label={m.filter.statusLabel} htmlFor="res-status">
+          <Select id="res-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
             <option value="">{m.filter.allStatuses}</option>
             <option value="PENDING">{m.filter.pending}</option>
             <option value="APPROVED">{m.filter.approved}</option>
@@ -198,48 +215,16 @@ export default async function ReservationsPage({
             <option value="EXPIRED">{m.filter.expired}</option>
             <option value="OVERDUE">{m.filter.overdue}</option>
           </Select>
-        </PremiumFilterField>
-
-        <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="res-projectId">
-          <Select id="res-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
+        </ListFilterField>
+        <ListFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="res-projectId">
+          <Select id="res-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
             <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
-        </PremiumFilterField>
-
-        {/* Action buttons — before advanced panel so they stay in row 1 */}
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {(sp.q || sp.status || sp.projectId || hasAdvancedFilters) && (
-            <Link href="/dashboard/reservations">
-              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
-            </Link>
-          )}
-          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filter.advancedHide : m.filter.advancedShow} />
-        </div>
-
-        {/* Advanced panel — basis-full forces row 2 */}
-        {showFilters && (
-          <PremiumFilterAdvancedPanel>
-              <PremiumFilterField label={m.filter.agentLabel}>
-<Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">{m.filter.allAgents}</option>
-                  {salesOptions.map((s) => (
-                    <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
-                  ))}
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filter.dateFrom}>
-<Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
-</PremiumFilterField>
-              <PremiumFilterField label={m.filter.dateTo}>
-<Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
-</PremiumFilterField>
-            </PremiumFilterAdvancedPanel>
-        )}
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
       {/* ── Error ────────────────────────────────────────────────────────────── */}
       {reservationsRes.error && (
@@ -250,12 +235,16 @@ export default async function ReservationsPage({
       )}
 
       {/* ── Rows ─────────────────────────────────────────────────────────────── */}
-      <PremiumSectionCard
-        title={m.title}
-        padded={false}
-        band
+      <ListTableCard
+        title={locale === 'ar' ? 'قائمة الحجوزات' : 'Reservations list'}
+        sub={locale === 'ar' ? 'مرتبة من الأحدث' : 'Newest first'}
+        footer={
+          paginationMeta ? (
+            <ListPager page={paginationMeta.page} pageSize={paginationMeta.pageSize} total={paginationMeta.total} basePath="/dashboard/reservations" params={sp} locale={locale} />
+          ) : undefined
+        }
         trailing={
-          <span className="text-xs text-slate-400 tabular-nums">
+          <span className="tabular-nums">
             {(paginationMeta?.total ?? reservations.length).toLocaleString(intlLocale(locale))} {m.countSuffix}
           </span>
         }
@@ -263,106 +252,80 @@ export default async function ReservationsPage({
         {reservations.length === 0 ? (
           <PremiumEmptyState icon={<BookmarkCheck />} title={m.empty} />
         ) : (
-          <ul className="divide-y divide-hairline" data-testid="reservation-rows">
-            {reservations.map((r) => {
-              const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
-              const project = r.unit?.building?.phase?.project;
-              const amount = Number(r.bookingAmount);
-              const href = `/dashboard/reservations/${r.id}`;
-              return (
-                <li
-                  key={r.id}
-                  data-testid="reservation-row"
-                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,0.9fr)_130px_190px_170px]"
-                >
-                  <Avatar name={name} />
-
-                  {/* Client + reservation code */}
-                  <div className="min-w-0">
-                    <Link href={href as never} className="block truncate text-[14.5px] font-bold text-slate-900 hover:text-brand-700">
-                      {name}
-                    </Link>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-500">
-                      <Link href={href as never} data-testid="list-code" className="whitespace-nowrap hover:text-brand-700">
-                        <span className="me-1 text-slate-400">{m.reservationWord}</span>
-                        <span className="font-mono font-semibold text-brand-700" dir="ltr">
-                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                        </span>
+          <DataTable testId="reservation-rows">
+            <thead>
+              <tr>
+                <Th>{locale === 'ar' ? 'رقم الحجز' : 'Reservation'}</Th>
+                <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
+                <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
+                <Th>{locale === 'ar' ? 'المندوب' : 'Agent'}</Th>
+                <Th>{locale === 'ar' ? 'مبلغ الحجز' : 'Booking amount'}</Th>
+                <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الانتهاء' : 'Expires'}</Th>
+                <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {reservations.map((r) => {
+                const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
+                const project = r.unit?.building?.phase?.project;
+                const amount = Number(r.bookingAmount);
+                const href = `/dashboard/reservations/${r.id}`;
+                return (
+                  <Tr key={r.id} testId="reservation-row">
+                    <Td>
+                      <Link href={href as never} data-testid="list-code" className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
+                        {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
                       </Link>
-                      {(r.client?.phone ?? r.lead?.phone) && (
-                        <span className="inline-flex items-center gap-1 tabular-nums">
-                          <Phone className="h-3 w-3 shrink-0" />
-                          <span dir="ltr">{r.client?.phone ?? r.lead?.phone}</span>
+                    </Td>
+                    <Td>
+                      <PersonCell name={name} phone={r.client?.phone ?? r.lead?.phone} href={href} />
+                    </Td>
+                    <Td>
+                      <UnitCell
+                        cover={project ? covers.get(project.id) : undefined}
+                        project={project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : undefined}
+                        unit={r.unit ? <EntityLink kind="unit" id={r.unit.id}>{r.unit.code}</EntityLink> : undefined}
+                        unitWord={`${m.unitWord}:`}
+                      />
+                    </Td>
+                    <Td>
+                      <AgentCell name={r.sales?.fullName} empty={m.noAgent} />
+                    </Td>
+                    <Td>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                          {Number.isFinite(amount)
+                            ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
+                            : '—'}
                         </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Project + unit */}
-                  <div className="hidden min-w-0 items-start gap-2 text-[12.5px] lg:flex">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#C9A24E]" />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-slate-800">{project ? <EntityLink kind="project" id={project.id} mono={false}>{tx(project.name)}</EntityLink> : '—'}</p>
-                      {r.unit && (
-                        <p className="mt-0.5 text-slate-500">
-                          <span className="me-1 text-slate-400">{m.unitWord}</span>
-                          <EntityLink kind="unit" id={r.unit.id} className="whitespace-nowrap">{r.unit.code}</EntityLink>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Agent + created */}
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    <p className={cn('truncate font-semibold', r.sales ? 'text-slate-800' : 'text-slate-400')}>
-                      {r.sales?.fullName ?? m.noAgent}
-                    </p>
-                    <p className="mt-0.5 whitespace-nowrap text-slate-500">
-                      {m.createdOn} {formatDate(r.createdAt, locale)}
-                    </p>
-                  </div>
-
-                  {/* Booking amount + payment */}
-                  <div className="hidden flex-col items-start gap-1 lg:flex">
-                    <span className="whitespace-nowrap text-[15px] font-bold tabular-nums text-slate-900">
-                      {Number.isFinite(amount)
-                        ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
-                        : '—'}
-                    </span>
-                    <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
-                  </div>
-
-                  {/* Status + expiry */}
-                  <div className="hidden flex-col items-start gap-1 lg:flex">
-                    <ReservationStatusBadge status={r.status} locale={locale} />
-                    <span className="whitespace-nowrap text-[11.5px] tabular-nums text-slate-500">
-                      {m.expiresOn} {formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)} · <span dir="ltr">{formatTime(r.expiresAt, locale)}</span>
-                    </span>
-                  </div>
-
-                  <ReservationActions
-                    reservation={r}
-                    canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
-                    locale={locale}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+                      </div>
+                    </Td>
+                    <Td>
+                      <ReservationStatusBadge status={r.status} locale={locale} dot />
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</DateText>
+                    </Td>
+                    <Td>
+                      <DateText>{formatDate(r.createdAt, locale)}</DateText>
+                    </Td>
+                    <Td>
+                      <ReservationActions
+                        reservation={r}
+                        canDecide={isAdmin || (isManager && r.salesId !== session?.id)}
+                        locale={locale}
+                      />
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
-      </PremiumSectionCard>
+      </ListTableCard>
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
-      {paginationMeta && paginationMeta.totalPages > 1 && (
-        <Pagination
-          page={paginationMeta.page}
-          pageSize={paginationMeta.pageSize}
-          total={paginationMeta.total}
-          basePath="/dashboard/reservations"
-          params={sp}
-          locale={locale}
-        />
-      )}
-    </div>
+    </ListPage>
   );
 }

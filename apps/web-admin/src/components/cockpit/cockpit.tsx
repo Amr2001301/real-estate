@@ -128,6 +128,30 @@ const FIGURE_TONES: Record<NonNullable<Figure['tone']>, { tile: string; bar: str
   gray: { tile: 'bg-slate-500/12 text-slate-600 dark:text-slate-300', bar: 'bg-slate-500', chip: 'bg-slate-500/12 text-slate-600 dark:text-slate-300' },
 };
 
+const SPARK_STROKE: Record<NonNullable<Figure['tone']>, string> = {
+  gold: '#C8A24B', green: '#1E8A5B', amber: '#B7791F', red: '#C0392B', blue: '#2F5DA8', gray: '#8A8574',
+};
+
+/** A small decorative trend line (shape only; it does not plot data). */
+function Sparkline({ seed, tone }: { seed: string; tone: NonNullable<Figure['tone']> }) {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => ((h = (h * 1664525 + 1013904223) >>> 0) % 1000) / 1000;
+  const pts = Array.from({ length: 10 }, (_, i) => 12 + rnd() * 10 + (tone === 'red' ? -i * 0.6 : i * 0.9));
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const w = 60, ht = 28;
+  const xy = pts.map((v, i) => [(i / (pts.length - 1)) * (w - 4) + 2, ht - 4 - ((v - min) / (max - min || 1)) * (ht - 10)] as const);
+  const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const [lx, ly] = xy[xy.length - 1] ?? [0, 0];
+  const c = SPARK_STROKE[tone];
+  return (
+    <svg aria-hidden width={w} height={ht} viewBox={`0 0 ${w} ${ht}`} className="shrink-0">
+      <path d={d} fill="none" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r="2.4" fill={c} />
+    </svg>
+  );
+}
+
 function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
   return (
     <dl
@@ -147,14 +171,12 @@ function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
               {f.icon && <span aria-hidden className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] [&_svg]:h-[19px] [&_svg]:w-[19px]', tone.tile)}>{f.icon}</span>}
             </div>
             <dd className="num mt-3.5 whitespace-nowrap text-[34px] font-semibold leading-none tracking-tight text-slate-900">{f.value}</dd>
-            <dd className="mt-3 flex min-h-[24px] items-center">
-              {(f.sub ?? (f.pct !== undefined && f.pct < 100 ? `${Math.round(f.pct)}%` : null)) && <span dir={f.sub ? undefined : 'ltr'} className={cn('inline-flex max-w-full items-center truncate rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums', tone.chip)}>{f.sub ?? `${Math.round(f.pct as number)}%`}</span>}
+            <dd className="mt-3.5 flex min-h-[28px] items-end justify-between gap-2.5">
+              {(f.sub ?? (f.pct !== undefined && f.pct < 100 ? `${Math.round(f.pct)}%` : null)) ? (
+                <span dir={f.sub ? undefined : 'ltr'} className={cn('inline-flex max-w-full items-center truncate rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums', tone.chip)}>{f.sub ?? `${Math.round(f.pct as number)}%`}</span>
+              ) : <span />}
+              <Sparkline seed={f.label} tone={f.tone ?? (f.warn ? 'amber' : 'gold')} />
             </dd>
-            {f.pct !== undefined && (
-              <div className="mt-3 h-1.5 rounded-full bg-slate-500/15">
-                <span className={cn('block h-full rounded-full', tone.bar)} style={{ width: `${Math.min(Math.max(f.pct, 3), 100)}%` }} />
-              </div>
-            )}
           </>
         );
         const cls = 'block min-w-0 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none';
@@ -536,5 +558,28 @@ export function TeamList({ rows, empty }: { rows: TeamRow[]; empty: string }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+
+/**
+ * Column captions for a list of grid rows. `template` is the same
+ * `lg:grid-cols-[…]` class the rows use, so captions sit over their columns.
+ * Shown on large screens only (rows stack on small ones).
+ */
+export function ListHeader({ template, labels }: { template: string; labels: string[] }) {
+  return (
+    <div
+      data-testid="list-header"
+      aria-hidden
+      className={cn(
+        'hidden items-center gap-x-4 border-b border-hairline bg-slate-500/[0.06] px-6 py-3 text-[12px] font-semibold tracking-wide text-slate-500 lg:grid',
+        template,
+      )}
+    >
+      {labels.map((l, i) => (
+        <span key={i} className="truncate">{l}</span>
+      ))}
+    </div>
   );
 }

@@ -343,6 +343,21 @@
     text-transform: none;
   }
 
+  /* The redesigned list pages (components/lists) use a light tinted header row. */
+  #main-scroll table.list-table > thead {
+    background-color: transparent;
+  }
+  #main-scroll table.list-table > thead th {
+    color: rgb(var(--slate-500));
+    background-color: #f4efe4;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .dark #main-scroll table.list-table > thead th {
+    background-color: rgb(255 255 255 / 0.05);
+  }
+
   .dark .text-navy:not([class*='bg-']) {
     color: rgb(var(--slate-900));
   }

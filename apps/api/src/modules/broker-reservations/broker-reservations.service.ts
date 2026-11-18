@@ -99,6 +99,23 @@ export class BrokerReservationsService {
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.leadId ? { leadId: query.leadId } : {}),
+      ...(query.q?.trim()
+        ? {
+            OR: (() => {
+              const term = query.q.trim();
+              const ci = { contains: term, mode: Prisma.QueryMode.insensitive };
+              return [
+                { reservationNumber: ci },
+                { lead: { fullName: ci } },
+                { lead: { phone: { contains: term } } },
+                { client: { fullName: ci } },
+                { client: { phone: { contains: term } } },
+                { broker: { companyName: ci } },
+                { unit: { code: ci } },
+              ];
+            })(),
+          }
+        : {}),
       ...(query.projectId
         ? { unit: { building: { phase: { projectId: query.projectId } } } }
         : {}),
