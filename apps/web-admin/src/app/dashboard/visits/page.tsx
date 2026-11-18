@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { CalendarClock, CalendarDays, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
 import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, Project, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, ListPage, ListPager, ListTabs, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, ListPage, ListPager, ListFilterBar, ListFilterField, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
@@ -101,11 +103,13 @@ export default async function VisitsPage({
     }
   } else if (tab === 'today') {
     const qs = new URLSearchParams({ pageSize: '50', today: '1' });
+    if (sp.q) qs.set('q', sp.q);
     const r = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
     if (r.error) fetchError = r.error;
     appointmentsData = r.data?.data ?? [];
   } else if (tab === 'past') {
     const qs = new URLSearchParams({ pageSize: '50' });
+    if (sp.q) qs.set('q', sp.q);
     const r = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
     if (r.error) fetchError = r.error;
     appointmentsData = (r.data?.data ?? []).filter((a) =>
@@ -128,14 +132,6 @@ export default async function VisitsPage({
           ? m.tabs.today
           : m.tabs.past;
 
-  const tabs = [
-    { label: m.tabs.requests, href: '/dashboard/visits?tab=requests', count: stats?.totalRequests },
-    { label: m.tabs.scheduled, href: '/dashboard/visits?tab=appointments', count: stats?.scheduledVisits },
-    { label: m.tabs.today, href: '/dashboard/visits?tab=today', count: stats?.todayVisits },
-    { label: m.tabs.past, href: '/dashboard/visits?tab=past' },
-  ];
-
-  const activeHref = `/dashboard/visits?tab=${tab}`;
 
   return (
     <ListPage minHeight={980}>
@@ -172,7 +168,37 @@ export default async function VisitsPage({
         />
       </section>
 
-      <ListTabs items={tabs} activeHref={activeHref} />
+      <ListFilterBar
+        action="/dashboard/visits"
+        submitLabel={uiT(locale).common.filterBtn}
+        clearHref={sp.q || sp.status || sp.clientId ? `/dashboard/visits?tab=${tab}` : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+      >
+        {sp.clientId && <input type="hidden" name="clientId" value={sp.clientId} />}
+        <ListFilterField search label={locale === 'ar' ? 'بحث' : 'Search'} htmlFor="vis-q">
+          <Input id="vis-q" name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={locale === 'ar' ? 'اسم العميل أو رقم الطلب أو الزيارة…' : 'Client name, request or visit number…'} />
+        </ListFilterField>
+        <ListFilterField label={locale === 'ar' ? 'العرض' : 'View'} htmlFor="vis-tab">
+          <Select id="vis-tab" name="tab" inputSize="sm" defaultValue={tab}>
+            <option value="requests">{m.tabs.requests}{typeof stats?.totalRequests === 'number' ? ` (${stats.totalRequests})` : ''}</option>
+            <option value="appointments">{m.tabs.scheduled}{typeof stats?.scheduledVisits === 'number' ? ` (${stats.scheduledVisits})` : ''}</option>
+            <option value="today">{m.tabs.today}</option>
+            <option value="past">{m.tabs.past}</option>
+          </Select>
+        </ListFilterField>
+        {tab === 'requests' && (
+          <ListFilterField label={locale === 'ar' ? 'الحالة' : 'Status'} htmlFor="vis-status">
+            <Select id="vis-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+              <option value="">{locale === 'ar' ? 'كل الحالات' : 'All statuses'}</option>
+              <option value="NEW">{locale === 'ar' ? 'جديد' : 'New'}</option>
+              <option value="UNDER_REVIEW">{locale === 'ar' ? 'قيد المراجعة' : 'Under review'}</option>
+              <option value="CONVERTED">{locale === 'ar' ? 'تم التحويل' : 'Converted'}</option>
+              <option value="REJECTED">{locale === 'ar' ? 'مرفوض' : 'Rejected'}</option>
+              <option value="CANCELLED">{locale === 'ar' ? 'ملغى' : 'Cancelled'}</option>
+            </Select>
+          </ListFilterField>
+        )}
+      </ListFilterBar>
 
       {fetchError && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
