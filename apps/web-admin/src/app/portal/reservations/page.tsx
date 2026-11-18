@@ -5,17 +5,15 @@ import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { DataTable, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { DataTable, ListPage, ListPager, ListTableCard, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
 import { Button } from '@/components/ui/button';
-import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ReservationsFilterBar } from '@/components/broker/reservations-filter-bar';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumSectionCard,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +28,7 @@ interface Search {
   to?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function PortalReservationsPage({
   searchParams,
@@ -69,18 +67,16 @@ export default async function PortalReservationsPage({
   const convertedCount = rConverted.data?.meta.total ?? 0;
 
   return (
-    <div className="space-y-5">
+    <ListPage minHeight={960}>
 
       <PremiumPageHero
+        className="shrink-0"
+        eyebrow={<span className="inline-flex items-center gap-2">{locale === 'ar' ? 'بوابة الوسيط / الحجوزات' : 'Broker portal / Reservations'}<span aria-hidden className="h-px w-6 bg-brand-700/40" /></span>}
         title={t.title}
         description={t.description}
-        breadcrumbs={[
-          { label: m.common.portal, href: '/portal' },
-          { label: m.common.reservations },
-        ]}
         actions={
           <Link href="/portal/reservations/new">
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {t.newReservation}
             </Button>
           </Link>
@@ -94,7 +90,7 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
@@ -114,18 +110,11 @@ export default async function PortalReservationsPage({
         sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
       />
 
-      <PremiumSectionCard
-        icon={<BookmarkCheck />}
-        title={t.tableTitle}
-        padded={false}
-        band
+      <ListTableCard
+        trailing={<span className="tabular-nums">{paged?.meta.total?.toLocaleString() ?? 0} {t.countUnit}</span>}
+        title={locale === 'ar' ? 'قائمة الحجوزات' : 'Reservations list'}
+        footer={paged && paged.meta.total > 0 ? <ListPager page={paged.meta.page} pageSize={paged.meta.pageSize} total={paged.meta.total} basePath="/portal/reservations" params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} locale={locale} /> : undefined}
       >
-        {rows.length > 0 && (
-          <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>{t.countUnit}</span>
-          </div>
-        )}
 
         {rows.length === 0 ? (
           <EmptyState
@@ -219,17 +208,7 @@ export default async function PortalReservationsPage({
           </DataTable>
         )}
 
-        {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/portal/reservations"
-            locale={locale}
-            params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
-          />
-        )}
-      </PremiumSectionCard>
-    </div>
+      </ListTableCard>
+    </ListPage>
   );
 }

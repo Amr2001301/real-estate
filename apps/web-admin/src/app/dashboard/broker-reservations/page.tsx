@@ -6,21 +6,16 @@ import type { AdminBrokerReservation, Paged, Project } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
   PremiumEmptyState,
-  PremiumFilterAdvancedToggle,
-  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
 
@@ -36,7 +31,7 @@ interface Search {
   showFilters?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function AdminBrokerReservationsPage({
   searchParams,
@@ -114,20 +109,22 @@ export default async function AdminBrokerReservationsPage({
     : pageUrl({ showFilters: '1' });
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.heroTitle}
         description={m.heroDescription}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
-          { label: m.breadcrumbSelf },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'الوسطاء / حجوزات الوسطاء' : 'Brokers / Broker reservations'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           <Link href={'/dashboard/broker-reservations/new' as never}>
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {m.newReservationBtn}
             </Button>
           </Link>
@@ -135,15 +132,15 @@ export default async function AdminBrokerReservationsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           cols={4}
           figures={[
             { label: m.kpiTotal, value: totalReservations, icon: FigIcons.total, pct: 100 },
-            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.pending, pct: totalReservations ? (counts.pending / totalReservations) * 100 : 0 },
-            { label: m.kpiApproved, value: counts.approved, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green', pct: totalReservations ? (counts.approved / totalReservations) * 100 : 0 },
-            { label: m.kpiConverted, value: counts.converted, sub: m.kpiThisPage, icon: FigIcons.sign, tone: 'blue', pct: totalReservations ? (counts.converted / totalReservations) * 100 : 0 },
+            { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.pending },
+            { label: m.kpiApproved, value: counts.approved, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green' },
+            { label: m.kpiConverted, value: counts.converted, sub: m.kpiThisPage, icon: FigIcons.sign, tone: 'blue' },
           ]}
         />
       </section>
@@ -157,38 +154,18 @@ export default async function AdminBrokerReservationsPage({
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/broker-reservations">
-        {/* Hidden inputs preserve advanced values when the panel is collapsed */}
-        {!showFilters && sp.status    && <input type="hidden" name="status"    value={sp.status} />}
-        {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
-        {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
-
-        {/* ── Row 1: broker filter + actions (always visible) ───────────────── */}
-        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bres-broker">
-          <Select id="bres-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
-            <option value="">{m.filterAllBrokers}</option>
-            {brokers.map((b) => (
-              <option key={b.id} value={b.id}>{b.companyName}</option>
-            ))}
-          </Select>
-        </PremiumFilterField>
-
-        {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {hasAnyFilter && (
-            <Link href={'/dashboard/broker-reservations' as never}>
-              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
-            </Link>
-          )}
-          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
-        </div>
-
-        {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
-        {showFilters && (
-          <PremiumFilterAdvancedPanel>
-              <PremiumFilterField label={m.filterStatus}>
-<Select id="bres-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+      <ListFilterBar
+        action="/dashboard/broker-reservations"
+        submitLabel={uiT(locale).common.filterBtn}
+        advancedHref={toggleFiltersUrl}
+        advancedLabel={showFilters ? m.filterHideFilters : m.filterAdvanced}
+        clearHref={hasAnyFilter ? '/dashboard/broker-reservations' : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+        advanced={
+          showFilters ? (
+            <>
+              <ListFilterField label={m.filterStatus}>
+                <Select id="bres-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
                   <option value="">{m.filterAllStatuses}</option>
                   <option value="PENDING">{m.filterStatusPending}</option>
                   <option value="APPROVED">{m.filterStatusApproved}</option>
@@ -197,29 +174,56 @@ export default async function AdminBrokerReservationsPage({
                   <option value="EXPIRED">{m.filterStatusExpired}</option>
                   <option value="CONVERTED">{m.filterStatusConverted}</option>
                 </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterProject}>
-<Select id="bres-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+              </ListFilterField>
+              <ListFilterField label={m.filterProject}>
+                <Select id="bres-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
                   <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterInternalRep}>
-<Select id="bres-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+              </ListFilterField>
+              <ListFilterField label={m.filterInternalRep}>
+                <Select id="bres-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
                   <option value="">{m.filterAllReps}</option>
                   {salesUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName}</option>
                   ))}
                 </Select>
-</PremiumFilterField>
-            </PremiumFilterAdvancedPanel>
-        )}
-      </PremiumFilterBar>
+              </ListFilterField>
+            </>
+          ) : undefined
+        }
+      >
+        {/* Hidden inputs preserve advanced values when the panel is collapsed */}
+        {!showFilters && sp.status    && <input type="hidden" name="status"    value={sp.status} />}
+        {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
+        {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
+
+        <ListFilterField label={m.filterBrokerLabel} htmlFor="bres-broker">
+          <Select id="bres-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+            <option value="">{m.filterAllBrokers}</option>
+            {brokers.map((b) => (
+              <option key={b.id} value={b.id}>{b.companyName}</option>
+            ))}
+          </Select>
+        </ListFilterField>
+      </ListFilterBar>
 
       {/* ── Reservations table ───────────────────────────────────────────────── */}
       <ListTableCard
+        footer={
+          paged && paged.meta.total > 0 ? (
+            <ListPager
+              page={paged.meta.page}
+              pageSize={paged.meta.pageSize}
+              total={paged.meta.total}
+              basePath="/dashboard/broker-reservations"
+              params={{ brokerId: sp.brokerId, status: sp.status, projectId: sp.projectId, salesId: sp.salesId, showFilters: sp.showFilters }}
+              locale={locale}
+            />
+          ) : undefined
+        }
         title={m.tableTitle}
         sub={m.tableDescription}
         trailing={
@@ -308,7 +312,7 @@ export default async function AdminBrokerReservationsPage({
                       />
                     </Td>
                     <Td>
-                      <ReservationStatusBadge status={r.status} />
+                      <ReservationStatusBadge status={r.status} dot />
                     </Td>
                     <Td>
                       <AgentCell name={r.sales?.fullName} empty={m.unassigned} />
@@ -355,22 +359,6 @@ export default async function AdminBrokerReservationsPage({
         )}
       </ListTableCard>
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
-      {paged && paged.meta.total > PAGE_SIZE && (
-        <Pagination
-          page={paged.meta.page}
-          pageSize={paged.meta.pageSize}
-          total={paged.meta.total}
-          basePath="/dashboard/broker-reservations"
-          params={{
-            brokerId: sp.brokerId,
-            status: sp.status,
-            projectId: sp.projectId,
-            salesId: sp.salesId,
-            showFilters: sp.showFilters,
-          }}
-        />
-      )}
-    </div>
+    </ListPage>
   );
 }

@@ -231,6 +231,7 @@ export function ListFilterBar({
   children,
   advanced,
   advancedHref,
+  onAdvanced,
   advancedLabel,
   submitLabel,
   clearHref,
@@ -241,6 +242,8 @@ export function ListFilterBar({
   /** The second row of fields, when open. */
   advanced?: ReactNode;
   advancedHref?: string;
+  /** For bars that keep the toggle in client state instead of the URL. */
+  onAdvanced?: () => void;
   advancedLabel?: string;
   submitLabel: string;
   clearHref?: string;
@@ -253,6 +256,16 @@ export function ListFilterBar({
       className="flex shrink-0 flex-wrap items-stretch gap-2.5 rounded-[20px] border border-hairline bg-surface p-3 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_8px_24px_-12px_rgb(11_18_32/0.1)] dark:shadow-none"
     >
       {children}
+      {onAdvanced && (
+        <button
+          type="button"
+          onClick={onAdvanced}
+          className="inline-flex h-14 items-center gap-2 self-end rounded-[14px] border border-hairline px-[18px] text-[13px] font-semibold text-slate-900 transition-colors hover:border-[#C9A24E]/60"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {advancedLabel}
+        </button>
+      )}
       {advancedHref && (
         <Link
           href={advancedHref as never}

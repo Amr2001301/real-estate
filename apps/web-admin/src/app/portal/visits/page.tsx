@@ -10,21 +10,17 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { DataTable, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { DataTable, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
 import { portalLeadsVisitsT } from '@/messages/portal/leads-visits';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
-  PremiumSectionCard,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +32,7 @@ interface Search {
   q?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 function appointmentUrgency(
   iso: string | null | undefined,
@@ -91,18 +87,16 @@ export default async function PortalVisitsPage({
   const rejectedCount  = rRejected.data?.meta.total  ?? 0;
 
   return (
-    <div className="space-y-5">
+    <ListPage minHeight={960}>
 
       <PremiumPageHero
+        className="shrink-0"
+        eyebrow={<span className="inline-flex items-center gap-2">{locale === 'ar' ? 'بوابة الوسيط / الزيارات' : 'Broker portal / Visits'}<span aria-hidden className="h-px w-6 bg-brand-700/40" /></span>}
         title={t.title}
         description={t.description}
-        breadcrumbs={[
-          { label: m.breadcrumbs.portal, href: '/portal' },
-          { label: m.breadcrumbs.visits },
-        ]}
         actions={
           <Link href="/portal/visits/new">
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {t.newRequest}
             </Button>
           </Link>
@@ -116,7 +110,7 @@ export default async function PortalVisitsPage({
         </div>
       )}
 
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
@@ -130,37 +124,17 @@ export default async function PortalVisitsPage({
         />
       </section>
 
-      <PremiumFilterBar
-        method="get"
+      <ListFilterBar
         action="/portal/visits"
-        trailing={
-          <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
-            {(sp.requestStatus || sp.q) && (
-              <Link href="/portal/visits">
-                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
-              </Link>
-            )}
-          </div>
-        }
+        submitLabel={t.filter}
+        clearHref={sp.requestStatus || sp.q ? '/portal/visits' : undefined}
+        clearLabel={t.clearFilter}
       >
-        <PremiumFilterField label={t.searchLabel}>
-          <Input
-            inputSize="sm"
-            name="q"
-            leftAddon={<Search />}
-            placeholder={t.searchPlaceholder}
-            defaultValue={sp.q ?? ''}
-            className="flex-1 min-w-[180px]"
-          />
-        </PremiumFilterField>
-        <PremiumFilterField label={t.statusLabel}>
-          <Select
-            name="requestStatus"
-            inputSize="sm"
-            defaultValue={sp.requestStatus ?? ''}
-            className="w-52"
-          >
+        <ListFilterField search label={t.searchLabel}>
+          <Input name="q" inputSize="sm" placeholder={t.searchPlaceholder} defaultValue={sp.q ?? ''} />
+        </ListFilterField>
+        <ListFilterField label={t.statusLabel}>
+          <Select name="requestStatus" inputSize="sm" defaultValue={sp.requestStatus ?? ''}>
             <option value="">{t.statusOptions.all}</option>
             <option value="NEW">{t.statusOptions.NEW}</option>
             <option value="UNDER_REVIEW">{t.statusOptions.UNDER_REVIEW}</option>
@@ -168,21 +142,13 @@ export default async function PortalVisitsPage({
             <option value="REJECTED">{t.statusOptions.REJECTED}</option>
             <option value="CANCELLED">{t.statusOptions.CANCELLED}</option>
           </Select>
-        </PremiumFilterField>
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
-      <PremiumSectionCard
-        icon={<CalendarClock />}
-        title={t.tableTitle}
-        padded={false}
-        band
+      <ListTableCard
+        title={locale === 'ar' ? 'طلبات الزيارة' : 'Visit requests'}
+        footer={paged && paged.meta.total > 0 ? <ListPager page={paged.meta.page} pageSize={paged.meta.pageSize} total={paged.meta.total} basePath="/portal/visits" params={{ requestStatus: sp.requestStatus, q: sp.q }} locale={locale} /> : undefined}
       >
-        {rows.length > 0 && (
-          <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>{t.countNoun}</span>
-          </div>
-        )}
 
         {rows.length === 0 ? (
           <EmptyState
@@ -271,18 +237,8 @@ export default async function PortalVisitsPage({
           </DataTable>
         )}
 
-        {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/portal/visits"
-            locale={locale}
-            params={{ requestStatus: sp.requestStatus, q: sp.q }}
-          />
-        )}
-      </PremiumSectionCard>
-    </div>
+      </ListTableCard>
+    </ListPage>
   );
 }
 

@@ -12,20 +12,15 @@ import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Amount, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { DataTable, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { DataTable, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, DateText, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { cn } from '@/lib/cn';
 import { getLocale } from '@/lib/locale';
 import { portalReservationsContractsT } from '@/messages/portal/reservations-contracts';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
-  PremiumSectionCard,
 } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
@@ -38,7 +33,7 @@ interface Search {
   q?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function PortalContractsPage({
   searchParams,
@@ -79,15 +74,13 @@ export default async function PortalContractsPage({
   const isFiltered = !!(sp.projectId || sp.signed || sp.q);
 
   return (
-    <div className="space-y-5">
+    <ListPage minHeight={960}>
 
       <PremiumPageHero
+        className="shrink-0"
+        eyebrow={<span className="inline-flex items-center gap-2">{locale === 'ar' ? 'بوابة الوسيط / العقود' : 'Broker portal / Contracts'}<span aria-hidden className="h-px w-6 bg-brand-700/40" /></span>}
         title={t.title}
         description={t.description}
-        breadcrumbs={[
-          { label: m.common.portal, href: '/portal' },
-          { label: m.common.contracts },
-        ]}
       />
 
       {contractsRes.error && (
@@ -97,7 +90,7 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
@@ -116,32 +109,17 @@ export default async function PortalContractsPage({
         />
       </section>
 
-      <PremiumFilterBar
-        method="get"
+      <ListFilterBar
         action="/portal/contracts"
-        trailing={
-          <div className="flex items-center gap-1.5 ms-auto shrink-0">
-            <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
-            {isFiltered && (
-              <Link href="/portal/contracts">
-                <Button type="button" variant="ghost" size="sm">{t.clearFilter}</Button>
-              </Link>
-            )}
-          </div>
-        }
+        submitLabel={t.filter}
+        clearHref={isFiltered ? '/portal/contracts' : undefined}
+        clearLabel={t.clearFilter}
       >
-        <PremiumFilterField label={t.search}>
-          <Input
-            inputSize="sm"
-            name="q"
-            leftAddon={<Search />}
-            placeholder={t.searchPlaceholder}
-            defaultValue={sp.q ?? ''}
-            className="flex-1 min-w-[180px]"
-          />
-        </PremiumFilterField>
-        <PremiumFilterField label={t.project}>
-          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
+        <ListFilterField search label={t.search}>
+          <Input name="q" inputSize="sm" placeholder={t.searchPlaceholder} defaultValue={sp.q ?? ''} />
+        </ListFilterField>
+        <ListFilterField label={t.project}>
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
             <option value="">{t.allProjects}</option>
             {projects.map((p) => (
               <option key={p.project.id} value={p.project.id}>
@@ -149,21 +127,19 @@ export default async function PortalContractsPage({
               </option>
             ))}
           </Select>
-        </PremiumFilterField>
-        <PremiumFilterField label={m.common.status}>
-          <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44">
+        </ListFilterField>
+        <ListFilterField label={m.common.status}>
+          <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
             <option value="">{t.allContracts}</option>
             <option value="yes">{t.signedOnly}</option>
             <option value="no">{t.pendingOnly}</option>
           </Select>
-        </PremiumFilterField>
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
-      <PremiumSectionCard
-        icon={<FileText />}
-        title={t.tableTitle}
-        padded={false}
-        band
+      <ListTableCard
+        title={locale === 'ar' ? 'قائمة العقود' : 'Contracts list'}
+        footer={paged && paged.meta.total > 0 ? <ListPager page={paged.meta.page} pageSize={paged.meta.pageSize} total={paged.meta.total} basePath="/portal/contracts" params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }} locale={locale} /> : undefined}
       >
         {rows.length === 0 ? (
           <EmptyState icon={<FileText />} title={t.emptyTitle} description={t.emptyDescription} />
@@ -270,17 +246,7 @@ export default async function PortalContractsPage({
           </DataTable>
         )}
 
-        {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/portal/contracts"
-            locale={locale}
-            params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }}
-          />
-        )}
-      </PremiumSectionCard>
-    </div>
+      </ListTableCard>
+    </ListPage>
   );
 }

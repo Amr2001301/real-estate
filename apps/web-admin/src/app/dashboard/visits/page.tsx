@@ -7,7 +7,7 @@ import { getLocale, type Locale } from '@/lib/locale';
 import type { Paged, Project, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatTime, intlLocale, tx, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, ListPage, ListTabs, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, ListPage, ListPager, ListTabs, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
@@ -45,9 +45,11 @@ interface SalesUser {
 export default async function VisitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; status?: string; q?: string; clientId?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string; q?: string; clientId?: string; page?: string }>;
 }) {
   const sp = await searchParams;
+  const PAGE_SIZE = 10;
+  const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const tab: Tab = (sp.tab as Tab) ?? (sp.clientId ? 'appointments' : 'requests');
 
   const [statsRes, salesRes, locale, coverRes] = await Promise.all([
@@ -73,14 +75,16 @@ export default async function VisitsPage({
   let requestsData: VisitRequest[] = [];
   let appointmentsData: VisitAppointment[] = [];
   let fetchError: string | null = null;
+  let totalRows = 0;
 
   if (tab === 'requests') {
-    const qs = new URLSearchParams({ pageSize: '50' });
+    const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (sp.status) qs.set('status', sp.status);
     if (sp.q) qs.set('q', sp.q);
     const r = await safe(api.get<Paged<VisitRequest>>(`/visits/requests?${qs}`));
     if (r.error) fetchError = r.error;
     requestsData = r.data?.data ?? [];
+    totalRows = r.data?.meta?.total ?? requestsData.length;
   } else if (tab === 'appointments') {
     const qs = new URLSearchParams({ pageSize: '50' });
     if (sp.clientId) { qs.set('clientId', sp.clientId); } else { qs.set('status', 'SCHEDULED'); }
@@ -107,6 +111,12 @@ export default async function VisitsPage({
     appointmentsData = (r.data?.data ?? []).filter((a) =>
       ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'].includes(a.status),
     );
+  }
+
+  if (tab !== 'requests') {
+    appointmentsData.sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1));
+    totalRows = appointmentsData.length;
+    appointmentsData = appointmentsData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   }
 
   const tabTitle =
@@ -173,11 +183,16 @@ export default async function VisitsPage({
 
       {tab === 'requests' && (
         <ListTableCard
+        footer={
+          totalRows > PAGE_SIZE ? (
+            <ListPager page={page} pageSize={PAGE_SIZE} total={totalRows} basePath="/dashboard/visits" params={{ tab, status: sp.status, q: sp.q, clientId: sp.clientId }} locale={locale} />
+          ) : undefined
+        }
           title={tabTitle}
           sub={m.description}
           trailing={
             <span className="tabular-nums">
-              {requestsData.length} {m.requestSuffix}
+              {totalRows} {m.requestSuffix}
             </span>
           }
         >
@@ -256,11 +271,16 @@ export default async function VisitsPage({
 
       {(tab === 'appointments' || tab === 'today' || tab === 'past') && (
         <ListTableCard
+        footer={
+          totalRows > PAGE_SIZE ? (
+            <ListPager page={page} pageSize={PAGE_SIZE} total={totalRows} basePath="/dashboard/visits" params={{ tab, status: sp.status, q: sp.q, clientId: sp.clientId }} locale={locale} />
+          ) : undefined
+        }
           title={tabTitle}
           sub={m.description}
           trailing={
             <span className="tabular-nums">
-              {appointmentsData.length} {m.visitSuffix}
+              {totalRows} {m.visitSuffix}
             </span>
           }
         >

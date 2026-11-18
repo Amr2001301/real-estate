@@ -6,20 +6,15 @@ import type { AdminBrokerContract, Paged, Project } from '@/lib/types';
 import { tx, formatDate, formatCurrency, intlLocale, compactParts } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Amount, Avatar, FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, DataTable, DateText, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
-  PremiumFilterBar,
-  PremiumFilterField,
   PremiumEmptyState,
-  PremiumFilterAdvancedToggle,
-  PremiumFilterAdvancedPanel,
 } from '@/components/premium';
 import { EntityLink } from '@/components/entity-link';
 
@@ -37,7 +32,7 @@ interface Search {
   showFilters?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default async function AdminBrokerContractsPage({
   searchParams,
@@ -117,24 +112,22 @@ export default async function AdminBrokerContractsPage({
     : pageUrl({ showFilters: '1' });
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6">
+    <ListPage minHeight={960}>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title={m.heroTitle}
         description={m.heroDescription}
-        breadcrumbs={[
-          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
-          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
-          { label: m.breadcrumbSelf },
-        ]}
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            {locale === 'ar' ? 'الوسطاء / عقود الوسطاء' : 'Brokers / Broker contracts'}
+            <span aria-hidden className="h-px w-6 bg-brand-700/40" />
+          </span>
+        }
+        className="shrink-0"
         actions={
           <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
-            <Button
-              variant="primary"
-              size="md"
-              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-            >
+            <Button variant="secondary" size="md" leftIcon={<ArrowRightLeft className="h-4 w-4" />}>
               {m.convertBtn}
             </Button>
           </Link>
@@ -142,13 +135,13 @@ export default async function AdminBrokerContractsPage({
       />
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
-      <section>
+      <section className="shrink-0">
         <FigureBar
           variant="cards"
           bare
           cols={4}
           figures={[
-            { label: m.kpiTotal, value: totalContracts, icon: FigIcons.total },
+            { label: m.kpiTotal, value: totalContracts, icon: FigIcons.total, sub: locale === 'ar' ? 'كل العقود' : 'All contracts' },
             { label: m.kpiSigned, value: counts.signed, sub: m.kpiThisPage, icon: FigIcons.done, tone: 'green' },
             { label: m.kpiPending, value: counts.pending, sub: m.kpiThisPage, warn: counts.pending > 0, icon: FigIcons.sign },
             { label: m.kpiTotalValue, value: totalValue > 0 ? <Amount parts={compactParts(totalValue, symbol, locale)} /> : '—', sub: m.kpiThisPage, icon: FigIcons.money, tone: 'blue' },
@@ -165,7 +158,49 @@ export default async function AdminBrokerContractsPage({
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
-      <PremiumFilterBar method="get" action="/dashboard/broker-contracts">
+      <ListFilterBar
+        action="/dashboard/broker-contracts"
+        submitLabel={uiT(locale).common.filterBtn}
+        advancedHref={toggleFiltersUrl}
+        advancedLabel={showFilters ? m.filterHideFilters : m.filterAdvanced}
+        clearHref={hasAnyFilter ? '/dashboard/broker-contracts' : undefined}
+        clearLabel={uiT(locale).common.clearBtn}
+        advanced={
+          showFilters ? (
+            <>
+              <ListFilterField label={m.filterProject}>
+<Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+                  <option value="">{m.filterAllProjects}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{tx(p.name)}</option>
+                  ))}
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterSalesRep}>
+<Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+                  <option value="">{m.filterAllSalesReps}</option>
+                  {salesUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.fullName}</option>
+                  ))}
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterStatus}>
+<Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
+                  <option value="">{m.filterAllContracts}</option>
+                  <option value="yes">{m.filterStatusSigned}</option>
+                  <option value="no">{m.filterStatusPending}</option>
+                </Select>
+</ListFilterField>
+              <ListFilterField label={m.filterDateFrom}>
+<Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
+</ListFilterField>
+              <ListFilterField label={m.filterDateTo}>
+<Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
+</ListFilterField>
+            </>
+          ) : undefined
+        }
+      >
         {/* Hidden inputs preserve advanced values when the panel is collapsed */}
         {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
         {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
@@ -173,65 +208,30 @@ export default async function AdminBrokerContractsPage({
         {!showFilters && sp.dateFrom  && <input type="hidden" name="dateFrom"  value={sp.dateFrom} />}
         {!showFilters && sp.dateTo    && <input type="hidden" name="dateTo"    value={sp.dateTo} />}
 
-        {/* ── Row 1: main filter + actions (always visible) ─────────────────── */}
-        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
-          <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
+        <ListFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
+          <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
             <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
           </Select>
-        </PremiumFilterField>
-
-        {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
-        <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {hasAnyFilter && (
-            <Link href={'/dashboard/broker-contracts' as never}>
-              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
-            </Link>
-          )}
-          <PremiumFilterAdvancedToggle href={toggleFiltersUrl} open={showFilters} active={hasAdvancedFilters} label={showFilters ? m.filterHideFilters : m.filterAdvanced} />
-        </div>
-
-        {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
-        {showFilters && (
-          <PremiumFilterAdvancedPanel>
-              <PremiumFilterField label={m.filterProject}>
-<Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">{m.filterAllProjects}</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{tx(p.name)}</option>
-                  ))}
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterSalesRep}>
-<Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">{m.filterAllSalesReps}</option>
-                  {salesUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.fullName}</option>
-                  ))}
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterStatus}>
-<Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
-                  <option value="">{m.filterAllContracts}</option>
-                  <option value="yes">{m.filterStatusSigned}</option>
-                  <option value="no">{m.filterStatusPending}</option>
-                </Select>
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterDateFrom}>
-<Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
-</PremiumFilterField>
-              <PremiumFilterField label={m.filterDateTo}>
-<Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
-</PremiumFilterField>
-            </PremiumFilterAdvancedPanel>
-        )}
-      </PremiumFilterBar>
+        </ListFilterField>
+      </ListFilterBar>
 
       {/* ── Contracts table ──────────────────────────────────────────────────── */}
       <ListTableCard
+        footer={
+          paged && paged.meta.total > 0 ? (
+            <ListPager
+              page={paged.meta.page}
+              pageSize={paged.meta.pageSize}
+              total={paged.meta.total}
+              basePath="/dashboard/broker-contracts"
+              params={{ brokerId: sp.brokerId, projectId: sp.projectId, salesId: sp.salesId, signed: sp.signed, dateFrom: sp.dateFrom, dateTo: sp.dateTo, showFilters: sp.showFilters }}
+              locale={locale}
+            />
+          ) : undefined
+        }
         title={m.tableTitle}
         sub={m.tableDescription}
         trailing={
@@ -383,24 +383,6 @@ export default async function AdminBrokerContractsPage({
         )}
       </ListTableCard>
 
-      {/* ── Pagination ───────────────────────────────────────────────────────── */}
-      {paged && paged.meta.total > PAGE_SIZE && (
-        <Pagination
-          page={paged.meta.page}
-          pageSize={paged.meta.pageSize}
-          total={paged.meta.total}
-          basePath="/dashboard/broker-contracts"
-          params={{
-            brokerId: sp.brokerId,
-            projectId: sp.projectId,
-            salesId: sp.salesId,
-            signed: sp.signed,
-            dateFrom: sp.dateFrom,
-            dateTo: sp.dateTo,
-            showFilters: sp.showFilters,
-          }}
-        />
-      )}
-    </div>
+    </ListPage>
   );
 }
