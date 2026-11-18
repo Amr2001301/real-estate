@@ -23,6 +23,7 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   brokerId?: string;
   projectId?: string;
   salesId?: string;
@@ -50,7 +51,7 @@ export default async function AdminBrokerContractsPage({
     page: String(page),
     pageSize: String(PAGE_SIZE),
   });
-  for (const key of ['brokerId', 'projectId', 'salesId', 'signed', 'dateFrom', 'dateTo'] as const) {
+  for (const key of ['q', 'brokerId', 'projectId', 'salesId', 'signed', 'dateFrom', 'dateTo'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
@@ -88,10 +89,11 @@ export default async function AdminBrokerContractsPage({
   // Advanced filter state — URL-based toggle, auto-opens when advanced filters are active
   const hasAdvancedFilters = !!(sp.projectId || sp.salesId || sp.signed || sp.dateFrom || sp.dateTo);
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
-  const hasAnyFilter = !!(sp.brokerId || hasAdvancedFilters);
+  const hasAnyFilter = !!(sp.q || sp.brokerId || hasAdvancedFilters);
 
   function pageUrl(overrides: Record<string, string | undefined>): string {
     const base: Record<string, string | undefined> = {
+      q: sp.q,
       brokerId: sp.brokerId,
       projectId: sp.projectId,
       salesId: sp.salesId,
@@ -208,6 +210,9 @@ export default async function AdminBrokerContractsPage({
         {!showFilters && sp.dateFrom  && <input type="hidden" name="dateFrom"  value={sp.dateFrom} />}
         {!showFilters && sp.dateTo    && <input type="hidden" name="dateTo"    value={sp.dateTo} />}
 
+        <ListFilterField search label={locale === 'ar' ? 'بحث' : 'Search'} htmlFor="bc-q">
+          <Input id="bc-q" name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={locale === 'ar' ? 'ابحث برقم العقد أو العميل أو الوسيط أو الوحدة…' : 'Contract no., customer, broker or unit…'} />
+        </ListFilterField>
         <ListFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
           <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
             <option value="">{m.filterAllBrokers}</option>
@@ -227,7 +232,7 @@ export default async function AdminBrokerContractsPage({
               pageSize={paged.meta.pageSize}
               total={paged.meta.total}
               basePath="/dashboard/broker-contracts"
-              params={{ brokerId: sp.brokerId, projectId: sp.projectId, salesId: sp.salesId, signed: sp.signed, dateFrom: sp.dateFrom, dateTo: sp.dateTo, showFilters: sp.showFilters }}
+              params={{ q: sp.q, brokerId: sp.brokerId, projectId: sp.projectId, salesId: sp.salesId, signed: sp.signed, dateFrom: sp.dateFrom, dateTo: sp.dateTo, showFilters: sp.showFilters }}
               locale={locale}
             />
           ) : undefined

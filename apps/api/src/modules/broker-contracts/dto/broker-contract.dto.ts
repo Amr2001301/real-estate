@@ -4,6 +4,8 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  MaxLength,
+  IsString,
   IsUUID,
   Max,
   Min,
@@ -13,6 +15,12 @@ const SIGNED_VALUES = ['yes', 'no'] as const;
 export type SignedFilter = (typeof SIGNED_VALUES)[number];
 
 export class BrokerContractsQueryDto {
+  /** Free-text search: contract number, customer, phone, broker, unit. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @IsUUID()
   brokerId?: string;

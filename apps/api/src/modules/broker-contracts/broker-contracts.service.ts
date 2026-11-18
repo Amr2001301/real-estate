@@ -94,6 +94,27 @@ export class BrokerContractsService {
       NOT: { brokerId: null },
       ...(reps ? { reservation: { salesId: { in: reps } } } : {}),
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
+      ...(query.q?.trim()
+        ? {
+            AND: [
+              {
+                OR: (() => {
+                  const term = query.q.trim();
+                  const ci = { contains: term, mode: Prisma.QueryMode.insensitive };
+                  return [
+                    { contractNumber: ci },
+                    { customer: { fullName: ci } },
+                    { customer: { phone: { contains: term } } },
+                    { reservation: { lead: { fullName: ci } } },
+                    { reservation: { lead: { phone: { contains: term } } } },
+                    { broker: { companyName: ci } },
+                    { unit: { code: ci } },
+                  ];
+                })(),
+              },
+            ],
+          }
+        : {}),
       ...(query.projectId
         ? { unit: { building: { phase: { projectId: query.projectId } } } }
         : {}),

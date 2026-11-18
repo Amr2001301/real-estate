@@ -11,6 +11,7 @@ import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
@@ -24,6 +25,7 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   brokerId?: string;
   status?: string;
   projectId?: string;
@@ -48,7 +50,7 @@ export default async function AdminBrokerReservationsPage({
     page: String(page),
     pageSize: String(PAGE_SIZE),
   });
-  for (const key of ['brokerId', 'status', 'projectId', 'salesId'] as const) {
+  for (const key of ['q', 'brokerId', 'status', 'projectId', 'salesId'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
@@ -87,10 +89,11 @@ export default async function AdminBrokerReservationsPage({
   // Advanced filter state — URL-based toggle, auto-opens when advanced filters are active
   const hasAdvancedFilters = !!(sp.status || sp.projectId || sp.salesId);
   const showFilters = hasAdvancedFilters || sp.showFilters === '1';
-  const hasAnyFilter = !!(sp.brokerId || hasAdvancedFilters);
+  const hasAnyFilter = !!(sp.q || sp.brokerId || hasAdvancedFilters);
 
   function pageUrl(overrides: Record<string, string | undefined>): string {
     const base: Record<string, string | undefined> = {
+      q: sp.q,
       brokerId: sp.brokerId,
       status: sp.status,
       projectId: sp.projectId,
@@ -200,6 +203,9 @@ export default async function AdminBrokerReservationsPage({
         {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
         {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
 
+        <ListFilterField search label={locale === 'ar' ? 'بحث' : 'Search'} htmlFor="bres-q">
+          <Input id="bres-q" name="q" inputSize="sm" defaultValue={sp.q ?? ''} placeholder={locale === 'ar' ? 'ابحث برقم الحجز أو العميل أو الوسيط أو الوحدة…' : 'Reservation no., client, broker or unit…'} />
+        </ListFilterField>
         <ListFilterField label={m.filterBrokerLabel} htmlFor="bres-broker">
           <Select id="bres-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
             <option value="">{m.filterAllBrokers}</option>
@@ -219,7 +225,7 @@ export default async function AdminBrokerReservationsPage({
               pageSize={paged.meta.pageSize}
               total={paged.meta.total}
               basePath="/dashboard/broker-reservations"
-              params={{ brokerId: sp.brokerId, status: sp.status, projectId: sp.projectId, salesId: sp.salesId, showFilters: sp.showFilters }}
+              params={{ q: sp.q, brokerId: sp.brokerId, status: sp.status, projectId: sp.projectId, salesId: sp.salesId, showFilters: sp.showFilters }}
               locale={locale}
             />
           ) : undefined
