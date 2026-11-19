@@ -97,6 +97,16 @@ export default async function ContractsPage({
   const share = (n: number) => (totalContracts ? Math.round((n / totalContracts) * 100) : 0);
   const ofTotal = locale === 'ar' ? 'من الإجمالي' : 'of total';
 
+  // A figure is on when the list shows exactly what it counts (one filter, or
+  // none for the total); clicking it again goes back to the whole list.
+  const current = sp.q || sp.hasReservation
+    ? null
+    : [sp.signed && `signed=${sp.signed}`, sp.deliveryDelayed === 'true' && 'deliveryDelayed=true'].filter(Boolean).join('&');
+  const figLink = (query: string) => {
+    const active = current === query;
+    return { active, href: active || !query ? '/dashboard/contracts' : `/dashboard/contracts?${query}` };
+  };
+
   return (
     <ListPage minHeight={960}>
 
@@ -128,18 +138,18 @@ export default async function ContractsPage({
           variant="cards"
           cols={4}
           figures={[
-            { label: m.figures.total, value: totalContracts, href: '/dashboard/contracts', icon: FigIcons.total, sub: locale === 'ar' ? 'كل العقود' : 'All contracts' },
-            { label: m.figures.signed, value: signedCount ?? '—', href: '/dashboard/contracts?signed=yes', icon: FigIcons.done, tone: 'green', sub: `${share(signedCount ?? 0)}% ${ofTotal}` },
+            { label: m.figures.total, value: totalContracts, ...figLink(''), icon: FigIcons.total, sub: locale === 'ar' ? 'كل العقود' : 'All contracts' },
+            { label: m.figures.signed, value: signedCount ?? '—', ...figLink('signed=yes'), icon: FigIcons.done, tone: 'green', sub: `${share(signedCount ?? 0)}% ${ofTotal}` },
             {
               label: m.figures.unsigned,
               value: signedCount === undefined ? '—' : totalContracts - signedCount,
-              href: '/dashboard/contracts?signed=no',
+              ...figLink('signed=no'),
               icon: FigIcons.sign,
               tone: 'amber',
               warn: signedCount !== undefined && totalContracts - signedCount > 0,
               sub: `${share(signedCount === undefined ? 0 : totalContracts - signedCount)}% ${ofTotal}`,
             },
-            { label: m.figures.delayed, value: delayedCount ?? '—', href: '/dashboard/contracts?deliveryDelayed=true', warn: (delayedCount ?? 0) > 0, icon: FigIcons.alert, tone: 'red', sub: `${share(delayedCount ?? 0)}% ${ofTotal}` },
+            { label: m.figures.delayed, value: delayedCount ?? '—', ...figLink('deliveryDelayed=true'), warn: (delayedCount ?? 0) > 0, icon: FigIcons.alert, tone: 'red', sub: `${share(delayedCount ?? 0)}% ${ofTotal}` },
           ]}
         />
       </section>

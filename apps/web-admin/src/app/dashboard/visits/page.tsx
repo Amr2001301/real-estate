@@ -28,7 +28,10 @@ function resolvedName(noClientName: string, ...parts: (string | null | undefined
   return { name: '—', isFallback: false };
 }
 
-type Tab = 'requests' | 'appointments' | 'today' | 'past';
+type Tab = 'requests' | 'appointments' | 'today' | 'week' | 'past';
+const TABS: Tab[] = ['requests', 'appointments', 'today', 'week', 'past'];
+/** The booked statuses a visit tab can narrow to (the figures count both). */
+const BOOKED = ['SCHEDULED', 'CONFIRMED'];
 
 interface Stats {
   newRequests: number;
@@ -52,7 +55,7 @@ export default async function VisitsPage({
   const sp = await searchParams;
   const PAGE_SIZE = 10;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
-  const tab: Tab = (sp.tab as Tab) ?? (sp.clientId ? 'appointments' : 'requests');
+  const tab: Tab = TABS.includes(sp.tab as Tab) ? (sp.tab as Tab) : sp.clientId ? 'appointments' : 'requests';
 
   const [statsRes, salesRes, locale, coverRes] = await Promise.all([
     safe(api.get<Stats>('/visits/stats')),
@@ -81,32 +84,14 @@ export default async function VisitsPage({
 
   if (tab === 'requests') {
     const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (sp.status) qs.set('status', sp.status);
+    // OPEN is the «طلبات جديدة» figure: new, under review or unset.
+    if (sp.status === 'OPEN') qs.set('open', 'true');
+    else if (sp.status) qs.set('status', sp.status);
     if (sp.q) qs.set('q', sp.q);
     const r = await safe(api.get<Paged<VisitRequest>>(`/visits/requests?${qs}`));
     if (r.error) fetchError = r.error;
     requestsData = r.data?.data ?? [];
     totalRows = r.data?.meta?.total ?? requestsData.length;
-  } else if (tab === 'appointments') {
-    const qs = new URLSearchParams({ pageSize: '50' });
-    if (sp.clientId) { qs.set('clientId', sp.clientId); } else { qs.set('status', 'SCHEDULED'); }
-    if (sp.q) qs.set('q', sp.q);
-    const r1 = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
-    if (sp.clientId) {
-      appointmentsData = r1.data?.data ?? [];
-      fetchError = r1.error ?? null;
-    } else {
-      const qs2 = new URLSearchParams({ pageSize: '50', status: 'CONFIRMED' });
-      const r2 = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs2}`));
-      appointmentsData = [...(r1.data?.data ?? []), ...(r2.data?.data ?? [])];
-      fetchError = r1.error ?? r2.error ?? null;
-    }
-  } else if (tab === 'today') {
-    const qs = new URLSearchParams({ pageSize: '50', today: '1' });
-    if (sp.q) qs.set('q', sp.q);
-    const r = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
-    if (r.error) fetchError = r.error;
-    appointmentsData = r.data?.data ?? [];
   } else if (tab === 'past') {
     const qs = new URLSearchParams({ pageSize: '50' });
     if (sp.q) qs.set('q', sp.q);
@@ -115,13 +100,34 @@ export default async function VisitsPage({
     appointmentsData = (r.data?.data ?? []).filter((a) =>
       ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'].includes(a.status),
     );
-  }
-
-  if (tab !== 'requests') {
     appointmentsData.sort((a, b) => (a.scheduledAt < b.scheduledAt ? 1 : -1));
     totalRows = appointmentsData.length;
     appointmentsData = appointmentsData.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  } else {
+    // Booked visits (scheduled or confirmed) — the same query the figures count,
+    // paged by the API so the total is the figure's number. A client's visits
+    // are all of theirs, whatever their status.
+    const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (sp.clientId) qs.set('clientId', sp.clientId);
+    else if (sp.status && BOOKED.includes(sp.status)) qs.set('status', sp.status);
+    else qs.set('booked', 'true');
+    if (tab === 'today') qs.set('today', '1');
+    if (tab === 'week') qs.set('week', 'true');
+    if (sp.q) qs.set('q', sp.q);
+    const r = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
+    if (r.error) fetchError = r.error;
+    appointmentsData = r.data?.data ?? [];
+    totalRows = r.data?.meta?.total ?? appointmentsData.length;
   }
+
+  // A figure is on when the list shows exactly what it counts; clicking it
+  // again goes back to the whole list.
+  const on = (t: Tab, status?: string) =>
+    sp.tab === t && (sp.status || undefined) === status && !sp.q && !sp.clientId;
+  const figLink = (active: boolean, query: string) => ({
+    active,
+    href: active ? '/dashboard/visits' : `/dashboard/visits${query}`,
+  });
 
   const tabTitle =
     tab === 'requests'
@@ -130,7 +136,9 @@ export default async function VisitsPage({
         ? m.tabs.scheduled
         : tab === 'today'
           ? m.tabs.today
-          : m.tabs.past;
+          : tab === 'week'
+            ? m.kpi.thisWeek
+            : m.tabs.past;
 
 
   return (
@@ -160,10 +168,10 @@ export default async function VisitsPage({
           bare
           cols={4}
           figures={[
-            { label: m.kpi.newRequests, value: stats?.newRequests ?? '—', href: '/dashboard/visits?tab=requests', warn: (stats?.newRequests ?? 0) > 0, icon: FigIcons.pending },
-            { label: m.kpi.today, value: stats?.todayVisits ?? '—', href: '/dashboard/visits?tab=today', icon: FigIcons.calendar, tone: 'blue' },
-            { label: m.kpi.thisWeek, value: stats?.weekVisits ?? '—', icon: FigIcons.calendar, tone: 'gold' },
-            { label: m.kpi.needConfirm, value: stats?.pendingConfirmation ?? '—', href: '/dashboard/visits?tab=appointments', warn: (stats?.pendingConfirmation ?? 0) > 0, icon: FigIcons.confirm },
+            { label: m.kpi.newRequests, value: stats?.newRequests ?? '—', ...figLink(on('requests', 'OPEN'), '?tab=requests&status=OPEN'), warn: (stats?.newRequests ?? 0) > 0, icon: FigIcons.pending },
+            { label: m.kpi.today, value: stats?.todayVisits ?? '—', ...figLink(on('today'), '?tab=today'), icon: FigIcons.calendar, tone: 'blue' },
+            { label: m.kpi.thisWeek, value: stats?.weekVisits ?? '—', ...figLink(on('week'), '?tab=week'), icon: FigIcons.calendar, tone: 'gold' },
+            { label: m.kpi.needConfirm, value: stats?.pendingConfirmation ?? '—', ...figLink(on('appointments', 'SCHEDULED'), '?tab=appointments&status=SCHEDULED'), warn: (stats?.pendingConfirmation ?? 0) > 0, icon: FigIcons.confirm },
           ]}
         />
       </section>
@@ -183,6 +191,7 @@ export default async function VisitsPage({
             <option value="requests">{m.tabs.requests}{typeof stats?.totalRequests === 'number' ? ` (${stats.totalRequests})` : ''}</option>
             <option value="appointments">{m.tabs.scheduled}{typeof stats?.scheduledVisits === 'number' ? ` (${stats.scheduledVisits})` : ''}</option>
             <option value="today">{m.tabs.today}</option>
+            <option value="week">{m.kpi.thisWeek}</option>
             <option value="past">{m.tabs.past}</option>
           </Select>
         </ListFilterField>
@@ -190,11 +199,21 @@ export default async function VisitsPage({
           <ListFilterField label={locale === 'ar' ? 'الحالة' : 'Status'} htmlFor="vis-status">
             <Select id="vis-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
               <option value="">{locale === 'ar' ? 'كل الحالات' : 'All statuses'}</option>
+              <option value="OPEN">{m.kpi.newRequests}</option>
               <option value="NEW">{locale === 'ar' ? 'جديد' : 'New'}</option>
               <option value="UNDER_REVIEW">{locale === 'ar' ? 'قيد المراجعة' : 'Under review'}</option>
               <option value="CONVERTED">{locale === 'ar' ? 'تم التحويل' : 'Converted'}</option>
               <option value="REJECTED">{locale === 'ar' ? 'مرفوض' : 'Rejected'}</option>
               <option value="CANCELLED">{locale === 'ar' ? 'ملغى' : 'Cancelled'}</option>
+            </Select>
+          </ListFilterField>
+        )}
+        {(tab === 'appointments' || tab === 'today' || tab === 'week') && !sp.clientId && (
+          <ListFilterField label={locale === 'ar' ? 'الحالة' : 'Status'} htmlFor="vis-appt-status">
+            <Select id="vis-appt-status" name="status" inputSize="sm" defaultValue={sp.status && BOOKED.includes(sp.status) ? sp.status : ''}>
+              <option value="">{locale === 'ar' ? 'مجدولة ومؤكدة' : 'Scheduled and confirmed'}</option>
+              <option value="SCHEDULED">{m.kpi.needConfirm}</option>
+              <option value="CONFIRMED">{locale === 'ar' ? 'مؤكدة' : 'Confirmed'}</option>
             </Select>
           </ListFilterField>
         )}
@@ -295,7 +314,7 @@ export default async function VisitsPage({
         </ListTableCard>
       )}
 
-      {(tab === 'appointments' || tab === 'today' || tab === 'past') && (
+      {tab !== 'requests' && (
         <ListTableCard
         footer={
           totalRows > PAGE_SIZE ? (

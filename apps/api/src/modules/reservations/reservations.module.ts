@@ -1144,24 +1144,33 @@ export class ReservationsService {
     }
   }
 
-  async stats() {
-    const [total, pending, approved, rejected, cancelled, expired] =
+  /**
+   * The figures over the reservations page. Each counts what its card opens:
+   * the same scope (a rep's own, a manager's team) and no deleted rows, as
+   * `list` does.
+   */
+  async stats(scope: { salesId?: string; salesIds?: string[] } = {}) {
+    const base: Prisma.ReservationWhereInput = {
+      deletedAt: null,
+      ...(scope.salesIds ? { salesId: { in: scope.salesIds } } : scope.salesId ? { salesId: scope.salesId } : {}),
+    };
+    const [total, pending, approved, rejected, cancelled, expired, overdue] =
       await this.prisma.$transaction([
-        this.prisma.reservation.count(),
-        this.prisma.reservation.count({ where: { status: ReservationStatus.PENDING } }),
-        this.prisma.reservation.count({ where: { status: ReservationStatus.APPROVED } }),
-        this.prisma.reservation.count({ where: { status: ReservationStatus.REJECTED } }),
-        this.prisma.reservation.count({ where: { status: ReservationStatus.CANCELLED } }),
-        this.prisma.reservation.count({ where: { status: ReservationStatus.EXPIRED } }),
+        this.prisma.reservation.count({ where: base }),
+        this.prisma.reservation.count({ where: { ...base, status: ReservationStatus.PENDING } }),
+        this.prisma.reservation.count({ where: { ...base, status: ReservationStatus.APPROVED } }),
+        this.prisma.reservation.count({ where: { ...base, status: ReservationStatus.REJECTED } }),
+        this.prisma.reservation.count({ where: { ...base, status: ReservationStatus.CANCELLED } }),
+        this.prisma.reservation.count({ where: { ...base, status: ReservationStatus.EXPIRED } }),
+        // Open and past expiry: the booking is paid, so the sweep left it for a person.
+        this.prisma.reservation.count({
+          where: {
+            ...base,
+            status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
+            expiresAt: { lt: new Date() },
+          },
+        }),
       ]);
-    // Open and past expiry: the booking is paid, so the sweep left it for a person.
-    const overdue = await this.prisma.reservation.count({
-      where: {
-        deletedAt: null,
-        status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] },
-        expiresAt: { lt: new Date() },
-      },
-    });
     return { total, pending, approved, rejected, cancelled, expired, overdue };
   }
 
@@ -2976,8 +2985,8 @@ class ReservationsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('reservations:read')
   @Get('stats')
-  stats() {
-    return this.svc.stats();
+  async stats(@CurrentUser() user: AuthUser) {
+    return this.svc.stats(await resolveSalesScope(this.prisma, user));
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

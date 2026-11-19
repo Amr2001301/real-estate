@@ -26,6 +26,8 @@ export class ListRequestsDto {
   @IsOptional() @IsUUID() leadId?: string;
   @IsOptional() @IsDateString() dateFrom?: string;
   @IsOptional() @IsDateString() dateTo?: string;
+  /** 'true' → requests still waiting on the company (new, under review or unset) — the «طلبات جديدة» figure. */
+  @IsOptional() @IsIn(['true', 'false']) open?: string;
   @IsOptional() @IsString() q?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(MAX_PAGE_SIZE) pageSize?: number;
@@ -40,6 +42,10 @@ export class ListAppointmentsDto {
   @IsOptional() @IsDateString() scheduledFrom?: string;
   @IsOptional() @IsDateString() scheduledTo?: string;
   @IsOptional() @IsString() today?: string;
+  /** 'true' → scheduled from today through the next seven days (the «هذا الأسبوع» figure). */
+  @IsOptional() @IsIn(['true', 'false']) week?: string;
+  /** 'true' → booked visits only: scheduled or confirmed (what the visit figures count). */
+  @IsOptional() @IsIn(['true', 'false']) booked?: string;
   /** 'true' → only visits still to happen (not completed, cancelled, no-show or rescheduled). */
   @IsOptional() @IsIn(['true', 'false']) open?: string;
   @IsOptional() @IsString() q?: string;

@@ -50,9 +50,11 @@ export default async function PortalReservationsPage({
   if (sp.from)      qs.set('from', sp.from);
   if (sp.to)        qs.set('to', sp.to);
 
-  const [resRes, projectsRes, rPending, rApproved, rConverted] = await Promise.all([
+  const [resRes, projectsRes, rAll, rPending, rApproved, rConverted] = await Promise.all([
     safe(api.get<Paged<PortalReservation>>(`/portal/reservations?${qs.toString()}`)),
     safe(api.get<PortalProject[]>('/portal/projects')),
+    // The total is every reservation, not the filtered list's count.
+    safe(api.get<Paged<PortalReservation>>('/portal/reservations?page=1&pageSize=1')),
     safe(api.get<Paged<PortalReservation>>('/portal/reservations?page=1&pageSize=1&status=PENDING')),
     safe(api.get<Paged<PortalReservation>>('/portal/reservations?page=1&pageSize=1&status=APPROVED')),
     safe(api.get<Paged<PortalReservation>>('/portal/reservations?page=1&pageSize=1&status=CONVERTED')),
@@ -62,9 +64,18 @@ export default async function PortalReservationsPage({
   const rows           = paged?.data ?? [];
   const projects       = projectsRes.data ?? [];
   const covers = new Map(projects.map((p) => [p.project.id, p.project.media?.[0]?.url]));
+  const totalCount     = rAll.data?.meta.total      ?? 0;
   const pendingCount   = rPending.data?.meta.total   ?? 0;
   const approvedCount  = rApproved.data?.meta.total  ?? 0;
   const convertedCount = rConverted.data?.meta.total ?? 0;
+
+  // A figure is on when the list shows exactly what it counts (no other
+  // filter); clicking it again goes back to the whole list.
+  const otherFilters = !!(sp.q || sp.projectId || sp.from || sp.to);
+  const figLink = (status: string | undefined) => {
+    const active = !otherFilters && (sp.status || undefined) === status;
+    return { active, href: active || !status ? '/portal/reservations' : `/portal/reservations?status=${status}` };
+  };
 
   return (
     <ListPage minHeight={960}>
@@ -96,10 +107,10 @@ export default async function PortalReservationsPage({
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: paged?.meta.total ?? 0, href: '/portal/reservations', icon: FigIcons.total },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/reservations?status=PENDING', warn: pendingCount > 0, icon: FigIcons.pending },
-            { label: t.metrics.approved, value: approvedCount, href: '/portal/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green' },
-            { label: t.metrics.converted, value: convertedCount, href: '/portal/reservations?status=CONVERTED', icon: FigIcons.sign, tone: 'blue' },
+            { label: t.metrics.total, value: totalCount, ...figLink(undefined), icon: FigIcons.total },
+            { label: t.metrics.pending, value: pendingCount, ...figLink('PENDING'), warn: pendingCount > 0, icon: FigIcons.pending },
+            { label: t.metrics.approved, value: approvedCount, ...figLink('APPROVED'), icon: FigIcons.done, tone: 'green' },
+            { label: t.metrics.converted, value: convertedCount, ...figLink('CONVERTED'), icon: FigIcons.sign, tone: 'blue' },
           ]}
         />
       </section>

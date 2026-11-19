@@ -374,6 +374,7 @@ export function ListPager({
     <nav
       aria-label="pagination"
       data-testid="list-pager"
+      data-total={total}
       className="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-6 py-3.5 text-[13px] text-slate-500"
     >
       <p className="tabular-nums">

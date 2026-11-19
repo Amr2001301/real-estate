@@ -104,6 +104,8 @@ export interface Figure {
   tone?: 'gold' | 'green' | 'amber' | 'red' | 'blue' | 'gray';
   /** `cards` variant: 0–100 share bar under the figure. */
   pct?: number;
+  /** `cards` variant: the list below shows exactly what this figure counts. */
+  active?: boolean;
 }
 
 /** Ready-made icons for the `cards` figure variant. */
@@ -181,7 +183,18 @@ function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
         );
         const cls = 'block min-w-0 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none';
         return f.href ? (
-          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-shadow hover:shadow-[0_14px_34px_-12px_rgb(11_18_32/0.18)]')}>
+          <Link
+            key={f.label}
+            href={f.href as never}
+            data-testid="figure"
+            data-active={f.active ? 'true' : undefined}
+            aria-current={f.active ? 'true' : undefined}
+            className={cn(
+              cls,
+              'transition-shadow hover:shadow-[0_14px_34px_-12px_rgb(11_18_32/0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8A24B]/60',
+              f.active && 'border-[#C8A24B] ring-2 ring-[#C8A24B]/70 dark:border-[#C8A24B]',
+            )}
+          >
             {body}
           </Link>
         ) : (
