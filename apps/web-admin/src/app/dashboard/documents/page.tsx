@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { DataTable, Th, Td, Tr } from '@/components/lists/list-kit';
 import { ExternalLink, Eye, FileText, Plus } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -207,66 +208,75 @@ export default async function DocumentsPage({
         {items.length === 0 ? (
           <PremiumEmptyState icon={<FileText />} title={m.emptyTitle} description={m.emptyDescription} />
         ) : (
-          <ul className="divide-y divide-hairline border-t border-hairline">
-            {items.map((row) => {
-              const oHref = ownerHref(row.ownerType, row.ownerId);
-              const uploader = row.uploadedBy?.fullName;
-              return (
-                <li
-                  key={row.id}
-                  data-testid="document-row"
-                  className="group grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
-                >
-                  <FileKindTile kind={fileKind(row.mimeType, row.fileName)} />
-
-                  <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/documents/${row.id}`}
-                      className="block truncate text-[14px] font-bold text-slate-900 hover:text-brand-700"
-                      dir="auto"
-                      title={row.title || undefined}
-                    >
-                      {row.title || <span className="text-slate-400">{m.noTitle}</span>}
-                    </Link>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
-                      <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', CATEGORY_CHIP[row.category])}>
-                        {CATEGORY_LABEL[row.category]}
-                      </span>
-                      <span className="tabular-nums">{formatFileSize(row.sizeBytes)}</span>
-                    </p>
-                  </div>
-
-                  <div className="hidden min-w-0 text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-500">{m.linkedTo}</p>
-                    {oHref ? (
-                      <Link href={oHref as never} className="font-semibold text-slate-800 hover:text-brand-700" title={row.ownerId}>
-                        {OWNER_TYPE_LABEL[row.ownerType]}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-slate-800">{OWNER_TYPE_LABEL[row.ownerType]}</span>
-                    )}
-                  </div>
-
-                  <div className="hidden min-w-0 items-center gap-2.5 lg:flex">
-                    {uploader && <Avatar name={uploader} className="h-8 w-8 text-[11px]" />}
-                    <div className="min-w-0">
-                      <p className="truncate text-[12.5px] font-semibold text-slate-800">{uploader ?? '—'}</p>
-                      <p className="whitespace-nowrap text-[11.5px] text-slate-500">{formatDateTime(row.createdAt, locale)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <a href={row.fileUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN} aria-label={m.ariaOpenFile} title={m.ariaOpenFile}>
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                    <Link href={`/dashboard/documents/${row.id}`} className={ACTION_BTN} aria-label={m.ariaDocDetails} title={m.ariaDocDetails}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <DataTable widths={[34, 20, 30, 16]}>
+            <thead>
+              <tr>
+                <Th>{locale === 'en' ? 'Document' : 'المستند'}</Th>
+                <Th>{m.linkedTo}</Th>
+                <Th>{locale === 'en' ? 'Uploaded by' : 'رفعه'}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((row) => {
+                const oHref = ownerHref(row.ownerType, row.ownerId);
+                const uploader = row.uploadedBy?.fullName;
+                return (
+                  <Tr key={row.id} testId="document-row">
+                    <Td>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <FileKindTile kind={fileKind(row.mimeType, row.fileName)} />
+                        <div className="min-w-0">
+                          <Link
+                            href={`/dashboard/documents/${row.id}`}
+                            className="block max-w-[320px] truncate text-[14px] font-bold text-slate-900 hover:text-brand-700"
+                            dir="auto"
+                            title={row.title || undefined}
+                          >
+                            {row.title || <span className="text-slate-400">{m.noTitle}</span>}
+                          </Link>
+                          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
+                            <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-bold', CATEGORY_CHIP[row.category])}>
+                              {CATEGORY_LABEL[row.category]}
+                            </span>
+                            <span className="tabular-nums">{formatFileSize(row.sizeBytes)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </Td>
+                    <Td>
+                      {oHref ? (
+                        <Link href={oHref as never} className="font-semibold text-slate-800 hover:text-brand-700" title={row.ownerId}>
+                          {OWNER_TYPE_LABEL[row.ownerType]}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold text-slate-800">{OWNER_TYPE_LABEL[row.ownerType]}</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        {uploader && <Avatar name={uploader} className="h-8 w-8 shrink-0 text-[11px]" />}
+                        <div className="min-w-0">
+                          <p className="truncate text-[12.5px] font-semibold text-slate-800">{uploader ?? '—'}</p>
+                          <p className="whitespace-nowrap text-[11.5px] text-slate-500">{formatDateTime(row.createdAt, locale)}</p>
+                        </div>
+                      </div>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-1.5">
+                        <a href={row.fileUrl} target="_blank" rel="noopener noreferrer" className={ACTION_BTN} aria-label={m.ariaOpenFile} title={m.ariaOpenFile}>
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                        <Link href={`/dashboard/documents/${row.id}`} className={ACTION_BTN} aria-label={m.ariaDocDetails} title={m.ariaDocDetails}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
       </Panel>
 

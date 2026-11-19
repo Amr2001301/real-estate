@@ -33,6 +33,7 @@ import { FigureBar, Avatar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
+import { DataTable, Th, Td, Tr } from '@/components/lists/list-kit';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -202,82 +203,90 @@ export default async function BrokersPage({
             className="py-12"
           />
         ) : (
-          <ul className="divide-y divide-hairline">
-            {rows.map((b) => {
-              const counts = b._count ?? { brokerUsers: 0, projectAccess: 0, unitAccess: 0 };
-              return (
-                <li
-                  key={b.id}
-                  data-testid="broker-row"
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-3 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[auto_minmax(0,1.5fr)_minmax(0,0.7fr)_200px_120px_minmax(0,0.6fr)_auto]"
-                >
-                  <Avatar name={b.companyName} className="h-11 w-11 text-[14px]" />
-
-                  <div className="min-w-0">
-                    <Link
-                      href={`/dashboard/brokers/${b.id}` as never}
-                      className="block truncate text-[14.5px] font-bold text-slate-900 transition-colors hover:text-brand-700"
-                    >
-                      {b.companyName}
-                    </Link>
-                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-slate-500">
-                      {b.commercialName && <span className="truncate" dir="auto">{b.commercialName}</span>}
-                      <span>
-                        <span className="me-1 text-slate-400">{locale === 'en' ? 'Code' : 'كود'}</span>
-                        <EntityLink kind="broker" id={b.id} className="whitespace-nowrap">{b.code}</EntityLink>
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="hidden text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-500">{m.cols.city}</p>
-                    {b.city ? (
-                      <p className="inline-flex items-center gap-1 font-semibold text-slate-800">
-                        <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
-                        {b.city}
-                      </p>
-                    ) : (
-                      <p className="text-slate-400">—</p>
-                    )}
-                  </div>
-
-                  <div className="hidden items-center gap-1.5 lg:flex">
-                    <MetricChip icon={<UsersIcon />} label={m.cols.staff} value={counts.brokerUsers} />
-                    <MetricChip icon={<Building2 />} label={m.cols.projects} value={counts.projectAccess} />
-                    <MetricChip icon={<Home />} label={m.cols.units} value={counts.unitAccess} />
-                  </div>
-
-                  <div className="justify-self-end lg:justify-self-start">
-                    <BrokerStatusBadge status={b.status as BrokerStatus} locale={locale} />
-                  </div>
-
-                  <div className="hidden text-[12.5px] lg:block">
-                    <p className="text-[11px] text-slate-500">{m.cols.added}</p>
-                    <p className="whitespace-nowrap font-semibold text-slate-800">{formatDate(b.createdAt, locale)}</p>
-                  </div>
-
-                  <div className="col-span-3 flex items-center gap-1.5 lg:col-span-1">
-                    {[
-                      { href: `/dashboard/brokers/${b.id}`, label: m.actionBtns.view, icon: <Eye /> },
-                      { href: `/dashboard/brokers/${b.id}/edit`, label: m.actionBtns.edit, icon: <Pencil /> },
-                      { href: `/dashboard/brokers/${b.id}/users`, label: m.actionBtns.staff, icon: <UsersIcon /> },
-                      { href: `/dashboard/brokers/${b.id}/access`, label: m.actionBtns.access, icon: <ShieldCheck /> },
-                    ].map((a) => (
-                      <Link
-                        key={a.href}
-                        href={a.href as never}
-                        aria-label={a.label}
-                        title={a.label}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 [&_svg]:h-4 [&_svg]:w-4"
-                      >
-                        {a.icon}
-                      </Link>
-                    ))}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <DataTable widths={[26, 11, 17, 11, 11, 24]}>
+            <thead>
+              <tr>
+                <Th>{locale === 'en' ? 'Broker' : 'الوسيط'}</Th>
+                <Th>{m.cols.city}</Th>
+                <Th>{locale === 'en' ? 'Team / projects / units' : 'الفريق / المشاريع / الوحدات'}</Th>
+                <Th>{locale === 'en' ? 'Status' : 'الحالة'}</Th>
+                <Th>{m.cols.added}</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((b) => {
+                const counts = b._count ?? { brokerUsers: 0, projectAccess: 0, unitAccess: 0 };
+                return (
+                  <Tr key={b.id} testId="broker-row">
+                    <Td>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar name={b.companyName} className="h-10 w-10 shrink-0 text-[13px]" />
+                        <div className="min-w-0">
+                          <Link
+                            href={`/dashboard/brokers/${b.id}` as never}
+                            className="block truncate text-[14px] font-bold text-slate-900 transition-colors hover:text-brand-700"
+                          >
+                            {b.companyName}
+                          </Link>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-slate-500">
+                            {b.commercialName && <span className="truncate" dir="auto">{b.commercialName}</span>}
+                            <span>
+                              <span className="me-1 text-slate-400">{locale === 'en' ? 'Code' : 'كود'}</span>
+                              <EntityLink kind="broker" id={b.id} className="whitespace-nowrap">{b.code}</EntityLink>
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </Td>
+                    <Td>
+                      {b.city ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-slate-800">
+                          <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+                          {b.city}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-1.5">
+                        <MetricChip icon={<UsersIcon />} label={m.cols.staff} value={counts.brokerUsers} />
+                        <MetricChip icon={<Building2 />} label={m.cols.projects} value={counts.projectAccess} />
+                        <MetricChip icon={<Home />} label={m.cols.units} value={counts.unitAccess} />
+                      </div>
+                    </Td>
+                    <Td>
+                      <BrokerStatusBadge status={b.status as BrokerStatus} locale={locale} />
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap text-slate-700">{formatDate(b.createdAt, locale)}</span>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { href: `/dashboard/brokers/${b.id}`, label: m.actionBtns.view, icon: <Eye /> },
+                          { href: `/dashboard/brokers/${b.id}/edit`, label: m.actionBtns.edit, icon: <Pencil /> },
+                          { href: `/dashboard/brokers/${b.id}/users`, label: m.actionBtns.staff, icon: <UsersIcon /> },
+                          { href: `/dashboard/brokers/${b.id}/access`, label: m.actionBtns.access, icon: <ShieldCheck /> },
+                        ].map((a) => (
+                          <Link
+                            key={a.href}
+                            href={a.href as never}
+                            aria-label={a.label}
+                            title={a.label}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 [&_svg]:h-4 [&_svg]:w-4"
+                          >
+                            {a.icon}
+                          </Link>
+                        ))}
+                      </div>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </DataTable>
         )}
       </PremiumSectionCard>
 

@@ -343,6 +343,26 @@
     letter-spacing: 0.02em;
     text-transform: none;
   }
+  /* Same cell rhythm as list-kit's Td/Th for every other table in the dashboard. */
+  #main-scroll table:not(.list-table):not([data-plain]) > thead th {
+    padding: 12px 8px;
+    border-top: 1px solid rgb(var(--tw-hairline));
+    border-bottom: 1px solid rgb(var(--tw-hairline));
+    white-space: nowrap;
+  }
+  #main-scroll table:not(.list-table):not([data-plain]) > tbody > tr > td {
+    padding: 12px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid rgb(var(--tw-hairline));
+  }
+  #main-scroll table:not(.list-table):not([data-plain]) > thead th:first-child,
+  #main-scroll table:not(.list-table):not([data-plain]) > tbody > tr > td:first-child {
+    padding-inline-start: 24px;
+  }
+  #main-scroll table:not(.list-table):not([data-plain]) > thead th:last-child,
+  #main-scroll table:not(.list-table):not([data-plain]) > tbody > tr > td:last-child {
+    padding-inline-end: 24px;
+  }
   .dark #main-scroll table > thead th {
     /* The same 5% white over the card, but opaque: a pinned actions column
        must not show the rows sliding under it. */

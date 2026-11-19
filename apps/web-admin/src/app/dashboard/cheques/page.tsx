@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { DataTable, Th, Td, Tr } from '@/components/lists/list-kit';
 import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
@@ -204,48 +205,47 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[860px]" data-testid="cheques-table">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+          <DataTable testId="cheques-table">
+              <thead>
                 <tr>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNumber}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBank}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDueDate}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCustomer}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colContract}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colAmount}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="text-end py-3 px-4 whitespace-nowrap">{m.colActions}</th>
+                  <Th>{m.colNumber}</Th>
+                  <Th>{m.colBank}</Th>
+                  <Th>{m.colDueDate}</Th>
+                  <Th>{m.colCustomer}</Th>
+                  <Th>{m.colContract}</Th>
+                  <Th>{m.colAmount}</Th>
+                  <Th>{m.colStatus}</Th>
+                  <Th>{m.colActions}</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody>
                 {list.data.map((pi) => {
                   // One cheque per installment today, so one deposit per cheque.
                   const d = pi.deposits[0];
                   const amount = pi.deposits.reduce((sum, x) => sum + Number(x.amount), 0);
                   return (
-                    <tr key={pi.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
-                      <td className="px-3 py-3.5">
+                    <Tr key={pi.id}>
+                      <Td>
                         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-muted px-2 py-1 font-mono text-[12px] font-bold text-slate-700" dir="ltr">
                           <Hash className="h-3 w-3 text-slate-400" />
                           {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
                         </span>
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <span className="inline-flex items-center gap-2 whitespace-nowrap text-slate-700">
                           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-700">
                             <Landmark className="h-3.5 w-3.5" />
                           </span>
                           {pi.drawerBankName ?? pi.bankName ?? '—'}
                         </span>
-                      </td>
-                      <td className="px-3 py-3.5 whitespace-nowrap">
+                      </Td>
+                      <Td>
                         <p className="tabular-nums text-slate-800">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</p>
                         {pi.status === 'PENDING_CLEARANCE' && pi.chequeDueDate && pi.chequeDueDate.slice(0, 10) <= todayIso && (
                           <p className="text-[11px] font-semibold text-amber-600">{m.dueNow}</p>
                         )}
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <PersonCell
                           name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'}
                           nameLink={
@@ -256,8 +256,8 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                                 : undefined
                           }
                         />
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         {d?.contract ? (
                           <CodeCell
                             href={`/dashboard/contracts/${d.contract.id}`}
@@ -276,11 +276,11 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         ) : (
                           '—'
                         )}
-                      </td>
-                      <td className="px-3 py-3.5 whitespace-nowrap tabular-nums font-bold text-slate-900">
+                      </Td>
+                      <Td>
                         {pi.deposits.length > 0 ? formatCurrency(amount, currency, locale) : '—'}
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold', STATUS_CHIP[pi.status])}>
                           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[pi.status])} />
                           {m.statusLabels[pi.status]}
@@ -288,21 +288,20 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         {pi.status === 'BOUNCED' && pi.bounceReason && (
                           <p className="mt-1 max-w-[180px] truncate text-[11px] text-slate-500" title={pi.bounceReason}>{pi.bounceReason}</p>
                         )}
-                      </td>
-                      <td className="px-3 py-3.5 text-end">
+                      </Td>
+                      <Td>
                         <ChequeActions
                           id={pi.id}
                           status={pi.status}
                           canBounce={session?.role === 'ADMIN'}
                           locale={locale}
                         />
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         )}
       </PremiumSectionCard>
 
