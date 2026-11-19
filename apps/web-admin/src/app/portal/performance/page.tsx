@@ -41,7 +41,6 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 interface Search {
-  q?: string;
   from?: string;
   to?: string;
   projectId?: string;
@@ -195,7 +194,7 @@ export default async function PortalPerformancePage({
     1,
   );
 
-  const isFiltered = !!(sp.q || sp.from || sp.to || sp.projectId);
+  const isFiltered = !!(sp.from || sp.to || sp.projectId);
 
   const money = (n: number | string | null | undefined) => <Amount parts={compactParts(Number(n ?? 0), symbol, locale)} />;
 
@@ -236,9 +235,6 @@ export default async function PortalPerformancePage({
           </div>
         }
       >
-        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="pp-q">
-          <Input id="pp-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Project or agent name…' : 'ابحث باسم المشروع أو الوكيل…'} />
-        </PremiumFilterField>
         <PremiumFilterField label={t.filters.project}>
           <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
             <option value="">{t.filters.allProjects}</option>
@@ -298,7 +294,7 @@ export default async function PortalPerformancePage({
             <EmptyState icon={<Building2 />} title={t.projects.empty} description="—" />
           ) : (
             <ul className="divide-y divide-hairline border-t border-hairline" data-testid="perf-project-rows">
-              {(sp.q?.trim() ? perf.projectBreakdown.filter((p) => (p.projectName ? tx(p.projectName, locale) : '').toLowerCase().includes(sp.q!.trim().toLowerCase())) : perf.projectBreakdown).map((p) => {
+              {perf.projectBreakdown.map((p) => {
                 const barPct = Math.max((Number(p.salesGross || 0) / maxSales) * 100, 2);
                 return (
                   <li
@@ -342,7 +338,7 @@ export default async function PortalPerformancePage({
           <div className="overflow-hidden rounded-card border border-hairline bg-surface">
             <PanelHead icon={<UsersIcon />} title={t.agents.title} sub={t.agents.countFn(perf.agentBreakdown.length)} />
             <ul className="divide-y divide-hairline border-t border-hairline" data-testid="perf-agent-rows">
-              {(sp.q?.trim() ? perf.agentBreakdown.filter((a) => a.fullName.toLowerCase().includes(sp.q!.trim().toLowerCase())) : perf.agentBreakdown).map((a) => (
+              {perf.agentBreakdown.map((a) => (
                 <li
                   key={a.brokerAgentId}
                   className="grid grid-cols-3 items-center gap-x-6 gap-y-3 px-6 py-4 transition-colors hover:bg-surface-muted/30 lg:grid-cols-[minmax(0,1.5fr)_80px_80px_100px_140px_140px]"

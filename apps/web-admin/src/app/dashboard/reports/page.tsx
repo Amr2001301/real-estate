@@ -85,7 +85,7 @@ const Q_MONTHS: Record<number, number[]> = {
 
 interface Search {
   mode?: string; month?: string; year?: string; quarter?: string;
-  dateFrom?: string; dateTo?: string; compare?: string; projectId?: string; period?: string; q?: string;
+  dateFrom?: string; dateTo?: string; compare?: string; projectId?: string; period?: string;
 }
 
 export const dynamic    = 'force-dynamic';
@@ -257,7 +257,6 @@ export default async function ReportsPage({
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
         defaultCompare={compare}
-        defaultQuery={sp.q ?? ''}
         basePath="/dashboard/reports"
         locale={locale}
       />
@@ -424,7 +423,7 @@ export default async function ReportsPage({
             <PremiumEmptyNote>{m.u5.projectsEmpty}</PremiumEmptyNote>
           ) : (
             <ol className="space-y-3">
-              {byProject.filter((p) => !sp.q?.trim() || (projectMap.get(p.projectId) ?? '').toLowerCase().includes(sp.q.trim().toLowerCase())).map((p, idx) => (
+              {byProject.map((p, idx) => (
                 <li key={p.projectId} className="flex items-center gap-3">
                   <Rank n={idx + 1} />
                   <span className="min-w-0 flex-1">
@@ -447,7 +446,7 @@ export default async function ReportsPage({
             <PremiumEmptyNote>{m.u5.brokersEmpty}</PremiumEmptyNote>
           ) : (
             <ol className="space-y-3">
-              {brokers.filter((b) => !sp.q?.trim() || b.brokerName.toLowerCase().includes(sp.q.trim().toLowerCase())).map((b, idx) => (
+              {brokers.map((b, idx) => (
                 <li key={b.brokerId} className="flex items-center gap-3">
                   <Rank n={idx + 1} />
                   <span className="min-w-0 flex-1">

@@ -18,7 +18,6 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 interface Search {
-  q?: string;
   tab?: string;
   from?: string;
   to?: string;
@@ -94,9 +93,6 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
   ]);
   const r = reportRes.data;
   const name = (v: Translatable | null, fallback: string) => (v ? tx(v, locale) : fallback);
-  // The search keeps the rows (reasons, reps, sources, projects) whose name has the word.
-  const needle = sp.q?.trim().toLowerCase();
-  const hit = (text: string) => !needle || text.toLowerCase().includes(needle);
   const top = r?.byReason.find((x) => x.reasonId !== null);
   const monthLabel = (key: string) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${key}-01T00:00:00Z`));
@@ -168,9 +164,6 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
             </div>
             <div className="mt-3">
               <PremiumFilterBar method="get" action="/dashboard/lost-reasons">
-                <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="lr-q">
-                  <input id="lr-q" type="search" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Reason, rep, source or project…' : 'ابحث بالسبب أو المندوب أو المصدر أو المشروع…'} />
-                </PremiumFilterField>
                 <PremiumFilterField label={m.filters.from} htmlFor="lr-from">
                   <input id="lr-from" type="date" name="from" defaultValue={from} />
                 </PremiumFilterField>
@@ -210,7 +203,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
             <div data-testid="lost-report" className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <PremiumPanel title={m.byReason} sub={m.byReasonSub}>
                 <div className="space-y-1">
-                  {r.byReason.filter((x) => hit(name(x.name, m.noReason))).map((x) => (
+                  {r.byReason.map((x) => (
                     <ShareRow
                       key={x.reasonId ?? 'none'}
                       label={`${name(x.name, m.noReason)}${x.active ? '' : ` (${m.off})`}`}
@@ -233,7 +226,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-hairline">
-                    {r.bySales.filter((x) => hit(x.fullName ?? m.unassigned)).map((x) => (
+                    {r.bySales.map((x) => (
                       <tr key={x.salesId ?? 'none'}>
                         <td className="py-2 font-semibold text-slate-800">{x.fullName ?? m.unassigned}</td>
                         <td className="py-2 tabular-nums text-slate-700">{x.count} <span className="text-slate-400">· {x.share}%</span></td>
@@ -255,7 +248,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
 
               <PremiumPanel title={m.bySource}>
                 <div className="space-y-1">
-                  {r.bySource.filter((x) => hit(name(x.name, m.noSource))).map((x) => (
+                  {r.bySource.map((x) => (
                     <ShareRow key={x.sourceId ?? 'none'} label={name(x.name, m.noSource)} count={x.count} share={x.share} muted={!x.sourceId} />
                   ))}
                 </div>
@@ -263,7 +256,7 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
 
               <PremiumPanel title={m.byProject}>
                 <div className="space-y-1">
-                  {r.byProject.filter((x) => hit(name(x.name, m.noProject))).map((x) => (
+                  {r.byProject.map((x) => (
                     <ShareRow key={x.projectId ?? 'none'} label={name(x.name, m.noProject)} count={x.count} share={x.share} muted={!x.projectId} />
                   ))}
                 </div>

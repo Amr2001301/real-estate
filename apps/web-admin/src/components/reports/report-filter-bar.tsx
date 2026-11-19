@@ -58,8 +58,6 @@ export interface ReportFilterBarProps {
   defaultDateFrom: string;
   defaultDateTo: string;
   defaultCompare: CompareMode;
-  /** The search box's current word (names of projects and brokers in the tables). */
-  defaultQuery?: string;
   basePath: string;
   locale?: Locale;
 }
@@ -78,7 +76,6 @@ export function ReportFilterBar({
   defaultDateFrom,
   defaultDateTo,
   defaultCompare,
-  defaultQuery = '',
   basePath,
   locale = 'ar',
 }: ReportFilterBarProps) {
@@ -91,7 +88,6 @@ export function ReportFilterBar({
     dateFrom: defaultDateFrom,
     dateTo: defaultDateTo,
     compare: defaultCompare,
-    q: defaultQuery,
   });
   const isAr = locale === 'ar';
 
@@ -109,7 +105,6 @@ export function ReportFilterBar({
       p.set('dateTo', next.dateTo);
     }
     if (next.compare !== 'none') p.set('compare', next.compare);
-    if (next.q.trim()) p.set('q', next.q.trim());
     router.push(`${basePath}?${p.toString()}`);
   }
 
@@ -137,16 +132,6 @@ export function ReportFilterBar({
 
   return (
     <PremiumFilterBar autoSubmit={false} onSubmit={(e) => { e.preventDefault(); go({}); }} trailing={<span className="pe-3 text-[13px] text-slate-500">{rangeText}</span>}>
-      <PremiumFilterField label={isAr ? 'بحث' : 'Search'} htmlFor="rf-q">
-        <input
-          id="rf-q"
-          type="search"
-          name="q"
-          value={state.q}
-          onChange={(e) => setState((st) => ({ ...st, q: e.target.value }))}
-          placeholder={isAr ? 'ابحث باسم المشروع أو الوسيط…' : 'Project or broker name…'}
-        />
-      </PremiumFilterField>
       <PremiumFilterField neutral label={isAr ? 'الفترة' : 'Period'} htmlFor="rf-mode">
         <Select id="rf-mode" inputSize="sm" value={state.mode} onChange={(e) => go({ mode: e.target.value as PeriodMode })}>
           {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (

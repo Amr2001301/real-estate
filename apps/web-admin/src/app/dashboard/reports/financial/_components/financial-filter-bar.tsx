@@ -116,9 +116,6 @@ export function FinancialFilterBar({
         </>
       }
     >
-      <PremiumFilterField label={fb.advancedPanel.clientLabel} htmlFor="ff-client">
-        <Input id="ff-client" placeholder={fb.advancedPanel.clientPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} />
-      </PremiumFilterField>
       <PremiumFilterField neutral label={fb.periodLabel} htmlFor="ff-mode">
         <Select id="ff-mode" inputSize="sm" value={mode} onChange={(e) => setMode(e.target.value as PeriodMode)}>
           {(Object.keys(fb.periodModes) as PeriodMode[]).map((pm) => (
@@ -175,6 +172,9 @@ export function FinancialFilterBar({
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </Select>
+          </PremiumFilterField>
+          <PremiumFilterField label={fb.advancedPanel.clientLabel} htmlFor="ff-client">
+            <Input id="ff-client" placeholder={fb.advancedPanel.clientPlaceholder} value={q} onChange={(e) => setQ(e.target.value)} />
           </PremiumFilterField>
           <PremiumFilterField label={fb.advancedPanel.typeLabel} htmlFor="ff-type">
             <Select id="ff-type" inputSize="sm" value={type} onChange={(e) => setType(e.target.value)}>

@@ -286,7 +286,7 @@ export function ListFilterBar({
       )}
       <button
         type="submit"
-        className={cn(GOLD_ACTION, 'inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}
+        className={cn(GOLD_ACTION, 'ms-3 inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}
       >
         <Filter className="h-4 w-4" />
         {submitLabel}

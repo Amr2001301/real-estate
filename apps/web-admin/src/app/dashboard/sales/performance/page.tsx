@@ -28,7 +28,6 @@ export const fetchCache = 'force-no-store';
 interface Search {
   period?: string;
   salesId?: string;
-  q?: string;
 }
 
 interface PerformanceRow {
@@ -166,11 +165,8 @@ export default async function SalesPerformancePage({
     if (a.att !== null && b.att !== null) return b.att - a.att;
     return b.achievedAmount - a.achievedAmount;
   });
-  // The search narrows the rep list (the team figures above stay the whole team's).
-  const needle = sp.q?.trim().toLowerCase();
-  const shown = needle ? sorted.filter((r) => r.salesName.toLowerCase().includes(needle)) : sorted;
 
-  const hasFilter = !!(sp.q || sp.period || sp.salesId);
+  const hasFilter = !!(sp.period || sp.salesId);
   const ringPct = Math.min(avgAttainment ?? 0, 100);
   const R = 52;
   const C = 2 * Math.PI * R;
@@ -214,9 +210,6 @@ export default async function SalesPerformancePage({
           </>
         }
       >
-        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="sp-q">
-          <Input id="sp-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Rep name…' : 'ابحث باسم المندوب…'} />
-        </PremiumFilterField>
         <PremiumFilterField label={m.filterPeriodLabel} htmlFor="period">
           <div className="flex items-center gap-1.5">
             <CalendarDays className="h-4 w-4 text-slate-400" />
@@ -312,7 +305,7 @@ export default async function SalesPerformancePage({
       ) : (
         <PremiumPanel title={m.tableTitle} sub={m.tableDesc(rows.length, periodStr)} padding="none">
           <ul data-testid="rep-performance" className="divide-y divide-hairline border-t border-hairline">
-            {shown.map((row, idx) => (
+            {sorted.map((row, idx) => (
               <li key={row.salesId} className="grid grid-cols-1 items-center gap-5 px-6 py-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1fr)]">
                 <div className="flex min-w-0 items-center gap-3.5">
                   <span className={cn(

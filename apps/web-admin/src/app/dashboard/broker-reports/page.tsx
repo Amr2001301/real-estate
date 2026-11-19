@@ -22,7 +22,6 @@ import { uiT } from '@/messages/ui';
 import { ExportMenu } from '@/components/export-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
   PremiumPageHero,
@@ -39,7 +38,6 @@ export const fetchCache = 'force-no-store';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Search {
-  q?: string;
   brokerId?: string;
   projectId?: string;
   from?: string;
@@ -193,9 +191,6 @@ export default async function AdminBrokerReportsPage({
           </>
         }
       >
-        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="br-q">
-          <Input id="br-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Broker or project name…' : 'ابحث باسم الوسيط أو المشروع…'} />
-        </PremiumFilterField>
         <PremiumFilterField label={m.filterBroker} htmlFor="br-broker">
           <Select id="br-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-32">
             <option value="">{m.filterAllBrokers}</option>
@@ -350,7 +345,7 @@ export default async function AdminBrokerReportsPage({
               </div>
             ) : (
               <div className="divide-y divide-hairline">
-                {(top?.data ?? []).filter((r) => !sp.q?.trim() || r.companyName.toLowerCase().includes(sp.q.trim().toLowerCase())).map((r, idx) => {
+                {(top?.data ?? []).map((r, idx) => {
                   const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
                   const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
                   return (
@@ -410,7 +405,7 @@ export default async function AdminBrokerReportsPage({
               </div>
             ) : (
               <div className="divide-y divide-hairline">
-                {projects.filter((p) => !sp.q?.trim() || (p.projectName ? tx(p.projectName) : '').toLowerCase().includes(sp.q.trim().toLowerCase())).map((p, idx) => {
+                {projects.map((p, idx) => {
                   const maxProjSales = Number(projects[0]?.salesGross ?? 1);
                   const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
                   const projName     = p.projectName ? tx(p.projectName) : '—';

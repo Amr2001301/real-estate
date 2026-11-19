@@ -89,18 +89,21 @@ export function PremiumFilterBar({
       >
         {children}
         {trailing && <div className="order-[4] flex shrink-0 items-end gap-2.5 self-end">{trailing}</div>}
-        {hasFilters && (
-          <Link
-            href={pathname as never}
-            className="order-[5] inline-flex h-14 items-center self-end rounded-[14px] px-3 text-[13px] font-semibold text-slate-500 hover:text-slate-900"
-          >
-            {ar ? 'مسح' : 'Clear'}
-          </Link>
-        )}
-        <button type="submit" data-filter-submit className={cn(GOLD_ACTION, 'order-[5] inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}>
-          <Filter className="h-4 w-4" />
-          {ar ? 'تصفية' : 'Filter'}
-        </button>
+        {/* The clear link and the gold button: one cluster, set apart from the fields. */}
+        <div className="order-[5] ms-3 flex shrink-0 items-end gap-2.5 self-end">
+          {hasFilters && (
+            <Link
+              href={pathname as never}
+              className="inline-flex h-14 items-center rounded-[14px] px-3 text-[13px] font-semibold text-slate-500 hover:text-slate-900"
+            >
+              {ar ? 'مسح' : 'Clear'}
+            </Link>
+          )}
+          <button type="submit" data-filter-submit className={cn(GOLD_ACTION, 'inline-flex h-14 items-center gap-2 rounded-[14px] px-6 text-[13px]')}>
+            <Filter className="h-4 w-4" />
+            {ar ? 'تصفية' : 'Filter'}
+          </button>
+        </div>
       </form>
       {summary && <div className="flex flex-wrap items-center gap-3 px-2 text-[13px] text-slate-500">{summary}</div>}
     </div>
