@@ -536,7 +536,7 @@ export function FunnelV2({
           <div key={s.label} className="flex flex-col gap-1.5">
             <div className="flex justify-between text-[13.5px]">
               <span className="text-slate-600">{s.label}</span>
-              <span className="num font-semibold text-slate-900">{s.value.toLocaleString('en')}</span>
+              <span className="num font-semibold text-slate-900">{(s.value ?? 0).toLocaleString('en')}</span>
             </div>
             <div className="flex h-3 rounded-full bg-surface-sunken">
               <div
