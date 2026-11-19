@@ -49,3 +49,30 @@ test('visit requests: schedule is in the menu, and the menu is never clipped', a
     expect(box!.x).toBeGreaterThanOrEqual(0);
   }
 });
+
+test('brokers, customers, users: one action on the row, the rest in the menu', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const cases: { path: string; hidden: string[]; inMenu: (string | RegExp)[] }[] = [
+    { path: '/dashboard/brokers', hidden: ['تعديل', 'الموظفون', 'الصلاحيات'], inMenu: ['تعديل', 'الموظفون', 'الصلاحيات'] },
+    { path: '/dashboard/customers', hidden: ['عقود العميل', 'طلبات الصيانة'], inMenu: ['عقود العميل', 'طلبات الصيانة'] },
+    { path: '/dashboard/users', hidden: ['الأجهزة'], inMenu: ['الأجهزة', /تعطيل|تفعيل/] },
+  ];
+  for (const c of cases) {
+    await gotoReady(page, c.path);
+    const row = page.locator('tbody tr', { has: page.getByTestId('row-menu') }).first();
+    if ((await row.count()) === 0) continue;
+    for (const name of c.hidden) await expect(row.getByRole('link', { name })).toHaveCount(0);
+    await row.getByTestId('row-menu').click();
+    for (const name of c.inMenu) await expect(page.getByRole('menuitem', { name })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menuitem')).toHaveCount(0);
+  }
+});
+
+test('cheques: the status cards sit above the filter, like the other lists', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gotoReady(page, '/dashboard/cheques');
+  const strip = await page.getByTestId('cheque-status-strip').boundingBox();
+  const filter = await page.locator('main form').first().boundingBox();
+  expect(strip && filter && strip.y < filter.y).toBeTruthy();
+});
