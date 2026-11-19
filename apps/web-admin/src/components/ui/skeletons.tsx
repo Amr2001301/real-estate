@@ -16,11 +16,6 @@ export function Skeleton({ className }: SkeletonProps) {
   return <div aria-hidden className={cn('animate-pulse rounded-md bg-slate-200/70', className)} />;
 }
 
-/** A block on the navy metric band. */
-function NavySkeleton({ className }: SkeletonProps) {
-  return <div aria-hidden className={cn('animate-pulse rounded-md bg-[#D8B66A]/15', className)} />;
-}
-
 const card = 'overflow-hidden rounded-card border border-hairline bg-surface';
 
 // ── Page parts ──────────────────────────────────────────────────────────────
@@ -45,31 +40,30 @@ export function PageHeaderSkeleton({ actions = 2, breadcrumb = true }: { actions
   );
 }
 
-/** PremiumMetricStrip: one navy band, gold hairlines, a ring icon and a large figure per cell. */
+/** The KPI row while it loads: the same light figure cards, with the figure's place held. */
 export function MetricStripSkeleton({ count = 4 }: { count?: number }) {
   if (count <= 0) return null;
   const cols =
-    count >= 6 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
-    : count === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
-    : count === 3 ? 'grid-cols-2 sm:grid-cols-3'
+    count >= 6 ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-6'
+    : count === 5 ? 'grid-cols-2 xl:grid-cols-5'
+    : count === 3 ? 'grid-cols-2 xl:grid-cols-3'
     : count === 2 ? 'grid-cols-2'
-    : 'grid-cols-2 lg:grid-cols-4';
+    : 'grid-cols-2 xl:grid-cols-4';
   return (
-    <section
-      aria-hidden
-      className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
-    >
-      <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', cols)}>
-        {Array.from({ length: count }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 bg-navy-band px-6 py-6">
-            <span className="h-12 w-12 shrink-0 rounded-full border border-[#D8B66A]/45" />
-            <div className="min-w-0 flex-1 space-y-2.5">
-              <NavySkeleton className="h-3 w-24" />
-              <NavySkeleton className="h-9 w-20 rounded-lg" />
-            </div>
+    <section aria-hidden className={cn('grid gap-4', cols)}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="min-w-0 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-10 rounded-[13px]" />
           </div>
-        ))}
-      </div>
+          <Skeleton className="mt-3.5 h-9 w-24 rounded-lg" />
+          <Skeleton className="mt-3.5 h-6 w-28 rounded-full" />
+        </div>
+      ))}
     </section>
   );
 }

@@ -22,10 +22,8 @@ import { getLocale } from '@/lib/locale';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
 import { portalSharedT } from '@/messages/portal/shared';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumFilterBar, PremiumFilterField, PremiumPageHero, PremiumRangeField } from '@/components/premium';
 import { Amount, Avatar, FigureBar } from '@/components/cockpit/cockpit';
 import {
   BrokerStatusBadge,
@@ -171,28 +169,21 @@ export default async function BrokerPerformancePage({
         }
       />
 
-      <form
-        method="get"
-        action={`/dashboard/brokers/${id}/performance`}
-        className={cn(CARD, 'flex flex-wrap items-center gap-3 p-3')}
-      >
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
-          <option value="">{m.filterAllProjects}</option>
-          {projectList.map((p) => (
-            <option key={p.id} value={p.id}>{tx(p.name)}</option>
-          ))}
-        </Select>
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-44" aria-label={word('من', 'From')} />
-        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-44" aria-label={word('إلى', 'To')} />
-        <div className="ms-auto flex items-center gap-1.5">
-          {Object.values(sp).some(Boolean) && (
-            <Link href={`/dashboard/brokers/${id}/performance`}>
-              <Button type="button" variant="ghost" size="sm">{m.clearBtn}</Button>
-            </Link>
-          )}
-          <Button type="submit" variant="primary" size="sm">{m.filterBtn}</Button>
-        </div>
-      </form>
+      <PremiumFilterBar method="get" action={`/dashboard/brokers/${id}/performance`}>
+        <PremiumFilterField label={locale === 'en' ? 'Project' : 'المشروع'} htmlFor="bp-project">
+          <Select id="bp-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+            <option value="">{m.filterAllProjects}</option>
+            {projectList.map((p) => (
+              <option key={p.id} value={p.id}>{tx(p.name)}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+        <PremiumRangeField
+          label={`${word('من', 'From')} → ${word('إلى', 'To')}`}
+          from={{ id: 'from', value: sp.from, label: word('من', 'From') }}
+          to={{ id: 'to', value: sp.to, label: word('إلى', 'To') }}
+        />
+      </PremiumFilterBar>
 
       <section data-testid="perf-figures" className={'overflow-hidden'}>
         <FigureBar
