@@ -42,6 +42,7 @@ export const fetchCache = 'force-no-store';
 
 interface Filters {
   page?: string;
+  q?: string;
   projectId?: string;
   status?: string;
   bedrooms?: string;
@@ -67,6 +68,7 @@ export default async function UnitsPage({
     pageSize: String(PAGE_SIZE),
   });
   if (sp.projectId) qs.set('projectId', sp.projectId);
+  if (sp.q)         qs.set('q',         sp.q);
   if (sp.status)    qs.set('status',    sp.status);
   if (sp.bedrooms)  qs.set('bedrooms',  sp.bedrooms);
   if (sp.priceMin)  qs.set('priceMin',  sp.priceMin);
@@ -236,6 +238,10 @@ export default async function UnitsPage({
         {!showFilters && sp.areaMin  && <input type="hidden" name="areaMin"  value={sp.areaMin} />}
         {!showFilters && sp.areaMax  && <input type="hidden" name="areaMax"  value={sp.areaMax} />}
 
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="unit-q">
+          <Input id="unit-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Unit code…' : 'ابحث بكود الوحدة…'} />
+        </PremiumFilterField>
+
         <PremiumFilterField label={m.filter.projectLabel} htmlFor="projectId">
           <Select id="projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
             <option value="">{uiT(locale).common.allProjects}</option>
@@ -258,7 +264,7 @@ export default async function UnitsPage({
             The basis-full advanced panel below wraps to row 2 without displacing these buttons. */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
           <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
-          {(sp.projectId || sp.status || hasAdvancedFilters) && (
+          {(sp.q || sp.projectId || sp.status || hasAdvancedFilters) && (
             <Link href={'/dashboard/units' as never}>
               <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
@@ -406,6 +412,7 @@ export default async function UnitsPage({
               total={paged.meta.total}
               basePath="/dashboard/units"
               params={{
+                q: sp.q,
                 projectId: sp.projectId,
                 status:    sp.status,
                 bedrooms:  sp.bedrooms,

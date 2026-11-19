@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
-import { formatCurrency, intlLocale } from '@/lib/format';
-import { getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
+import { compactParts, formatCurrency, intlLocale } from '@/lib/format';
+import { FigureBar } from '@/components/cockpit/cockpit';
+import { currencySymbol, getReportsCurrency, getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero, PremiumPanel, PremiumEmptyNote, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
@@ -170,6 +171,12 @@ export default async function SalesPerformancePage({
   const R = 52;
   const C = 2 * Math.PI * R;
 
+  // A money figure as a short number and its unit, for the cards.
+  const money = (amount: number) => {
+    const [value, unit] = compactParts(amount, currencySymbol(currency, locale), locale);
+    return { value, unit };
+  };
+
   return (
     <div className="space-y-6">
       <PremiumPageHero
@@ -220,7 +227,16 @@ export default async function SalesPerformancePage({
       </PremiumFilterBar>
 
       {/* ── Team overview ─────────────────────────────────────────────── */}
-      <div data-testid="team-overview" className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <FigureBar
+        cols={4}
+        figures={[
+          { label: m.kpiTotalSales, ...money(totalAchieved), line: m.kpiTotalSalesSub(rows.length), icon: <Wallet /> },
+          { label: m.kpiContracts, value: String(totalContracts), line: m.kpiContractsSub(totalLeads), icon: <FileText /> },
+          { label: m.kpiBonus, ...money(totalBonusAmt), line: m.kpiBonusSub(bonus.length), icon: <BadgePercent /> },
+        ]}
+      />
+
+      <div data-testid="team-overview" className="grid grid-cols-1 gap-4">
         <section className="relative overflow-hidden rounded-card border border-hairline bg-surface p-6">
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-bl from-brand-500/[0.10] via-transparent to-transparent" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
@@ -276,24 +292,6 @@ export default async function SalesPerformancePage({
           </div>
         </section>
 
-        <div className="grid grid-cols-1 overflow-hidden rounded-card border border-hairline bg-surface sm:grid-cols-3 xl:grid-cols-1">
-          {[
-            { label: m.kpiTotalSales, value: formatCurrency(totalAchieved, currency, locale), sub: m.kpiTotalSalesSub(rows.length), icon: <Wallet /> },
-            { label: m.kpiContracts, value: String(totalContracts), sub: m.kpiContractsSub(totalLeads), icon: <FileText /> },
-            { label: m.kpiBonus, value: formatCurrency(totalBonusAmt, currency, locale), sub: m.kpiBonusSub(bonus.length), icon: <BadgePercent /> },
-          ].map((k, i) => (
-            <div key={k.label} className={cn('flex items-center gap-4 px-5 py-4', i > 0 && 'border-hairline max-xl:sm:border-s xl:border-t max-sm:border-t')}>
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-500/12 text-brand-700 [&_svg]:h-[18px] [&_svg]:w-[18px]">
-                {k.icon}
-              </span>
-              <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-slate-500">{k.label}</p>
-                <p className="num truncate text-[24px] font-semibold leading-tight text-slate-900">{k.value}</p>
-                <p className="truncate text-[11.5px] text-slate-500">{k.sub}</p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ── Reps ──────────────────────────────────────────────────────── */}

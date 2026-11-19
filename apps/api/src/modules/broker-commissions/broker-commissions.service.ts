@@ -351,7 +351,17 @@ export class BrokerCommissionsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
+    const q = query.q?.trim();
     const where: Prisma.BrokerCommissionWhereInput = {
+      ...(q
+        ? {
+            OR: [
+              { broker: { companyName: { contains: q, mode: 'insensitive' } } },
+              { brokerAgent: { fullName: { contains: q, mode: 'insensitive' } } },
+              { contract: { contractNumber: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
       ...(query.brokerAgentId ? { brokerAgentId: query.brokerAgentId } : {}),
       ...(query.status ? { status: query.status } : {}),

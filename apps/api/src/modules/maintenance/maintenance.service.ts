@@ -1332,8 +1332,25 @@ export class MaintenanceService {
     categoryId?: string;
     from?: string;
     to?: string;
+    /** A word in the description, the client's name or phone, or the unit's code. */
+    q?: string;
   }) {
+    const q = opts.q?.trim();
     const where: Prisma.MaintenanceRequestWhereInput = {
+      ...(q
+        ? {
+            AND: [
+              {
+                OR: [
+                  { description: { contains: q, mode: 'insensitive' } },
+                  { customer: { fullName: { contains: q, mode: 'insensitive' } } },
+                  { customer: { phone: { contains: q } } },
+                  { unit: { code: { contains: q, mode: 'insensitive' } } },
+                ],
+              },
+            ],
+          }
+        : {}),
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.customerId ? { customerId: opts.customerId } : {}),
       ...(opts.assignedAdminId ? { assignedAdminId: opts.assignedAdminId } : {}),

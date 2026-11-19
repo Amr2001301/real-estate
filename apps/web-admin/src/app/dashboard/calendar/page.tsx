@@ -8,8 +8,9 @@ import { getSession } from '@/lib/session';
 import { getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { staffOptions } from '@/lib/options';
 import { uiT } from '@/messages/ui';
-import { PremiumPageHero, PremiumPanel } from '@/components/premium';
-import { Button } from '@/components/ui/button';
+import { PremiumPageHero, PremiumPanel, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/cn';
 import { calendarT } from '@/components/crm/calendar-messages';
 import { KIND_ICON } from '@/components/crm/follow-up-icons';
@@ -29,6 +30,7 @@ interface Search {
   month?: string;
   day?: string;
   salesId?: string;
+  q?: string;
 }
 
 const MONTH = /^\d{4}-\d{2}$/;
@@ -81,8 +83,15 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const tz = res.data?.timeZone ?? zone;
   const dayOf = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
   const timeOf = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG-u-nu-latn', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+  // The month comes whole; the search keeps the events whose customer, unit, reference or note has the word.
+  const needle = sp.q?.trim().toLowerCase();
+  const events = (res.data?.events ?? []).filter((e) => {
+    if (!needle) return true;
+    const hay = [e.customer, 'ref' in e ? e.ref : null, 'unit' in e ? e.unit : null, 'note' in e ? e.note : null];
+    return hay.some((v) => v?.toLowerCase().includes(needle));
+  });
   const byDay = new Map<string, CalendarEvent[]>();
-  for (const e of res.data?.events ?? []) {
+  for (const e of events) {
     const k = dayOf.format(new Date(e.at));
     byDay.set(k, [...(byDay.get(k) ?? []), e]);
   }
@@ -113,7 +122,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const tally = (evs: CalendarEvent[]) => Object.fromEntries(TYPES.map((t) => [t, evs.filter((e) => e.type === t).length])) as Record<CalendarEvent['type'], number>;
   const link = (over: Partial<Search>) => {
     const p = new URLSearchParams();
-    const merged = { month, salesId, ...over };
+    const merged = { month, salesId, q: sp.q, ...over };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
     return `/dashboard/calendar?${p.toString()}` as never;
   };
@@ -122,7 +131,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const monthName = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${first}T00:00:00Z`));
   const dayName = new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${selected}T00:00:00Z`));
   const selectedEvents = byDay.get(selected) ?? [];
-  const inMonth = (res.data?.events ?? []).filter((e) => dayOf.format(new Date(e.at)).startsWith(month));
+  const inMonth = events.filter((e) => dayOf.format(new Date(e.at)).startsWith(month));
 
   return (
     <div className="space-y-6">
@@ -147,18 +156,22 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
         <p className="text-[12.5px] text-slate-500">{m.summary(tally(inMonth))}</p>
+      </div>
+
+      <PremiumFilterBar method="get" action="/dashboard/calendar">
+        <input type="hidden" name="month" value={month} />
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="cal-q">
+          <Input id="cal-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Customer, unit or reference…' : 'ابحث باسم العميل أو الوحدة أو المرجع…'} />
+        </PremiumFilterField>
         {canPick && (
-          <form method="get" className="flex items-center gap-2">
-            <input type="hidden" name="month" value={month} />
-            <label className="text-[12px] font-semibold text-slate-500" htmlFor="cal-rep">{m.rep}</label>
-            <select id="cal-rep" name="salesId" defaultValue={salesId} className="h-9 rounded-xl border border-hairline bg-surface px-3 text-[13px] text-slate-700">
+          <PremiumFilterField label={m.rep} htmlFor="cal-rep">
+            <Select id="cal-rep" name="salesId" inputSize="sm" defaultValue={salesId}>
               <option value="">{m.everyone}</option>
               {(repsRes.data?.data ?? []).map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-            </select>
-            <Button type="submit" variant="primary" size="sm">{m.apply}</Button>
-          </form>
+            </Select>
+          </PremiumFilterField>
         )}
-      </div>
+      </PremiumFilterBar>
 
       {res.error && <div role="alert" className="rounded-card bg-danger-500/10 p-6 text-sm text-danger-600">{m.error}: {res.error}</div>}
 

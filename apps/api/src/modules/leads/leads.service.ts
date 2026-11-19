@@ -948,11 +948,25 @@ export class LeadsService {
     return { overdue, today, upcoming };
   }
 
-  async followUps(scope: FollowUpScope, bucket: FollowUpBucket, opts: { page?: number; pageSize?: number } = {}) {
+  async followUps(scope: FollowUpScope, bucket: FollowUpBucket, opts: { page?: number; pageSize?: number; q?: string } = {}) {
     const page = opts.page ?? 1;
     const pageSize = Math.min(opts.pageSize ?? 20, 100);
     const { companyId, windows } = await this.followUpWindows();
-    const where = this.followUpWhere(companyId, scope, windows[bucket]);
+    const q = opts.q?.trim();
+    const where: Prisma.LeadWhereInput = {
+      ...this.followUpWhere(companyId, scope, windows[bucket]),
+      // A word in the lead's name or phone, or in the linked client's.
+      ...(q
+        ? {
+            OR: [
+              { fullName: { contains: q, mode: 'insensitive' } },
+              { phone: { contains: q } },
+              { client: { fullName: { contains: q, mode: 'insensitive' } } },
+              { client: { phone: { contains: q } } },
+            ],
+          }
+        : {}),
+    };
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.lead.findMany({
         where,

@@ -3,6 +3,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +17,7 @@ import {
 } from './targets-management-client';
 import { pctLabel, getMonthOptions } from './utils';
 import { compactParts } from '@/lib/format';
-import { Amount, FigureBar, PaceBar } from '@/components/cockpit/cockpit';
+import { Amount, FigureBar } from '@/components/cockpit/cockpit';
 import { cn } from '@/lib/cn';
 import { attainment, targetPhase } from '@/lib/target-pace';
 import { getReportsCurrency, currencySymbol, getCompanyTimeZone, todayIn } from '@/lib/currency';
@@ -82,9 +83,11 @@ export default async function TargetsPage({
   ]);
 
   const allTargets = targetsRes.data ?? [];
-  const targets = period
-    ? allTargets.filter((t) => t.period === period)
-    : allTargets;
+  // The list comes whole, so the search runs here: a word in the rep's name.
+  const needle = sp.q?.trim().toLowerCase();
+  const targets = allTargets
+    .filter((t) => !period || t.period === period)
+    .filter((t) => !needle || (t.sales?.fullName ?? '').toLowerCase().includes(needle));
 
   let salesUsers: SalesUser[] = salesRes.data ?? [];
   if (salesUsers.length === 0) {
@@ -160,7 +163,7 @@ export default async function TargetsPage({
         )
       : null;
   const hasMeaningfulPerf = topPerformer !== null && topPerformer.pct > 0;
-  const hasFilters = !!(sp.salesId || sp.year || sp.month || sp.period);
+  const hasFilters = !!(sp.q || sp.salesId || sp.year || sp.month || sp.period);
 
   const monthOptions = getMonthOptions(locale);
 
@@ -191,6 +194,9 @@ export default async function TargetsPage({
           </div>
         }
       >
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="f-q">
+          <Input id="f-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Rep name…' : 'ابحث باسم المندوب…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={m.filterAgent} htmlFor="f-salesId">
           <Select
             id="f-salesId"
@@ -242,7 +248,7 @@ export default async function TargetsPage({
       </PremiumFilterBar>
 
       {/* ── Key figures ───────────────────────────────────────────────────── */}
-      <section data-testid="targets-kpis" className="overflow-hidden rounded-card">
+      <section data-testid="targets-kpis" className="flex flex-col gap-4">
         <FigureBar
           bare
           cols={4}
@@ -253,15 +259,11 @@ export default async function TargetsPage({
               label: m.metricAchievedAmount,
               value: <Amount parts={compactParts(totalAchievedAmount, symbol, locale)} />,
               sub: overallPct !== null ? `${overallPct}% ${m.metricOfTarget}` : undefined,
+              bar: overallPct ?? undefined,
             },
             { label: m.metricUnitsTarget, value: totalUnitsTarget, sub: `${totalAchievedUnits} ${m.metricAchievedUnits}` },
           ]}
         />
-        {overallPct !== null && (
-          <div className="border-t border-hairline px-5 py-4">
-            <PaceBar pct={overallPct} tone="bg-gradient-to-l from-[#E6C77E] to-[#B8913F]" />
-          </div>
-        )}
       </section>
 
       {/* ── Insights ──────────────────────────────────────────────────────── */}
@@ -312,7 +314,7 @@ function Insight({
   tone?: 'good' | 'warn';
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-card border border-hairline bg-surface p-5">
+    <div className="flex items-center gap-4 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none">
       <span
         className={cn(
           'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full [&_svg]:h-5 [&_svg]:w-5',

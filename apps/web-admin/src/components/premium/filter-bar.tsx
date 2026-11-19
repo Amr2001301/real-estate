@@ -80,7 +80,9 @@ export function PremiumFilterBar({
           'flex flex-wrap items-stretch gap-2.5 rounded-[20px] border border-hairline bg-surface p-3',
           'shadow-[0_1px_2px_rgb(11_18_32/0.04),0_8px_24px_-12px_rgb(11_18_32/0.1)] dark:shadow-none',
           // A page's own submit button is hidden: the bar has the one gold button.
-          '[&_button[type=submit]:not([data-filter-submit])]:hidden',
+          '[&_button[type=submit]:not([data-filter-submit])]:hidden [&_a:has(>button[type=button])]:hidden',
+          // Pages put their second row of filters in a full-width block: it goes under the first row, after the buttons.
+          '[&>.basis-full]:order-[9]',
           className,
         )}
         {...rest}
@@ -246,7 +248,7 @@ export function PremiumRangeField({
   to: { id: string; value?: string; label: string };
 }) {
   const input =
-    'h-6 w-[124px] border-0 bg-transparent p-0 text-[14px] font-semibold tabular-nums text-slate-900 focus:outline-none focus:ring-0';
+    'h-6 w-[116px] border-0 bg-transparent p-0 text-[14px] font-semibold tabular-nums text-slate-900 focus:outline-none focus:ring-0';
   return (
     <div className="flex min-w-[150px] shrink-0 flex-col justify-center gap-1 rounded-[14px] border border-hairline bg-[#F8F5EE] px-4 py-2 dark:bg-white/[0.04]">
       <span className={cn('flex items-center gap-1.5 text-[11px] font-semibold text-slate-500', hideLabel && 'sr-only')}>

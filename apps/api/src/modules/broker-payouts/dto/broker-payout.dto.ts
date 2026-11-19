@@ -19,6 +19,12 @@ import { BrokerPayoutMethod, BrokerPayoutStatus } from '@prisma/client';
 const PERIOD_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export class BrokerPayoutsQueryDto {
+  /** A word in the broker's name or the period (2026-05). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @IsUUID()
   brokerId?: string;

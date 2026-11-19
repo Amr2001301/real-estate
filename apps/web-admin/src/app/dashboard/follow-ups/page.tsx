@@ -8,6 +8,7 @@ import { getLocale } from '@/lib/locale';
 import { getSession } from '@/lib/session';
 import { uiT } from '@/messages/ui';
 import { PremiumPageHero, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
@@ -30,7 +31,7 @@ const TONE: Record<FollowUpBucket, { tab: string; count: string; due: string }> 
 export default async function FollowUpsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bucket?: string; page?: string }>;
+  searchParams: Promise<{ bucket?: string; q?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const bucket: FollowUpBucket = BUCKETS.includes(sp.bucket as FollowUpBucket) ? (sp.bucket as FollowUpBucket) : 'overdue';
@@ -42,7 +43,7 @@ export default async function FollowUpsPage({
 
   const [summaryRes, listRes] = await Promise.all([
     safe(api.get<FollowUpSummary>('/leads/follow-ups/summary')),
-    safe(api.get<Paged<FollowUpLead>>(`/leads/follow-ups?bucket=${bucket}&page=${page}&pageSize=${PAGE_SIZE}`)),
+    safe(api.get<Paged<FollowUpLead>>(`/leads/follow-ups?bucket=${bucket}&page=${page}&pageSize=${PAGE_SIZE}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}`)),
   ]);
   const summary = summaryRes.data ?? { overdue: 0, today: 0, upcoming: 0 };
   const rows = listRes.data?.data ?? [];
@@ -58,6 +59,9 @@ export default async function FollowUpsPage({
       />
 
       <PremiumFilterBar method="get" action="/dashboard/follow-ups">
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="follow-q">
+          <Input id="follow-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Lead name or phone…' : 'ابحث باسم العميل المحتمل أو هاتفه…'} />
+        </PremiumFilterField>
         <PremiumFilterField neutral label={f.page.title} htmlFor="follow-bucket">
           <Select id="follow-bucket" name="bucket" inputSize="sm" defaultValue={bucket} data-testid="follow-bucket">
             {BUCKETS.map((b) => (
@@ -160,7 +164,7 @@ export default async function FollowUpsPage({
       )}
 
       {total > PAGE_SIZE && (
-        <Pagination page={page} pageSize={PAGE_SIZE} total={total} basePath="/dashboard/follow-ups" params={{ bucket }} locale={locale} />
+        <Pagination page={page} pageSize={PAGE_SIZE} total={total} basePath="/dashboard/follow-ups" params={{ bucket, q: sp.q }} locale={locale} />
       )}
     </div>
   );

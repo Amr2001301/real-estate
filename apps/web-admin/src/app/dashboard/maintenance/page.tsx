@@ -114,6 +114,7 @@ export default async function MaintenancePage({
     categoryId?: string;
     from?: string;
     to?: string;
+    q?: string;
     page?: string;
     catErr?: string;
   }>;
@@ -156,6 +157,7 @@ export default async function MaintenancePage({
   if (sp.categoryId) listQs.set('categoryId', sp.categoryId);
   if (sp.from) listQs.set('from', sp.from);
   if (sp.to) listQs.set('to', sp.to);
+  if (sp.q) listQs.set('q', sp.q);
 
   const reportFilters = {
     status: sp.status,
@@ -176,7 +178,7 @@ export default async function MaintenancePage({
   const rows = reqsRes.data?.data ?? [];
   const admins = adminsRes.data?.data ?? [];
   const cats = catsRes.data ?? [];
-  const hasFilters = !!(sp.status || sp.assignedAdminId || sp.reviewStatus || sp.categoryId || sp.from || sp.to);
+  const hasFilters = !!(sp.q || sp.status || sp.assignedAdminId || sp.reviewStatus || sp.categoryId || sp.from || sp.to);
   const csvParams: Record<string, string | undefined> = {
     status: sp.status,
     reviewStatus: sp.reviewStatus,
@@ -232,6 +234,9 @@ export default async function MaintenancePage({
           </div>
         }
       >
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="maint-q">
+          <Input id="maint-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Client, unit or description…' : 'ابحث بالعميل أو الوحدة أو الوصف…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="maint-status">
           <Select
             id="maint-status"
@@ -441,7 +446,7 @@ export default async function MaintenancePage({
           page={page}
           pageSize={pageSize}
           total={reqsRes.data.meta.total}
-          params={csvParams}
+          params={{ ...csvParams, q: sp.q }}
           locale={locale}
         />
       )}

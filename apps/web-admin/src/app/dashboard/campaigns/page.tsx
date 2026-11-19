@@ -9,6 +9,7 @@ import { can } from '@/lib/permissions';
 import { currencySymbol, getReportsCurrency } from '@/lib/currency';
 import { uiT } from '@/messages/ui';
 import { PremiumMetricStrip, PremiumPageHero, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -28,7 +29,7 @@ interface ListResponse {
 }
 
 /** «الحملات التسويقية» — every campaign with what it cost and brought. */
-export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   const [sp, locale, session, currency] = await Promise.all([searchParams, getLocale(), getSession(), getReportsCurrency()]);
   const m = campaignT(locale);
   const L = m.list;
@@ -38,7 +39,11 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const res = await safe(api.get<ListResponse>('/campaigns'));
   const all = res.data?.data ?? [];
   const status = STATUSES.includes(sp.status as CampaignStatus) ? (sp.status as CampaignStatus) : null;
-  const rows = status ? all.filter((c) => c.status === status) : all;
+  const needle = sp.q?.trim().toLowerCase();
+  // The list comes whole, so the search runs here: a word in the campaign's name.
+  const rows = all
+    .filter((c) => !status || c.status === status)
+    .filter((c) => !needle || c.name.toLowerCase().includes(needle));
   const t = res.data?.totals;
   const parts = (n: number | null | undefined) => (n == null ? (['—', ''] as const) : compactParts(n, symbol, locale));
   const money = (n: number | null | undefined) => (n == null ? '—' : parts(n).join(' '));
@@ -161,6 +166,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           )}
 
           <PremiumFilterBar method="get" action="/dashboard/campaigns">
+            <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="camp-q">
+              <Input id="camp-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Campaign name…' : 'ابحث باسم الحملة…'} />
+            </PremiumFilterField>
             <PremiumFilterField label={L.filters.status} htmlFor="camp-status">
               <Select id="camp-status" name="status" inputSize="sm" defaultValue={status ?? ''}>
                 <option value="">{L.filters.all} ({all.length})</option>

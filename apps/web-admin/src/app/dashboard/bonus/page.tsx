@@ -66,6 +66,7 @@ function buildEntriesUrl(sp: Record<string, string | undefined>): string {
   if (sp.salesId) p.set('salesId', sp.salesId);
   if (sp.status) p.set('status', sp.status);
   if (sp.period) p.set('period', sp.period);
+  if (sp.q) p.set('q', sp.q);
   const qs = p.toString();
   return `/bonus-entries${qs ? `?${qs}` : ''}`;
 }
@@ -215,7 +216,7 @@ export default async function BonusPage({
     return `/dashboard/bonus${qs ? `?${qs}` : ''}`;
   })();
 
-  const hasFilters = !!(sp.salesId || sp.status || sp.period);
+  const hasFilters = !!(sp.q || sp.salesId || sp.status || sp.period);
   const entryCount = entries.length === 0 ? '0' : entries.length.toLocaleString(intlLocale(locale));
 
   return (
@@ -276,6 +277,9 @@ export default async function BonusPage({
           </div>
         }
       >
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="bonus-q">
+          <Input id="bonus-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Rep or rule name…' : 'ابحث باسم المندوب أو القاعدة…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={m.filterAgent} htmlFor="bonus-sales">
           <Select id="bonus-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-48">
             <option value="">{m.filterAgentAll}</option>

@@ -9,8 +9,7 @@ import { can } from '@/lib/permissions';
 import { getCompanyTimeZone, todayIn } from '@/lib/currency';
 import { projectOptions, staffOptions } from '@/lib/options';
 import { uiT } from '@/messages/ui';
-import { PremiumBars, PremiumMetricStrip, PremiumPageHero, PremiumPanel } from '@/components/premium';
-import { Button } from '@/components/ui/button';
+import { PremiumBars, PremiumFilterBar, PremiumFilterField, PremiumMetricStrip, PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { cn } from '@/lib/cn';
 import { lostT } from '@/components/crm/lost-messages';
 import { LostReasonsManager } from './_components/lost-reasons-manager';
@@ -98,8 +97,6 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
   const monthLabel = (key: string) =>
     new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${key}-01T00:00:00Z`));
 
-  const selectCls =
-    'h-9 rounded-xl border border-hairline bg-surface px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
 
   return (
     <div className="space-y-6">
@@ -165,41 +162,34 @@ export default async function LostReasonsPage({ searchParams }: { searchParams: 
                 );
               })}
             </div>
-            <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
-              <label className="text-[12px] font-semibold text-slate-500">
-                {m.filters.from}
-                <input type="date" name="from" defaultValue={from} className={cn(selectCls, 'mt-1 block')} />
-              </label>
-              <label className="text-[12px] font-semibold text-slate-500">
-                {m.filters.to}
-                <input type="date" name="to" defaultValue={to} className={cn(selectCls, 'mt-1 block')} />
-              </label>
-              <label className="text-[12px] font-semibold text-slate-500">
-                {m.filters.sales}
-                <select name="salesId" defaultValue={sp.salesId ?? ''} className={cn(selectCls, 'mt-1 block')}>
-                  <option value="">{m.filters.all}</option>
-                  {(repsRes.data?.data ?? []).map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-                </select>
-              </label>
-              <label className="text-[12px] font-semibold text-slate-500">
-                {m.filters.project}
-                <select name="projectId" defaultValue={sp.projectId ?? ''} className={cn(selectCls, 'mt-1 block')}>
-                  <option value="">{m.filters.all}</option>
-                  {(projectsRes.data?.data ?? []).map((p) => <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>)}
-                </select>
-              </label>
-              <label className="text-[12px] font-semibold text-slate-500">
-                {m.filters.source}
-                <select name="sourceId" defaultValue={sp.sourceId ?? ''} className={cn(selectCls, 'mt-1 block')}>
-                  <option value="">{m.filters.all}</option>
-                  {(sourcesRes.data ?? []).map((s) => <option key={s.id} value={s.id}>{tx(s.name, locale)}</option>)}
-                </select>
-              </label>
-              <Button type="submit" variant="primary" size="sm">{m.filters.apply}</Button>
-              <Link href={'/dashboard/lost-reasons' as never} className="pb-2 text-[12.5px] font-semibold text-slate-500 hover:text-slate-800">
-                {m.filters.reset}
-              </Link>
-            </form>
+            <div className="mt-3">
+              <PremiumFilterBar method="get" action="/dashboard/lost-reasons">
+                <PremiumFilterField label={m.filters.from} htmlFor="lr-from">
+                  <input id="lr-from" type="date" name="from" defaultValue={from} />
+                </PremiumFilterField>
+                <PremiumFilterField label={m.filters.to} htmlFor="lr-to">
+                  <input id="lr-to" type="date" name="to" defaultValue={to} />
+                </PremiumFilterField>
+                <PremiumFilterField label={m.filters.sales} htmlFor="lr-sales">
+                  <select id="lr-sales" name="salesId" defaultValue={sp.salesId ?? ''}>
+                    <option value="">{m.filters.all}</option>
+                    {(repsRes.data?.data ?? []).map((u) => <option key={u.id} value={u.id}>{u.fullName}</option>)}
+                  </select>
+                </PremiumFilterField>
+                <PremiumFilterField label={m.filters.project} htmlFor="lr-project">
+                  <select id="lr-project" name="projectId" defaultValue={sp.projectId ?? ''}>
+                    <option value="">{m.filters.all}</option>
+                    {(projectsRes.data?.data ?? []).map((p) => <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>)}
+                  </select>
+                </PremiumFilterField>
+                <PremiumFilterField label={m.filters.source} htmlFor="lr-source">
+                  <select id="lr-source" name="sourceId" defaultValue={sp.sourceId ?? ''}>
+                    <option value="">{m.filters.all}</option>
+                    {(sourcesRes.data ?? []).map((s) => <option key={s.id} value={s.id}>{tx(s.name, locale)}</option>)}
+                  </select>
+                </PremiumFilterField>
+              </PremiumFilterBar>
+            </div>
           </div>
 
           {reportRes.error ? (

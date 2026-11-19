@@ -371,9 +371,24 @@ export class RequestsService {
    * so the admin can call / WhatsApp / email them — this is an ADMIN-facing
    * surface, so phone/email ARE included here (unlike the notification payload).
    */
-  async listInfoRequests(opts: { page: number; pageSize: number; status?: InfoRequestStatus; viewer?: { id: string; role: UserRole } }) {
+  async listInfoRequests(opts: { page: number; pageSize: number; status?: InfoRequestStatus; q?: string; viewer?: { id: string; role: UserRole } }) {
     // FG-04 — /dashboard/requests sent ?status= but the list ignored it.
-    const where: Prisma.InfoRequestWhereInput = opts.status ? { status: opts.status } : {};
+    const q = opts.q?.trim();
+    const where: Prisma.InfoRequestWhereInput = {
+      ...(opts.status ? { status: opts.status } : {}),
+      // A word in the message, or the person's name or phone (the customer's, or the lead's).
+      ...(q
+        ? {
+            OR: [
+              { message: { contains: q, mode: 'insensitive' } },
+              { user: { fullName: { contains: q, mode: 'insensitive' } } },
+              { user: { phone: { contains: q } } },
+              { lead: { fullName: { contains: q, mode: 'insensitive' } } },
+              { lead: { phone: { contains: q } } },
+            ],
+          }
+        : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.infoRequest.findMany({
         where,
@@ -782,12 +797,14 @@ class RequestsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
     @Query('status') status?: string,
+    @Query('q') q?: string,
   ) {
     const known = Object.values(InfoRequestStatus) as string[];
     return this.svc.listInfoRequests({
       page: Number(page),
       pageSize: Number(pageSize),
       status: status && known.includes(status) ? (status as InfoRequestStatus) : undefined,
+      q,
       viewer: { id: user.sub, role: user.role },
     });
   }
