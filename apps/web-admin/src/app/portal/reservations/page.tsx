@@ -76,7 +76,7 @@ export default async function PortalReservationsPage({
         description={t.description}
         actions={
           <Link href="/portal/reservations/new">
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {t.newReservation}
             </Button>
           </Link>

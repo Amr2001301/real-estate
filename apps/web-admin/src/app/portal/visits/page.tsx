@@ -96,7 +96,7 @@ export default async function PortalVisitsPage({
         description={t.description}
         actions={
           <Link href="/portal/visits/new">
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {t.newRequest}
             </Button>
           </Link>

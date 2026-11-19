@@ -114,7 +114,7 @@ export default async function ContractsPage({
         actions={
           isAdmin ? (
             <Link href="/dashboard/contracts/new">
-              <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 {m.addBtn}
               </Button>
             </Link>

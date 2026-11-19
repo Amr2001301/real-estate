@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Building2, Phone, Search, ChevronDown, SlidersHorizontal, Filter } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { GOLD_ACTION } from '@/components/ui/button';
 import { Avatar } from '@/components/cockpit/cockpit';
 import type { Locale } from '@/lib/locale';
 
@@ -285,7 +286,7 @@ export function ListFilterBar({
       )}
       <button
         type="submit"
-        className="inline-flex h-14 items-center gap-2 self-end rounded-[14px] bg-navy px-6 text-[13px] font-semibold text-white shadow-soft transition-colors hover:bg-navy-700"
+        className={cn(GOLD_ACTION, 'inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}
       >
         <Filter className="h-4 w-4" />
         {submitLabel}

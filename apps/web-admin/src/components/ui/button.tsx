@@ -4,10 +4,16 @@ import { cn } from '@/lib/cn';
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'subtle';
 type Size = 'sm' | 'md' | 'lg';
 
+/**
+ * The platform's one gold: the top bar's assistant button, every main action
+ * (add, filter, save…) and the list pages' filter button all use this.
+ */
+export const GOLD_ACTION =
+  'bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)] text-[#0B1220] font-bold shadow-[0_8px_20px_-8px_rgb(158_122_43/0.6)] transition hover:brightness-105';
+
 const VARIANT: Record<Variant, string> = {
-  // U5: the one gold action per screen — gold gradient pill, dark text.
-  primary:
-    'bg-gradient-to-b from-[#D8B66A] to-[#B38B3A] text-[#1A1408] font-bold shadow-[0_8px_20px_-8px_rgb(179_139_58/0.65)] hover:from-[#DFC07A] hover:to-[#BC9442] disabled:opacity-60',
+  // U5: the one gold action per screen — the assistant's gold, dark text.
+  primary: `${GOLD_ACTION} disabled:opacity-60 disabled:hover:brightness-100`,
   secondary:
     'bg-navy text-white shadow-soft hover:bg-navy-700 active:bg-navy disabled:bg-navy/60',
   outline:
