@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, Clock, Eye, Pencil, Plus, ScrollText, ShieldAlert, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plus, ScrollText, Sparkles, Trash2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, Paged, UserRole } from '@/lib/types';
 import { formatDateTime, intlLocale } from '@/lib/format';
@@ -13,6 +13,7 @@ import { AuditFilterBar } from './_components/audit-filter-bar';
 import { areaLabel } from '../operations/_area-label';
 import { PremiumPageHero, PremiumPanel, PremiumEmptyState } from '@/components/premium';
 import { initials as sharedInitials } from '@/lib/initials';
+import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -145,13 +146,6 @@ const KIND_RING: Record<Kind, string> = {
   delete:  'bg-danger-500/12 text-danger-600 ring-1 ring-inset ring-danger-500/25',
   special: 'bg-sky-500/12 text-sky-600 ring-1 ring-inset ring-sky-500/25',
 };
-const KIND_BAR: Record<Kind, string> = {
-  create: 'bg-emerald-500',
-  edit: 'bg-amber-400',
-  delete: 'bg-danger-500',
-  special: 'bg-sky-500',
-};
-
 const ROLE_CHIP: Partial<Record<UserRole, string>> = {
   ADMIN:                  'bg-brand-500/12 text-brand-700',
   SALES_MANAGER:          'bg-sky-500/12 text-sky-600',
@@ -254,51 +248,39 @@ export default async function AuditLogsPage({
         </div>
       )}
 
-      {/* ── Summary ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard testId="audit-total" icon={<ScrollText />} label={l.total}>
-          <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(total)}</p>
-          <p className="mt-2 text-[12px] text-slate-500">{hasFilter ? l.totalFiltered : l.totalAll}</p>
-        </SummaryCard>
-
-        <SummaryCard testId="audit-last" icon={<Clock />} label={l.lastActivity}>
-          <p className="text-[20px] font-bold leading-tight text-slate-900">{rows[0] ? relative(rows[0].createdAt) : '—'}</p>
-          {rows[0] && <p className="mt-2 truncate text-[12px] text-slate-500">{formatDateTime(rows[0].createdAt, locale, timeZone)}</p>}
-        </SummaryCard>
-
-        <SummaryCard testId="audit-kinds" icon={<Activity />} label={l.onPage}>
-          {kindRows.length === 0 ? (
-            <p className="text-[20px] font-bold text-slate-900">—</p>
-          ) : (
-            <>
-              <div className="flex h-2 overflow-hidden rounded-full bg-surface-muted">
-                {kindRows.map((k) => (
-                  <span key={k} className={cn('h-full', KIND_BAR[k])} style={{ width: `${(kinds[k] / rows.length) * 100}%` }} />
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-[12px]">
-                {kindRows.map((k) => (
-                  <span key={k} className="inline-flex items-center gap-1.5 text-slate-600">
-                    <span className={cn('h-2 w-2 rounded-full', KIND_BAR[k])} />
-                    {l.kinds[k]}
-                    <b className="text-slate-900 tabular-nums">{num(kinds[k])}</b>
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-        </SummaryCard>
-
-        <SummaryCard
-          testId="audit-sensitive"
-          icon={sensitive > 0 ? <ShieldAlert /> : <ShieldCheck />}
-          label={l.sensitive}
-          tone={sensitive > 0 ? 'warn' : 'good'}
-        >
-          <p className="num text-[34px] font-semibold leading-none text-slate-900">{num(sensitive)}</p>
-          <p className="mt-2 text-[12px] text-slate-500">{sensitive > 0 ? l.sensitiveSub : l.sensitiveNone}</p>
-        </SummaryCard>
-      </div>
+      {/* ── Summary: the shared figure cards ───────────────────────────────── */}
+      <FigureBar
+        cols={4}
+        figures={[
+          { testId: 'audit-total', label: l.total, value: num(total), line: hasFilter ? l.totalFiltered : l.totalAll, icon: FigIcons.total },
+          {
+            testId: 'audit-last',
+            label: l.lastActivity,
+            value: rows[0] ? relative(rows[0].createdAt) : '—',
+            line: rows[0] ? formatDateTime(rows[0].createdAt, locale, timeZone) : undefined,
+            icon: FigIcons.pending,
+            tone: 'blue',
+          },
+          {
+            testId: 'audit-kinds',
+            label: l.onPage,
+            value: num(rows.length),
+            // create 13 · edit 10 · delete 2
+            line: kindRows.map((k) => `${l.kinds[k]} ${num(kinds[k])}`).join(' · ') || undefined,
+            icon: FigIcons.calendar,
+            tone: 'gray',
+          },
+          {
+            testId: 'audit-sensitive',
+            label: l.sensitive,
+            value: num(sensitive),
+            line: sensitive > 0 ? l.sensitiveSub : l.sensitiveNone,
+            icon: sensitive > 0 ? FigIcons.alert : FigIcons.done,
+            tone: sensitive > 0 ? 'amber' : 'green',
+            warn: sensitive > 0,
+          },
+        ]}
+      />
 
       {/* ── Filters ────────────────────────────────────────────────────────── */}
       <AuditFilterBar
@@ -426,33 +408,3 @@ export default async function AuditLogsPage({
   );
 }
 
-function SummaryCard({
-  icon, label, children, tone = 'neutral', testId,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-  tone?: 'neutral' | 'good' | 'warn';
-  testId?: string;
-}) {
-  return (
-    <div
-      data-testid={testId}
-      className={cn(
-        'flex flex-col gap-4 rounded-card border bg-surface p-5',
-        tone === 'warn' ? 'border-amber-500/40' : tone === 'good' ? 'border-emerald-500/25' : 'border-hairline',
-      )}
-    >
-      <div className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
-        <span className={cn(
-          'inline-flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5',
-          tone === 'warn' ? 'bg-amber-500/15 text-amber-600' : tone === 'good' ? 'bg-emerald-500/12 text-emerald-600' : 'bg-brand-500/12 text-brand-700',
-        )}>
-          {icon}
-        </span>
-        {label}
-      </div>
-      <div>{children}</div>
-    </div>
-  );
-}

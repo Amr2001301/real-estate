@@ -112,6 +112,8 @@ export interface Figure {
   line?: string;
   /** `cards` variant: 0–100 bar in the bottom row, beside the chip. */
   bar?: number;
+  /** A page's own test id for the card (default `figure`). */
+  testId?: string;
 }
 
 /** Ready-made icons for the `cards` figure variant. */
@@ -201,7 +203,7 @@ export function FigureCards({ figures, cols }: { figures: Figure[]; cols: number
           <Link
             key={f.label}
             href={f.href as never}
-            data-testid="figure"
+            data-testid={f.testId ?? 'figure'}
             data-active={f.active ? 'true' : undefined}
             aria-current={f.active ? 'true' : undefined}
             className={cn(
@@ -213,7 +215,7 @@ export function FigureCards({ figures, cols }: { figures: Figure[]; cols: number
             {body}
           </Link>
         ) : (
-          <div key={f.label} data-testid="figure" className={cls}>{body}</div>
+          <div key={f.label} data-testid={f.testId ?? 'figure'} className={cls}>{body}</div>
         );
       })}
     </dl>
