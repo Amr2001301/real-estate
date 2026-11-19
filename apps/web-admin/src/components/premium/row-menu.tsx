@@ -41,16 +41,23 @@ export function RowMenu({ label, children }: { label: string; children: ReactNod
       if (!menuRef.current?.contains(t) && !btnRef.current?.contains(t)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    const close = () => setOpen(false);
+    // A scroll or resize moves the button: the menu follows it, and closes only once the
+    // button has left the window. (Closing on any scroll shut the menu at once when the
+    // page had just scrolled the button into view for the click.)
+    const follow = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (!r || r.bottom < 0 || r.top > window.innerHeight) setOpen(false);
+      else place();
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    window.addEventListener('resize', close);
-    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', follow);
+    window.addEventListener('scroll', follow, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
-      window.removeEventListener('resize', close);
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', follow);
+      window.removeEventListener('scroll', follow, true);
     };
   }, [open]);
 
