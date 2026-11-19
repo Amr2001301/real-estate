@@ -295,7 +295,7 @@ export default async function UnitsPage({
       </PremiumFilterBar>
 
       {/* ── Units table ── */}
-      <div className="bg-surface border border-hairline rounded-card overflow-hidden">
+      <div className="overflow-clip rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08),0_30px_60px_-30px_rgb(11_18_32/0.12)] dark:shadow-none">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
             <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">

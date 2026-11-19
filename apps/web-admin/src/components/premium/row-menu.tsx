@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -99,33 +100,39 @@ export function RowMenu({ label, children }: { label: string; children: ReactNod
   );
 }
 
-/** One menu entry; pass `type="submit"` inside a form. */
+/** One menu entry; pass `type="submit"` inside a form, or `href` for a link. */
 export function MenuItem({
   icon,
   children,
   tone = 'default',
   type = 'button',
   onClick,
+  href,
 }: {
   icon: ReactNode;
   children: ReactNode;
   tone?: 'default' | 'danger' | 'warning' | 'success';
   type?: 'button' | 'submit';
   onClick?: () => void;
+  href?: string;
 }) {
+  const cls = cn(
+    'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-[13px] font-semibold transition-colors [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0',
+    tone === 'danger' && 'text-danger-600 hover:bg-danger-500/10',
+    tone === 'warning' && 'text-amber-600 hover:bg-amber-500/10',
+    tone === 'success' && 'text-emerald-700 hover:bg-emerald-500/10',
+    tone === 'default' && 'text-slate-700 hover:bg-surface-muted',
+  );
+  if (href) {
+    return (
+      <Link href={href as never} role="menuitem" className={cls}>
+        {icon}
+        {children}
+      </Link>
+    );
+  }
   return (
-    <button
-      type={type}
-      role="menuitem"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-start text-[13px] font-semibold transition-colors [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0',
-        tone === 'danger' && 'text-danger-600 hover:bg-danger-500/10',
-        tone === 'warning' && 'text-amber-600 hover:bg-amber-500/10',
-        tone === 'success' && 'text-emerald-700 hover:bg-emerald-500/10',
-        tone === 'default' && 'text-slate-700 hover:bg-surface-muted',
-      )}
-    >
+    <button type={type} role="menuitem" onClick={onClick} className={cls}>
       {icon}
       {children}
     </button>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { AlertCircle, Landmark, Search, Hash, RotateCcw } from 'lucide-react';
+import { AlertCircle, Landmark, Search, Hash, RotateCcw, Clock, CheckCircle2, Undo2 } from 'lucide-react';
+import { FigureCards } from '@/components/cockpit/cockpit';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -10,6 +11,7 @@ import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { DataTable, Th, Td, Tr } from '@/components/lists/list-kit';
 import { Pagination } from '@/components/ui/pagination';
 import {
   PremiumPageHero,
@@ -45,6 +47,9 @@ const STATUS_CHIP: Record<PaymentInstrumentStatus, string> = {
   REPLACED: 'bg-slate-500/10 text-slate-500',
   CANCELLED: 'bg-slate-500/10 text-slate-500',
 };
+
+const STRIP_TONE: Partial<Record<PaymentInstrumentStatus, 'amber' | 'blue' | 'green' | 'red'>> = { PENDING_CLEARANCE: 'amber', DEPOSITED: 'blue', CLEARED: 'green', BOUNCED: 'red' };
+const STRIP_ICON: Partial<Record<PaymentInstrumentStatus, React.ReactNode>> = { PENDING_CLEARANCE: <Clock />, DEPOSITED: <Landmark />, CLEARED: <CheckCircle2 />, BOUNCED: <Undo2 /> };
 
 const STATUS_DOT: Record<PaymentInstrumentStatus, string> = {
   PENDING_CLEARANCE: 'bg-amber-400',
@@ -99,14 +104,15 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
     return `/dashboard/cheques${s2 ? `?${s2}` : ''}`;
   };
   const cards = [
-    { key: 'ALL', label: m.statusAll, count: allRes.data?.meta.total, href: stripHref(), active: !status, dot: 'bg-brand-400' },
+    { key: 'ALL', label: m.statusAll, count: allRes.data?.meta.total, href: stripHref(), active: !status, tone: 'gold' as const, icon: <Landmark /> },
     ...STRIP.map((st, i) => ({
       key: st,
       label: m.statusLabels[st],
       count: stripRes[i]?.data?.meta.total,
       href: stripHref(st),
       active: status === st,
-      dot: STATUS_DOT[st],
+      tone: STRIP_TONE[st] ?? ('gray' as const),
+      icon: STRIP_ICON[st],
     })),
   ];
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -121,6 +127,21 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
           { label: m.breadcrumb },
         ]}
       />
+
+      <div data-testid="cheque-status-strip">
+        <FigureCards
+          cols={5}
+          figures={cards.map((c) => ({
+            label: c.label,
+            value: c.count ?? '—',
+            href: c.href,
+            active: c.active,
+            tone: c.tone,
+            icon: c.icon,
+            testId: `cheque-card-${c.key}`,
+          }))}
+        />
+      </div>
 
       <PremiumFilterBar method="get" action="/dashboard/cheques">
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="chq-status">
@@ -162,30 +183,6 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
         </div>
       </PremiumFilterBar>
 
-      <nav data-testid="cheque-status-strip" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {cards.map((c) => (
-          <Link
-            key={c.key}
-            href={c.href as never}
-            aria-current={c.active ? 'page' : undefined}
-            className={cn(
-              'group rounded-2xl border px-4 py-3.5 transition-colors',
-              c.active
-                ? 'border-brand-500/50 bg-gradient-to-br from-brand-500/[0.14] to-brand-700/[0.04]'
-                : 'border-hairline bg-surface hover:border-brand-500/30',
-            )}
-          >
-            <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
-              <span className={cn('h-2 w-2 rounded-full', c.dot)} />
-              {c.label}
-            </span>
-            <span className={cn('mt-1.5 block text-[26px] font-bold leading-none tabular-nums', c.active ? 'text-brand-700' : 'text-slate-900')}>
-              {c.count ?? '—'}
-            </span>
-          </Link>
-        ))}
-      </nav>
-
       <PremiumSectionCard
         icon={<Landmark />}
         title={list ? m.listTitle(list.meta.total) : m.title}
@@ -204,48 +201,47 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
             className="py-12"
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[860px]" data-testid="cheques-table">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+          <DataTable testId="cheques-table">
+              <thead>
                 <tr>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNumber}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBank}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDueDate}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCustomer}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colContract}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colAmount}</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
-                  <th className="text-end py-3 px-4 whitespace-nowrap">{m.colActions}</th>
+                  <Th>{m.colNumber}</Th>
+                  <Th>{m.colBank}</Th>
+                  <Th>{m.colDueDate}</Th>
+                  <Th>{m.colCustomer}</Th>
+                  <Th>{m.colContract}</Th>
+                  <Th>{m.colAmount}</Th>
+                  <Th>{m.colStatus}</Th>
+                  <Th>{m.colActions}</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody>
                 {list.data.map((pi) => {
                   // One cheque per installment today, so one deposit per cheque.
                   const d = pi.deposits[0];
                   const amount = pi.deposits.reduce((sum, x) => sum + Number(x.amount), 0);
                   return (
-                    <tr key={pi.id} className="hover:bg-brand-500/[0.04] transition-colors duration-100">
-                      <td className="px-3 py-3.5">
+                    <Tr key={pi.id}>
+                      <Td>
                         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-surface-muted px-2 py-1 font-mono text-[12px] font-bold text-slate-700" dir="ltr">
                           <Hash className="h-3 w-3 text-slate-400" />
                           {pi.chequeNumber ?? pi.referenceNumber ?? '—'}
                         </span>
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <span className="inline-flex items-center gap-2 whitespace-nowrap text-slate-700">
                           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-brand-700">
                             <Landmark className="h-3.5 w-3.5" />
                           </span>
                           {pi.drawerBankName ?? pi.bankName ?? '—'}
                         </span>
-                      </td>
-                      <td className="px-3 py-3.5 whitespace-nowrap">
+                      </Td>
+                      <Td>
                         <p className="tabular-nums text-slate-800">{pi.chequeDueDate ? formatDate(pi.chequeDueDate, locale) : '—'}</p>
                         {pi.status === 'PENDING_CLEARANCE' && pi.chequeDueDate && pi.chequeDueDate.slice(0, 10) <= todayIso && (
                           <p className="text-[11px] font-semibold text-amber-600">{m.dueNow}</p>
                         )}
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <PersonCell
                           name={d?.contract?.customer?.fullName ?? d?.reservation?.client?.fullName ?? '—'}
                           nameLink={
@@ -256,8 +252,8 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                                 : undefined
                           }
                         />
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         {d?.contract ? (
                           <CodeCell
                             href={`/dashboard/contracts/${d.contract.id}`}
@@ -276,11 +272,11 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         ) : (
                           '—'
                         )}
-                      </td>
-                      <td className="px-3 py-3.5 whitespace-nowrap tabular-nums font-bold text-slate-900">
+                      </Td>
+                      <Td>
                         {pi.deposits.length > 0 ? formatCurrency(amount, currency, locale) : '—'}
-                      </td>
-                      <td className="px-3 py-3.5">
+                      </Td>
+                      <Td>
                         <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11.5px] font-semibold', STATUS_CHIP[pi.status])}>
                           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[pi.status])} />
                           {m.statusLabels[pi.status]}
@@ -288,21 +284,20 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
                         {pi.status === 'BOUNCED' && pi.bounceReason && (
                           <p className="mt-1 max-w-[180px] truncate text-[11px] text-slate-500" title={pi.bounceReason}>{pi.bounceReason}</p>
                         )}
-                      </td>
-                      <td className="px-3 py-3.5 text-end">
+                      </Td>
+                      <Td>
                         <ChequeActions
                           id={pi.id}
                           status={pi.status}
                           canBounce={session?.role === 'ADMIN'}
                           locale={locale}
                         />
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+          </DataTable>
         )}
       </PremiumSectionCard>
 

@@ -50,7 +50,7 @@ export function PremiumSectionCard({
   return (
     <section
       className={cn(
-        'bg-surface border border-hairline rounded-card overflow-hidden',
+        'rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08),0_30px_60px_-30px_rgb(11_18_32/0.12)] dark:shadow-none overflow-hidden',
         className,
       )}
     >

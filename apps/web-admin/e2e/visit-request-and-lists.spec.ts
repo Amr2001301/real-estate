@@ -46,7 +46,7 @@ test('cheques page: status cards with counts', async ({ page }) => {
   const strip = page.getByTestId('cheque-status-strip');
   await expect(strip.getByRole('link')).toHaveCount(5);
   const all = strip.getByRole('link').first();
-  await expect(all).toHaveAttribute('aria-current', 'page');
+  await expect(all).toHaveAttribute('aria-current', 'true');
   await expect(all).toContainText(/\d/);
 });
 

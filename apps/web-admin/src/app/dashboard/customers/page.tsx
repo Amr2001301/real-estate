@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import {
   UserCheck,
   AlertCircle,
@@ -324,22 +325,16 @@ export default async function CustomersPage({
                       {u.lastLoginAt ? formatDate(u.lastLoginAt, locale) : '—'}
                     </td>
                     <td className="py-3 ps-4 pe-5">
-                      <div className="flex items-center gap-1">
-                        <Link href={`/dashboard/contracts?customerId=${u.id}` as never}>
-                          <IconButton label={m.actionBtns.contracts} variant="outline" size="sm">
-                            <FileText />
-                          </IconButton>
-                        </Link>
-                        <Link href={`/dashboard/maintenance?customerId=${u.id}` as never}>
-                          <IconButton label={m.actionBtns.maintenance} variant="outline" size="sm">
-                            <Wrench />
-                          </IconButton>
-                        </Link>
+                      <div className="flex items-center gap-1.5">
                         <Link href={`/dashboard/customers/${u.id}` as never}>
                           <IconButton label={m.actionBtns.view} variant="outline" size="sm">
                             <Eye />
                           </IconButton>
                         </Link>
+                        <RowMenu label={locale === 'en' ? 'More actions' : 'إجراءات أخرى'}>
+                          <MenuItem href={`/dashboard/contracts?customerId=${u.id}`} icon={<FileText />}>{m.actionBtns.contracts}</MenuItem>
+                          <MenuItem href={`/dashboard/maintenance?customerId=${u.id}`} icon={<Wrench />}>{m.actionBtns.maintenance}</MenuItem>
+                        </RowMenu>
                       </div>
                     </td>
                   </tr>
