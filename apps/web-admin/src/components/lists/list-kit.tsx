@@ -30,7 +30,7 @@ export function ListTableCard({
   return (
     <section
       data-testid={testId}
-      className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-hairline bg-surface lg:flex-1 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08),0_30px_60px_-30px_rgb(11_18_32/0.12)] dark:shadow-none"
+      className="flex flex-col overflow-clip rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08),0_30px_60px_-30px_rgb(11_18_32/0.12)] dark:shadow-none"
     >
       <header className="flex shrink-0 items-start justify-between gap-3 px-6 pb-[18px] pt-[22px]">
         <div className="min-w-0">
@@ -46,18 +46,13 @@ export function ListTableCard({
 }
 
 /**
- * The page: on large screens it fills the viewport, so only the table scrolls and the pager stays put.
- * `minHeight` keeps the table usable on short screens (the page then scrolls instead of squeezing it).
+ * The page. It scrolls as a whole — the table is never a box with its own
+ * hidden up-and-down scroll, and the pager comes right after the last row,
+ * where nobody misses it. `minHeight` is accepted for older callers and no
+ * longer used.
  */
-export function ListPage({ children, minHeight = 900 }: { children: ReactNode; minHeight?: number }) {
-  return (
-    <div
-      className="flex flex-col gap-5 lg:h-[max(calc(100dvh-76px-4rem),var(--list-min))]"
-      style={{ ['--list-min' as string]: `${minHeight}px` }}
-    >
-      {children}
-    </div>
-  );
+export function ListPage({ children }: { children: ReactNode; minHeight?: number }) {
+  return <div className="flex flex-col gap-5">{children}</div>;
 }
 
 /** Underline tabs with a count chip (the visits page). */
@@ -97,7 +92,10 @@ export function ListTabs({ items, activeHref }: { items: { label: string; href: 
 
 export function DataTable({ children, testId }: { children: ReactNode; testId?: string }) {
   return (
-    <div className="overflow-auto lg:min-h-0 lg:flex-1">
+    // Sideways only: a table wider than its card scrolls left and right with a
+    // visible bar under it. It never gets a height of its own, so it never
+    // scrolls up and down inside the card — the page does.
+    <div className="overflow-x-auto scrollbar-thin">
       <table data-testid={testId} className="list-table w-full border-collapse text-[13.5px]">
         {children}
       </table>
@@ -110,7 +108,7 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
     <th
       scope="col"
       className={cn(
-        'sticky top-0 z-10 whitespace-nowrap border-y border-hairline bg-[#F4EFE4] px-2 py-3 dark:bg-white/[0.05] text-start text-[12px] font-semibold tracking-wide text-slate-500 first:ps-6 last:pe-6',
+        'sticky top-0 z-10 whitespace-nowrap border-y border-hairline bg-[#F4EFE4] px-2 py-3 last:end-0 last:z-20 text-start text-[12px] font-semibold tracking-wide text-slate-500 first:ps-6 last:pe-6',
         className,
       )}
     >
@@ -129,7 +127,9 @@ export function Tr({ children, className, testId }: { children: ReactNode; class
 
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
   return (
-    <td className={cn('whitespace-nowrap border-b border-hairline px-2 py-3 align-middle first:ps-6 last:pe-6', className)}>
+    // The last column (the row's actions) stays pinned to the end edge, so a
+    // table wider than its card never hides its buttons behind a sideways scroll.
+    <td className={cn('whitespace-nowrap border-b border-hairline px-2 py-3 align-middle first:ps-6 last:pe-6 last:sticky last:end-0 last:z-[1] last:bg-surface rtl:last:shadow-[10px_0_14px_-12px_rgb(11_18_32/0.28)] ltr:last:shadow-[-10px_0_14px_-12px_rgb(11_18_32/0.28)]', className)}>
       {children}
     </td>
   );
