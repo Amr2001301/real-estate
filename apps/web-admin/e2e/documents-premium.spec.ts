@@ -9,12 +9,14 @@ import { gotoReady } from './helpers/pickers';
  */
 test.use({ storageState: ADMIN_STORAGE });
 
-test('documents list is rows, newest first by default', async ({ page }) => {
+test('documents list is a table with column headers, newest first by default', async ({ page }) => {
   await gotoReady(page, '/dashboard/documents');
   await expect(page.locator('select[name="sortOrder"]')).toHaveValue('desc');
   const rows = page.getByTestId('document-row');
   if ((await rows.count()) === 0) test.skip(true, 'no documents seeded');
-  await expect(page.getByTestId('documents').locator('table')).toHaveCount(0);
+  // The same table look as the other lists: real column headers, one table row per document.
+  await expect(page.getByTestId('documents').locator('table thead th').first()).toBeVisible();
+  await expect(rows.first()).toHaveJSProperty('tagName', 'TR');
 });
 
 test('document detail leads with the file and hides raw ids', async ({ page }) => {
