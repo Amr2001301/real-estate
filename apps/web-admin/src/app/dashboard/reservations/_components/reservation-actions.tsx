@@ -25,7 +25,7 @@ export function ReservationActions({ reservation, canDecide = false, locale = 'a
   const m = uiT(locale).pages.reservationDetailPage;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [approvePending, startApprove] = useTransition();
+  const [, startApprove] = useTransition();
 
   const isPending = reservation.status === 'PENDING';
   const isApproved = reservation.status === 'APPROVED';
@@ -40,36 +40,24 @@ export function ReservationActions({ reservation, canDecide = false, locale = 'a
 
   return (
     <div className="flex items-center justify-end gap-2">
-      {/* Approve / reject as round buttons; cancel sits in the menu. */}
-      {isPending && canDecide && (
-        <>
-          <button
-            type="button"
-            onClick={handleApprove}
-            disabled={approvePending}
-            aria-label={m.listApproveShort}
-            title={m.listApproveShort}
-            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-emerald-500/12 text-emerald-700 transition-colors hover:bg-emerald-500/20 disabled:opacity-60"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setRejectOpen(true)}
-            aria-label={m.listRejectLabel}
-            title={m.listRejectLabel}
-            className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-rose-500/12 text-rose-700 transition-colors hover:bg-rose-500/20"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </>
-      )}
-
-      {canCancel && (
+      {/* Every decision is in the menu — approve, reject, cancel — so a row stays a row. */}
+      {(canCancel || (isPending && canDecide)) && (
         <RowMenu label={m.listMoreLabel}>
-          <MenuItem icon={<Ban />} onClick={() => setCancelOpen(true)}>
-            {m.listCancelLabel}
-          </MenuItem>
+          {isPending && canDecide && (
+            <>
+              <MenuItem icon={<CheckCircle2 />} tone="success" onClick={handleApprove}>
+                {m.listApproveShort}
+              </MenuItem>
+              <MenuItem icon={<X />} tone="danger" onClick={() => setRejectOpen(true)}>
+                {m.listRejectLabel}
+              </MenuItem>
+            </>
+          )}
+          {canCancel && (
+            <MenuItem icon={<Ban />} onClick={() => setCancelOpen(true)}>
+              {m.listCancelLabel}
+            </MenuItem>
+          )}
         </RowMenu>
       )}
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Eye, CalendarPlus, X, Ban } from 'lucide-react';
 import type { VisitRequest, VisitRequestStatus } from '@/lib/types';
 import { ScheduleModal } from './schedule-modal';
-import { RowMenu, MenuItem, PrimaryAction } from '@/components/premium/row-menu';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import { updateRequestStatusAction } from '../actions';
 import { uiT } from '@/messages/ui';
 import type { Locale } from '@/lib/locale';
@@ -29,10 +29,10 @@ export function RequestActions({ request, salesOptions, locale = 'ar' }: Props) 
     <div className="flex items-center justify-end gap-2">
       {!isFinal && (
         <>
-          <PrimaryAction icon={<CalendarPlus />} onClick={() => setScheduleOpen(true)}>
-            {m.scheduleBtn}
-          </PrimaryAction>
           <RowMenu label={m.moreActions}>
+            <MenuItem icon={<CalendarPlus />} tone="warning" onClick={() => setScheduleOpen(true)}>
+              {m.scheduleBtn}
+            </MenuItem>
             <form action={updateRequestStatusAction.bind(null, request.id)}>
               <input type="hidden" name="status" value="REJECTED" />
               <MenuItem type="submit" icon={<X />} tone="danger">{m.rejectBtn}</MenuItem>

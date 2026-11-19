@@ -244,16 +244,14 @@ export default async function VisitsPage({
           {requestsData.length === 0 ? (
             <PremiumEmptyState icon={<CalendarClock />} title={m.empty.noRequests} />
           ) : (
-            <DataTable testId="visit-rows">
+            <DataTable testId="visit-rows" widths={[14, 21, 25, 17, 14, 9]}>
               <thead>
                 <tr>
                   <Th>{locale === 'ar' ? 'رقم الطلب' : 'Request'}</Th>
                   <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
                   <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
                   <Th>{locale === 'ar' ? 'التاريخ المفضل' : 'Preferred date'}</Th>
-                  <Th>{locale === 'ar' ? 'المصدر' : 'Source'}</Th>
                   <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
-                  <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -267,7 +265,7 @@ export default async function VisitsPage({
                   );
                   const href = `/dashboard/visits/requests/${r.id}`;
                   return (
-                    <Tr key={r.id} testId="visit-row">
+                    <Tr key={r.id} testId="visit-row" waiting={r.requestStatus === null || r.requestStatus === 'NEW' || r.requestStatus === 'UNDER_REVIEW'}>
                       <Td>
                         <Link href={href as never} data-testid="list-code" className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
                           {r.requestNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
@@ -288,9 +286,12 @@ export default async function VisitsPage({
                         {/* Date-only: stored as midnight UTC, so read in UTC. */}
                         <DateText>{r.preferredDate ? formatDate(r.preferredDate, locale, 'UTC') : '—'}</DateText>
                         {r.preferredTime && <span className="ms-1.5 text-[11.5px] tabular-nums text-slate-400" dir="ltr">{r.preferredTime}</span>}
-                      </Td>
-                      <Td>
-                        <span className="text-[12.5px] text-slate-700">{r.source ? SOURCE_LABEL[r.source] ?? r.source : '—'}</span>
+                        {/* Where it came from — a small line under the date, not a column. */}
+                        {r.source && (
+                          <span className="mt-1 block text-[11.5px] text-slate-500">
+                            {locale === 'ar' ? 'من' : 'via'} {SOURCE_LABEL[r.source] ?? r.source}
+                          </span>
+                        )}
                       </Td>
                       <Td>
                         {r.requestStatus ? (
@@ -298,9 +299,6 @@ export default async function VisitsPage({
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}
-                      </Td>
-                      <Td>
-                        <DateText>{formatDate(r.createdAt, locale)}</DateText>
                       </Td>
                       <Td>
                         <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
