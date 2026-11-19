@@ -22,6 +22,7 @@ import { getLocale } from '@/lib/locale';
 import { cn } from '@/lib/cn';
 import { uiT } from '@/messages/ui';
 import { portalSharedT } from '@/messages/portal/shared';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { PremiumFilterBar, PremiumFilterField, PremiumPageHero, PremiumRangeField } from '@/components/premium';
 import { Amount, Avatar, FigureBar } from '@/components/cockpit/cockpit';
@@ -41,6 +42,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 interface Search {
+  q?: string;
   from?: string;
   to?: string;
   projectId?: string;
@@ -170,6 +172,9 @@ export default async function BrokerPerformancePage({
       />
 
       <PremiumFilterBar method="get" action={`/dashboard/brokers/${id}/performance`}>
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="bp-q">
+          <Input id="bp-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Project or agent name…' : 'ابحث باسم المشروع أو الوكيل…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={locale === 'en' ? 'Project' : 'المشروع'} htmlFor="bp-project">
           <Select id="bp-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
             <option value="">{m.filterAllProjects}</option>
@@ -283,7 +288,7 @@ export default async function BrokerPerformancePage({
                 <p className="mt-1 text-[12px] text-slate-500">{m.noProjectsDesc}</p>
               </li>
             )}
-            {report.projectBreakdown.map((p) => (
+            {(sp.q?.trim() ? report.projectBreakdown.filter((p) => (p.projectName ? tx(p.projectName) : '').toLowerCase().includes(sp.q!.trim().toLowerCase())) : report.projectBreakdown).map((p) => (
               <li key={p.projectId} className="grid grid-cols-[minmax(0,1fr)_60px_120px_120px] items-center gap-4 px-6 py-4">
                 <div className="min-w-0">
                   <p className="truncate text-[14px] font-bold text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
@@ -312,7 +317,7 @@ export default async function BrokerPerformancePage({
             {report.agentBreakdown.length === 0 && (
               <li className="px-6 py-8 text-center text-[13.5px] font-semibold text-slate-700">{m.noAgentsTitle}</li>
             )}
-            {report.agentBreakdown.map((a) => (
+            {(sp.q?.trim() ? report.agentBreakdown.filter((a) => a.fullName.toLowerCase().includes(sp.q!.trim().toLowerCase())) : report.agentBreakdown).map((a) => (
               <li key={a.brokerAgentId} className="grid grid-cols-[36px_minmax(0,1fr)_50px_60px_120px] items-center gap-4 px-6 py-4">
                 <Avatar name={a.fullName} />
                 <div className="min-w-0">

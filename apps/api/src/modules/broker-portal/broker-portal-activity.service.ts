@@ -94,7 +94,7 @@ export class BrokerPortalActivityService {
     // it. A non-manager follows their own leads only.
     const viewer = await resolveBrokerViewer(this.prisma, scope);
     const wantsLeadSource = this.sourceForFilter(query) !== 'broker-only';
-    const wantsBrokerSource = this.sourceForFilter(query) !== 'lead-only' && viewer.canViewCommissions;
+    const wantsBrokerSource = this.sourceForFilter(query) !== 'lead-only' && viewer.canViewCommissions && !query.q?.trim();
 
     // Over-fetch (page * pageSize) from each source, merge, slice. Cheap
     // enough at portal scale; correctness > optimality here.
@@ -156,9 +156,21 @@ export class BrokerPortalActivityService {
       // No matching raw types — short-circuit by filtering on a never-matching id.
       return { id: '__none__' };
     }
+    const q = query.q?.trim();
     return {
       type: { in: rawTypes },
-      lead: { brokerId: scope.brokerId, ...agentFilter(viewer) },
+      lead: {
+        brokerId: scope.brokerId,
+        ...agentFilter(viewer),
+        ...(q
+          ? {
+              OR: [
+                { fullName: { contains: q, mode: 'insensitive' as const } },
+                { phone: { contains: q } },
+              ],
+            }
+          : {}),
+      },
     };
   }
 

@@ -316,7 +316,7 @@ export function ListFilterField({
 }) {
   if (search) {
     return (
-      <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[190px] flex-1 basis-[190px]')}>
+      <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[190px] flex-[2] basis-[200px]')}>
         <span className="text-[11px] font-semibold text-slate-500">{label}</span>
         <span className="flex items-center gap-2">
           <Search className="h-[15px] w-[15px] shrink-0 text-slate-400" />
@@ -326,7 +326,7 @@ export function ListFilterField({
     );
   }
   return (
-    <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[138px]')}>
+    <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[124px] flex-1 basis-[124px]')}>
       <span className="text-[11px] font-semibold text-slate-500">{label}</span>
       <span className="relative flex items-center">
         {children}

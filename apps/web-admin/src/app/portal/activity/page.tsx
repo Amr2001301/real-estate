@@ -28,6 +28,7 @@ import { tx, formatTime, intlLocale, DEFAULT_TIME_ZONE } from '@/lib/format';
 import { getLocale, type Locale } from '@/lib/locale';
 import { portalDashboardT } from '@/messages/portal/dashboard';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -43,6 +44,7 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   type?: string;
   entityType?: string;
 }
@@ -140,6 +142,7 @@ export default async function PortalActivityPage({
     page: String(page),
     pageSize: String(PAGE_SIZE),
   });
+  if (sp.q) qs.set('q', sp.q);
   if (sp.type) qs.set('type', sp.type);
   if (sp.entityType) qs.set('entityType', sp.entityType);
 
@@ -172,7 +175,7 @@ export default async function PortalActivityPage({
         trailing={
           <div className="flex items-center gap-1.5 ms-auto shrink-0">
             <Button type="submit" variant="primary" size="sm">{t.filter}</Button>
-            {(sp.type || sp.entityType) && (
+            {(sp.q || sp.type || sp.entityType) && (
               <Link href="/portal/activity">
                 <Button type="button" variant="ghost" size="sm">{m.common.clear}</Button>
               </Link>
@@ -180,6 +183,9 @@ export default async function PortalActivityPage({
           </div>
         }
       >
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="pa-q">
+          <Input id="pa-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Lead name or phone…' : 'ابحث باسم العميل أو هاتفه…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={t.eventType}>
           <Select
             name="type"
@@ -315,7 +321,7 @@ export default async function PortalActivityPage({
             total={paged.meta.total}
             basePath="/portal/activity"
             locale={locale}
-            params={{ type: sp.type, entityType: sp.entityType }}
+            params={{ q: sp.q, type: sp.type, entityType: sp.entityType }}
           />
         )}
       </PremiumSectionCard>

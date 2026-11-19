@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { PremiumFilterBar, PremiumFilterField, PremiumFilterAdvancedPanel, PremiumFilterAdvancedToggle } from '@/components/premium/filter-bar';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -45,7 +44,6 @@ export function AuditFilterBar({
   );
 
   const hasAdvanced = !!(entityType || actorId || from || to);
-  const hasAny      = !!(q || action || entityType || actorId || from || to);
 
   function buildQuery(): string {
     const p = new URLSearchParams();
@@ -64,10 +62,6 @@ export function AuditFilterBar({
     router.push(`/dashboard/audit-logs${buildQuery()}`);
   }
 
-  function handleClear() {
-    setQ(''); setAction(''); setEntityType(''); setActorId(''); setFrom(''); setTo('');
-    router.push('/dashboard/audit-logs');
-  }
 
   return (
     <PremiumFilterBar
@@ -75,10 +69,6 @@ export function AuditFilterBar({
       onSubmit={handleSubmit}
       trailing={
         <>
-          <Button type="submit" variant="primary" size="sm">{m.applyBtn}</Button>
-          {hasAny && (
-            <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{m.clearBtn}</Button>
-          )}
           <PremiumFilterAdvancedToggle
             onClick={() => setShowAdvanced((v) => !v)}
             open={showAdvanced}

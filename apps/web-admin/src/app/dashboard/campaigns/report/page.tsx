@@ -8,6 +8,7 @@ import { currencySymbol, getCompanyTimeZone, getReportsCurrency, todayIn } from 
 import { projectOptions } from '@/lib/options';
 import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { PremiumBars, PremiumFilterBar, PremiumFilterField, PremiumMetricStrip, PremiumPageHero, PremiumPanel, PremiumRangeField } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { cn } from '@/lib/cn';
@@ -19,6 +20,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 interface Search {
+  q?: string;
   from?: string;
   to?: string;
   channel?: string;
@@ -192,6 +194,9 @@ export default async function CampaignReportPage({ searchParams }: { searchParam
         </div>
         <div className="mt-3">
           <PremiumFilterBar method="get" action="/dashboard/campaigns/report">
+            <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="cr-q">
+              <Input id="cr-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Campaign name…' : 'ابحث باسم الحملة…'} />
+            </PremiumFilterField>
             <PremiumRangeField
               label={`${m.filters.from} → ${m.filters.to}`}
               from={{ id: 'from', value: from, label: m.filters.from }}
@@ -229,7 +234,7 @@ export default async function CampaignReportPage({ searchParams }: { searchParam
               <table className="w-full min-w-[860px] text-[13px]">
                 {head(m.cols.campaign)}
                 <tbody className="divide-y divide-hairline">
-                  {r.campaigns.map((c, i) => (
+                  {(sp.q?.trim() ? r.campaigns.filter((c) => c.name.toLowerCase().includes(sp.q!.trim().toLowerCase())) : r.campaigns).map((c, i) => (
                     <tr key={c.id} data-testid="report-campaign-row" className="hover:bg-surface-muted/40">
                       <td className="px-3 py-3">
                         <Link href={`/dashboard/campaigns/${c.id}` as never} className="flex min-w-0 items-center gap-3">
