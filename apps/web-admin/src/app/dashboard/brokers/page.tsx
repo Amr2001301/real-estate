@@ -33,6 +33,7 @@ import { FigureBar, Avatar } from '@/components/cockpit/cockpit';
 import { getLocale } from '@/lib/locale';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import { DataTable, Th, Td, Tr } from '@/components/lists/list-kit';
 
 export const dynamic = 'force-dynamic';
@@ -264,22 +265,19 @@ export default async function BrokersPage({
                     </Td>
                     <Td>
                       <div className="flex items-center gap-1.5">
-                        {[
-                          { href: `/dashboard/brokers/${b.id}`, label: m.actionBtns.view, icon: <Eye /> },
-                          { href: `/dashboard/brokers/${b.id}/edit`, label: m.actionBtns.edit, icon: <Pencil /> },
-                          { href: `/dashboard/brokers/${b.id}/users`, label: m.actionBtns.staff, icon: <UsersIcon /> },
-                          { href: `/dashboard/brokers/${b.id}/access`, label: m.actionBtns.access, icon: <ShieldCheck /> },
-                        ].map((a) => (
-                          <Link
-                            key={a.href}
-                            href={a.href as never}
-                            aria-label={a.label}
-                            title={a.label}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 [&_svg]:h-4 [&_svg]:w-4"
-                          >
-                            {a.icon}
-                          </Link>
-                        ))}
+                        <Link
+                          href={`/dashboard/brokers/${b.id}` as never}
+                          aria-label={m.actionBtns.view}
+                          title={m.actionBtns.view}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-[#C9A24E]/60 hover:text-slate-900 [&_svg]:h-4 [&_svg]:w-4"
+                        >
+                          <Eye />
+                        </Link>
+                        <RowMenu label={locale === 'en' ? 'More actions' : 'إجراءات أخرى'}>
+                          <MenuItem href={`/dashboard/brokers/${b.id}/edit`} icon={<Pencil />}>{m.actionBtns.edit}</MenuItem>
+                          <MenuItem href={`/dashboard/brokers/${b.id}/users`} icon={<UsersIcon />}>{m.actionBtns.staff}</MenuItem>
+                          <MenuItem href={`/dashboard/brokers/${b.id}/access`} icon={<ShieldCheck />}>{m.actionBtns.access}</MenuItem>
+                        </RowMenu>
                       </div>
                     </Td>
                   </Tr>

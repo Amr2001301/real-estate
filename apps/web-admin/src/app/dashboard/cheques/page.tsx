@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { AlertCircle, Landmark, Search, Hash, RotateCcw } from 'lucide-react';
+import { AlertCircle, Landmark, Search, Hash, RotateCcw, Clock, CheckCircle2, Undo2 } from 'lucide-react';
+import { FigureCards } from '@/components/cockpit/cockpit';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { getLocale } from '@/lib/locale';
@@ -46,6 +47,9 @@ const STATUS_CHIP: Record<PaymentInstrumentStatus, string> = {
   REPLACED: 'bg-slate-500/10 text-slate-500',
   CANCELLED: 'bg-slate-500/10 text-slate-500',
 };
+
+const STRIP_TONE: Partial<Record<PaymentInstrumentStatus, 'amber' | 'blue' | 'green' | 'red'>> = { PENDING_CLEARANCE: 'amber', DEPOSITED: 'blue', CLEARED: 'green', BOUNCED: 'red' };
+const STRIP_ICON: Partial<Record<PaymentInstrumentStatus, React.ReactNode>> = { PENDING_CLEARANCE: <Clock />, DEPOSITED: <Landmark />, CLEARED: <CheckCircle2 />, BOUNCED: <Undo2 /> };
 
 const STATUS_DOT: Record<PaymentInstrumentStatus, string> = {
   PENDING_CLEARANCE: 'bg-amber-400',
@@ -100,14 +104,15 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
     return `/dashboard/cheques${s2 ? `?${s2}` : ''}`;
   };
   const cards = [
-    { key: 'ALL', label: m.statusAll, count: allRes.data?.meta.total, href: stripHref(), active: !status, dot: 'bg-brand-400' },
+    { key: 'ALL', label: m.statusAll, count: allRes.data?.meta.total, href: stripHref(), active: !status, tone: 'gold' as const, icon: <Landmark /> },
     ...STRIP.map((st, i) => ({
       key: st,
       label: m.statusLabels[st],
       count: stripRes[i]?.data?.meta.total,
       href: stripHref(st),
       active: status === st,
-      dot: STATUS_DOT[st],
+      tone: STRIP_TONE[st] ?? ('gray' as const),
+      icon: STRIP_ICON[st],
     })),
   ];
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -122,6 +127,21 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
           { label: m.breadcrumb },
         ]}
       />
+
+      <div data-testid="cheque-status-strip">
+        <FigureCards
+          cols={5}
+          figures={cards.map((c) => ({
+            label: c.label,
+            value: c.count ?? '—',
+            href: c.href,
+            active: c.active,
+            tone: c.tone,
+            icon: c.icon,
+            testId: `cheque-card-${c.key}`,
+          }))}
+        />
+      </div>
 
       <PremiumFilterBar method="get" action="/dashboard/cheques">
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="chq-status">
@@ -162,30 +182,6 @@ export default async function ChequesPage({ searchParams }: { searchParams: Sear
           )}
         </div>
       </PremiumFilterBar>
-
-      <nav data-testid="cheque-status-strip" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {cards.map((c) => (
-          <Link
-            key={c.key}
-            href={c.href as never}
-            aria-current={c.active ? 'page' : undefined}
-            className={cn(
-              'group rounded-2xl border px-4 py-3.5 transition-colors',
-              c.active
-                ? 'border-brand-500/50 bg-gradient-to-br from-brand-500/[0.14] to-brand-700/[0.04]'
-                : 'border-hairline bg-surface hover:border-brand-500/30',
-            )}
-          >
-            <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500">
-              <span className={cn('h-2 w-2 rounded-full', c.dot)} />
-              {c.label}
-            </span>
-            <span className={cn('mt-1.5 block text-[26px] font-bold leading-none tabular-nums', c.active ? 'text-brand-700' : 'text-slate-900')}>
-              {c.count ?? '—'}
-            </span>
-          </Link>
-        ))}
-      </nav>
 
       <PremiumSectionCard
         icon={<Landmark />}

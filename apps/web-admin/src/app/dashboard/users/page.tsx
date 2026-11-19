@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
+import { RowMenu, MenuItem } from '@/components/premium/row-menu';
 import { KeyRound, MonitorSmartphone, Plus, Users, UserCheck, UserX, Shield, Search } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { staffOptions } from '@/lib/options';
@@ -455,32 +456,18 @@ export default async function UsersPage({
                             <KeyRound className="h-3.5 w-3.5" />
                             {m.actionBtns.permissions}
                           </Link>
-                          <Link
-                            href={`/dashboard/users/${u.id}/sessions` as never}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-hairline px-3 text-[12px] font-semibold text-slate-700 transition-colors hover:border-brand-500/40 hover:text-brand-700"
-                          >
-                            <MonitorSmartphone className="h-3.5 w-3.5" />
-                            {m.actionBtns.devices}
-                          </Link>
-                          {u.active ? (
-                            <form action={deactivateAction.bind(null, u.id)}>
-                              <button
-                                type="submit"
-                                className="inline-flex h-8 items-center rounded-full px-3 text-[12px] font-semibold text-danger-600 transition-colors hover:bg-danger-500/10"
-                              >
-                                {m.actionBtns.deactivate}
-                              </button>
-                            </form>
-                          ) : (
-                            <form action={activateAction.bind(null, u.id)}>
-                              <button
-                                type="submit"
-                                className="inline-flex h-8 items-center rounded-full border border-emerald-500/30 px-3 text-[12px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/10"
-                              >
-                                {m.actionBtns.activate}
-                              </button>
-                            </form>
-                          )}
+                          <RowMenu label={locale === 'en' ? 'More actions' : 'إجراءات أخرى'}>
+                            <MenuItem href={`/dashboard/users/${u.id}/sessions`} icon={<MonitorSmartphone />}>{m.actionBtns.devices}</MenuItem>
+                            {u.active ? (
+                              <form action={deactivateAction.bind(null, u.id)}>
+                                <MenuItem type="submit" icon={<UserX />} tone="danger">{m.actionBtns.deactivate}</MenuItem>
+                              </form>
+                            ) : (
+                              <form action={activateAction.bind(null, u.id)}>
+                                <MenuItem type="submit" icon={<UserCheck />} tone="success">{m.actionBtns.activate}</MenuItem>
+                              </form>
+                            )}
+                          </RowMenu>
                         </div>
                       </td>
                     </tr>
