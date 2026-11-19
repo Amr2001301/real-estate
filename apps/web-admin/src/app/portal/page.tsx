@@ -144,7 +144,7 @@ function brokerMetrics(perf: PerfSummary | undefined, symbol: string | undefined
       label: k.payoutRate,
       value: payoutRate !== null ? payoutRate : '—',
       unit: payoutRate !== null ? '%' : '',
-      ring: payoutRate ?? undefined,
+      bar: payoutRate ?? undefined,
       trend: payoutRate === null ? undefined : payoutRate >= 80 ? k.payoutAlmostFull : payoutRate >= 50 ? k.payoutPartial : k.payoutProcessing,
       tone: payoutRate === null ? undefined : payoutRate >= 80 ? 'success' : 'warning',
     },

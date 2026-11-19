@@ -125,15 +125,27 @@ export interface HeroMetric {
   value: ReactNode;
   unit?: string;
   sub?: ReactNode;
+  /** A short status under the figure, as a coloured chip. */
   trend?: string;
-  tone?: 'success' | 'warning' | 'danger';
-  ring?: number;
+  tone?: 'success' | 'warning' | 'danger' | 'neutral';
+  /** 0–100: a thin bar under the figure (a share or a rate). */
+  bar?: number;
+  /** A caption beside the bar, when there is no chip. */
+  barLabel?: string;
 }
 
 const TREND: Record<NonNullable<HeroMetric['tone']>, string> = {
-  success: 'text-[#7DD3A8]',
-  warning: 'text-[#F1CB7A]',
-  danger: 'text-[#F5A3A3]',
+  success: 'bg-[#7DD3A8]/[0.12] text-[#7DD3A8]',
+  warning: 'bg-[#F1CB7A]/[0.12] text-[#F1CB7A]',
+  danger: 'bg-[#F5A3A3]/[0.12] text-[#F5A3A3]',
+  neutral: 'bg-white/[0.08] text-[#F7F3EA]/75',
+};
+
+const BAR: Record<NonNullable<HeroMetric['tone']>, string> = {
+  success: 'bg-[#7DD3A8]',
+  warning: 'bg-[#F1CB7A]',
+  danger: 'bg-[#F5A3A3]',
+  neutral: 'bg-[linear-gradient(90deg,#EAD5A3,#C8A24B)]',
 };
 
 /** The greeting over a photo, the actions, and the money figures on a glass strip. */
@@ -182,23 +194,34 @@ export function HeroV2({
         data-testid="metric-strip"
         className="relative m-4 mt-7 grid grid-cols-2 gap-y-5 rounded-[22px] border border-white/[0.12] bg-[#0B1220]/45 py-5 backdrop-blur-xl sm:m-[18px] lg:grid-cols-5"
       >
+        {/* Every figure has the same four rows — label, figure, one line, a
+            bar or chip — so the columns line up with nothing empty under them. */}
         {metrics.map((m, i) => (
-          <div key={i} className={cn('min-w-0 px-6', i > 0 && 'lg:border-s lg:border-white/[0.12]')}>
-            <div className="flex items-center gap-3.5">
-              {m.ring !== undefined && <Ring pct={m.ring} light />}
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-[#F7F3EA]/75">{m.label}</p>
-                <p className="mt-2.5 flex items-baseline gap-1.5">
-                  <span dir="ltr" className="num text-[30px] font-semibold leading-none tracking-[-0.03em] text-[#F7F3EA]">
-                    {m.value}
-                    {m.unit === '%' && <span className="text-[18px] text-[#F7F3EA]/80">%</span>}
+          <div key={i} data-testid="hero-metric" className={cn('flex min-w-0 flex-col px-6', i > 0 && 'lg:border-s lg:border-white/[0.12]')}>
+            <p className="truncate text-[13px] text-[#F7F3EA]/75">{m.label}</p>
+            <p className="mt-2.5 flex items-baseline gap-1.5">
+              <span dir="ltr" className="num text-[30px] font-semibold leading-none tracking-[-0.03em] text-[#F7F3EA]">
+                {m.value}
+                {m.unit === '%' && <span className="text-[18px] text-[#F7F3EA]/80">%</span>}
+              </span>
+              {m.unit && m.unit !== '%' && <span className="text-[13px] text-[#F7F3EA]/70">{m.unit}</span>}
+            </p>
+            {m.sub && <p className="mt-1.5 truncate text-[12px] text-[#F7F3EA]/70">{m.sub}</p>}
+            {(m.bar !== undefined || m.trend) && (
+              <div className="mt-auto flex min-h-[24px] items-center gap-2.5 pt-3.5">
+                {m.bar !== undefined && (
+                  <span aria-hidden className="h-[5px] min-w-[40px] flex-1 overflow-hidden rounded-full bg-white/[0.12]">
+                    <span className={cn('block h-full rounded-full', BAR[m.tone ?? 'neutral'])} style={{ width: `${Math.max(0, Math.min(100, m.bar))}%` }} />
                   </span>
-                  {m.unit && m.unit !== '%' && <span className="text-[13px] text-[#F7F3EA]/70">{m.unit}</span>}
-                </p>
-                {m.sub && <p className="mt-1.5 text-[12px] leading-relaxed text-[#F7F3EA]/70">{m.sub}</p>}
-                {m.trend && <p className={cn('mt-1.5 text-[12px] font-semibold', TREND[m.tone ?? 'success'])}>{m.trend}</p>}
+                )}
+                {m.barLabel && !m.trend && <span className="whitespace-nowrap text-[11.5px] text-[#F7F3EA]/70">{m.barLabel}</span>}
+                {m.trend && (
+                  <span data-testid="hero-metric-chip" className={cn('whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-semibold', TREND[m.tone ?? 'success'])}>
+                    {m.trend}
+                  </span>
+                )}
               </div>
-            </div>
+            )}
           </div>
         ))}
       </div>

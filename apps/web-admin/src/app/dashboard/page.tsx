@@ -246,6 +246,14 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
     m.u5.groupedPayments,
   ).slice(0, 7);
 
+  // Signed contracts against last month, as a chip; nothing when both are 0.
+  function monthChip(now: number, prev: number): { trend?: string; tone?: 'success' | 'danger' | 'neutral' } {
+    if (now === 0 && prev === 0) return {};
+    const d = now - prev;
+    if (d === 0) return { trend: m.u5.monthSame, tone: 'neutral' };
+    return { trend: m.monthDeltaSign(d), tone: d > 0 ? 'success' : 'danger' };
+  }
+
   const funnel = summary?.funnel;
   const topProjects = summary?.topProjects ?? [];
   const forecast = summary?.cashflowForecast;
@@ -282,7 +290,11 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         metrics={
           summary
             ? [
-                { label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub },
+                {
+                  label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub,
+                  bar: total > 0 ? Math.round((collected / total) * 100) : undefined,
+                  barLabel: total > 0 ? m.u5.collectedShare(Math.round((collected / total) * 100)) : undefined,
+                },
                 {
                   label: m.u5.collected, value: colNum, unit: colUnit,
                   sub: fees > 0 ? m.u5.feesSub(compactParts(fees, symbol, locale).join(' ')) : undefined,
@@ -290,15 +302,22 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
                   tone: collectionDelta !== null && collectionDelta >= 0 ? 'success' : 'danger',
                 },
                 {
+                  // The rate, its bar and a short status: the ring and the
+                  // two-line note crowded this one column.
                   label: m.kpi.collectionRate, value: rate !== null ? rate : '—', unit: rate !== null ? '%' : '',
-                  ring: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
-                  trend: rate !== null ? rateNote : undefined,
+                  bar: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
+                  trend: rate === null ? undefined : rate >= 90 ? m.u5.rateHealthy : rate >= 70 ? m.u5.rateWatch : m.u5.rateLowChip,
                   tone: rate === null ? undefined : rate >= 90 ? 'success' : rate >= 70 ? 'warning' : 'danger',
                 },
-                { label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone },
+                {
+                  label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone,
+                  trend: overdue > 0 && summary.portfolio?.overdueCount ? m.u5.overdueContracts(summary.portfolio.overdueCount) : undefined,
+                  tone: 'danger',
+                },
                 {
                   label: m.kpi.monthContracts, value: fin?.signedContractsThisMonth ?? 0,
                   sub: kpis ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits) : undefined,
+                  ...monthChip(fin?.signedContractsThisMonth ?? 0, fin?.prevMonthSignedContracts ?? 0),
                 },
               ]
             : []
