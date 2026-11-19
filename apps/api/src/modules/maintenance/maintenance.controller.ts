@@ -216,6 +216,7 @@ export class MaintenanceController {
     @Query('categoryId') categoryId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('q') q?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -229,6 +230,7 @@ export class MaintenanceController {
       categoryId,
       from,
       to,
+      q,
     });
   }
 

@@ -7,8 +7,8 @@ import { getLocale } from '@/lib/locale';
 import { currencySymbol, getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { projectOptions } from '@/lib/options';
 import { uiT } from '@/messages/ui';
-import { PremiumBars, PremiumMetricStrip, PremiumPageHero, PremiumPanel } from '@/components/premium';
 import { Button } from '@/components/ui/button';
+import { PremiumBars, PremiumFilterBar, PremiumFilterField, PremiumMetricStrip, PremiumPageHero, PremiumPanel, PremiumRangeField } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { cn } from '@/lib/cn';
 import { campaignT } from '@/components/campaigns/messages';
@@ -100,8 +100,6 @@ export default async function CampaignReportPage({ searchParams }: { searchParam
     new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ar-EG', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(new Date(`${key}-01T00:00:00Z`));
   const hasData = !!r && (r.campaigns.length > 0 || r.totals.spend > 0 || r.totals.leads > 0);
 
-  const selectCls =
-    'h-9 rounded-xl border border-hairline bg-surface px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30';
 
   const figureCells = (f: CampaignFigures) => (
     <>
@@ -192,34 +190,27 @@ export default async function CampaignReportPage({ searchParams }: { searchParam
             );
           })}
         </div>
-        <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="text-[12px] font-semibold text-slate-500">
-            {m.filters.from}
-            <input type="date" name="from" defaultValue={from} className={cn(selectCls, 'mt-1 block')} />
-          </label>
-          <label className="text-[12px] font-semibold text-slate-500">
-            {m.filters.to}
-            <input type="date" name="to" defaultValue={to} className={cn(selectCls, 'mt-1 block')} />
-          </label>
-          <label className="text-[12px] font-semibold text-slate-500">
-            {m.filters.channel}
-            <select name="channel" defaultValue={channel} className={cn(selectCls, 'mt-1 block')}>
-              <option value="">{m.filters.all}</option>
-              {CHANNELS.map((c) => <option key={c} value={c}>{cm.channel[c]}</option>)}
-            </select>
-          </label>
-          <label className="text-[12px] font-semibold text-slate-500">
-            {m.filters.project}
-            <select name="projectId" defaultValue={projectId} className={cn(selectCls, 'mt-1 block')}>
-              <option value="">{m.filters.all}</option>
-              {(projectsRes.data?.data ?? []).map((p) => <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>)}
-            </select>
-          </label>
-          <Button type="submit" variant="primary" size="sm">{m.filters.apply}</Button>
-          <Link href={'/dashboard/campaigns/report' as never} className="pb-2 text-[12.5px] font-semibold text-slate-500 hover:text-slate-800">
-            {m.filters.reset}
-          </Link>
-        </form>
+        <div className="mt-3">
+          <PremiumFilterBar method="get" action="/dashboard/campaigns/report">
+            <PremiumRangeField
+              label={`${m.filters.from} → ${m.filters.to}`}
+              from={{ id: 'from', value: from, label: m.filters.from }}
+              to={{ id: 'to', value: to, label: m.filters.to }}
+            />
+            <PremiumFilterField label={m.filters.channel} htmlFor="cr-channel">
+              <select id="cr-channel" name="channel" defaultValue={channel}>
+                <option value="">{m.filters.all}</option>
+                {CHANNELS.map((c) => <option key={c} value={c}>{cm.channel[c]}</option>)}
+              </select>
+            </PremiumFilterField>
+            <PremiumFilterField label={m.filters.project} htmlFor="cr-project">
+              <select id="cr-project" name="projectId" defaultValue={projectId}>
+                <option value="">{m.filters.all}</option>
+                {(projectsRes.data?.data ?? []).map((p) => <option key={p.id} value={p.id}>{tx(p.name, locale)}</option>)}
+              </select>
+            </PremiumFilterField>
+          </PremiumFilterBar>
+        </div>
       </div>
 
       {res.error ? (

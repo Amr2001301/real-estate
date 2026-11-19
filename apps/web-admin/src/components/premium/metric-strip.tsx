@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { FigureCards, type Figure } from '@/components/cockpit/cockpit';
 
 type Tone =
   | 'brand'
@@ -29,24 +30,6 @@ export interface Metric {
   ring?:      number;
 }
 
-function Ring({ pct, children }: { pct: number; children: ReactNode }) {
-  const r = 18;
-  const c = 2 * Math.PI * r;
-  const p = Math.max(0, Math.min(100, pct));
-  return (
-    <span className="relative inline-grid h-[84px] w-[84px] shrink-0 place-items-center">
-      <svg viewBox="0 0 44 44" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
-        <circle cx="22" cy="22" r={r} fill="none" stroke="rgb(255 255 255 / 0.12)" strokeWidth="3" />
-        <circle
-          cx="22" cy="22" r={r} fill="none" stroke="#D8B66A" strokeWidth="3" strokeLinecap="round"
-          strokeDasharray={`${(p / 100) * c} ${c}`}
-        />
-      </svg>
-      <span className="relative flex items-baseline gap-px leading-none">{children}</span>
-    </span>
-  );
-}
-
 /** One segment of the band's bottom distribution bar (e.g. sold / reserved / available). */
 export interface MetricSegment {
   label: string;
@@ -61,19 +44,6 @@ export const UNIT_STATUS_COLORS = {
   reserved:  '#C79A3B',
   available: '#5E7F6B',
 } as const;
-
-/**
- * On the two-column phone grid an odd count left one empty cell; the first
- * figure (the headline) takes the full width instead, until the grid widens.
- */
-const LEAD_SPAN: Record<number, string> = {
-  2: 'col-span-2',
-  3: 'max-sm:col-span-2',
-  4: 'max-lg:col-span-2',
-  5: 'max-lg:col-span-2',
-  6: 'max-sm:col-span-2',
-  8: 'max-sm:col-span-2',
-};
 
 const COLS: Record<number, string> = {
   1: 'grid-cols-1',
@@ -136,137 +106,76 @@ function splitAny(value: string | number): [string, string] {
   return m ? [m[2]!, m[1]!] : [num, unit];
 }
 
-/** Trend text on navy: green / red when the caller marked it so, otherwise muted. */
-function trendColour(cls?: string): string {
-  if (!cls) return 'text-[#A9B0BD]';
-  if (/success|emerald|green/.test(cls)) return 'text-[#86C9A0]';
-  if (/danger|red|rose/.test(cls)) return 'text-[#F09687]';
-  if (/warning|amber/.test(cls)) return 'text-[#E8B96E]';
-  return 'text-[#A9B0BD]';
+/** The trend's colour class → the figure card's tone. */
+function trendTone(cls?: string): Figure['tone'] | undefined {
+  if (!cls) return undefined;
+  if (/success|emerald|green/.test(cls)) return 'green';
+  if (/danger|red|rose/.test(cls)) return 'red';
+  if (/warning|amber/.test(cls)) return 'amber';
+  return undefined;
 }
 
+/** The unit-status colours were made for navy; on a light card they need a darker pair. */
+const ON_LIGHT: Record<string, string> = {
+  [UNIT_STATUS_COLORS.sold]: '#0B1220',
+};
+
 /**
- * The navy KPI band (U5): one band divided by gold hairlines; each cell has a
- * thin gold icon in a gold ring, the value in Cormorant in one colour and its
- * unit in small gold text. Fixed in both themes.
+ * The KPI row: the same light figure cards as every list page (the navy band
+ * is retired). Each metric becomes a card — label, figure with its unit, a
+ * plain line, and a status chip or a rate bar at the bottom. A distribution
+ * (sold / reserved / available) sits under the cards as a segmented bar.
  */
 export function PremiumMetricStrip({
   metrics,
   cols,
-  variant = 'dashboard',
   distribution,
   formatCount = (n) => String(n),
   className,
 }: PremiumMetricStripProps) {
-  // Fewer figures than columns (3 in a 4-column band) fill the row; a fourth empty cell showed as a grey block.
   const effectiveCols = (cols !== undefined && metrics.length < cols && COLS[metrics.length] ? metrics.length : cols) ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6 | 8);
-  const compact = variant === 'compact';
   const total = distribution?.reduce((a, s) => a + s.value, 0) ?? 0;
+  const figures: Figure[] = metrics.map((m) => {
+    const [num, autoUnit] = m.unit !== undefined
+      ? [String(m.value), m.unit]
+      : compactFigure(...splitAny(m.value), /[\u0600-\u06FF]/.test(m.label));
+    const tone = trendTone(m.trendCls);
+    return {
+      label: m.label,
+      value: num,
+      unit: autoUnit || undefined,
+      line: m.sub,
+      sub: m.trend,
+      tone: tone ?? 'gold',
+      warn: tone === 'amber' || tone === 'red',
+      icon: m.icon,
+      bar: m.ring,
+    };
+  });
 
   return (
-    <section
-      data-testid="metric-strip"
-      className={cn(
-        'overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8]',
-        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
-        className,
-      )}
-    >
-      <div className={cn('grid gap-px bg-[#D8B66A]/[0.16]', COLS[effectiveCols] ?? COLS[4])}>
-        {metrics.map((m, i) => {
-          const [num, autoUnit] = m.unit !== undefined
-            ? [String(m.value), m.unit]
-            : compactFigure(...splitAny(m.value), /[\u0600-\u06FF]/.test(m.label));
-          const long = m.valueSize === 'compact' || (m.valueSize !== 'normal' && num.length > 7);
-          // A name, not a figure (e.g. the top broker): smaller type, at most two lines.
-          const isText = !/\d/.test(num) && num !== '—';
-          return (
-            <div
-              key={i}
-              className={cn(
-                'flex min-w-0 items-center gap-4 bg-navy-band',
-                compact ? 'px-5 py-4 sm:px-6 sm:py-5' : 'px-5 py-5 sm:px-6 sm:py-6',
-                i === 0 && metrics.length % 2 === 1 && LEAD_SPAN[effectiveCols],
-              )}
-            >
-              {m.icon && (
-                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#D8B66A]/45 text-[#D8B66A] [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:stroke-[1.6]">
-                  {m.icon}
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] leading-snug text-[#A9B0BD] line-clamp-2">{m.label}</p>
-                {m.ring !== undefined ? (
-                  <div className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-                    <Ring pct={m.ring}>
-                      {/* A percent reads 40%, left to right, in both languages. */}
-                      <span dir={autoUnit === '%' ? 'ltr' : undefined} className="inline-flex items-baseline">
-                        <span className="num text-[28px] font-semibold text-[#F4ECD8]">{num}</span>
-                        {autoUnit && <span className="text-[12px] font-bold text-[#D8B66A]">{autoUnit}</span>}
-                      </span>
-                    </Ring>
-                    <div className="min-w-0">
-                      {m.sub && <p className="text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
-                      {m.trend && (
-                        <p className={cn('mt-1.5 text-[11.5px] font-bold leading-snug', trendColour(m.trendCls))}>{m.trend}</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                <>
-                <div className="mt-1 flex items-center gap-3">
-                <p className="flex flex-wrap items-baseline gap-x-1.5 leading-none">
-                  <span
-                    className={cn(
-                      isText
-                        ? 'line-clamp-2 font-heading text-[19px] font-bold leading-snug text-[#F4ECD8]'
-                        : 'num font-semibold text-[#F4ECD8]',
-                      !isText && (long ? 'text-[30px]' : compact ? 'text-[38px]' : 'text-[44px]'),
-                    )}
-                    title={isText ? num : undefined}
-                  >
-                    {num}
-                  </span>
-                  {autoUnit && (
-                    // A percent sits after the figure (40%), as in the apps.
-                    <span className={cn('text-[13px] font-bold text-[#D8B66A]', autoUnit === '%' && 'rtl:order-first')}>{autoUnit}</span>
-                  )}
-                </p>
-                </div>
-                {m.sub && <p className="mt-2 text-[12px] leading-snug text-[#A9B0BD]">{m.sub}</p>}
-                {m.trend && (
-                  <p className={cn('mt-1.5 text-[11.5px] font-bold leading-none', trendColour(m.trendCls))}>
-                    {m.trend}
-                  </p>
-                )}
-                </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+    <section data-testid="metric-strip" className={cn('flex flex-col gap-4', className)}>
+      <FigureCards figures={figures} cols={Math.min(6, effectiveCols) as 4 | 5 | 6} />
       {distribution && distribution.length > 0 && (
-        <div className="border-t border-[#D8B66A]/[0.16] px-6 py-5">
+        <div className="rounded-[22px] border border-hairline bg-surface px-6 py-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none">
           <div className="flex h-2 gap-1" role="img" aria-label={distribution.map((s) => `${s.label} ${formatCount(s.value)}`).join('، ')}>
             {distribution.map((s) =>
               s.value > 0 ? (
                 <span
                   key={s.label}
                   className="rounded-full"
-                  style={{ flexGrow: s.value, flexBasis: 0, background: s.color }}
+                  style={{ flexGrow: s.value, flexBasis: 0, background: ON_LIGHT[s.color] ?? s.color }}
                 />
               ) : null,
             )}
-            {total === 0 && <span className="flex-1 rounded-full bg-white/10" />}
+            {total === 0 && <span className="flex-1 rounded-full bg-slate-500/15" />}
           </div>
-          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-[#A9B0BD]">
+          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-slate-500">
             {distribution.map((s) => (
               <li key={s.label} className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full" style={{ background: s.color }} aria-hidden />
+                <span className="h-2 w-2 rounded-full" style={{ background: ON_LIGHT[s.color] ?? s.color }} aria-hidden />
                 <span>{s.label}</span>
-                <span className="num text-[17px] font-semibold text-[#F4ECD8]">{formatCount(s.value)}</span>
+                <span className="num text-[17px] font-semibold text-slate-900">{formatCount(s.value)}</span>
                 {total > 0 && <span>· {Math.round((s.value / total) * 100)}%</span>}
               </li>
             ))}

@@ -211,6 +211,7 @@ export class LeadsController {
     @CurrentUser() user: AuthUser,
     @Query('bucket') bucket = 'overdue',
     @Query('salesId') salesId?: string,
+    @Query('q') q?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -221,6 +222,7 @@ export class LeadsController {
     return this.leads.followUps(scope, bucket as FollowUpBucket, {
       page: Math.max(1, Number(page) || 1),
       pageSize: Math.max(1, Number(pageSize) || 20),
+      q,
     });
   }
 

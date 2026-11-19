@@ -113,7 +113,16 @@ export class BrokerPayoutsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 20;
 
+    const q = query.q?.trim();
     const where: Prisma.BrokerPayoutWhereInput = {
+      ...(q
+        ? {
+            OR: [
+              { broker: { companyName: { contains: q, mode: 'insensitive' } } },
+              { period: { contains: q } },
+            ],
+          }
+        : {}),
       ...(query.brokerId ? { brokerId: query.brokerId } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.period ? { period: query.period } : {}),

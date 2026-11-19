@@ -91,18 +91,30 @@ export function ListTabs({ items, activeHref }: { items: { label: string; href: 
   );
 }
 
-export function DataTable({ children, testId }: { children: ReactNode; testId?: string }) {
+export function DataTable({ children, testId, widths }: { children: ReactNode; testId?: string; widths?: number[] }) {
   return (
     // Sideways only: a table wider than its card scrolls left and right with a
     // visible bar under it. It never gets a height of its own, so it never
     // scrolls up and down inside the card — the page does.
     <div className="overflow-x-auto scrollbar-thin">
-      <table data-testid={testId} className="list-table w-full border-collapse text-[13.5px]">
+      {/* `widths` are the columns' shares (in %): the width is spread on purpose, not left to the content. */}
+      <table data-testid={testId} className={cn('list-table w-full border-collapse text-[13.5px]', widths && 'min-w-[980px] table-fixed')}>
+        {widths && (
+          <colgroup>
+            {widths.map((w, i) => (
+              <col key={i} style={{ width: `${w}%` }} />
+            ))}
+          </colgroup>
+        )}
         {children}
       </table>
     </div>
   );
 }
+
+/** A row that still waits for someone's decision: a gold edge and a warm tint. */
+export const WAITING_ROW =
+  '[&>td]:!bg-[#FAF3DF] dark:[&>td]:!bg-[#2B2615] rtl:[&>td:first-child]:shadow-[inset_-4px_0_0_#C8A24B] ltr:[&>td:first-child]:shadow-[inset_4px_0_0_#C8A24B]';
 
 export function Th({ children, className }: { children?: ReactNode; className?: string }) {
   return (
@@ -118,9 +130,9 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   );
 }
 
-export function Tr({ children, className, testId }: { children: ReactNode; className?: string; testId?: string }) {
+export function Tr({ children, className, testId, waiting }: { children: ReactNode; className?: string; testId?: string; waiting?: boolean }) {
   return (
-    <tr data-testid={testId} className={cn('transition-colors hover:bg-surface-muted/40', className)}>
+    <tr data-testid={testId} data-waiting={waiting ? 'true' : undefined} className={cn(waiting && WAITING_ROW, 'transition-colors hover:bg-surface-muted/40', className)}>
       {children}
     </tr>
   );
@@ -286,7 +298,7 @@ export function ListFilterBar({
       )}
       <button
         type="submit"
-        className={cn(GOLD_ACTION, 'inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}
+        className={cn(GOLD_ACTION, 'ms-3 inline-flex h-14 items-center gap-2 self-end rounded-[14px] px-6 text-[13px]')}
       >
         <Filter className="h-4 w-4" />
         {submitLabel}
@@ -316,7 +328,7 @@ export function ListFilterField({
 }) {
   if (search) {
     return (
-      <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[260px] flex-1 basis-[280px]')}>
+      <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[190px] flex-[2] basis-[200px]')}>
         <span className="text-[11px] font-semibold text-slate-500">{label}</span>
         <span className="flex items-center gap-2">
           <Search className="h-[15px] w-[15px] shrink-0 text-slate-400" />
@@ -326,7 +338,7 @@ export function ListFilterField({
     );
   }
   return (
-    <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[150px]')}>
+    <label htmlFor={htmlFor} className={cn(FIELD_BOX, FIELD_CTRL, 'min-w-[124px] flex-1 basis-[124px]')}>
       <span className="text-[11px] font-semibold text-slate-500">{label}</span>
       <span className="relative flex items-center">
         {children}

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-/** A row of figures as one navy band split by gold hairlines (U5, like PremiumMetricStrip). */
+/** A row of figure cards (the same light look as the KPI cards on the lists). */
 export function MetricGrid({
   cols = 4,
   className,
@@ -14,10 +14,9 @@ export function MetricGrid({
   return (
     <div
       className={cn(
-        'grid gap-px overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16]',
-        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
+        'grid gap-4',
         cols === 2 && 'grid-cols-2',
-        cols === 3 && 'grid-cols-3',
+        cols === 3 && 'grid-cols-2 md:grid-cols-3',
         cols === 4 && 'grid-cols-2 md:grid-cols-4',
         className,
       )}
@@ -42,11 +41,11 @@ export function MetricTile({
   size?: 'sm' | 'md' | 'lg';
 }) {
   return (
-    <div className="bg-navy-band px-5 py-5">
-      <p className="text-[13px] leading-snug text-[#A9B0BD]">{label}</p>
+    <div className="min-w-0 rounded-[22px] border border-hairline bg-surface p-5 shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none">
+      <p className="text-[13px] font-medium leading-snug text-slate-500">{label}</p>
       <p
         className={cn(
-          'num mt-1 font-semibold leading-none text-[#F4ECD8]',
+          'num mt-3 font-semibold leading-none text-slate-900',
           size === 'sm' && 'text-[22px]',
           size === 'md' && 'text-[30px]',
           size === 'lg' && 'text-[40px]',
@@ -54,7 +53,7 @@ export function MetricTile({
       >
         {value}
       </p>
-      {sub && <p className="mt-2 text-[12px] text-[#A9B0BD]">{sub}</p>}
+      {sub && <p className="mt-2.5 text-[12px] text-slate-500">{sub}</p>}
     </div>
   );
 }

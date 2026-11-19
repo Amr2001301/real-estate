@@ -17,7 +17,15 @@ test('the operations center shows the trend, the insights and a clean breakdown'
   for (const id of ['ops-top-user', 'ops-top-area', 'ops-top-action', 'ops-security']) {
     await expect(page.getByTestId(id)).toBeVisible();
   }
-  await expect(page.getByTestId('ops-timeline').locator('li').first()).toBeVisible();
+  // The activity log is a table: event, by, area, times, last — one row per grouped event.
+  const log = page.getByTestId('ops-timeline');
+  await expect(log.locator('thead th')).toHaveCount(6);
+  await expect(log.locator('tbody tr').first()).toBeVisible();
+  // A kind filter keeps only that kind: «حذف» shows deletions or the empty message, never other rows.
+  await page.getByTestId('ops-kind-delete').click();
+  await expect(page).toHaveURL(/kind=delete/);
+  await expect(page.getByTestId('ops-kind-delete')).toHaveAttribute('aria-current', 'true');
+  await gotoReady(page, '/dashboard/operations');
 
   // No area twice, and no raw action code on the page.
   const areas = await page.getByTestId('ops-areas').locator('li').allInnerTexts();

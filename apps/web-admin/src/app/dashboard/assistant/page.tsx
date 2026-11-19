@@ -13,9 +13,9 @@ import {
   TrendingUp,
   Wallet,
 } from 'lucide-react';
-import { PremiumPanel } from '@/components/premium';
 import { useClientLocale } from '@/components/locale-provider';
-import { aiT } from '@/components/ai/ai-strings';
+import { aiT, type AiPlanView } from '@/components/ai/ai-strings';
+import { formatDate } from '@/lib/format';
 import { AnswerText } from '@/components/ai/answer-text';
 import { cn } from '@/lib/cn';
 
@@ -86,6 +86,8 @@ export default function AssistantPage() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
+  // The company's plan, for admins only (the API refuses everyone else).
+  const [plan, setPlan] = useState<AiPlanView | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLTextAreaElement>(null);
 
@@ -95,6 +97,10 @@ export default function AssistantPage() {
       .then(async (r) => (r.ok ? ((await r.json()) as Status) : null))
       .then(setStatus)
       .catch(() => setStatus(null));
+    void fetch('/api-proxy/ai/usage')
+      .then(async (r) => (r.ok ? ((await r.json()) as { enabled: boolean } & Partial<AiPlanView>) : null))
+      .then((u) => setPlan(u && u.enabled ? (u as AiPlanView) : null))
+      .catch(() => setPlan(null));
   }, []);
 
   useEffect(() => {
@@ -216,105 +222,117 @@ export default function AssistantPage() {
     </span>
   );
 
+  const questionsLeft = remaining ?? plan?.remaining ?? null;
+  const card = 'rounded-[22px] border border-hairline bg-surface p-[22px] shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none';
   return (
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-6">
-        {/* The console: navy, gold glow; the greeting, the box and the suggestions before the first question. */}
-        <section className="relative overflow-hidden rounded-card bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)]">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_90%_at_100%_0%,rgba(216,182,106,0.20),transparent_60%),radial-gradient(55%_80%_at_0%_100%,rgba(38,64,95,0.85),transparent)]" />
-          <div className={cn('relative p-6 sm:p-8', started && 'sm:py-6')}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
-                <AssistantMark size={started ? 'md' : 'lg'} />
-                <div className="min-w-0">
-                  <p className="text-[12px] font-semibold tracking-wide text-[#D8B66A]">{c.eyebrow}</p>
-                  <h1 className="mt-1 font-heading text-[28px] font-bold leading-tight !text-white sm:text-[34px]">{m.title}</h1>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {statusPill}
-                {readOnlyPill}
-                {started && (
-                  <button
-                    type="button"
-                    onClick={() => setTurns([])}
-                    disabled={pending}
-                    className="inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] font-semibold text-white ring-1 ring-inset ring-white/25 transition hover:bg-white/10 disabled:opacity-50"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    {c.clear}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {blocked && (
-              <div
-                role="status"
-                data-testid="ai-unavailable"
-                className="mt-6 flex items-start gap-3 rounded-2xl bg-white/[0.06] px-4 py-3.5 ring-1 ring-inset ring-[#D8B66A]/30"
+    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+      {/* One console: a fixed header, the body that scrolls, the box always at the bottom. */}
+      <section className="relative flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-[24px] bg-navy-band text-white shadow-[0_24px_60px_-30px_rgba(14,22,38,0.8)] xl:h-[calc(100dvh-150px)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_90%_at_100%_0%,rgba(216,182,106,0.16),transparent_60%),radial-gradient(55%_80%_at_0%_100%,rgba(38,64,95,0.85),transparent)]" />
+        <header className="relative flex flex-wrap items-center gap-3.5 border-b border-white/[0.08] px-6 py-[18px]">
+          <AssistantMark size="md" />
+          <div className="min-w-0">
+            <p className="text-[11.5px] font-semibold tracking-wide text-[#D8B66A]">{c.eyebrow}</p>
+            <h1 className="mt-0.5 font-heading text-[22px] font-bold leading-tight !text-white">{m.title}</h1>
+          </div>
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            {statusPill}
+            {readOnlyPill}
+            {started && (
+              <button
+                type="button"
+                onClick={() => setTurns([])}
+                disabled={pending}
+                className="inline-flex h-[34px] items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)] px-3.5 text-[12.5px] font-bold text-[#0B1220] transition hover:brightness-105 disabled:opacity-50"
               >
-                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D8B66A]/15 text-[#D8B66A]">
-                  <Lock className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-[14px] font-bold text-white">{c.unavailableTitle}</p>
-                  <p className="mt-0.5 text-[13px] text-white/65">{blocked}</p>
-                </div>
-              </div>
-            )}
-
-            {!started && (
-              <div className="mt-8 flex flex-col gap-6">
-                <div>
-                  <h2 className="font-heading text-[24px] font-bold !text-white sm:text-[28px]">{c.greeting}</h2>
-                  <p className="mt-1.5 max-w-2xl text-[14px] leading-relaxed text-white/60">{c.description}</p>
-                </div>
-                {composer(true)}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="ai-suggestions">
-                  {c.suggestions.map((s, i) => (
-                    <button
-                      key={s}
-                      type="button"
-                      disabled={!canAsk}
-                      onClick={() => void ask(s)}
-                      className="group flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-3.5 text-start ring-1 ring-inset ring-white/10 transition hover:bg-white/[0.08] hover:ring-[#D8B66A]/50 disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#D8B66A]/12 text-[#D8B66A] ring-1 ring-inset ring-[#D8B66A]/25 [&_svg]:h-4 [&_svg]:w-4">
-                        {TOPIC_ICON[SUGGESTION_TOPIC[i] ?? 'sales']}
-                      </span>
-                      <span className="text-[14px] font-medium text-white/85 group-hover:text-white">{s}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+                <RotateCcw className="h-3.5 w-3.5" />
+                {c.clear}
+              </button>
             )}
           </div>
-        </section>
+        </header>
 
-        {/* The conversation, once it has begun. */}
-        {started && (
-          <section className="flex min-h-[460px] flex-col overflow-hidden rounded-card border border-hairline bg-surface shadow-soft">
-            <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 py-6 sm:px-7" aria-live="polite" data-testid="ai-chat">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {blocked && (
+            <div
+              role="status"
+              data-testid="ai-unavailable"
+              className="m-6 flex flex-col items-center gap-2 rounded-[20px] bg-white/[0.05] px-6 py-8 text-center ring-1 ring-inset ring-[#D8B66A]/30"
+            >
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#D8B66A]/12 text-[#D8B66A] ring-1 ring-inset ring-[#D8B66A]/30">
+                <Lock className="h-6 w-6" />
+              </span>
+              <p className="mt-2 text-[20px] font-bold text-white">{c.unavailableTitle}</p>
+              <p className="max-w-md text-[13.5px] leading-[1.8] text-white/65">{blocked}</p>
+              {status?.reason !== 'NOT_CONFIGURED' && (
+                <span className="mt-2 inline-flex h-10 items-center rounded-xl bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)] px-5 text-[13px] font-bold text-[#0B1220]">
+                  {c.contactAdmin}
+                </span>
+              )}
+            </div>
+          )}
+
+          {!started && blocked ? (
+            // Not available: the notice above says why; the topics it will answer, as plain chips.
+            <div className="flex flex-wrap justify-center gap-2.5 px-6 pb-6">
+              {c.can.map((x) => (
+                <span key={x.k} className="inline-flex h-9 items-center gap-2 rounded-full bg-white/[0.05] px-3.5 text-[12.5px] text-white/75 ring-1 ring-inset ring-white/10 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                  {TOPIC_ICON[x.k]}
+                  {x.title}
+                </span>
+              ))}
+            </div>
+          ) : !started ? (
+            <div className="flex flex-1 flex-col justify-center px-6 py-7 sm:px-10">
+              <h2 className="font-heading text-[28px] font-bold !text-white">{c.greeting}</h2>
+              <p className="mt-2 max-w-xl text-[14px] leading-[1.7] text-white/60">{c.description}</p>
+              <div className="mt-6 grid grid-cols-1 gap-3.5 sm:grid-cols-2" data-testid="ai-suggestions">
+                {c.suggestions.map((sug, i) => {
+                  const topic = c.can[i];
+                  return (
+                    <button
+                      key={sug}
+                      type="button"
+                      disabled={!canAsk}
+                      onClick={() => void ask(sug)}
+                      className="group flex flex-col gap-3 rounded-[18px] bg-white/[0.04] px-[18px] py-4 text-start ring-1 ring-inset ring-white/10 transition hover:bg-white/[0.08] hover:ring-[#D8B66A]/50 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#D8B66A]/12 text-[#D8B66A] ring-1 ring-inset ring-[#D8B66A]/25 [&_svg]:h-4 [&_svg]:w-4">
+                          {TOPIC_ICON[SUGGESTION_TOPIC[i] ?? 'sales']}
+                        </span>
+                        <span className="text-[14px] font-bold text-white">{topic?.title}</span>
+                      </span>
+                      <span className="flex items-center justify-between gap-2 rounded-[11px] bg-white/[0.04] px-3 py-2.5 text-[13px] text-white/85 group-hover:text-white">
+                        {sug}
+                        <span aria-hidden className="text-[#D8B66A] ltr:rotate-180">←</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col gap-5 px-6 py-6 sm:px-10" aria-live="polite" data-testid="ai-chat">
               {turns.map((t, k) =>
                 t.role === 'user' ? (
                   <div key={k} className="flex justify-start">
                     <div
                       dir="auto"
                       aria-label={c.you}
-                      className="max-w-[80%] rounded-[20px] rounded-ss-md bg-navy px-4 py-3 dark:bg-navy-600 dark:ring-1 dark:ring-inset dark:ring-white/10 text-[14.5px] leading-relaxed text-white shadow-soft"
+                      className="max-w-[75%] rounded-[20px] rounded-ss-md bg-[#1E2C47] px-4 py-3 text-[14.5px] leading-relaxed text-white ring-1 ring-inset ring-white/10"
                     >
                       <p className="whitespace-pre-wrap">{t.content}</p>
                     </div>
                   </div>
                 ) : (
                   <div key={k} className="flex items-start justify-end gap-3">
-                    <div className="max-w-[85%] min-w-0">
-                      <p className="mb-1.5 text-[12px] font-bold text-brand-700">{c.assistant}</p>
+                    <div className="min-w-0 max-w-[85%]">
+                      <p className="mb-1.5 text-[12px] font-bold text-[#D8B66A]">{c.assistant}</p>
                       <div
                         dir="auto"
                         aria-label={c.assistant}
-                        className="rounded-card rounded-se-md border border-hairline bg-surface-sunken px-5 py-4 text-[14.5px] leading-relaxed text-slate-800"
+                        className="rounded-[20px] rounded-se-md bg-[#FFFDF8] px-5 py-4 text-[14.5px] leading-[1.85] text-slate-800"
                       >
                         <AnswerText text={t.content} />
                       </div>
@@ -325,8 +343,8 @@ export default function AssistantPage() {
               )}
               {pending && (
                 <div className="flex items-start justify-end gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-card rounded-se-md border border-hairline bg-surface-sunken px-4 py-3 text-[13.5px] text-slate-500">
-                    <Loader2 className="h-4 w-4 animate-spin text-brand-600" />
+                  <div className="inline-flex items-center gap-2 rounded-[20px] rounded-se-md bg-white/[0.07] px-4 py-3 text-[13.5px] text-white/70">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#D8B66A]" />
                     {c.thinking}
                   </div>
                   <AssistantMark size="sm" />
@@ -334,38 +352,38 @@ export default function AssistantPage() {
               )}
               <div ref={endRef} />
             </div>
-            <div className="border-t border-hairline bg-surface-muted/60 px-4 py-4 sm:px-6">{composer(false)}</div>
+          )}
+        </div>
+
+        <div className="relative border-t border-white/[0.08] bg-black/10 px-6 pb-4 pt-4">{composer(true)}</div>
+      </section>
+
+      <aside className="flex flex-col gap-5">
+        {plan && (
+          <section className={card} data-testid="ai-plan-card">
+            <h3 className="font-heading text-[16px] font-semibold text-slate-900">{c.plan.title}</h3>
+            <p className="mt-1 text-[12px] text-slate-500">{[plan.packageName, c.plan.ends(formatDate(plan.periodEnd, locale))].filter(Boolean).join(' · ')}</p>
+            <p className="num mt-4 font-heading text-[30px] font-bold leading-none text-slate-900">{questionsLeft ?? plan.remaining}</p>
+            <p className="mt-1.5 text-[12.5px] text-slate-500">{c.plan.left(questionsLeft ?? plan.remaining, plan.quota)}</p>
+            <div className="mt-3 h-[7px] overflow-hidden rounded-full bg-surface-sunken">
+              <div
+                className="h-full rounded-full bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)]"
+                style={{ width: `${plan.quota > 0 ? Math.min(100, Math.max(0, (((plan.quota - (questionsLeft ?? plan.remaining)) / plan.quota) * 100))) : 0}%` }}
+              />
+            </div>
           </section>
         )}
-      </div>
-
-      {/* What it answers, and its rules. */}
-      <aside className="flex flex-col gap-6">
-        <PremiumPanel title={c.canTitle}>
-          <ul className="flex flex-col gap-4">
-            {c.can.map((x) => (
-              <li key={x.k} className="flex items-start gap-3">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-brand-400/40 bg-brand-50 text-brand-700 [&_svg]:h-4 [&_svg]:w-4">
-                  {TOPIC_ICON[x.k]}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[14px] font-bold text-slate-900">{x.title}</p>
-                  <p className="mt-0.5 text-[12.5px] text-slate-500">{x.line}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </PremiumPanel>
-        <PremiumPanel title={c.rulesTitle}>
-          <ul className="flex flex-col gap-3">
+        <section className={card}>
+          <h3 className="font-heading text-[16px] font-semibold text-slate-900">{c.rulesTitle}</h3>
+          <ul className="mt-3.5 flex flex-col gap-2.5">
             {c.rules.map((r) => (
-              <li key={r} className="flex items-start gap-2.5 text-[13.5px] text-slate-700">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+              <li key={r} className="flex items-start gap-2.5 text-[13px] text-slate-700">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#B38B3A]" />
                 {r}
               </li>
             ))}
           </ul>
-        </PremiumPanel>
+        </section>
       </aside>
     </div>
   );

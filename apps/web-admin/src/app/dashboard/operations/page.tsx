@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import {
   ArrowDownRight,
@@ -295,7 +296,12 @@ function InsightCard({
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function OperationsCenterPage() {
+export default async function OperationsCenterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kind?: string; q?: string }>;
+}) {
+  const sp = await searchParams;
   const locale = await getLocale();
   const m = uiT(locale).operationsPage;
   const num = (n: number) => n.toLocaleString(intlLocale(locale));
@@ -307,7 +313,29 @@ export default async function OperationsCenterPage() {
 
   const summary = summaryRes.data;
   const recent = recentRes.data?.data ?? [];
-  const recentGroups = groupRecentEvents(recent).slice(0, 10);
+  const allGroups = groupRecentEvents(recent);
+  // The table's filter: one kind of action, and/or a word in the event, person or area.
+  const kindFilter = (['create', 'edit', 'delete', 'special'] as const).find((k) => k === sp.kind);
+  const needle = sp.q?.trim().toLowerCase();
+  const recentGroups = allGroups
+    .filter((g) => !kindFilter || actionKind(g.action) === kindFilter)
+    .filter(
+      (g) =>
+        !needle ||
+        [eventLabel(g.action, g.entityType, m.eventLabels, m.domainActions), g.actor?.fullName ?? m.systemActor, areaLabel(g.entityType, m.areaLabels)]
+          .some((t) => t.toLowerCase().includes(needle)),
+    )
+    .slice(0, 12);
+  const rel = new Intl.RelativeTimeFormat(intlLocale(locale), { numeric: 'auto' });
+  // «اليوم / أمس / the date» above the rows of that day.
+  const dayHeading = (iso: string) => {
+    const d = new Date(iso);
+    const start = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((start(new Date()) - start(d)) / 86_400_000);
+    return diff <= 1 && diff >= 0
+      ? rel.format(-diff, 'day')
+      : new Intl.DateTimeFormat(intlLocale(locale), { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  };
   const week = summary?.totals.last7Days ?? 0;
   const prevWeek = summary?.totals.previous7Days ?? null;
   const weekDelta = prevWeek ? Math.round(((week - prevWeek) / prevWeek) * 100) : null;
@@ -485,73 +513,124 @@ export default async function OperationsCenterPage() {
           {/* ── Timeline + breakdown ─────────────────────────────────────────── */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
             <PremiumPanel
-              className="lg:col-span-2"
+              className="lg:col-span-3"
               title={m.timeline.title}
               sub={m.timeline.sub}
               link={{ href: '/dashboard/audit-logs', label: m.timeline.viewAll }}
+              padding="none"
             >
+              <div className="flex flex-wrap items-center gap-2 px-6 pb-4 pt-1">
+                {([undefined, 'create', 'edit', 'delete', 'special'] as const).map((k) => {
+                  const on = kindFilter === k;
+                  const qs = new URLSearchParams();
+                  if (k) qs.set('kind', k);
+                  if (sp.q) qs.set('q', sp.q);
+                  return (
+                    <Link
+                      key={k ?? 'all'}
+                      href={`/dashboard/operations${qs.size ? `?${qs}` : ''}` as never}
+                      aria-current={on ? 'true' : undefined}
+                      data-testid={`ops-kind-${k ?? 'all'}`}
+                      className={cn(
+                        'inline-flex h-[34px] items-center rounded-full px-3.5 text-[12.5px] font-semibold transition-colors',
+                        on ? 'bg-navy text-white' : 'border border-hairline text-slate-600 hover:border-[#C8A24B]/60',
+                      )}
+                    >
+                      {k ? m.distribution.kindLabels[k] : m.timeline.all}
+                    </Link>
+                  );
+                })}
+                <form action="/dashboard/operations" className="ms-auto">
+                  {kindFilter && <input type="hidden" name="kind" value={kindFilter} />}
+                  <input
+                    name="q"
+                    defaultValue={sp.q ?? ''}
+                    placeholder={m.timeline.search}
+                    aria-label={m.timeline.search}
+                    className="h-[34px] w-[240px] rounded-xl border border-hairline bg-surface px-3 text-[12.5px] text-slate-900 outline-none placeholder:text-slate-400 focus:border-[#C8A24B]"
+                  />
+                </form>
+              </div>
               {recentGroups.length === 0 ? (
                 <div className="py-10">
-                  <EmptyState icon={<ScrollText />} title={m.emptyEvents} description={m.emptyEventsDesc} />
+                  <EmptyState icon={<ScrollText />} title={allGroups.length === 0 ? m.emptyEvents : m.timeline.noMatch} description={allGroups.length === 0 ? m.emptyEventsDesc : undefined} />
                 </div>
               ) : (
-                <ol className="flex flex-col" data-testid="ops-timeline">
-                  {recentGroups.map((g, i) => {
-                    const Icon = methodIcon(g.action);
-                    const href =
-                      g.count === 1
-                        ? `/dashboard/audit-logs/${g.firstId}`
-                        : `/dashboard/audit-logs?entityType=${encodeURIComponent(g.entityType)}&action=${encodeURIComponent(g.action)}`;
-                    const last = i === recentGroups.length - 1;
-                    return (
-                      <li key={g.firstId} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <span className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full', methodIconCls(g.action))}>
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          {!last && <span className="my-1 w-px flex-1 bg-hairline" />}
-                        </div>
-                        <Link
-                          href={href as never}
-                          className={cn(
-                            'group -mt-0.5 flex min-w-0 flex-1 items-start justify-between gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-surface-muted/60',
-                            !last && 'mb-2',
-                          )}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-[14px] font-semibold text-slate-900">
-                                {eventLabel(g.action, g.entityType, m.eventLabels, m.domainActions)}
-                              </p>
-                              {g.count > 1 && (
-                                <span className="shrink-0 rounded-full bg-brand-500/12 px-2 py-0.5 text-[10px] font-bold text-brand-700 tabular-nums">
-                                  ×{num(g.count)}
+                <div className="overflow-x-auto scrollbar-thin">
+                  <table className="w-full min-w-[720px] border-collapse text-[13px]" data-testid="ops-timeline">
+                    <thead>
+                      <tr className="bg-[#F4EFE4] dark:bg-white/[0.05]">
+                        {[m.timeline.cols.event, m.timeline.cols.by, m.timeline.cols.area, m.timeline.cols.times, m.timeline.cols.last].map((h, i) => (
+                          <th key={h} className={cn('whitespace-nowrap px-2.5 py-3 text-start text-[12px] font-semibold text-slate-500', i === 0 && 'ps-6', i === 4 && 'pe-6')}>
+                            {h}
+                          </th>
+                        ))}
+                        <th className="w-10" aria-hidden />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentGroups.map((g, i) => {
+                        const Icon = methodIcon(g.action);
+                        const href =
+                          g.count === 1
+                            ? `/dashboard/audit-logs/${g.firstId}`
+                            : `/dashboard/audit-logs?entityType=${encodeURIComponent(g.entityType)}&action=${encodeURIComponent(g.action)}`;
+                        const day = dayHeading(g.latestAt);
+                        const newDay = i === 0 || dayHeading(recentGroups[i - 1]!.latestAt) !== day;
+                        return (
+                          <Fragment key={g.firstId}>
+                            {newDay && (
+                              <tr>
+                                <td colSpan={6} className="px-6 pb-2 pt-4 text-[12px] font-bold text-[#8A6823] dark:text-[#E2C792]">{day}</td>
+                              </tr>
+                            )}
+                            <tr className="group border-t border-hairline transition-colors hover:bg-surface-muted/60">
+                              <td className="py-3 ps-6">
+                                <Link href={href as never} className="flex items-center gap-3">
+                                  <span className={cn('inline-flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full', methodIconCls(g.action))}>
+                                    <Icon className="h-4 w-4" />
+                                  </span>
+                                  <span className="text-[14px] font-semibold text-slate-900">
+                                    {eventLabel(g.action, g.entityType, m.eventLabels, m.domainActions)}
+                                  </span>
+                                </Link>
+                              </td>
+                              <td className="px-2.5 py-3">
+                                <span className="inline-flex items-center gap-2 text-slate-700">
+                                  <Avatar name={g.actor?.fullName ?? m.systemActor} size="sm" />
+                                  {g.actor?.fullName ?? m.systemActor}
                                 </span>
-                              )}
-                            </div>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
-                              <span className="inline-flex items-center gap-1.5">
-                                <Avatar name={g.actor?.fullName ?? m.systemActor} size="sm" />
-                                <span className="font-medium text-slate-700">{g.actor?.fullName ?? m.systemActor}</span>
-                              </span>
-                              <span className="rounded-full border border-hairline px-2 py-0.5 text-[11px]">
-                                {areaLabel(g.entityType, m.areaLabels)}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pt-0.5 text-[11.5px] text-slate-400">
-                            {relativeTime(g.latestAt, m.relativeTime, locale)}
-                            <Eye className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ol>
+                              </td>
+                              <td className="px-2.5 py-3">
+                                <span className="rounded-full border border-hairline px-2.5 py-0.5 text-[11.5px] text-slate-600">{areaLabel(g.entityType, m.areaLabels)}</span>
+                              </td>
+                              <td className="num px-2.5 py-3 text-[13px] font-bold">
+                                {g.count > 1 ? (
+                                  <span className="rounded-full bg-[#C8A24B]/15 px-2.5 py-0.5 text-[#8A6823] dark:text-[#E2C792]">×{num(g.count)}</span>
+                                ) : (
+                                  <span className="font-medium text-slate-400">1</span>
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-3 pe-6 text-[12.5px] text-slate-500">
+                                {relativeTime(g.latestAt, m.relativeTime, locale)}
+                              </td>
+                              <td className="pe-4 text-end">
+                                <Link href={href as never} aria-label={eventLabel(g.action, g.entityType, m.eventLabels, m.domainActions)} className="text-[#C8A24B]">
+                                  <Eye className="inline h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                                </Link>
+                              </td>
+                            </tr>
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
+              <p className="border-t border-hairline px-6 py-3.5 text-[12px] text-slate-500">{m.timeline.note}</p>
             </PremiumPanel>
 
-            <div className="flex flex-col gap-5 lg:gap-6">
+            <div className="grid grid-cols-1 gap-5 lg:col-span-3 lg:grid-cols-2 lg:gap-6">
               <PremiumPanel title={m.distribution.title} sub={m.distribution.sub}>
                 {areaRows.length === 0 ? (
                   <p className="py-6 text-center text-[13px] text-slate-500">{m.sections.noData}</p>

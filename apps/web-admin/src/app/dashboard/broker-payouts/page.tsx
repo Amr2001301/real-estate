@@ -30,6 +30,7 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   brokerId?: string;
   status?: string;
   period?: string;
@@ -54,7 +55,7 @@ export default async function AdminBrokerPayoutsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  for (const key of ['brokerId', 'status', 'period', 'from', 'to'] as const) {
+  for (const key of ['q', 'brokerId', 'status', 'period', 'from', 'to'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
@@ -157,6 +158,9 @@ export default async function AdminBrokerPayoutsPage({
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/broker-payouts">
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="bpay-q">
+          <Input id="bpay-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Broker name or period (2026-05)…' : 'ابحث باسم الوسيط أو الفترة (2026-05)…'} />
+        </PremiumFilterField>
         {/* Hidden inputs preserve advanced values when the panel is collapsed */}
         {!showFilters && sp.status && <input type="hidden" name="status" value={sp.status} />}
         {!showFilters && sp.period && <input type="hidden" name="period" value={sp.period} />}
@@ -308,6 +312,7 @@ export default async function AdminBrokerPayoutsPage({
           total={paged.meta.total}
           basePath="/dashboard/broker-payouts"
           params={{
+            q: sp.q,
             brokerId: sp.brokerId,
             status: sp.status,
             period: sp.period,

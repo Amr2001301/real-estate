@@ -131,7 +131,7 @@ export function ReportFilterBar({
   }
 
   return (
-    <PremiumFilterBar autoSubmit={false} onSubmit={(e) => e.preventDefault()} trailing={<span className="pe-3 text-[13px] text-slate-500">{rangeText}</span>}>
+    <PremiumFilterBar autoSubmit={false} onSubmit={(e) => { e.preventDefault(); go({}); }} trailing={<span className="pe-3 text-[13px] text-slate-500">{rangeText}</span>}>
       <PremiumFilterField neutral label={isAr ? 'الفترة' : 'Period'} htmlFor="rf-mode">
         <Select id="rf-mode" inputSize="sm" value={state.mode} onChange={(e) => go({ mode: e.target.value as PeriodMode })}>
           {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (

@@ -16,6 +16,7 @@ import type { Paged, AdminInfoRequest } from '@/lib/types';
 import { formatDateTime, tx, intlLocale } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
@@ -39,6 +40,7 @@ const PAGE_SIZE = 20;
 
 interface Filters {
   page?: string;
+  q?: string;
   status?: string;
 }
 
@@ -76,6 +78,7 @@ export default async function InfoRequestsPage({
 
   const pageQs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (statusFilter) pageQs.set('status', statusFilter);
+  if (sp.q) pageQs.set('q', sp.q);
 
   // Two fetches: the page the table renders, and a single row whose meta
   // carries the server-computed status counts for the KPI strip (FG-23).
@@ -152,6 +155,9 @@ export default async function InfoRequestsPage({
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/requests">
+        <PremiumFilterField label={locale === 'en' ? 'Search' : 'بحث'} htmlFor="req-q">
+          <Input id="req-q" name="q" defaultValue={sp.q ?? ''} placeholder={locale === 'en' ? 'Name, phone or message…' : 'ابحث بالاسم أو الهاتف أو الرسالة…'} />
+        </PremiumFilterField>
         <PremiumFilterField label={m.filter.statusLabel} htmlFor="req-status">
           <Select id="req-status" name="status" inputSize="sm" defaultValue={statusFilter} className="w-40 shrink-0">
             <option value="">{m.filter.all}</option>
@@ -348,7 +354,7 @@ export default async function InfoRequestsPage({
           pageSize={res.data.meta.pageSize}
           total={total}
           basePath="/dashboard/requests"
-          params={{ status: statusFilter || undefined }}
+          params={{ status: statusFilter || undefined, q: sp.q }}
           locale={locale}
         />
       )}

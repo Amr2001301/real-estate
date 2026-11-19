@@ -388,9 +388,20 @@ export class BonusService {
     salesIds?: string[];
     status?: BonusEntryStatus;
     period?: string;
+    /** A word in the rep's name or the rule's. */
+    q?: string;
   }) {
+    const q = opts.q?.trim();
     return this.prisma.bonusEntry.findMany({
       where: {
+        ...(q
+          ? {
+              OR: [
+                { sales: { fullName: { contains: q, mode: 'insensitive' } } },
+                { rule: { name: { contains: q, mode: 'insensitive' } } },
+              ],
+            }
+          : {}),
         ...(opts.salesIds
           ? { salesId: { in: opts.salesIds } }
           : opts.salesId
@@ -790,13 +801,14 @@ class BonusController {
     @Query('salesId') salesId?: string,
     @Query('status') status?: BonusEntryStatus,
     @Query('period') period?: string,
+    @Query('q') q?: string,
   ) {
     // PRM2 — a rep their own, a manager their team's; ADMIN or
     // bonus:entries:read:all the whole company (one rep when asked).
     const scope = (await seesWholeCompany(this.prisma, req, user, COMPANY_WIDE_CODES.bonus))
       ? salesId ? { salesId } : {}
       : await resolveSalesScope(this.prisma, user, salesId);
-    return this.svc.listEntries({ ...scope, status, period });
+    return this.svc.listEntries({ ...scope, status, period, q });
   }
 
   // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +

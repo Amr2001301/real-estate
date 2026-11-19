@@ -3,7 +3,9 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -50,6 +52,12 @@ type EntityType = 'Lead' | 'VisitRequest' | 'Reservation' | 'Contract' | 'Commis
 const ENTITY_TYPES = ['Lead', 'VisitRequest', 'Reservation', 'Contract', 'Commission', 'Payout'] as const;
 
 export class PortalActivityQueryDto {
+  /** A word in the lead's name or phone. Payout events have no lead, so a search leaves them out. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @IsEnum(PORTAL_ACTIVITY_TYPES)
   type?: PortalActivityType;

@@ -144,7 +144,7 @@ function brokerMetrics(perf: PerfSummary | undefined, symbol: string | undefined
       label: k.payoutRate,
       value: payoutRate !== null ? payoutRate : '—',
       unit: payoutRate !== null ? '%' : '',
-      ring: payoutRate ?? undefined,
+      bar: payoutRate ?? undefined,
       trend: payoutRate === null ? undefined : payoutRate >= 80 ? k.payoutAlmostFull : payoutRate >= 50 ? k.payoutPartial : k.payoutProcessing,
       tone: payoutRate === null ? undefined : payoutRate >= 80 ? 'success' : 'warning',
     },
@@ -196,7 +196,10 @@ export default async function PortalDashboard() {
         { label: f.stages.approved, value: perf.leadsApproved, note: convPct(perf.leadsApproved, perf.leadsSubmitted) ? `${f.approvalRate} ${convPct(perf.leadsApproved, perf.leadsSubmitted)}` : undefined },
         { label: f.stages.reservations, value: perf.reservationsCreated },
         { label: f.stages.contracts, value: perf.contractsSigned, note: convPct(perf.contractsSigned, perf.reservationsCreated) ? `${f.contractRate} ${convPct(perf.contractsSigned, perf.reservationsCreated)}` : undefined },
-        { label: f.stages.payouts, value: perf.payoutsPaid, note: convPct(perf.payoutsPaid, perf.contractsSigned) ? `${f.payoutRate} ${convPct(perf.payoutsPaid, perf.contractsSigned)}` : undefined },
+        // Money is hidden from an agent who may not see commissions: no payouts figure, no stage.
+        ...(perf.payoutsPaid == null
+          ? []
+          : [{ label: f.stages.payouts, value: perf.payoutsPaid, note: convPct(perf.payoutsPaid, perf.contractsSigned) ? `${f.payoutRate} ${convPct(perf.payoutsPaid, perf.contractsSigned)}` : undefined }]),
       ]
     : [];
 

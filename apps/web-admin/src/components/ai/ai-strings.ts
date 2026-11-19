@@ -71,6 +71,13 @@ const ar = {
     offline: 'غير متاح الآن',
     unavailableTitle: 'المساعد غير متاح الآن',
     keyHint: 'Enter للإرسال · Shift + Enter لسطر جديد',
+    plan: {
+      title: 'باقة المساعد',
+      left: (n: number, quota: number) => `${n} سؤال متبقٍ من ${quota}`,
+      ends: (d: string) => `تنتهي الباقة في ${d}`,
+    },
+    contactAdmin: 'تواصل مع مدير الشركة',
+    newTopicHint: 'اختر سؤالًا أو اكتب سؤالك.',
     remaining: (n: number) => `متبقٍ ${n} سؤال هذا الشهر`,
     canTitle: 'ماذا يمكنه أن يجيب؟',
     can: [
@@ -173,6 +180,13 @@ const en: typeof ar = {
     offline: 'Not available now',
     unavailableTitle: 'The assistant is not available now',
     keyHint: 'Enter to send · Shift + Enter for a new line',
+    plan: {
+      title: 'Assistant plan',
+      left: (n: number, quota: number) => `${n} of ${quota} questions left`,
+      ends: (d: string) => `Plan ends ${d}`,
+    },
+    contactAdmin: 'Ask your company admin',
+    newTopicHint: 'Pick a question or write your own.',
     remaining: (n: number) => `${n} questions left this month`,
     canTitle: 'What can it answer?',
     can: [

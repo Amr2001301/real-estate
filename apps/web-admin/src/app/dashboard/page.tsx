@@ -20,6 +20,7 @@ import {
   HeroAction,
   HeroV2,
   LeadSourcesV2,
+  LeaderboardNudge,
   LeaderboardV2,
   MonthlyBarsV2,
   ProjectHealthV2,
@@ -28,7 +29,7 @@ import {
 import { SalesDashboard } from './_components/sales-home';
 import { BrokerageDashboard } from './_components/brokerage-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
-import type { Paged, Project, TopBrokersResponse } from '@/lib/types';
+import type { Broker, Paged, Project, TopBrokersResponse } from '@/lib/types';
 import { AiUsageCard, type AiUsage } from '@/components/ai/ai-usage-card';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const [r, topSalesRes, topBrokersRes, aiUsageRes, projectsRes] = await Promise.all([
+  const [r, topSalesRes, topBrokersRes, aiUsageRes, projectsRes, brokersCountRes] = await Promise.all([
     safe(api.get<AdminSummary>('/reports/admin-summary')),
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
     safe(api.get<TopBrokersResponse>('/broker-reports/top-brokers?limit=5&metric=salesGross')),
@@ -207,6 +208,8 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
     session?.role === 'ADMIN' ? safe(api.get<AiUsage>('/ai/usage')) : Promise.resolve({ data: null }),
     // The project rows show each project's cover photo and city (from the projects list).
     safe(api.get<Paged<Project>>('/projects?pageSize=100')),
+    // How many brokers the company has, for the line under a short leaderboard.
+    safe(api.get<Paged<Broker>>('/brokers?pageSize=1')),
   ]);
 
   const summary = r.data;
@@ -246,6 +249,23 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
     m.u5.groupedPayments,
   ).slice(0, 7);
 
+  const brokerRows = (topBrokersRes.data?.data ?? [])
+    .slice(0, 5)
+    .map((b) => ({ id: b.brokerId, name: b.companyName, sub: `${b.contractsSigned} ${m.topBrokers.contractSuffix}`, value: Number(b.salesGross) }));
+  const brokersWithSales = brokerRows.filter((r) => r.value > 0).length;
+  const brokersTotal = brokersCountRes.data?.meta.total;
+  const brokersWithoutSales = brokersTotal !== undefined ? Math.max(0, brokersTotal - brokersWithSales) : 0;
+  const brokerNudgeTitle =
+    brokersWithSales === 0 ? m.u5.brokersNudge.none : brokersWithSales === 1 ? m.u5.brokersNudge.one : m.u5.brokersNudge.few(brokersWithSales);
+
+  // Signed contracts against last month, as a chip; nothing when both are 0.
+  function monthChip(now: number, prev: number): { trend?: string; tone?: 'success' | 'danger' | 'neutral' } {
+    if (now === 0 && prev === 0) return {};
+    const d = now - prev;
+    if (d === 0) return { trend: m.u5.monthSame, tone: 'neutral' };
+    return { trend: m.monthDeltaSign(d), tone: d > 0 ? 'success' : 'danger' };
+  }
+
   const funnel = summary?.funnel;
   const topProjects = summary?.topProjects ?? [];
   const forecast = summary?.cashflowForecast;
@@ -282,7 +302,11 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
         metrics={
           summary
             ? [
-                { label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub },
+                {
+                  label: m.kpi.totalContracts, value: totalNum, unit: totalUnit, sub: m.kpi.totalContractsSub,
+                  bar: total > 0 ? Math.round((collected / total) * 100) : undefined,
+                  barLabel: total > 0 ? m.u5.collectedShare(Math.round((collected / total) * 100)) : undefined,
+                },
                 {
                   label: m.u5.collected, value: colNum, unit: colUnit,
                   sub: fees > 0 ? m.u5.feesSub(compactParts(fees, symbol, locale).join(' ')) : undefined,
@@ -290,15 +314,22 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
                   tone: collectionDelta !== null && collectionDelta >= 0 ? 'success' : 'danger',
                 },
                 {
+                  // The rate, its bar and a short status: the ring and the
+                  // two-line note crowded this one column.
                   label: m.kpi.collectionRate, value: rate !== null ? rate : '—', unit: rate !== null ? '%' : '',
-                  ring: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
-                  trend: rate !== null ? rateNote : undefined,
+                  bar: rate ?? undefined, sub: rate !== null ? m.u5.rateSub : rateNote,
+                  trend: rate === null ? undefined : rate >= 90 ? m.u5.rateHealthy : rate >= 70 ? m.u5.rateWatch : m.u5.rateLowChip,
                   tone: rate === null ? undefined : rate >= 90 ? 'success' : rate >= 70 ? 'warning' : 'danger',
                 },
-                { label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone },
+                {
+                  label: m.kpi.overdue, value: ovNum, unit: ovUnit, sub: overdue > 0 ? m.overdueExceeded : m.kpi.overdueNone,
+                  trend: overdue > 0 && summary.portfolio?.overdueCount ? m.u5.overdueContracts(summary.portfolio.overdueCount) : undefined,
+                  tone: 'danger',
+                },
                 {
                   label: m.kpi.monthContracts, value: fin?.signedContractsThisMonth ?? 0,
                   sub: kpis ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits) : undefined,
+                  ...monthChip(fin?.signedContractsThisMonth ?? 0, fin?.prevMonthSignedContracts ?? 0),
                 },
               ]
             : []
@@ -382,9 +413,17 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
             link={{ href: '/dashboard/broker-reports', label: m.viewAll }}
             empty={m.topBrokers.empty}
             money={money}
-            rows={(topBrokersRes.data?.data ?? [])
-              .slice(0, 5)
-              .map((b) => ({ id: b.brokerId, name: b.companyName, sub: `${b.contractsSigned} ${m.topBrokers.contractSuffix}`, value: Number(b.salesGross) }))}
+            rows={brokerRows}
+            fill={brokerRows.filter((r) => r.value > 0).length < 5 && (
+              <LeaderboardNudge
+                title={brokerNudgeTitle}
+                text={brokersWithoutSales > 0 ? m.u5.brokersNudge.rest(brokersWithoutSales) : m.u5.brokersNudge.restNoCount}
+                actions={[
+                  { href: '/dashboard/brokers/new', label: m.u5.brokersNudge.add, primary: true },
+                  { href: '/dashboard/brokers', label: m.u5.brokersNudge.all },
+                ]}
+              />
+            )}
           />
         </div>
       </div>
@@ -410,18 +449,16 @@ export default async function DashboardHome({ searchParams }: { searchParams: Pr
               title={m.u5.funnel.title}
               sub={m.u5.funnel.sub}
               footnote={m.u5.funnelNote}
+              headline={
+                funnel.reservations > 0
+                  ? { pct: Math.round((funnel.contracts / funnel.reservations) * 100), label: m.u5.funnelHeadline }
+                  : undefined
+              }
               stages={[
                 { label: m.u5.funnel.leads, value: funnel.leads },
                 { label: m.u5.funnel.visits, value: funnel.visits },
                 { label: m.u5.funnel.reservations, value: funnel.reservations },
-                {
-                  label: m.u5.funnel.contracts,
-                  value: funnel.contracts,
-                  // Contracts come from bookings, so this rate means something.
-                  note: funnel.reservations > 0
-                    ? m.u5.funnelConversion(Math.round((funnel.contracts / funnel.reservations) * 100))
-                    : undefined,
-                },
+                { label: m.u5.funnel.contracts, value: funnel.contracts },
               ]}
             />
           )}

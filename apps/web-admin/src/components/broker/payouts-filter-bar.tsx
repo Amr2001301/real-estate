@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { PremiumFilterBar, PremiumFilterField } from '@/components/premium/filter-bar';
@@ -24,19 +23,11 @@ export function PayoutsFilterBar({ sp, locale = 'ar' }: Props) {
   const f = t.filters;
   const L = f.labels;
   const c = t.payoutsFilter;
-  const anyFilter = !!(sp.q || sp.status || sp.period || sp.from || sp.to);
 
   return (
     <PremiumFilterBar
       method="get"
       action="/portal/payouts"
-      trailing={
-        anyFilter ? (
-          <Link href="/portal/payouts" className="px-3 text-[13px] font-bold text-brand-700 underline underline-offset-4">
-            {f.clear}
-          </Link>
-        ) : undefined
-      }
     >
       <PremiumFilterField label={L.search} htmlFor="pf-q">
         <Input id="pf-q" name="q" placeholder={c.searchPlaceholder} defaultValue={sp.q ?? ''} />

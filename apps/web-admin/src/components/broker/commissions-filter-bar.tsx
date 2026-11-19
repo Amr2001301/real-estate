@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Input } from '@/components/ui/input';
@@ -27,19 +26,11 @@ export function CommissionsFilterBar({ projects, sp, locale = 'ar' }: Props) {
   const f = t.filters;
   const L = f.labels;
   const c = t.commissionsFilter;
-  const anyFilter = !!(sp.q || sp.status || sp.projectId || sp.from || sp.to);
 
   return (
     <PremiumFilterBar
       method="get"
       action="/portal/commissions"
-      trailing={
-        anyFilter ? (
-          <Link href="/portal/commissions" className="px-3 text-[13px] font-bold text-brand-700 underline underline-offset-4">
-            {f.clear}
-          </Link>
-        ) : undefined
-      }
     >
       <PremiumFilterField label={L.search} htmlFor="cf-q">
         <Input id="cf-q" name="q" placeholder={c.searchPlaceholder} defaultValue={sp.q ?? ''} />

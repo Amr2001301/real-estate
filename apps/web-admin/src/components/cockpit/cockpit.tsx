@@ -106,6 +106,14 @@ export interface Figure {
   pct?: number;
   /** `cards` variant: the list below shows exactly what this figure counts. */
   active?: boolean;
+  /** `cards` variant: a small unit after the figure («مليون ج.م», «%»). */
+  unit?: string;
+  /** `cards` variant: a plain line under the figure (the chip is `sub`). */
+  line?: string;
+  /** `cards` variant: 0–100 bar in the bottom row, beside the chip. */
+  bar?: number;
+  /** A page's own test id for the card (default `figure`). */
+  testId?: string;
 }
 
 /** Ready-made icons for the `cards` figure variant. */
@@ -154,7 +162,7 @@ function Sparkline({ seed, tone }: { seed: string; tone: NonNullable<Figure['ton
   );
 }
 
-function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
+export function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
   return (
     <dl
       data-testid="figure-bar"
@@ -172,11 +180,20 @@ function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
               <dt className="text-[13px] font-medium text-slate-500">{f.label}</dt>
               {f.icon && <span aria-hidden className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] [&_svg]:h-[19px] [&_svg]:w-[19px]', tone.tile)}>{f.icon}</span>}
             </div>
-            <dd className="num mt-3.5 whitespace-nowrap text-[34px] font-semibold leading-none tracking-tight text-slate-900">{f.value}</dd>
+            <dd className="num mt-3.5 flex items-baseline gap-1.5 whitespace-nowrap text-[34px] font-semibold leading-none tracking-tight text-slate-900">
+              <span>{f.value}</span>
+              {f.unit && <span className="text-[13px] font-semibold tracking-normal text-slate-500">{f.unit}</span>}
+            </dd>
+            {f.line && <dd className="mt-2 truncate text-[12px] text-slate-500">{f.line}</dd>}
             <dd className="mt-3.5 flex min-h-[28px] items-end justify-between gap-2.5">
+              {f.bar !== undefined ? (
+                <span aria-hidden className="mb-2 h-[5px] min-w-[40px] flex-1 overflow-hidden rounded-full bg-slate-500/15">
+                  <span className={cn('block h-full rounded-full', tone.bar)} style={{ width: `${Math.max(0, Math.min(100, f.bar))}%` }} />
+                </span>
+              ) : null}
               {(f.sub ?? (f.pct !== undefined && f.pct < 100 ? `${Math.round(f.pct)}%` : null)) ? (
                 <span dir={f.sub ? undefined : 'ltr'} className={cn('inline-flex max-w-full items-center truncate rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums', tone.chip)}>{f.sub ?? `${Math.round(f.pct as number)}%`}</span>
-              ) : <span />}
+              ) : f.bar === undefined ? <span /> : null}
               <Sparkline seed={f.label} tone={f.tone ?? (f.warn ? 'amber' : 'gold')} />
             </dd>
           </>
@@ -186,7 +203,7 @@ function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
           <Link
             key={f.label}
             href={f.href as never}
-            data-testid="figure"
+            data-testid={f.testId ?? 'figure'}
             data-active={f.active ? 'true' : undefined}
             aria-current={f.active ? 'true' : undefined}
             className={cn(
@@ -198,7 +215,7 @@ function FigureCards({ figures, cols }: { figures: Figure[]; cols: number }) {
             {body}
           </Link>
         ) : (
-          <div key={f.label} data-testid="figure" className={cls}>{body}</div>
+          <div key={f.label} data-testid={f.testId ?? 'figure'} className={cls}>{body}</div>
         );
       })}
     </dl>
@@ -218,38 +235,9 @@ const FIGURE_COLS: Record<number, string> = {
   6: 'sm:grid-cols-3 xl:grid-cols-6',
 };
 
-export function FigureBar({ figures, cols = 6, variant = 'band' }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean; variant?: 'band' | 'cards' }) {
-  if (variant === 'cards') return <FigureCards figures={figures} cols={cols} />;
-  return (
-    <dl
-      data-testid="figure-bar"
-      className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-[#D8B66A]/[0.16] text-[#F4ECD8]',
-        'shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]',
-        FIGURE_COLS[Math.min(cols, Math.max(2, figures.length))] ?? 'xl:grid-cols-4',
-        // An odd count: the first figure spans the phone row, no empty cell.
-        figures.length % 2 === 1 && 'max-xl:[&>*:first-child]:col-span-2',
-      )}
-    >
-      {figures.map((f) => {
-        const body = (
-          <>
-            <dt className="text-[13px] leading-snug text-[#A9B0BD]">{f.label}</dt>
-            <dd className="num mt-2 whitespace-nowrap text-[34px] font-semibold leading-none text-[#F4ECD8] [&_.text-slate-500]:!text-[#D8B66A]">{f.value}</dd>
-            {f.sub && <dd className={cn('mt-2 truncate text-[12px]', f.warn ? 'font-semibold text-[#E8B96E]' : 'text-[#A9B0BD]')}>{f.sub}</dd>}
-          </>
-        );
-        const cls = 'block bg-navy-band px-5 py-5 sm:px-6';
-        return f.href ? (
-          <Link key={f.label} href={f.href as never} data-testid="figure" className={cn(cls, 'transition-[filter] hover:brightness-125')}>
-            {body}
-          </Link>
-        ) : (
-          <div key={f.label} data-testid="figure" className={cls}>{body}</div>
-        );
-      })}
-    </dl>
-  );
+export function FigureBar({ figures, cols = 6 }: { figures: Figure[]; cols?: 4 | 5 | 6; bare?: boolean; variant?: 'band' | 'cards' }) {
+  // One look for every KPI row: the light figure cards (the navy band is retired).
+  return <FigureCards figures={figures} cols={cols} />;
 }
 
 /** A compact amount: the figure, its unit (ألف / مليون + currency) smaller beside it. */

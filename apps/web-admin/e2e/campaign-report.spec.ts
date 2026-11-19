@@ -35,7 +35,7 @@ test('the campaigns report ranks campaigns with their spend, and filters by chan
 
   // Another channel leaves it out.
   await page.locator('select[name="channel"]').selectOption('GOOGLE');
-  await page.getByRole('button', { name: 'تطبيق' }).click();
+  await page.getByRole('button', { name: 'تصفية' }).click();
   await page.waitForURL(/channel=GOOGLE/);
   await expect(page.getByTestId('report-campaign-row').filter({ hasText: name })).toHaveCount(0);
 

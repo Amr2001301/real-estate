@@ -15,6 +15,12 @@ import {
 import { BrokerCommissionStatus, PaymentMethod } from '@prisma/client';
 
 export class BrokerCommissionsQueryDto {
+  /** A word in the broker's or the agent's name, or in the contract number. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @IsUUID()
   brokerId?: string;

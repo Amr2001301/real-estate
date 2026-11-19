@@ -18,7 +18,7 @@ import {
   PremiumEmptyState,
 } from '@/components/premium';
 import { FigIcons, FigureBar } from '@/components/cockpit/cockpit';
-import { AgentCell, AlertStrip, DataTable, DateText, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
+import { AgentCell, AlertStrip, DataTable, ListFilterBar, ListFilterField, ListPage, ListPager, ListTableCard, PersonCell, Td, Th, Tr, UnitCell } from '@/components/lists/list-kit';
 import { uiT } from '@/messages/ui';
 import { EntityLink } from '@/components/entity-link';
 
@@ -267,17 +267,15 @@ export default async function ReservationsPage({
         {reservations.length === 0 ? (
           <PremiumEmptyState icon={<BookmarkCheck />} title={m.empty} />
         ) : (
-          <DataTable testId="reservation-rows">
+          <DataTable testId="reservation-rows" widths={[14, 18, 23, 14, 10, 13, 8]}>
             <thead>
               <tr>
                 <Th>{locale === 'ar' ? 'رقم الحجز' : 'Reservation'}</Th>
                 <Th>{locale === 'ar' ? 'العميل' : 'Client'}</Th>
                 <Th>{locale === 'ar' ? 'المشروع / الوحدة' : 'Project / unit'}</Th>
                 <Th>{locale === 'ar' ? 'المندوب' : 'Agent'}</Th>
-                <Th>{locale === 'ar' ? 'مبلغ الحجز' : 'Booking amount'}</Th>
+                <Th>{locale === 'ar' ? `مبلغ الحجز (${symbol})` : `Booking amount (${symbol})`}</Th>
                 <Th>{locale === 'ar' ? 'الحالة' : 'Status'}</Th>
-                <Th>{locale === 'ar' ? 'تاريخ الانتهاء' : 'Expires'}</Th>
-                <Th>{locale === 'ar' ? 'تاريخ الإنشاء' : 'Created'}</Th>
                 <Th />
               </tr>
             </thead>
@@ -288,7 +286,7 @@ export default async function ReservationsPage({
                 const amount = Number(r.bookingAmount);
                 const href = `/dashboard/reservations/${r.id}`;
                 return (
-                  <Tr key={r.id} testId="reservation-row">
+                  <Tr key={r.id} testId="reservation-row" waiting={r.status === 'PENDING'}>
                     <Td>
                       <Link href={href as never} data-testid="list-code" className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline" dir="ltr">
                         {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
@@ -311,20 +309,16 @@ export default async function ReservationsPage({
                     <Td>
                       <div className="flex flex-col items-start gap-1">
                         <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                          {Number.isFinite(amount)
-                            ? <>{amount.toLocaleString(intlLocale(locale))} <span className="text-[11px] font-semibold text-slate-500">{symbol}</span></>
-                            : '—'}
+                          {Number.isFinite(amount) ? amount.toLocaleString(intlLocale(locale)) : '—'}
                         </span>
                       </div>
                     </Td>
                     <Td>
                       <ReservationStatusBadge status={r.status} locale={locale} dot />
-                    </Td>
-                    <Td>
-                      <DateText>{formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}</DateText>
-                    </Td>
-                    <Td>
-                      <DateText>{formatDate(r.createdAt, locale)}</DateText>
+                      {/* When it lapses — under the status, not a column of its own. */}
+                      <span className="mt-1 block text-[11.5px] tabular-nums text-slate-500">
+                        {locale === 'ar' ? 'ينتهي' : 'Expires'} {formatDate(r.expiresAt, locale, DEFAULT_TIME_ZONE)}
+                      </span>
                     </Td>
                     <Td>
                       <ReservationActions

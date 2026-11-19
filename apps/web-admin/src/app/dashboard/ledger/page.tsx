@@ -1,18 +1,17 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowDownLeft, ArrowUpRight, PauseCircle, RotateCcw, Scale, Search } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, PauseCircle, Scale } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { getLocale, type Locale } from '@/lib/locale';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
-import { getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
+import { currencySymbol, getCompanyTimeZone, getReportsCurrency, todayIn } from '@/lib/currency';
 import { projectOptions as fetchProjectOptions } from '@/lib/options';
 import type { Paged } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
-import { PremiumFilterBar, PremiumFilterField, PremiumPageHero } from '@/components/premium';
+import { PremiumFilterBar, PremiumFilterField, PremiumMetricStrip, PremiumPageHero, PremiumRangeField } from '@/components/premium';
 import { compactFigure } from '@/components/premium/metric-strip';
 import { EntityLink } from '@/components/entity-link';
 import { ledgerT } from './messages';
@@ -308,45 +307,33 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
         breadcrumbs={[{ label: t.home, href: '/dashboard' }, { label: t.breadcrumb }]}
       />
 
-      {/* Position: what is owed to the company, the net, what it owes. */}
+      {/* Position: what is owed to the company, the net, what it owes — the shared figure cards. */}
       {s && (
-        <section
-          data-testid="metric-strip"
-          className="overflow-hidden rounded-card border border-[#D8B66A]/[0.28] bg-navy-band text-[#F4ECD8] shadow-[0_22px_44px_-24px_rgb(10_17_32/0.55)]"
-        >
-          <div className="grid gap-px bg-[#D8B66A]/[0.16] md:grid-cols-3">
-            {(['receivables', 'net', 'payables'] as const).map((k) => {
-              const value = k === 'net' ? net : n(k === 'receivables' ? s.receivables.total : s.payables.total);
-              const overdue = k === 'net' ? 0 : sideStates(k).late;
-              return (
-                <div key={k} className="flex flex-col items-center gap-2 bg-navy-band px-7 py-7 text-center">
-                  <p className="flex items-center justify-center gap-2 text-[13px] text-[#A9B0BD]">
-                    <span className="text-[#D8B66A] [&_svg]:h-4 [&_svg]:w-4">
-                      {k === 'net' ? <Scale /> : k === 'receivables' ? <ArrowDownLeft /> : <ArrowUpRight />}
-                    </span>
-                    {k === 'net' ? t.net.title : t.sides[k].title}
-                  </p>
-                  <Figure value={value} currency={currency} locale={locale} size="xl" tone="cream" />
-                  <p className="text-[12px] text-[#A9B0BD]">
-                    {k === 'net'
-                      ? `${net >= 0 ? t.net.positive : t.net.negative} · ${t.net.asOf} ${formatDate(s.asOf, locale)}`
-                      : (
-                        <>
-                          {t.sides[k].overdue}{' '}
-                          <span className={cn('font-semibold tabular-nums', overdue > 0 ? 'text-[#F09687]' : 'text-[#86C9A0]')}>{money(overdue)}</span>
-                        </>
-                      )}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <PremiumMetricStrip
+          cols={3}
+          metrics={(['receivables', 'net', 'payables'] as const).map((k) => {
+            const value = k === 'net' ? net : n(k === 'receivables' ? s.receivables.total : s.payables.total);
+            const overdue = k === 'net' ? 0 : sideStates(k).late;
+            const [num, unit] = compactFigure(String(Math.abs(Math.round(value))), currencySymbol(currency, locale), locale !== 'en');
+            return {
+              label: k === 'net' ? t.net.title : t.sides[k].title,
+              value: `${value < 0 ? '-' : ''}${num}`,
+              unit,
+              icon: k === 'net' ? <Scale /> : k === 'receivables' ? <ArrowDownLeft /> : <ArrowUpRight />,
+              sub: k === 'net' ? `${net >= 0 ? t.net.positive : t.net.negative} · ${t.net.asOf} ${formatDate(s.asOf, locale)}` : undefined,
+              trend: k === 'net' ? undefined : `${t.sides[k].overdue} ${money(overdue)}`,
+              trendCls: overdue > 0 ? 'danger' : 'success',
+            };
+          })}
+        />
       )}
 
       <div className="flex flex-col gap-2">
         <PremiumFilterBar method="get" action="/dashboard/ledger" data-testid="ledger-filters">
           {sp.group && <input type="hidden" name="group" value={group} />}
+          <PremiumFilterField label={t.filter.search} htmlFor="lg-q">
+            <Input id="lg-q" name="q" defaultValue={sp.q ?? ''} placeholder={t.filter.search} />
+          </PremiumFilterField>
           <PremiumFilterField label={t.filter.period} htmlFor="lg-period">
             <Select id="lg-period" name="period" inputSize="sm" defaultValue={period} className="w-44 shrink-0">
               {PERIODS.map((p) => (
@@ -354,12 +341,11 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
               ))}
             </Select>
           </PremiumFilterField>
-          <PremiumFilterField label={t.filter.from} htmlFor="lg-from">
-            <Input id="lg-from" name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} className="w-40 shrink-0" />
-          </PremiumFilterField>
-          <PremiumFilterField label={t.filter.to} htmlFor="lg-to">
-            <Input id="lg-to" name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} className="w-40 shrink-0" />
-          </PremiumFilterField>
+          <PremiumRangeField
+            label={`${t.filter.from} → ${t.filter.to}`}
+            from={{ id: 'dateFrom', value: sp.dateFrom, label: t.filter.from }}
+            to={{ id: 'dateTo', value: sp.dateTo, label: t.filter.to }}
+          />
           <PremiumFilterField label={t.filter.project} htmlFor="lg-project">
             <Select id="lg-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-48 shrink-0">
               <option value="">{t.filter.allProjects}</option>
@@ -368,23 +354,6 @@ export default async function LedgerPage({ searchParams }: { searchParams: Promi
               ))}
             </Select>
           </PremiumFilterField>
-          <div className="min-w-[200px] flex-1">
-            <label htmlFor="lg-q" className="sr-only">{t.filter.search}</label>
-            <Input id="lg-q" name="q" inputSize="sm" placeholder={t.filter.search} defaultValue={sp.q ?? ''} leftAddon={<Search />} className="w-full" />
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button type="submit" variant="primary" size="sm">{t.filter.apply}</Button>
-            {(period !== 'all' || sp.projectId || sp.q) && (
-              <Link
-                href="/dashboard/ledger"
-                title={t.filter.reset}
-                aria-label={t.filter.reset}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-hairline text-slate-500 transition-colors hover:border-danger-500/40 hover:text-danger-600"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Link>
-            )}
-          </div>
         </PremiumFilterBar>
         <p className="px-3 text-[12px] leading-relaxed text-slate-500">
           {range.dateFrom && range.dateTo && (
