@@ -73,6 +73,13 @@ export default async function PortalContractsPage({
 
   const isFiltered = !!(sp.projectId || sp.signed || sp.q);
 
+  // A figure is on when the list shows exactly what it counts (no other
+  // filter); clicking it again goes back to the whole list.
+  const figLink = (signed: string | undefined) => {
+    const active = !(sp.projectId || sp.q) && (sp.signed || undefined) === signed;
+    return { active, href: active || !signed ? '/portal/contracts' : `/portal/contracts?signed=${signed}` };
+  };
+
   return (
     <ListPage minHeight={960}>
 
@@ -96,9 +103,9 @@ export default async function PortalContractsPage({
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: totalAll, href: '/portal/contracts', icon: FigIcons.total },
-            { label: t.metrics.signed, value: signedCount, href: '/portal/contracts?signed=yes', icon: FigIcons.done, tone: 'green' },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/contracts?signed=no', warn: pendingCount > 0, icon: FigIcons.sign },
+            { label: t.metrics.total, value: totalAll, ...figLink(undefined), icon: FigIcons.total },
+            { label: t.metrics.signed, value: signedCount, ...figLink('yes'), icon: FigIcons.done, tone: 'green' },
+            { label: t.metrics.pending, value: pendingCount, ...figLink('no'), warn: pendingCount > 0, icon: FigIcons.sign },
             {
               label: t.pageValue.replace(/:\s*$/, ''),
               value: <Amount parts={compactParts(pageValue, symbol, locale)} />,

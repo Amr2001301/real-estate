@@ -355,7 +355,9 @@
     letter-spacing: 0.02em;
   }
   .dark #main-scroll table.list-table > thead th {
-    background-color: rgb(255 255 255 / 0.05);
+    /* The same 5% white over the card, but opaque: the pinned actions column
+       must not show the rows sliding under it. */
+    background: linear-gradient(rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.05)), rgb(var(--tw-surface));
   }
 
   .dark .text-navy:not([class*='bg-']) {

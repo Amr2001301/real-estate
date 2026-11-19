@@ -45,6 +45,9 @@ interface SalesUser {
   role?: string;
 }
 
+/** «منتهية/ملغاة»: the API takes a comma-separated status list. */
+const CLOSED = 'CANCELLED,EXPIRED';
+
 export default async function ReservationsPage({
   searchParams,
 }: {
@@ -117,6 +120,17 @@ export default async function ReservationsPage({
   const projects: ProjectOption[] = projectsRes.data?.data ?? [];
   const salesOptions: SalesUser[] = salesRes.data?.data ?? [];
 
+  // A figure is on when the list shows exactly what it counts (no other
+  // filter); clicking it again goes back to the whole list.
+  const otherFilters = !!(sp.q || sp.projectId || sp.salesId || sp.dateFrom || sp.dateTo);
+  const figLink = (status: string | undefined) => {
+    const active = !otherFilters && (sp.status || undefined) === status;
+    return {
+      active,
+      href: active || !status ? '/dashboard/reservations' : `/dashboard/reservations?status=${status}`,
+    };
+  };
+
   return (
     <ListPage minHeight={960}>
 
@@ -133,7 +147,7 @@ export default async function ReservationsPage({
         className="shrink-0"
         actions={
           <Link href="/dashboard/reservations/new">
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {m.addBtn}
             </Button>
           </Link>
@@ -146,11 +160,11 @@ export default async function ReservationsPage({
           variant="cards"
           cols={5}
           figures={[
-            { label: m.kpi.total, value: stats?.total ?? '—', href: '/dashboard/reservations', icon: FigIcons.total, sub: locale === 'ar' ? 'كل الحجوزات' : 'All reservations' },
-            { label: m.kpi.underReview, value: stats?.pending ?? '—', href: '/dashboard/reservations?status=PENDING', warn: (stats?.pending ?? 0) > 0, icon: FigIcons.pending, tone: 'amber', sub: locale === 'ar' ? 'بانتظار اعتمادك' : 'Awaiting your approval' },
-            { label: m.kpi.approved, value: stats?.approved ?? '—', href: '/dashboard/reservations?status=APPROVED', icon: FigIcons.done, tone: 'green', sub: `${share(stats?.approved ?? 0)}% ${ofTotal}` },
-            { label: m.kpi.rejected, value: stats?.rejected ?? '—', href: '/dashboard/reservations?status=REJECTED', icon: FigIcons.rejected, tone: 'red', sub: `${share(stats?.rejected ?? 0)}% ${ofTotal}` },
-            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—', icon: FigIcons.alert, tone: 'gray', sub: `${share((stats?.expired ?? 0) + (stats?.cancelled ?? 0))}% ${ofTotal}` },
+            { label: m.kpi.total, value: stats?.total ?? '—', ...figLink(undefined), icon: FigIcons.total, sub: locale === 'ar' ? 'كل الحجوزات' : 'All reservations' },
+            { label: m.kpi.underReview, value: stats?.pending ?? '—', ...figLink('PENDING'), warn: (stats?.pending ?? 0) > 0, icon: FigIcons.pending, tone: 'amber', sub: locale === 'ar' ? 'بانتظار اعتمادك' : 'Awaiting your approval' },
+            { label: m.kpi.approved, value: stats?.approved ?? '—', ...figLink('APPROVED'), icon: FigIcons.done, tone: 'green', sub: `${share(stats?.approved ?? 0)}% ${ofTotal}` },
+            { label: m.kpi.rejected, value: stats?.rejected ?? '—', ...figLink('REJECTED'), icon: FigIcons.rejected, tone: 'red', sub: `${share(stats?.rejected ?? 0)}% ${ofTotal}` },
+            { label: m.kpi.cancelledExpired, value: stats ? (stats.expired ?? 0) + (stats.cancelled ?? 0) : '—', ...figLink(CLOSED), icon: FigIcons.alert, tone: 'gray', sub: `${share((stats?.expired ?? 0) + (stats?.cancelled ?? 0))}% ${ofTotal}` },
           ]}
         />
       </section>
@@ -213,6 +227,7 @@ export default async function ReservationsPage({
             <option value="REJECTED">{m.filter.rejected}</option>
             <option value="CANCELLED">{m.filter.cancelled}</option>
             <option value="EXPIRED">{m.filter.expired}</option>
+            <option value={CLOSED}>{m.kpi.cancelledExpired}</option>
             <option value="OVERDUE">{m.filter.overdue}</option>
           </Select>
         </ListFilterField>

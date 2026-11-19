@@ -127,7 +127,7 @@ export default async function AdminBrokerReservationsPage({
         className="shrink-0"
         actions={
           <Link href={'/dashboard/broker-reservations/new' as never}>
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {m.newReservationBtn}
             </Button>
           </Link>

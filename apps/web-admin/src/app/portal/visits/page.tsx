@@ -65,14 +65,15 @@ export default async function PortalVisitsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  if (sp.requestStatus) qs.set('requestStatus', sp.requestStatus);
+  // OPEN is the «قيد الانتظار» figure: new or under review.
+  if (sp.requestStatus === 'OPEN') qs.set('open', 'true');
+  else if (sp.requestStatus) qs.set('requestStatus', sp.requestStatus);
   if (sp.q) qs.set('q', sp.q);
 
-  const [r, rAll, rNew, rUnderReview, rConverted, rRejected, projectsRes] = await Promise.all([
+  const [r, rAll, rOpen, rConverted, rRejected, projectsRes] = await Promise.all([
     safe(api.get<Paged<PortalVisitRequest>>(`/portal/visits?${qs.toString()}`)),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1')),
-    safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=NEW')),
-    safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=UNDER_REVIEW')),
+    safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&open=true')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=CONVERTED')),
     safe(api.get<Paged<PortalVisitRequest>>('/portal/visits?page=1&pageSize=1&requestStatus=REJECTED')),
     safe(api.get<PortalProject[]>('/portal/projects')),
@@ -82,9 +83,16 @@ export default async function PortalVisitsPage({
   const paged        = r.data;
   const rows         = paged?.data ?? [];
   const totalCount     = rAll.data?.meta.total ?? paged?.meta.total ?? 0;
-  const pendingCount   = (rNew.data?.meta.total ?? 0) + (rUnderReview.data?.meta.total ?? 0);
+  const pendingCount   = rOpen.data?.meta.total ?? 0;
   const scheduledCount = rConverted.data?.meta.total ?? 0;
   const rejectedCount  = rRejected.data?.meta.total  ?? 0;
+
+  // A figure is on when the list shows exactly what it counts (no search);
+  // clicking it again goes back to the whole list.
+  const figLink = (status: string | undefined) => {
+    const active = !sp.q && (sp.requestStatus || undefined) === status;
+    return { active, href: active || !status ? '/portal/visits' : `/portal/visits?requestStatus=${status}` };
+  };
 
   return (
     <ListPage minHeight={960}>
@@ -96,7 +104,7 @@ export default async function PortalVisitsPage({
         description={t.description}
         actions={
           <Link href="/portal/visits/new">
-            <Button variant="secondary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
               {t.newRequest}
             </Button>
           </Link>
@@ -116,10 +124,10 @@ export default async function PortalVisitsPage({
           bare
           cols={4}
           figures={[
-            { label: t.metrics.total, value: totalCount, href: '/portal/visits', icon: FigIcons.total },
-            { label: t.metrics.pending, value: pendingCount, href: '/portal/visits?requestStatus=NEW', warn: pendingCount > 0, icon: FigIcons.pending },
-            { label: t.metrics.scheduled, value: scheduledCount, href: '/portal/visits?requestStatus=CONVERTED', icon: FigIcons.calendar, tone: 'green' },
-            { label: t.metrics.rejected, value: rejectedCount, href: '/portal/visits?requestStatus=REJECTED', icon: FigIcons.rejected, tone: 'red' },
+            { label: t.metrics.total, value: totalCount, ...figLink(undefined), icon: FigIcons.total },
+            { label: t.metrics.pending, value: pendingCount, ...figLink('OPEN'), warn: pendingCount > 0, icon: FigIcons.pending },
+            { label: t.metrics.scheduled, value: scheduledCount, ...figLink('CONVERTED'), icon: FigIcons.calendar, tone: 'green' },
+            { label: t.metrics.rejected, value: rejectedCount, ...figLink('REJECTED'), icon: FigIcons.rejected, tone: 'red' },
           ]}
         />
       </section>
@@ -136,6 +144,7 @@ export default async function PortalVisitsPage({
         <ListFilterField label={t.statusLabel}>
           <Select name="requestStatus" inputSize="sm" defaultValue={sp.requestStatus ?? ''}>
             <option value="">{t.statusOptions.all}</option>
+            <option value="OPEN">{t.metrics.pending}</option>
             <option value="NEW">{t.statusOptions.NEW}</option>
             <option value="UNDER_REVIEW">{t.statusOptions.UNDER_REVIEW}</option>
             <option value="CONVERTED">{t.statusOptions.CONVERTED}</option>

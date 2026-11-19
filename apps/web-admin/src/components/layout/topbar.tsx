@@ -10,6 +10,8 @@ import { NotificationBell } from './notification-bell';
 import { TopbarCrumbs } from './topbar-crumbs';
 import { LangToggle } from '@/components/ui/lang-toggle';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { GOLD_ACTION } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
 
 interface Props {
@@ -78,7 +80,7 @@ export async function Topbar({ user, locale, notificationsHref, sections, leadin
             <Link
               href={assistant.href as never}
               prefetch={false}
-              className="hidden h-[42px] items-center gap-2 rounded-full bg-[linear-gradient(135deg,#EAD5A3_0%,#C8A24B_48%,#9E7A2B_100%)] px-4 text-[13px] font-bold text-[#0B1220] transition hover:brightness-105 sm:inline-flex"
+              className={cn(GOLD_ACTION, 'hidden h-[42px] items-center gap-2 rounded-full px-4 text-[13px] sm:inline-flex')}
             >
               <Sparkles className="h-4 w-4" strokeWidth={2} aria-hidden />
               {locale === 'en' ? 'Assistant' : 'المساعد'}

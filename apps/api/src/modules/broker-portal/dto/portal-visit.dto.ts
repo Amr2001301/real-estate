@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsIn,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -58,6 +59,11 @@ export class PortalVisitsQueryDto {
   @IsOptional()
   @IsEnum(VisitRequestStatus)
   requestStatus?: VisitRequestStatus;
+
+  /** 'true' → requests still waiting on the company (new or under review) — the «قيد الانتظار» figure. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  open?: string;
 
   @IsOptional()
   @IsEnum(VisitStatus)

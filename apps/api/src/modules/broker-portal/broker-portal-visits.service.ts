@@ -53,7 +53,11 @@ export class BrokerPortalVisitsService {
 
     const where: Prisma.VisitRequestWhereInput = {
       brokerId: scope.brokerId,
-      ...(query.requestStatus ? { requestStatus: query.requestStatus } : {}),
+      ...(query.requestStatus
+        ? { requestStatus: query.requestStatus }
+        : query.open === 'true'
+          ? { requestStatus: { in: [VisitRequestStatus.NEW, VisitRequestStatus.UNDER_REVIEW] } }
+          : {}),
       ...(query.status ? { status: query.status } : {}),
     };
 

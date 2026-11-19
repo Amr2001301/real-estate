@@ -52,6 +52,18 @@ const FINAL_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.RESCHEDULED,
 ];
 
+// Requests still waiting on the company — what «طلبات جديدة» counts and `open=true` lists.
+const OPEN_REQUEST_WHERE: Prisma.VisitRequestWhereInput = {
+  OR: [
+    { requestStatus: VisitRequestStatus.NEW },
+    { requestStatus: VisitRequestStatus.UNDER_REVIEW },
+    { requestStatus: null },
+  ],
+};
+
+// A booked visit — what the visit figures count and `booked=true` lists.
+const BOOKED_STATUSES: AppointmentStatus[] = [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED];
+
 const REQUEST_INCLUDE = {
   user: { select: { id: true, fullName: true, phone: true, email: true } },
   lead: { select: { id: true, fullName: true, phone: true, email: true, stage: true } },
@@ -194,36 +206,32 @@ export class VisitsService {
           ? { assignedSalesId: { in: await managerScopeIds(this.prisma, user.sub) } }
           : {};
 
+    // The request counts follow the list's scope, so a figure always matches
+    // the rows its card opens.
+    const requestScope = await this.requestScope(user);
+
     const [newRequests, totalRequests, todayVisits, weekVisits, scheduledVisits, pendingConfirmation] =
       await this.prisma.$transaction([
-        this.prisma.visitRequest.count({
-          where: {
-            OR: [
-              { requestStatus: VisitRequestStatus.NEW },
-              { requestStatus: VisitRequestStatus.UNDER_REVIEW },
-              { requestStatus: null },
-            ],
-          },
-        }),
-        this.prisma.visitRequest.count({}),
+        this.prisma.visitRequest.count({ where: { ...requestScope, ...OPEN_REQUEST_WHERE } }),
+        this.prisma.visitRequest.count({ where: requestScope }),
         this.prisma.visitAppointment.count({
           where: {
             ...salesFilter,
             scheduledAt: { gte: todayStart, lt: todayEnd },
-            status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+            status: { in: BOOKED_STATUSES },
           },
         }),
         this.prisma.visitAppointment.count({
           where: {
             ...salesFilter,
             scheduledAt: { gte: todayStart, lt: weekEnd },
-            status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+            status: { in: BOOKED_STATUSES },
           },
         }),
         this.prisma.visitAppointment.count({
           where: {
             ...salesFilter,
-            status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+            status: { in: BOOKED_STATUSES },
           },
         }),
         this.prisma.visitAppointment.count({
@@ -236,12 +244,26 @@ export class VisitsService {
 
   // ─── Visit Requests ───────────────────────────────────────────────────────
 
+  /**
+   * SALES can only see requests linked to their appointments; SALES_MANAGER
+   * sees requests linked to their team's appointments (empty team ⇒ none).
+   */
+  private async requestScope(user: AuthUser): Promise<Prisma.VisitRequestWhereInput> {
+    if (user.role === UserRole.SALES) {
+      return { appointments: { some: { assignedSalesId: user.sub } } };
+    }
+    if (user.role === UserRole.SALES_MANAGER) {
+      return { appointments: { some: { assignedSalesId: { in: await managerScopeIds(this.prisma, user.sub) } } } };
+    }
+    return {};
+  }
+
   async listRequests(dto: ListRequestsDto, user: AuthUser) {
     const page = dto.page ?? 1;
     const pageSize = dto.pageSize ?? 20;
 
     const where: Prisma.VisitRequestWhereInput = {
-      ...(dto.status ? { requestStatus: dto.status } : {}),
+      ...(dto.status ? { requestStatus: dto.status } : dto.open === 'true' ? OPEN_REQUEST_WHERE : {}),
       ...(dto.source ? { source: dto.source } : {}),
       ...(dto.projectId ? { projectId: dto.projectId } : {}),
       ...(dto.leadId ? { leadId: dto.leadId } : {}),
@@ -265,15 +287,7 @@ export class VisitsService {
         : {}),
     };
 
-    // SALES can only see requests linked to their appointments; SALES_MANAGER
-    // sees requests linked to their team's appointments (empty team ⇒ none).
-    if (user.role === UserRole.SALES) {
-      where.appointments = { some: { assignedSalesId: user.sub } };
-    } else if (user.role === UserRole.SALES_MANAGER) {
-      where.appointments = {
-        some: { assignedSalesId: { in: await managerScopeIds(this.prisma, user.sub) } },
-      };
-    }
+    Object.assign(where, await this.requestScope(user));
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.visitRequest.findMany({
@@ -877,13 +891,20 @@ export class VisitsService {
       ? (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })()
       : undefined;
     const todayEnd = todayStart ? new Date(todayStart.getTime() + 86_400_000) : undefined;
+    // «هذا الأسبوع»: today through the next seven days, as the stats count it.
+    const weekStart = dto.week === 'true'
+      ? (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); })()
+      : undefined;
+    const weekEnd = weekStart ? new Date(weekStart.getTime() + 7 * 86_400_000) : undefined;
 
     const where: Prisma.VisitAppointmentWhereInput = {
       // "Upcoming" is a visit still to happen: a completed or cancelled one
       // later today was counted as upcoming on the sales home pages.
       ...(dto.status
         ? { status: dto.status }
-        : dto.open === 'true'
+        : dto.booked === 'true'
+          ? { status: { in: BOOKED_STATUSES } }
+          : dto.open === 'true'
           ? { status: { notIn: FINAL_STATUSES } }
           : {}),
       ...(dto.projectId ? { projectId: dto.projectId } : {}),
@@ -891,7 +912,9 @@ export class VisitsService {
       ...(dto.leadId ? { leadId: dto.leadId } : {}),
       ...(dto.today
         ? { scheduledAt: { gte: todayStart, lt: todayEnd } }
-        : dto.scheduledFrom || dto.scheduledTo
+        : weekStart
+          ? { scheduledAt: { gte: weekStart, lt: weekEnd } }
+          : dto.scheduledFrom || dto.scheduledTo
           ? {
               scheduledAt: {
                 ...(dto.scheduledFrom ? { gte: new Date(dto.scheduledFrom) } : {}),
