@@ -329,33 +329,22 @@
   .dark .bg-white\/90 {
     background-color: rgb(var(--tw-surface));
   }
-  /* Tables (U5): a navy header row everywhere in the app. */
+  /* Tables: one look everywhere — the light tinted header row of the list pages
+     (reservations, contracts, visits). No navy header rows. */
   #main-scroll table > thead {
-    background-color: #0e1626;
+    background-color: transparent;
     border-color: transparent;
   }
   #main-scroll table > thead th {
-    color: #a9b0bd;
-    background-color: transparent;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
-  /* The redesigned list pages (components/lists) use a light tinted header row. */
-  #main-scroll table.list-table > thead {
-    background-color: transparent;
-  }
-  #main-scroll table.list-table > thead th {
     color: rgb(var(--slate-500));
     background-color: #f4efe4;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.02em;
+    text-transform: none;
   }
-  .dark #main-scroll table.list-table > thead th {
-    /* The same 5% white over the card, but opaque: the pinned actions column
+  .dark #main-scroll table > thead th {
+    /* The same 5% white over the card, but opaque: a pinned actions column
        must not show the rows sliding under it. */
     background: linear-gradient(rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.05)), rgb(var(--tw-surface));
   }
@@ -400,11 +389,12 @@
   section.rounded-card {
     box-shadow: 0 1px 2px rgb(15 30 51 / 0.05), 0 10px 28px -14px rgb(15 30 51 / 0.18);
   }
+  /* A card's title row: the same plain header as the list pages' cards (no gold underline). */
   .card-head {
-    background: #fff;
+    background: transparent;
     color: #0f1e33;
     border-bottom: 1px solid #e7dfc9;
-    box-shadow: inset 0 -2px 0 #d8b66a;
+    box-shadow: none;
   }
   .card-head h2,
   .card-head h3,

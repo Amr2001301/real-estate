@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn';
 /** The rounded card around a table, with horizontal scroll on small screens. */
 export function PremiumTableCard({ children, footer, className }: { children: ReactNode; footer?: ReactNode; className?: string }) {
   return (
-    <div className={cn('relative overflow-hidden rounded-card border border-hairline bg-surface', className)}>
+    <div className={cn('relative overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08),0_30px_60px_-30px_rgb(11_18_32/0.12)] dark:shadow-none', className)}>
       <div className="overflow-x-auto scrollbar-thin">{children}</div>
       {footer && <div className="border-t border-hairline">{footer}</div>}
     </div>
