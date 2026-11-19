@@ -42,6 +42,42 @@ export async function FollowUpsPanel({ locale, limit = 5, variant = 'default' }:
       today: 'bg-amber-500/[0.11] text-[#94650A] dark:text-[#E9B44C]',
       upcoming: 'bg-[#C8A24B]/[0.12] text-[#8A6823] dark:text-[#E2C792]',
     } as const;
+    // Nothing to act on: one short row — the counts and the all-clear —
+    // instead of a card with a big empty half.
+    if (rows.length === 0) {
+      return (
+        <div data-testid="follow-ups-panel" data-compact="true">
+          <section className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-[22px] border border-hairline bg-surface px-6 py-[18px] shadow-[0_1px_2px_rgb(11_18_32/0.04),0_10px_30px_-10px_rgb(11_18_32/0.08)] dark:shadow-none">
+            <div className="min-w-[170px]">
+              <h2 className="font-heading text-[19px] font-semibold leading-snug text-slate-900">{f.panel.title}</h2>
+              <p className="mt-1 text-[12.5px] text-slate-500">{f.panel.desc}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tiles.map((t) => (
+                <Link
+                  key={t.key}
+                  href={`/dashboard/follow-ups?bucket=${t.key}` as never}
+                  data-testid={`follow-count-${t.key}`}
+                  className={cn(
+                    'inline-flex h-10 items-center gap-2.5 rounded-xl px-4 text-[13px] font-semibold transition-opacity hover:opacity-85',
+                    t.n > 0 ? tone[t.key] : 'bg-surface-muted text-slate-500',
+                  )}
+                >
+                  {f.page.tabs[t.key]}
+                  <span className="num text-[18px] font-semibold leading-none">{t.n}</span>
+                </Link>
+              ))}
+            </div>
+            <p className="flex min-w-[200px] flex-1 items-center justify-center gap-2 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <CheckCircle2 className="h-[18px] w-[18px]" /> {f.panel.clear}
+            </p>
+            <Link href="/dashboard/follow-ups" className="text-[13px] font-semibold text-[#8A6823] hover:text-[#C8A24B] dark:text-[#E2C792]">
+              {f.panel.all} ←
+            </Link>
+          </section>
+        </div>
+      );
+    }
     return (
       <div data-testid="follow-ups-panel">
         <Panel title={f.panel.title} sub={f.panel.desc} link={{ href: '/dashboard/follow-ups', label: f.panel.all }}>

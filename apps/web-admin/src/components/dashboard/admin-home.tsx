@@ -443,6 +443,7 @@ export function LeaderboardV2({
   rows,
   money,
   className,
+  fill,
 }: {
   title: string;
   sub: string;
@@ -451,6 +452,8 @@ export function LeaderboardV2({
   rows: LeaderRow[];
   money: Money;
   className?: string;
+  /** Shown under a short list, in the space the missing rows leave. */
+  fill?: ReactNode;
 }) {
   const ranked = rows.filter((r) => r.value > 0);
   return (
@@ -472,34 +475,79 @@ export function LeaderboardV2({
           ))}
         </ol>
       )}
+      {fill}
     </Panel>
+  );
+}
+
+/** What fills a short leaderboard: says why it is short and what to do about it. */
+export function LeaderboardNudge({
+  title, text, actions,
+}: { title: string; text: string; actions: Array<{ href: string; label: string; primary?: boolean }> }) {
+  return (
+    <div
+      data-testid="leaderboard-nudge"
+      className="mt-4 flex flex-1 flex-col items-center justify-center gap-2.5 rounded-[18px] border-[1.5px] border-dashed border-hairline bg-surface-muted/60 px-5 py-6 text-center"
+    >
+      <p className="text-[14px] font-bold text-slate-900">{title}</p>
+      <p className="max-w-[260px] text-[12.5px] leading-[1.7] text-slate-500">{text}</p>
+      <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+        {actions.map((a) => (
+          <Link
+            key={a.href}
+            href={a.href as never}
+            className={cn(
+              'inline-flex h-9 items-center rounded-[11px] px-3.5 text-[12.5px] font-semibold transition',
+              a.primary ? cn(GOLD, 'font-bold text-[#0B1220] hover:brightness-105') : 'border border-hairline text-slate-700 hover:border-[#C8A24B]/60',
+            )}
+          >
+            {a.label}
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
 // ── Funnel ───────────────────────────────────────────────────────────────────
 
-export function FunnelV2({ title, sub, stages, footnote }: { title: string; sub: string; stages: FunnelStage[]; footnote?: string }) {
+export function FunnelV2({
+  title, sub, stages, footnote, headline,
+}: {
+  title: string; sub: string; stages: FunnelStage[]; footnote?: string;
+  /** The one rate worth reading first: a ring, the figure and what it is of. */
+  headline?: { pct: number; label: string };
+}) {
   const max = Math.max(1, ...stages.map((s) => s.value));
   return (
     <Panel title={title} sub={sub}>
-      <div className="flex flex-1 flex-col justify-center gap-4">
+      {headline && (
+        <div data-testid="funnel-headline" className="flex items-center gap-4 rounded-[18px] bg-[#C8A24B]/[0.10] px-[18px] py-4">
+          <Ring pct={headline.pct} size={64} stroke={7} label=" " />
+          <div className="min-w-0">
+            <p className="num font-heading text-[30px] font-bold leading-none text-slate-900">{headline.pct}%</p>
+            <p className="mt-1.5 text-[12.5px] text-slate-600">{headline.label}</p>
+          </div>
+        </div>
+      )}
+      {/* The stages share the card's height, so there is no empty band. */}
+      <div className="flex flex-1 flex-col justify-evenly gap-4 py-3">
         {stages.map((s, i) => (
           <div key={s.label} className="flex flex-col gap-1.5">
-            <div className="flex justify-between text-[13px]">
+            <div className="flex justify-between text-[13.5px]">
               <span className="text-slate-600">{s.label}</span>
               <span className="num font-semibold text-slate-900">{s.value.toLocaleString('en')}</span>
             </div>
-            <div className="flex h-3 rounded-md bg-surface-sunken">
+            <div className="flex h-3 rounded-full bg-surface-sunken">
               <div
-                className={cn('h-full rounded-md', i === stages.length - 1 ? GOLD : NAVY_BAR)}
+                className={cn('h-full rounded-full', i === stages.length - 1 ? GOLD : NAVY_BAR)}
                 style={{ width: `${s.value > 0 ? Math.max(4, (s.value / max) * 100) : 0}%` }}
               />
             </div>
-            {s.note && <p className="text-[12px] font-semibold text-success-700 dark:text-[#4CC38A]">{s.note}</p>}
           </div>
         ))}
       </div>
-      {footnote && <p className="mt-4 border-t border-hairline pt-3 text-[12px] leading-relaxed text-slate-500">{footnote}</p>}
+      {footnote && <p className="border-t border-hairline pt-3 text-[12px] leading-relaxed text-slate-500">{footnote}</p>}
     </Panel>
   );
 }

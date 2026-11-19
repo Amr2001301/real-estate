@@ -264,7 +264,7 @@ const UI = {
           rateLow: 'أقل من المستحق — تدخل مطلوب',
           rateLowChip: 'أقل من المستحق',
           collectedShare: (pct: number) => `${pct}% منها محصّل`,
-          overdueContracts: (n: number) => (n === 1 ? 'عقد واحد متأخر' : `${n} عقود متأخرة`),
+          overdueContracts: (n: number) => (n === 1 ? 'عقد واحد متأخر' : n === 2 ? 'عقدان متأخران' : n <= 10 ? `${n} عقود متأخرة` : `${n} عقدًا متأخرًا`),
           monthSame: 'مثل الشهر الماضي',
           funnelHeadline: 'من الحجوزات تحوّلت إلى عقود موقّعة',
           brokersNudge: {
@@ -5639,6 +5639,11 @@ const UI = {
         title: 'سجل النشاط',
         sub: 'آخر ما حدث في النظام، مجمّعًا',
         viewAll: 'السجل كاملًا',
+        all: 'الكل',
+        search: 'ابحث بالاسم أو المجال…',
+        cols: { event: 'الحدث', by: 'بواسطة', area: 'المجال', times: 'المرات', last: 'آخر مرة' },
+        note: 'الأحداث المتكررة متجمّعة في صف واحد — دوس على الصف لتفاصيلها.',
+        noMatch: 'لا أحداث تطابق هذا الفلتر.',
       },
       distribution: {
         title: 'توزيع النشاط',
@@ -11652,6 +11657,11 @@ const UI = {
         title: 'Activity log',
         sub: 'What happened last, grouped',
         viewAll: 'Full log',
+        all: 'All',
+        search: 'Search by name or area…',
+        cols: { event: 'Event', by: 'By', area: 'Area', times: 'Times', last: 'Last' },
+        note: 'Repeated events are grouped in one row — open a row for its details.',
+        noMatch: 'No events match this filter.',
       },
       distribution: {
         title: 'Activity breakdown',
