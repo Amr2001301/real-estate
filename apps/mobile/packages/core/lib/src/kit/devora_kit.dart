@@ -708,3 +708,122 @@ class _DvCurvePainter extends CustomPainter {
   @override
   bool shouldRepaint(_DvCurvePainter old) => old.values != values;
 }
+
+class DvRankRow {
+  const DvRankRow({required this.id, required this.title, required this.amount, required this.value, this.unit = '', this.subtitle, this.onTap});
+  final String id;
+  final String title;
+  final String? subtitle;
+
+  /// The raw figure the bars compare.
+  final double amount;
+  final String value;
+  final String unit;
+  final VoidCallback? onTap;
+}
+
+/// A ranking in one white card: the rank (gold for the first), the name, the
+/// figure, and a thin bar of each row against the largest, with its share of
+/// [total] when one is given.
+class DvRankList extends StatelessWidget {
+  const DvRankList({super.key, required this.rows, this.total, this.empty});
+  final List<DvRankRow> rows;
+  final double? total;
+  final String? empty;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    if (rows.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(18),
+        decoration: homeCard(context, radius: 24),
+        child: Text(empty ?? '', style: TextStyle(color: colors.inkMuted, fontSize: 13)),
+      );
+    }
+    final max = rows.fold<double>(0, (a, r) => r.amount > a ? r.amount : a);
+    final out = <Widget>[];
+    for (var i = 0; i < rows.length; i++) {
+      final r = rows[i];
+      final first = i == 0;
+      if (i > 0) out.add(Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline));
+      out.add(InkWell(
+        key: Key('dv-rank-${r.id}'),
+        onTap: r.onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(children: [
+            Row(children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: first ? dvGoldGradient : null,
+                  color: first ? null : colors.surfaceSoft,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(ltr('${i + 1}'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: first ? dvOnGold : colors.inkMuted)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                  if ((r.subtitle ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(r.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                  ],
+                ]),
+              ),
+              const SizedBox(width: 10),
+              Text.rich(TextSpan(children: [
+                TextSpan(text: ltr(r.value), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                if (r.unit.isNotEmpty) TextSpan(text: ' ${r.unit}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+              ])),
+            ]),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 40),
+              child: Row(children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: SizedBox(
+                      height: 6,
+                      child: Stack(children: [
+                        Positioned.fill(child: ColoredBox(color: colors.surfaceSoft)),
+                        FractionallySizedBox(
+                          widthFactor: max <= 0 ? 0 : (r.amount / max).clamp(0, 1).toDouble(),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: first ? dvGoldGradient : null,
+                              color: first ? null : const Color(0xFF1B2A48),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
+                if (total != null && total! > 0) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 38,
+                    child: Text(ltr('${(r.amount / total! * 100).round()}%'), textAlign: TextAlign.end, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                  ),
+                ],
+              ]),
+            ),
+          ]),
+        ),
+      ));
+    }
+    return Container(
+      decoration: homeCard(context, radius: 24),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: out),
+    );
+  }
+}

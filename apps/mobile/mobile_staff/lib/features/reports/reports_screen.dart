@@ -320,17 +320,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 HomeSection(
                   icon: Icons.apartment_rounded,
                   title: l10n.rpProjects,
-                  child: HomeRankList(
+                  child: DvRankList(
                     empty: l10n.rpNoSales,
+                    total: d.sales,
                     rows: [
                       for (final p in d.projects)
-                        HomeRankRow(
+                        DvRankRow(
                           id: p.id,
                           title: p.name.isEmpty ? l10n.rpUnknownProject : p.name,
-                          icon: Icons.apartment_rounded,
                           subtitle: l10n.ahContractsN(p.count),
+                          amount: p.value,
                           value: homeCompact(p.value, l10n).$1,
-                          unit: '${homeCompact(p.value, l10n).$2} $symbol'.trim(),
+                          unit: homeCompact(p.value, l10n).$2,
                           onTap: p.id.isEmpty ? null : () => context.push('/projects/${p.id}'),
                         ),
                     ],
@@ -339,17 +340,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 HomeSection(
                   icon: Icons.handshake_rounded,
                   title: l10n.ahTopBrokers,
-                  child: HomeRankList(
+                  child: DvRankList(
                     empty: l10n.ahNoBrokers,
                     rows: [
                       for (final b in d.brokers)
-                        HomeRankRow(
+                        DvRankRow(
                           id: b.id,
                           title: b.name,
-                          icon: Icons.storefront_rounded,
                           subtitle: l10n.ahContractsN(b.count),
+                          amount: b.value,
                           value: homeCompact(b.value, l10n).$1,
-                          unit: '${homeCompact(b.value, l10n).$2} $symbol'.trim(),
+                          unit: homeCompact(b.value, l10n).$2,
                         ),
                     ],
                   ),
