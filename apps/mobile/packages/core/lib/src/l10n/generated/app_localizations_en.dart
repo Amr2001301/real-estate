@@ -10183,6 +10183,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mtaAssignedTo => 'Assigned to';
 
   @override
+  String get mtaRequest => 'Maintenance request';
+
+  @override
+  String get mtaDetails => 'Details';
+
+  @override
+  String get mtaActionsTitle => 'Actions';
+
+  @override
   String get mtaUnassigned => 'Not assigned yet';
 
   @override

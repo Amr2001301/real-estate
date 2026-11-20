@@ -18074,6 +18074,24 @@ abstract class AppLocalizations {
   /// **'Assigned to'**
   String get mtaAssignedTo;
 
+  /// No description provided for @mtaRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance request'**
+  String get mtaRequest;
+
+  /// No description provided for @mtaDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mtaDetails;
+
+  /// No description provided for @mtaActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get mtaActionsTitle;
+
   /// No description provided for @mtaUnassigned.
   ///
   /// In en, this message translates to:

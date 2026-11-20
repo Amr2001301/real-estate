@@ -10222,6 +10222,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mtaAssignedTo => 'المُسند إليه';
 
   @override
+  String get mtaRequest => 'طلب صيانة';
+
+  @override
+  String get mtaDetails => 'البيانات';
+
+  @override
+  String get mtaActionsTitle => 'الإجراءات';
+
+  @override
   String get mtaUnassigned => 'لم يُسند بعد';
 
   @override

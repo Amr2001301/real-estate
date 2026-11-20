@@ -434,7 +434,12 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
                 _ => DvTone.neutral,
               },
             ),
-            bottom: (v.clientPhone ?? '').trim().isEmpty ? null : _DarkContactButtons(phone: v.clientPhone, l10n: l10n),
+            bottom: (v.clientPhone ?? '').trim().isEmpty
+                ? null
+                : DvHeroButtons(buttons: [
+                    DvHeroButton(icon: Icons.phone_rounded, label: l10n.ldCall, gold: true, onTap: () => ContactActions.call(v.clientPhone!.trim())),
+                    DvHeroButton(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: v.clientPhone!.trim())),
+                  ]),
           ),
         ),
         SliverList.list(children: [
@@ -901,100 +906,6 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Contact buttons styled for dark (navy) background
-// ══════════════════════════════════════════════════════════════════════════════
-class _DarkContactButtons extends StatelessWidget {
-  const _DarkContactButtons({required this.phone, required this.l10n});
-  final String? phone;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final number = phone?.trim() ?? '';
-    if (number.isEmpty) return const SizedBox.shrink();
-
-    return Row(
-      children: [
-        // Call — white-glass outline
-        Expanded(
-          child: GestureDetector(
-            onTap: () => ContactActions.call(number),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.call_rounded,
-                      size: 16, color: Colors.white),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.contactCall,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        // WhatsApp — gold filled
-        Expanded(
-          child: GestureDetector(
-            onTap: () => ContactActions.whatsApp(number: number),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppPalette.gold300, AppPalette.gold500],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppPalette.gold400.withValues(alpha: 0.40),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.chat_rounded,
-                      size: 16, color: Colors.white),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.contactWhatsapp,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

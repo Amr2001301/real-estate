@@ -1339,3 +1339,11 @@ class DvHeroButtons extends StatelessWidget {
         for (var i = 0; i < buttons.length; i++) ...[if (i > 0) const SizedBox(width: 8), Expanded(child: buttons[i])],
       ]);
 }
+
+/// A [BadgeTone] as a [DvTone].
+DvTone dvToneOf(BadgeTone t) => switch (t) {
+      BadgeTone.success => DvTone.ok,
+      BadgeTone.error => DvTone.bad,
+      BadgeTone.warning => DvTone.warn,
+      _ => DvTone.neutral,
+    };

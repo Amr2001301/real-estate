@@ -52,7 +52,7 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
           builder: (context, state) {
             final c = state.cheque;
             final number = c?.number ?? row?.number;
-            final title = number != null ? '${l10n.chequeNumberLabel} ${ltr(number)}' : l10n.chequesTitle;
+            final title = number != null ? ltr(number) : l10n.chequesTitle;
             if (c == null) {
               return Column(children: [
                 HomeListHero(title: title, back: true),

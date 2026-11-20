@@ -366,7 +366,6 @@ class UnitSpecTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final rows = <(String, String)>[
       (l10n.upCode, ltr(code)),
@@ -374,37 +373,10 @@ class UnitSpecTable extends StatelessWidget {
       for (final it in unitSpecItems(specs, l10n, lang)) (it.label, it.value),
       ...extra,
     ];
-    return Container(
-      key: const Key('unit-spec-table'),
-      decoration: homeCard(context, radius: 22),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(builder: (context, box) {
-        final w = box.maxWidth / 2;
-        return Wrap(children: [
-          for (final (i, (k, v)) in rows.indexed)
-            Container(
-              width: w,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-              decoration: BoxDecoration(
-                border: BorderDirectional(
-                  end: i.isEven ? BorderSide(color: colors.hairline) : BorderSide.none,
-                  bottom: i < rows.length - (rows.length.isEven ? 2 : 1) ? BorderSide(color: colors.hairline) : BorderSide.none,
-                ),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                const SizedBox(height: 2),
-                Text(v, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              ]),
-            ),
-        ]);
-      }),
-    );
+    return DvInfoCard(key: const Key('unit-spec-table'), rows: [for (final (k, v) in rows) DvInfo(k, v)]);
   }
 }
 
-/// The live reservation (number, status, client, consultant, expiry) and
-/// the past ones, as on the website.
 class _Reservation extends StatelessWidget {
   const _Reservation({required this.page});
   final UnitPage page;
@@ -536,57 +508,21 @@ class _Where extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final u = page.unit;
-    Widget cell(String k, String? v) => Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              Text((v ?? '').isEmpty ? '—' : v!, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-            ]),
-          ),
-        );
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        key: const Key('unit-project'),
-        borderRadius: BorderRadius.circular(22),
+    String v(String? x) => (x ?? '').isEmpty ? '—' : x!;
+    return DvInfoCard(rows: [
+      DvInfo(
+        l10n.upProject,
+        u.projectName?.resolve(lang) ?? '—',
+        id: 'unit-project',
         onTap: u.projectId == null ? null : () => context.push('/projects/${u.projectId}'),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(children: [
-            Row(children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(13)),
-                child: Icon(Icons.apartment_rounded, color: AppPalette.gold300, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(l10n.upProject, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  Text(u.projectName?.resolve(lang) ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                ]),
-              ),
-              // chevron_right turns into an outward ‹ in Arabic, as the homes.
-              if (u.projectId != null) const Icon(Icons.chevron_right_rounded, color: Color(0xFFB8AE9F)),
-            ]),
-            const SizedBox(height: 10),
-            Divider(height: 1, color: colors.hairline),
-            Row(children: [cell(l10n.upPhase, page.phaseName), cell(l10n.upBuilding, page.buildingName)]),
-            Row(children: [
-              cell(l10n.labelCity, u.projectCity),
-              cell(l10n.upUpdated, page.updatedAt == null ? null : DateFormatter.dayMonth(page.updatedAt!, languageCode: lang)),
-            ]),
-          ]),
-        ),
       ),
-    );
+      DvInfo(l10n.upPhase, v(page.phaseName)),
+      DvInfo(l10n.upBuilding, v(page.buildingName)),
+      DvInfo(l10n.labelCity, v(u.projectCity)),
+      DvInfo(l10n.upUpdated, page.updatedAt == null ? '—' : DateFormatter.dayMonth(page.updatedAt!, languageCode: lang)),
+    ]);
   }
 }
 
