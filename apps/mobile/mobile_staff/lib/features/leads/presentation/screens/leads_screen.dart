@@ -181,10 +181,9 @@ class _LeadsScreenState extends State<LeadsScreen> {
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(child: _Figures(state: state, manager: _manager)),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      padding: const EdgeInsets.only(top: 16, bottom: 4),
                       child: HomePills(pills: [
                         HomePill(
                           id: 'all',
@@ -264,49 +263,6 @@ class _LeadsScreenState extends State<LeadsScreen> {
           ),
         ];
     }
-  }
-}
-
-/// The navy band: the scope's leads (and how many are open), the conversion,
-/// and the unassigned queue (managers) or the overdue follow-ups (reps).
-class _Figures extends StatelessWidget {
-  const _Figures({required this.state, required this.manager});
-  final LeadsListState state;
-  final bool manager;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    if (state.pipeline.isEmpty) return const SizedBox(height: 4);
-    final rate = state.conversionRate;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-      child: HomeBand(figures: [
-        HomeFigure(id: 'total', value: '${state.pipelineTotal}', label: l10n.lvTotal, hint: l10n.lvOpenN(state.openCount)),
-        HomeFigure(
-          id: 'conversion',
-          value: rate == null ? '—' : '$rate%',
-          label: l10n.lvConversion,
-          hint: l10n.lvWonN(state.pipeline['WON'] ?? 0),
-        ),
-        if (manager)
-          HomeFigure(
-            id: 'unassigned',
-            value: '${state.unassignedCount}',
-            label: l10n.lvUnassigned,
-            hint: l10n.lvUnassignedHint,
-            warn: state.unassignedCount > 0,
-          )
-        else
-          HomeFigure(
-            id: 'overdue',
-            value: '${state.overdueFollowUps}',
-            label: l10n.lvOverdue,
-            hint: state.overdueFollowUps > 0 ? l10n.lvOverdueSome : l10n.lvOverdueNone,
-            warn: state.overdueFollowUps > 0,
-          ),
-      ]),
-    );
   }
 }
 

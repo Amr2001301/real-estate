@@ -44,9 +44,8 @@ class HomeHero extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            const Positioned.fill(child: CustomPaint(painter: HomeHeroPainter())),
             Padding(
-              padding: EdgeInsets.fromLTRB(18, top + 14, 18, 100),
+              padding: EdgeInsets.fromLTRB(18, top + 14, 18, 26),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -77,7 +76,7 @@ class HomeHero extends StatelessWidget {
                       NotificationsBell(route: bellRoute),
                     ],
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
                   Text(now.hour < 12 ? l10n.shGreetMorning : l10n.shGreetEvening,
                       style: const TextStyle(color: Color(0xFFC9D2DE), fontSize: 13)),
                   const SizedBox(height: 2),
@@ -89,17 +88,10 @@ class HomeHero extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: [
-                      _HeroTag(gold: true, icon: Icons.verified_rounded, label: roleLabel),
-                      _HeroTag(
-                        icon: Icons.calendar_today_rounded,
-                        label: '${DateFormatter.weekdayShort(now, languageCode: lang)} ${DateFormatter.dayMonth(now, languageCode: lang)}',
-                      ),
-                    ],
+                  const SizedBox(height: 6),
+                  Text(
+                    '$roleLabel  ·  ${DateFormatter.weekdayShort(now, languageCode: lang)} ${DateFormatter.dayMonth(now, languageCode: lang)}',
+                    style: const TextStyle(color: Color(0xFF9FB0C8), fontSize: 12.5),
                   ),
                 ],
               ),
@@ -117,32 +109,5 @@ class _LogoInitials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Text(homeInitials(name), style: homeDisplay(13, AppPalette.navy));
-}
-
-class _HeroTag extends StatelessWidget {
-  const _HeroTag({required this.icon, required this.label, this.gold = false});
-  final IconData icon;
-  final String label;
-  final bool gold;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-        decoration: BoxDecoration(
-          gradient: gold ? homeGoldGradient : null,
-          color: gold ? null : Colors.white.withValues(alpha: 0.07),
-          border: gold ? null : Border.all(color: Colors.white.withValues(alpha: 0.12)),
-          borderRadius: BorderRadius.circular(99),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: gold ? AppPalette.navy : const Color(0xFFDCE3EC)),
-            const SizedBox(width: 5),
-            Text(label,
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: gold ? AppPalette.navy : const Color(0xFFDCE3EC))),
-          ],
-        ),
-      );
 }
 

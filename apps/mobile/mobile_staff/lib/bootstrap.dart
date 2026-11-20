@@ -36,8 +36,8 @@ Future<void> bootstrap(EnvConfig env) async {
   final config = EnvConfig.initialize(env);
 
   // The staff app wears the platform's identity (the Devora crystal: midnight
-  // blue-black with an electric-blue light), not the company's colours.
-  AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFF7FAEFF));
+  // blue-black with platinum steel), not the company's colours.
+  AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFFB4BFD6));
 
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
 

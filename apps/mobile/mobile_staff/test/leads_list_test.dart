@@ -109,9 +109,9 @@ void main() {
 
   testWidgets('a rep sees the stage counts, the overdue follow-ups and the card', (t) async {
     final repo = await _pump(t, AppRole.sales, [_lead('l1', next: _now.subtract(const Duration(hours: 2)))]);
-    expect(find.byKey(const Key('home-fig-total')), findsOneWidget);
-    expect(find.textContaining('62'), findsWidgets); // the pipeline total, not the loaded page
-    expect(find.byKey(const Key('home-fig-overdue')), findsOneWidget);
+    expect(find.byKey(const Key('home-pill-all')), findsOneWidget);
+    expect(find.textContaining('62'), findsWidgets); // the pipeline total on the «all» pill, not the loaded page
+    expect(find.byKey(const Key('home-fig-total')), findsNothing); // no stats band above the filters
     expect(find.byKey(const Key('home-pill-unassigned')), findsNothing);
     expect(find.byKey(const Key('leads-duplicates')), findsNothing);
     expect(find.textContaining('متابعة متأخرة'), findsOneWidget);
@@ -126,7 +126,7 @@ void main() {
 
   testWidgets('a manager sees the unassigned queue and the rep on each card', (t) async {
     final repo = await _pump(t, AppRole.salesManager, [_lead('l1'), _lead('l2', rep: null)]);
-    expect(find.byKey(const Key('home-fig-unassigned')), findsOneWidget);
+    expect(find.byKey(const Key('home-pill-unassigned')), findsOneWidget);
     expect(find.byKey(const Key('leads-duplicates')), findsOneWidget);
     expect(find.text('محمود البنا'), findsOneWidget);
     expect(find.text('غير مُسنَد'), findsWidgets);
