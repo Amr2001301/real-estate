@@ -29,7 +29,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: BlocBuilder<AdminHomeCubit, AdminHomeState>(
         builder: (context, state) {
           final data = state.data;
@@ -45,12 +45,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 120),
                 children: [
-                  DvPageTitle(
-                    overline: '${DateFormatter.weekdayShort(now, languageCode: lang)}، ${DateFormatter.dayMonth(now, languageCode: lang)}',
+                  HomeListHero(
+                    key: const Key('dv-hero'),
                     title: '${now.hour < 12 ? l10n.shGreetMorning : l10n.shGreetEvening} $first',
-                    trailing: [
+                    subtitle: '${DateFormatter.weekdayShort(now, languageCode: lang)}، ${DateFormatter.dayMonth(now, languageCode: lang)}',
+                    actions: [
                       BlocBuilder<UnreadCountCubit, int>(
-                        builder: (context, n) => DvIconButton(
+                        builder: (context, n) => HomeHeroButton(
                           key: const Key('home-bell'),
                           icon: AppIcons.notification,
                           dot: n > 0,
@@ -59,13 +60,14 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         ),
                       ),
                     ],
+                    bottom: data == null ? null : _heroFigure(context, data),
                   ),
                   if (data == null && state.status == DataStatus.failure)
                     Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: ErrorState(failure: state.failure, onRetry: cubit.load))
                   else if (data == null)
                     const Padding(padding: EdgeInsets.only(top: 120), child: Center(child: CircularProgressIndicator()))
                   else ...[
-                    _hero(context, data),
+                    const SizedBox(height: 4),
                     DvSectionTitle(title: l10n.dvAwaiting, trailing: '${_awaiting(context, data).length}'),
                     if (_awaiting(context, data).isEmpty)
                       DvListCard(children: [DvRow(icon: Icons.check_circle_outline_rounded, title: l10n.dvAllClear)])
@@ -93,22 +95,24 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   /// The month's collection against last month; the line is the overall
   /// collection rate of what is due.
-  Widget _hero(BuildContext context, AdminHome d) {
+  Widget _heroFigure(BuildContext context, AdminHome d) {
     final l10n = context.l10n;
     final (value, unit) = homeCompact(d.collectedThisMonth, l10n);
     final (prev, prevUnit) = homeCompact(d.prevMonthCollected, l10n);
-    return DvHeroCard(
+    return DvHeroFigure(
       label: l10n.dvCollectedMonth,
       value: value,
       unit: '$unit ${_symbol(context)}'.trim(),
-      sideLabel: l10n.dvLastMonth,
-      sideValue: '$prev $prevUnit'.trim(),
+      badge: DvHeroBadge('${l10n.dvLastMonth} ${'$prev $prevUnit'.trim()}'),
       progress: d.collectionRate == null ? null : d.collectionRate! / 100,
-      facts: [
-        if (d.collectionRate != null) l10n.dvCollectionPct(d.collectionRate!),
-        l10n.dvSignedN(d.signedThisMonth),
-        l10n.dvNewLeadsN(d.newLeadsThisMonth),
-      ],
+      footer: Text(
+        [
+          if (d.collectionRate != null) l10n.dvCollectionPct(d.collectionRate!),
+          l10n.dvSignedN(d.signedThisMonth),
+          l10n.dvNewLeadsN(d.newLeadsThisMonth),
+        ].join('  ·  '),
+        style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFFAEB8CB)),
+      ),
     );
   }
 

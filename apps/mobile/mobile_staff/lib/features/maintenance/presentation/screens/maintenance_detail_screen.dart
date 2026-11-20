@@ -116,19 +116,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                     back: true,
                     title: l10n.maintenanceCompactDetailTitle,
                     subtitle: l10n.maintenanceDetailSubtitle,
-                    actions: [
-                      if (status != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.16),
-                            border: Border.all(color: accent.withValues(alpha: 0.5)),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(maintenanceStatusLabel(context.l10n, status),
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: accent)),
-                        ),
-                    ],
+                    badge: status == null ? null : DvHeroBadge(maintenanceStatusLabel(context.l10n, status), tone: dvToneOf(maintenanceStatusTone(status))),
                   ),
                 ),
                 SliverPadding(
