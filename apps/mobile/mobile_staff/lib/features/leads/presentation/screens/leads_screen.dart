@@ -8,6 +8,7 @@ import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/leads_cubit.dart';
+import '../follow_up_labels.dart';
 
 export '../cubit/leads_cubit.dart' show LeadSource;
 
@@ -262,14 +263,10 @@ class _LeadsScreenState extends State<LeadsScreen> {
         return [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            sliver: SliverList.builder(
+            sliver: SliverList.separated(
               itemCount: state.leads.length,
-              itemBuilder: (context, i) => LeadCard(
-                lead: state.leads[i],
-                showRep: _manager,
-                first: i == 0,
-                last: i == state.leads.length - 1,
-              ),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => LeadCard(lead: state.leads[i], showRep: _manager),
             ),
           ),
         ];
@@ -281,15 +278,11 @@ class _LeadsScreenState extends State<LeadsScreen> {
 /// comes next (the follow-up, else the visit, else the last contact), with
 /// call and WhatsApp.
 class LeadCard extends StatelessWidget {
-  const LeadCard({super.key, required this.lead, this.showRep = false, this.first = true, this.last = true});
+  const LeadCard({super.key, required this.lead, this.showRep = false});
   final Lead lead;
 
   /// Managers see whose lead it is.
   final bool showRep;
-
-  /// The rows share one white card: the first rounds the top, the last the bottom.
-  final bool first;
-  final bool last;
 
   @override
   Widget build(BuildContext context) {
@@ -299,50 +292,56 @@ class LeadCard extends StatelessWidget {
     final now = DateTime.now();
     final stageColor = leadStageColor(lead.stage, colors);
     final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
-    final source = lead.brokerName ?? lead.sourceName?.resolve(lang) ?? l10n.lvDirect;
+    final source = lead.brokerName != null ? '${l10n.lvBroker} · ${lead.brokerName}' : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect);
     final rep = showRep ? (lead.unassigned ? l10n.lvUnassigned : lead.assignedSalesName) : null;
-    final line = [if ((project ?? '').isNotEmpty) project!, source, if ((rep ?? '').isNotEmpty) rep!].join(' · ');
+    final hasPhone = (lead.phone ?? '').isNotEmpty;
 
-    // Only what needs attention: an overdue follow-up, or one due today.
-    final f = lead.nextActionAt;
+    // The next step: the follow-up (its kind and when), else the booked visit,
+    // else the last contact.
     final open = lead.stage != 'WON' && lead.stage != 'LOST';
-    final state = f == null || !open ? null : leadFollowState(f, now);
-    final (String? due, DvTone tone) = switch (state) {
-      LeadFollowState.overdue => (l10n.dvOverdueDays(homeDay(now).difference(homeDay(f!)).inDays), DvTone.bad),
-      LeadFollowState.today => (l10n.dvTodayAt(DateFormatter.time(f!, languageCode: lang)), DvTone.warn),
-      _ => (null, DvTone.neutral),
-    };
-    final radius = BorderRadius.vertical(top: Radius.circular(first ? 20 : 0), bottom: Radius.circular(last ? 20 : 0));
+    final f = lead.nextActionAt;
+    final (IconData nextIcon, String nextText, Color nextColor) = () {
+      if (f != null && open) {
+        final kind = noteKindLabel(l10n, lead.nextActionType ?? 'FOLLOW_UP');
+        return switch (leadFollowState(f, now)) {
+          LeadFollowState.overdue => (Icons.schedule_rounded, '$kind · ${l10n.dvOverdueDays(homeDay(now).difference(homeDay(f)).inDays)}', colors.error),
+          LeadFollowState.today => (Icons.schedule_rounded, '$kind · ${l10n.dvTodayAt(DateFormatter.time(f, languageCode: lang))}', colors.warning),
+          LeadFollowState.upcoming => (Icons.event_rounded, '$kind · ${leadWhen(context, f)}', colors.inkStrong),
+        };
+      }
+      if (lead.upcomingVisitAt != null) return (Icons.event_rounded, l10n.lvVisit(leadWhen(context, lead.upcomingVisitAt!)), colors.inkStrong);
+      if (lead.lastContactAt != null) {
+        return (Icons.history_rounded, l10n.lvLastContact(leadWhen(context, lead.lastContactAt!, withTime: false)), colors.inkMuted);
+      }
+      return (Icons.history_rounded, l10n.lvNoContact, colors.inkMuted);
+    }();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: radius,
-        border: Border(
-          top: first ? BorderSide(color: colors.hairline) : BorderSide.none,
-          left: BorderSide(color: colors.hairline),
-          right: BorderSide(color: colors.hairline),
-          bottom: BorderSide(color: colors.hairline),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        child: InkWell(
-          key: Key('lead-card-${lead.id}'),
-          borderRadius: radius,
-          onTap: () => context.push('/leads/${lead.id}', extra: lead).then((_) {
-            if (context.mounted) context.read<LeadsCubit>().loadSummary();
-          }),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-            child: Row(children: [
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: Key('lead-card-${lead.id}'),
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => context.push('/leads/${lead.id}', extra: lead).then((_) {
+          if (context.mounted) context.read<LeadsCubit>().loadSummary();
+        }),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.hairline),
+            boxShadow: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 44,
+                height: 44,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: colors.surfaceSoft, shape: BoxShape.circle),
-                child: Text(homeInitials(lead.fullName), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+                child: Text(homeInitials(lead.fullName), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -350,59 +349,89 @@ class LeadCard extends StatelessWidget {
                   Text(lead.fullName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 14.5, height: 1.4, fontWeight: FontWeight.w600, color: colors.inkStrong)),
-                  const SizedBox(height: 5),
-                  Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                      style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  if ((project ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(project!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                  ],
                 ]),
               ),
               const SizedBox(width: 10),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                  child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: stageColor)),
-                ),
-                if (due != null) ...[
-                  const SizedBox(height: 6),
-                  Text(due,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: stageColor)),
+              ),
+            ]),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: colors.hairline)),
+            Row(children: [
+              Icon(nextIcon, size: 19, color: nextColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(nextText,
                       key: Key('lead-next-${lead.id}'),
-                      style: TextStyle(fontSize: 11.5, height: 1.3, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
-                ],
-              ]),
-              if ((lead.phone ?? '').isNotEmpty) ...[
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: nextColor)),
+                  const SizedBox(height: 3),
+                  Text([source, if ((rep ?? '').isNotEmpty) rep!].join(' · '),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                ]),
+              ),
+              if (hasPhone) ...[
                 const SizedBox(width: 8),
-                _RoundAction(
+                _SquareAction(
+                  key: Key('lead-whatsapp-${lead.id}'),
+                  icon: Icons.chat_outlined,
+                  color: const Color(0xFF1E7A55),
+                  onTap: () => leadContact(context, lead, 'WHATSAPP'),
+                ),
+                const SizedBox(width: 8),
+                _SquareAction(
                   key: Key('lead-call-${lead.id}'),
                   icon: Icons.phone_rounded,
-                  color: colors.inkStrong,
+                  gold: true,
                   onTap: () => leadContact(context, lead, 'CALL'),
                 ),
               ],
             ]),
-          ),
+          ]),
         ),
       ),
     );
   }
 }
 
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({super.key, required this.icon, required this.color, required this.onTap});
+/// A 40px rounded-square action: soft grey, or gold for the main one (call).
+class _SquareAction extends StatelessWidget {
+  const _SquareAction({super.key, required this.icon, required this.onTap, this.color, this.gold = false});
   final IconData icon;
-  final Color color;
   final VoidCallback onTap;
+  final Color? color;
+  final bool gold;
 
   @override
-  Widget build(BuildContext context) => Material(
-        color: color.withValues(alpha: 0.10),
-        shape: const CircleBorder(),
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gold ? dvGoldGradient : null,
+        color: gold ? null : colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Material(
+        color: Colors.transparent,
         child: InkWell(
-          customBorder: const CircleBorder(),
+          borderRadius: BorderRadius.circular(13),
           onTap: onTap,
-          child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 18, color: color)),
+          child: SizedBox(width: 40, height: 40, child: Icon(icon, size: 19, color: gold ? dvOnGold : (color ?? colors.inkStrong))),
         ),
-      );
+      ),
+    );
+  }
 }
+
 
 /// A choice in the filter sheet.
 class _ActiveFilterChips extends StatelessWidget {
