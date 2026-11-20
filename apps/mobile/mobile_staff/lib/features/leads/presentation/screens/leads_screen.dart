@@ -107,12 +107,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
   }
 
   void _showFilterSheet(BuildContext context, LeadsCubit cubit) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _LeadFilterSheet(cubit: cubit, manager: _manager),
-    );
+    showFilterSheet(context, (_) => _LeadFilterSheet(cubit: cubit, manager: _manager));
   }
 
   @override
@@ -517,31 +512,6 @@ class _RoundAction extends StatelessWidget {
 }
 
 /// A choice in the filter sheet.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.active, required this.onTap});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: active ? AppPalette.navy : colors.surface,
-      shape: StadiumBorder(side: BorderSide(color: active ? AppPalette.navy : colors.hairline)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(label,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: active ? Colors.white : colors.inkStrong)),
-        ),
-      ),
-    );
-  }
-}
-
 class _ActiveFilterChips extends StatelessWidget {
   const _ActiveFilterChips({
     required this.state,
@@ -763,244 +733,100 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        bottomPad + AppSpacing.md,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.hairline,
-                borderRadius: AppRadii.pillAll,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Title row
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.leadsFilterSheet,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: colors.inkStrong,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _clear,
-                child: Text(
-                  l10n.leadsFilterClear,
-                  style: TextStyle(color: colors.error, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Source picker
-          Text(
-            l10n.leadsFilterSource,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.inkMuted,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          if (_loadingSources)
-            const Center(
-              child: SizedBox(
-                height: 32,
-                width: 32,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip(
-                    label: lang == 'ar' ? 'الكل' : 'All',
-                    active: _sourceId == null,
-                    onTap: () => setState(() => _sourceId = null),
-                  ),
-                  for (final src in _sources) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _FilterChip(
-                      label: src.name,
-                      active: _sourceId == src.id,
-                      onTap: () => setState(
-                        () => _sourceId = _sourceId == src.id ? null : src.id,
-                      ),
-                    ),
+    final active = (_sourceId == null ? 0 : 1) + (_dateFrom == null && _dateTo == null ? 0 : 1) + (_salesId == null ? 0 : 1);
+    return FilterSheet(
+      title: l10n.leadsFilterSheet,
+      active: active,
+      onClear: _clear,
+      onApply: _apply,
+      applyLabel: l10n.leadsFilterApply,
+      sections: [
+        FilterSection(
+          icon: Icons.campaign_outlined,
+          title: l10n.leadsFilterSource,
+          child: _loadingSources
+              ? const Padding(padding: EdgeInsets.all(12), child: Center(child: SizedBox(height: 26, width: 26, child: CircularProgressIndicator(strokeWidth: 2))))
+              : FilterTiles<String?>(
+                  keyPrefix: 'lead-source',
+                  selected: _sourceId,
+                  onSelect: (v) => setState(() => _sourceId = v),
+                  options: [
+                    FilterOption<String?>(null, lang == 'ar' ? 'الكل' : 'All', icon: Icons.apps_rounded),
+                    for (final src in _sources) FilterOption<String?>(src.id, src.name, icon: Icons.alt_route_rounded),
                   ],
-                ],
+                ),
+        ),
+        FilterSection(
+          icon: Icons.date_range_rounded,
+          title: lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
+          child: Row(children: [
+            Expanded(
+              child: _DateButton(
+                label: _dateFrom ?? l10n.leadsFilterDateFrom,
+                hasValue: _dateFrom != null,
+                onTap: () => _pickDate(true),
+                onClear: _dateFrom != null ? () => setState(() => _dateFrom = null) : null,
               ),
             ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Date range
-          Text(
-            lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.inkMuted,
+            const SizedBox(width: 10),
+            Expanded(
+              child: _DateButton(
+                label: _dateTo ?? l10n.leadsFilterDateTo,
+                hasValue: _dateTo != null,
+                onTap: () => _pickDate(false),
+                onClear: _dateTo != null ? () => setState(() => _dateTo = null) : null,
+              ),
+            ),
+          ]),
+        ),
+        if (widget.manager && _staff.isNotEmpty)
+          FilterSection(
+            icon: Icons.badge_outlined,
+            title: l10n.lvRep,
+            child: FilterRadioList<String?>(
+              keyPrefix: 'lead-rep',
+              selected: _salesId,
+              onSelect: (v) => setState(() => _salesId = v),
+              options: [
+                FilterOption<String?>(null, l10n.lvAllReps),
+                for (final o in _staff) FilterOption<String?>(o.id, o.name),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Expanded(
-                child: _DateButton(
-                  label: _dateFrom ?? l10n.leadsFilterDateFrom,
-                  hasValue: _dateFrom != null,
-                  onTap: () => _pickDate(true),
-                  onClear: _dateFrom != null
-                      ? () => setState(() => _dateFrom = null)
-                      : null,
-                  colors: colors,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _DateButton(
-                  label: _dateTo ?? l10n.leadsFilterDateTo,
-                  hasValue: _dateTo != null,
-                  onTap: () => _pickDate(false),
-                  onClear: _dateTo != null
-                      ? () => setState(() => _dateTo = null)
-                      : null,
-                  colors: colors,
-                ),
-              ),
-            ],
-          ),
-          if (widget.manager && _staff.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.lvRep,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip(
-                    label: l10n.lvAllReps,
-                    active: _salesId == null,
-                    onTap: () => setState(() => _salesId = null),
-                  ),
-                  for (final o in _staff) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _FilterChip(
-                      label: o.name,
-                      active: _salesId == o.id,
-                      onTap: () => setState(() => _salesId = _salesId == o.id ? null : o.id),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-
-          // Apply button
-          FilledButton(onPressed: _apply, child: Text(l10n.leadsFilterApply)),
-        ],
-      ),
+      ],
     );
   }
 }
 
 class _DateButton extends StatelessWidget {
-  const _DateButton({
-    required this.label,
-    required this.hasValue,
-    required this.onTap,
-    required this.colors,
-    this.onClear,
-  });
+  const _DateButton({required this.label, required this.hasValue, required this.onTap, this.onClear});
   final String label;
   final bool hasValue;
   final VoidCallback onTap;
   final VoidCallback? onClear;
-  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: hasValue
-              ? colors.brandNavy.withValues(alpha: 0.06)
-              : colors.surface,
-          border: Border.all(
-            color: hasValue
-                ? colors.brandNavy.withValues(alpha: 0.25)
-                : colors.hairline,
-          ),
-          borderRadius: AppRadii.card,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 14,
-              color: hasValue ? colors.brandNavy : colors.inkMuted,
-            ),
-            const SizedBox(width: 6),
+    final colors = context.appColors;
+    return Material(
+      color: homeField(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: hasValue ? AppPalette.navy : homeLine(context), width: hasValue ? 1.4 : 1)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(children: [
+            Icon(Icons.calendar_today_outlined, size: 16, color: AppPalette.gold600),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: hasValue ? colors.inkStrong : colors.inkMuted,
-                  fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text(label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: hasValue ? FontWeight.w700 : FontWeight.w500, color: hasValue ? colors.inkStrong : colors.inkMuted)),
             ),
-            if (onClear != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 14,
-                  color: colors.inkMuted,
-                ),
-              ),
-          ],
+            if (onClear != null) GestureDetector(onTap: onClear, child: Icon(Icons.close_rounded, size: 16, color: colors.inkMuted)),
+          ]),
         ),
       ),
     );
