@@ -160,95 +160,36 @@ class FollowUpCard extends StatelessWidget {
       if ((lead.projectInterest ?? '').isNotEmpty) lead.projectInterest!,
       if ((lead.assignedSalesName ?? '').isNotEmpty) lead.assignedSalesName!,
     ].join(' · ');
-    Widget round(IconData icon, Color c, String tip, VoidCallback f) => Tooltip(
-          message: tip,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(99),
-            onTap: f,
-            child: Container(width: 36, height: 36, decoration: BoxDecoration(color: c.withValues(alpha: 0.12), shape: BoxShape.circle), child: Icon(icon, size: 18, color: c)),
-          ),
-        );
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('follow-up-${lead.id}'),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                  child: Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(child: Text(lead.fullName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-                      const SizedBox(width: 6),
-                      StatusBadge(label: leadStageLabel(l10n, lead.stage), tone: leadStageTone(lead.stage)),
-                    ]),
-                    if (note != null && note.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-                    if (where.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Row(children: [
-                          Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                          const SizedBox(width: 3),
-                          Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-                        ]),
-                      ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(noteKindIcon(type), size: 13, color: color),
-                        const SizedBox(width: 4),
-                        Flexible(child: Text(at == null ? noteKindLabel(l10n, type) : '${noteKindLabel(l10n, type)} · ${followUpWhen(at, l10n, lang)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
-                      ]),
-                    ),
-                  ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
-              child: Row(children: [
-                if (phone != null && phone.isNotEmpty) ...[
-                  round(Icons.call_rounded, colors.success, l10n.contactCall, () => ContactActions.call(phone)),
-                  const SizedBox(width: 8),
-                  round(Icons.chat_rounded, const Color(0xFF128C7E), l10n.contactWhatsapp, () => ContactActions.whatsApp(number: phone)),
-                ],
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.lastAt == null
-                        ? l10n.followUpsNoActivity
-                        : item.lastCallResult != null
-                            ? '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${callResultLabel(l10n, item.lastCallResult!)}'
-                            : '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${followUpDate(item.lastAt!, lang)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
-                  ),
-                ),
-                Text(l10n.fuLogResult, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
-              ]),
-            ),
-          ]),
-        ),
-      ),
+    final last = item.lastAt == null
+        ? l10n.followUpsNoActivity
+        : item.lastCallResult != null
+            ? '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${callResultLabel(l10n, item.lastCallResult!)}'
+            : '${noteKindLabel(l10n, item.lastKind ?? 'NOTE')} · ${followUpDate(item.lastAt!, lang)}';
+    final stageColor = switch (leadStageTone(lead.stage)) {
+      BadgeTone.success => colors.success,
+      BadgeTone.warning => colors.warning,
+      BadgeTone.error => colors.error,
+      BadgeTone.info => colors.info,
+      _ => colors.inkMuted,
+    };
+    return DvEntityCard(
+      inkKey: ValueKey('follow-up-${lead.id}'),
+      onTap: onTap,
+      initials: homeInitials(lead.fullName),
+      title: lead.fullName,
+      subtitle: [if (note != null && note.isNotEmpty) note, if (where.isNotEmpty) where].join(' · '),
+      status: leadStageLabel(l10n, lead.stage),
+      statusColor: stageColor,
+      footIcon: noteKindIcon(type),
+      footColor: color,
+      footText: at == null ? noteKindLabel(l10n, type) : '${noteKindLabel(l10n, type)} · ${followUpWhen(at, l10n, lang)}',
+      footSub: last,
+      actions: [
+        if (phone != null && phone.isNotEmpty) ...[
+          DvSquareAction(icon: Icons.chat_outlined, color: const Color(0xFF1E7A55), tooltip: l10n.contactWhatsapp, onTap: () => ContactActions.whatsApp(number: phone)),
+          DvSquareAction(icon: Icons.phone_rounded, gold: true, tooltip: l10n.contactCall, onTap: () => ContactActions.call(phone)),
+        ],
+      ],
     );
   }
 }

@@ -315,182 +315,80 @@ class ReservationCardView extends StatelessWidget {
     final decides = route == '/reservations' && canDecideBooking(row, role: role, userId: session.sessionOrNull?.userId);
     String day(DateTime d) => DateFormatter.dayMonth(d, languageCode: lang);
     final where = [if ((row.projectName ?? '').isNotEmpty) row.projectName!, if ((row.unitCode ?? '').isNotEmpty) ltr(row.unitCode!)].join(' · ');
-    Widget mini(String k, String v, {String? sub, Color? subColor}) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              if (sub != null) Text(sub, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: subColor ?? colors.inkMuted)),
-            ]),
-          ),
-        );
-
-    // The next step, by state.
-    final left = row.daysLeft(DateTime.now());
-    final List<Widget> foot = switch (row.status) {
-      'PENDING' => [
-          if (left != null)
-            left < 0
-                ? ReservationChip(label: l10n.rvExpiredOn(day(row.expiresAt!)), icon: Icons.timer_off_rounded, color: colors.error)
-                : ReservationChip(label: '${l10n.rvExpiresInN(left)} · ${day(row.expiresAt!)}', icon: Icons.schedule_rounded, color: catalogReserved),
-          const Spacer(),
-          if (row.createdAt != null) Text(l10n.rvCreatedOn(day(row.createdAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      'APPROVED' when !row.bookingSettled => [
-          ReservationChip(label: l10n.rvUnpaidWarn, icon: Icons.payments_rounded, color: catalogReserved),
-          const Spacer(),
-          if (row.expiresAt != null) Text(l10n.rvExpiresOn(day(row.expiresAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      'APPROVED' => [
-          ReservationChip(label: l10n.rvReady, icon: Icons.task_alt_rounded, color: catalogAvailable),
-          const Spacer(),
-          if (role == AppRole.admin && route == '/reservations')
-            ReservationLink(key: Key('reservation-convert-${row.id}'), label: l10n.rvConvert, onTap: () => context.push('/reservations/${row.id}/convert')),
-        ],
-      'CONVERTED' => [
-          Text(row.convertedAt == null ? l10n.rvStConverted : l10n.rvConvertedOn(day(row.convertedAt!)),
-              style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ],
-      _ => [
-          Expanded(
-            child: Text(
-              (row.reason ?? '').isNotEmpty ? l10n.rvReasonLine(row.reason!) : (row.closedAt == null ? '' : day(row.closedAt!)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: colors.inkMuted),
-            ),
-          ),
-        ],
+    final (String status, Color statusColor) = switch (row.status) {
+      'PENDING' => (l10n.rvStPending, colors.warning),
+      'APPROVED' => (l10n.rvStApproved, colors.success),
+      'CONVERTED' => (l10n.rvStConverted, colors.inkStrong),
+      'REJECTED' => (l10n.rvStRejected, colors.inkMuted),
+      'CANCELLED' => (l10n.rvStCancelled, colors.inkMuted),
+      _ => (l10n.rvStExpired, colors.inkMuted),
     };
 
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('reservation-card-${row.id}'),
-        onTap: () => context.push('$route/${row.id}'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                  child: Text(homeInitials(row.clientName), style: homeDisplay(14, AppPalette.gold300)),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(row.clientName ?? '—',
-                            maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                      const SizedBox(width: 6),
-                      reservationBadge(l10n, row),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(children: [
-                        TextSpan(text: ltr(row.displayNumber), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (showConsultant && (row.salesName ?? '').isNotEmpty) TextSpan(text: ' · ${row.salesName}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                        if (row.viaBroker && route == '/reservations')
-                          TextSpan(text: ' · ${l10n.rvByBroker}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (where.isNotEmpty)
-                      Row(children: [
-                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                        const SizedBox(width: 3),
-                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-                      ]),
-                  ]),
-                ),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: Row(children: [
-                mini(
-                  l10n.rvBooking,
-                  row.bookingAmount <= 0 ? '—' : contractMoney(row.bookingAmount),
-                  sub: row.bookingAmount <= 0 ? null : bookingPayLabel(l10n, row),
-                  subColor: row.bookingSettled ? catalogAvailable : catalogReserved,
-                ),
-                const SizedBox(width: 6),
-                extraMini == null
-                    ? mini(
-                        l10n.kcPlan,
-                        row.months == null || row.months == 0
-                            ? l10n.kcNoPlan
-                            : l10n.kcPlanLine(row.months!, row.monthly == null ? '—' : contractMoney(row.monthly!)),
-                      )
-                    : mini(extraMini!.$1, extraMini!.$2),
-              ]),
-            ),
-            if (decides)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: Row(children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      key: Key('reservation-approve-${row.id}'),
-                      onPressed: working ? null : () => _decide(context, approve: true),
-                      icon: const Icon(Icons.check_rounded, size: 18),
-                      label: Text(l10n.reservationApprove),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: catalogAvailable,
-                        minimumSize: const Size.fromHeight(42),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: Key('reservation-reject-${row.id}'),
-                      onPressed: working ? null : () => _decide(context, approve: false),
-                      icon: const Icon(Icons.close_rounded, size: 18),
-                      label: Text(l10n.reservationReject),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colors.error,
-                        side: BorderSide(color: colors.error.withValues(alpha: 0.4), width: 1.5),
-                        minimumSize: const Size.fromHeight(42),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                  ),
-                ]),
-              ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: colors.surfaceSoft.withValues(alpha: 0.6), border: Border(top: BorderSide(color: colors.hairline))),
-              child: Row(children: [
-                for (final w in foot)
-                  if (w is Spacer)
-                    const SizedBox(width: 8)
-                  else if (w is ReservationChip)
-                    Flexible(flex: 3, child: w)
-                  else if (w is Text)
-                    Flexible(flex: 2, child: Align(alignment: AlignmentDirectional.centerEnd, child: w))
-                  else
-                    w,
-              ]),
-            ),
-          ]),
+    // The one fact that matters now, by state.
+    final left = row.daysLeft(DateTime.now());
+    final (IconData footIcon, String footText, Color footColor) = switch (row.status) {
+      'PENDING' when left != null && left < 0 => (Icons.timer_off_rounded, l10n.rvExpiredOn(day(row.expiresAt!)), colors.error),
+      'PENDING' when left != null => (Icons.schedule_rounded, '${l10n.rvExpiresInN(left)} · ${day(row.expiresAt!)}', colors.warning),
+      'APPROVED' when !row.bookingSettled => (Icons.payments_outlined, l10n.rvUnpaidWarn, colors.warning),
+      'APPROVED' => (Icons.task_alt_rounded, l10n.rvReady, colors.success),
+      'CONVERTED' => (Icons.description_outlined, row.convertedAt == null ? l10n.rvStConverted : l10n.rvConvertedOn(day(row.convertedAt!)), colors.inkMuted),
+      _ => (
+          Icons.info_outline_rounded,
+          (row.reason ?? '').isNotEmpty ? l10n.rvReasonLine(row.reason!) : (row.closedAt == null ? status : day(row.closedAt!)),
+          colors.inkMuted
         ),
-      ),
+    };
+    final money = [
+      if (row.bookingAmount > 0) '${l10n.rvBooking} ${contractMoney(row.bookingAmount)} · ${bookingPayLabel(l10n, row)}',
+      extraMini != null
+          ? '${extraMini!.$1} ${extraMini!.$2}'
+          : (row.months == null || row.months == 0 ? l10n.kcNoPlan : l10n.kcPlanLine(row.months!, row.monthly == null ? '—' : contractMoney(row.monthly!))),
+    ].join(' · ');
+    final who = [
+      ltr(row.displayNumber),
+      if (showConsultant && (row.salesName ?? '').isNotEmpty) row.salesName!,
+      if (row.viaBroker && route == '/reservations') l10n.rvByBroker,
+    ].join(' · ');
+
+    return DvEntityCard(
+      inkKey: Key('reservation-card-${row.id}'),
+      onTap: () => context.push('$route/${row.id}'),
+      initials: homeInitials(row.clientName),
+      title: row.clientName ?? '—',
+      subtitle: [who, if (where.isNotEmpty) where].join(' · '),
+      status: status,
+      statusColor: statusColor,
+      footIcon: footIcon,
+      footColor: footColor,
+      footText: footText,
+      footSub: money,
+      actions: [
+        if (decides) ...[
+          DvSquareAction(
+            key: Key('reservation-reject-${row.id}'),
+            icon: Icons.close_rounded,
+            color: colors.error,
+            tooltip: l10n.reservationReject,
+            busy: working,
+            onTap: () => _decide(context, approve: false),
+          ),
+          DvSquareAction(
+            key: Key('reservation-approve-${row.id}'),
+            icon: Icons.check_rounded,
+            gold: true,
+            tooltip: l10n.reservationApprove,
+            busy: working,
+            onTap: () => _decide(context, approve: true),
+          ),
+        ] else if (row.status == 'APPROVED' && row.bookingSettled && role == AppRole.admin && route == '/reservations')
+          DvSquareAction(
+            key: Key('reservation-convert-${row.id}'),
+            icon: Icons.description_rounded,
+            gold: true,
+            tooltip: l10n.rvConvert,
+            onTap: () => context.push('/reservations/${row.id}/convert'),
+          ),
+      ],
     );
   }
 }

@@ -260,130 +260,36 @@ class UnitCard extends StatelessWidget {
       if (row.floor != null) (Icons.stairs_rounded, row.floor == 0 ? l10n.cuGroundFloor : l10n.cuFloorN(ltr('${row.floor}'))),
       ?tag,
     ];
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('unit-card-${row.id}'),
-        onTap: onTap ?? () => context.push('/units/${row.id}'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Stack(clipBehavior: Clip.none, children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(15)),
-                    child: Icon(Icons.door_front_door_rounded, color: AppPalette.gold300, size: 22),
-                  ),
-                  PositionedDirectional(
-                    bottom: -3,
-                    end: -3,
-                    child: Container(
-                      width: 13,
-                      height: 13,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: colors.surface, width: 2.5)),
-                    ),
-                  ),
-                ]),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(ltr(row.code), maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(16, colors.inkStrong)),
-                        ),
-                      ),
-                      CatalogBadge.status(unitStatusLabel(l10n, row.status), color),
-                    ]),
-                    if ((row.typeName ?? '').isNotEmpty)
-                      Text(row.typeName!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    if (where.isNotEmpty)
-                      Row(children: [
-                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                        ),
-                      ]),
-                  ]),
-                ),
-              ]),
+    final specLine = [
+      if ((row.typeName ?? '').isNotEmpty) row.typeName!,
+      for (final (_, text) in specs) text,
+    ].join(' · ');
+    return DvEntityCard(
+      inkKey: Key('unit-card-${row.id}'),
+      onTap: onTap ?? () => context.push('/units/${row.id}'),
+      icon: Icons.door_front_door_rounded,
+      title: ltr(row.code),
+      subtitle: [if (where.isNotEmpty) where, if (specLine.isNotEmpty) specLine].join(' · '),
+      status: unitStatusLabel(l10n, row.status),
+      statusColor: color,
+      footIcon: row.reservedUntil != null ? Icons.timer_rounded : Icons.sell_outlined,
+      footColor: colors.inkStrong,
+      footText: row.price == null ? l10n.priceOnRequest : '${ltr(catalogGrouped(row.price!))} ${PriceFormatter.symbol(lang)}',
+      footSub: row.reservedUntil == null ? null : l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
+      footKey: row.reservedUntil == null ? null : Key('unit-reserved-${row.id}'),
+      actions: actions ??
+          [
+            DvSquareAction(
+              icon: Icons.ios_share_rounded,
+              onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
             ),
-            if (specs.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: Wrap(spacing: 6, runSpacing: 6, children: [
-                  for (final (icon, text) in specs)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(99)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(icon, size: 13, color: AppPalette.gold500),
-                        const SizedBox(width: 4),
-                        Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.inkStrong)),
-                      ]),
-                    ),
-                ]),
-              ),
-            if (row.reservedUntil != null)
-              Container(
-                margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                decoration: BoxDecoration(color: homeWarnFill(context), borderRadius: BorderRadius.circular(10)),
-                child: Row(children: [
-                  const Icon(Icons.timer_rounded, size: 14, color: Color(0xFF8A5A12)),
-                  const SizedBox(width: 4),
-                  Text(l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
-                      key: Key('unit-reserved-${row.id}'), style: const TextStyle(fontSize: 12, color: Color(0xFF8A5A12))),
-                ]),
-              ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-              decoration: BoxDecoration(
-                color: colors.surfaceSoft.withValues(alpha: 0.6),
-                border: Border(top: BorderSide(color: colors.hairline)),
-              ),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(l10n.cuPrice, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    if (row.price != null)
-                      Text.rich(TextSpan(children: [
-                        TextSpan(
-                          text: ltr(catalogGrouped(row.price!)),
-                          style: homeDisplay(18, AppPalette.gold600),
-                        ),
-                        TextSpan(text: ' ${PriceFormatter.symbol(lang)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ]))
-                    else
-                      Text(l10n.priceOnRequest, style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-                  ]),
-                ),
-                ...?actions,
-                if (actions == null) ...[
-                  UnitRoundAction(
-                    key: Key('unit-calc-${row.id}'),
-                    icon: Icons.calculate_rounded,
-                    onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
-                  ),
-                  const SizedBox(width: 6),
-                  UnitRoundAction(
-                    icon: Icons.ios_share_rounded,
-                    onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
-                  ),
-                ],
-              ]),
+            DvSquareAction(
+              key: Key('unit-calc-${row.id}'),
+              icon: Icons.calculate_rounded,
+              gold: true,
+              onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
             ),
-          ]),
-        ),
-      ),
+          ],
     );
   }
 }

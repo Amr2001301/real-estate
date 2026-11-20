@@ -168,67 +168,25 @@ class ChequeCardView extends StatelessWidget {
     final c = cheque;
     final tone = chequeStatusColor(c.status, colors);
     final dueNow = c.dueForDeposit(DateTime.now());
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: ValueKey('cheque-${c.id}'),
-        onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(Icons.receipt_long_rounded, color: tone, size: 22),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(child: Text(c.customer ?? (c.number != null ? ltr('#${c.number}') : l10n.chequesTitle), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-                      const SizedBox(width: 6),
-                      Text.rich(TextSpan(children: [
-                        TextSpan(text: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ])),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(children: [
-                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (c.number != null) TextSpan(text: ' · ${l10n.chequeNumberLabel} ${ltr(c.number!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                        if (c.bank != null) TextSpan(text: ' · ${c.bank}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 5),
-                    Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      CatalogBadge.status(chequeStatusLabel(l10n, c.status), tone),
-                      if (dueNow) Text(l10n.chequeDueForDeposit, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.error)),
-                    ]),
-                  ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
-              child: Row(children: [
-                if (c.dueDate != null) Text(l10n.pmDueOn(followUpDate(c.dueDate!, lang)), style: TextStyle(fontSize: 12, color: dueNow ? colors.error : colors.inkMuted)),
-                const Spacer(),
-                Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-              ]),
-            ),
-          ]),
-        ),
-      ),
+    return DvEntityCard(
+      inkKey: ValueKey('cheque-${c.id}'),
+      onTap: onTap,
+      icon: Icons.receipt_long_rounded,
+      title: c.customer ?? (c.number != null ? ltr('#${c.number}') : l10n.chequesTitle),
+      subtitle: [
+        if (c.contractNumber != null) ltr(c.contractNumber!),
+        if (c.number != null) '${l10n.chequeNumberLabel} ${ltr(c.number!)}',
+        if (c.bank != null) c.bank!,
+      ].join(' · '),
+      status: chequeStatusLabel(l10n, c.status),
+      statusColor: tone,
+      footIcon: dueNow ? Icons.priority_high_rounded : Icons.event_outlined,
+      footColor: dueNow ? colors.error : colors.inkStrong,
+      footText: '${c.amount == null ? '—' : contractMoney(c.amount!.toDouble())} $currency',
+      footSub: [
+        if (c.dueDate != null) l10n.pmDueOn(followUpDate(c.dueDate!, lang)),
+        if (dueNow) l10n.chequeDueForDeposit,
+      ].join(' · '),
     );
   }
 }

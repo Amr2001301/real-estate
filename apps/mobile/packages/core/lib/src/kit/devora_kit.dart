@@ -334,3 +334,153 @@ class DvGoldButton extends StatelessWidget {
         ),
       );
 }
+
+/// The list card of the staff app (the leads' design A): a navy circle with
+/// gold initials (or an icon), the title and one line under it, the status;
+/// a hairline; then the one fact that matters now (coloured when it needs
+/// attention) with a line under it, and up to two actions, the main one gold.
+class DvEntityCard extends StatelessWidget {
+  const DvEntityCard({
+    super.key,
+    required this.title,
+    this.initials,
+    this.icon,
+    this.subtitle,
+    this.status,
+    this.statusColor,
+    this.footIcon,
+    this.footText,
+    this.footColor,
+    this.footSub,
+    this.footKey,
+    this.actions = const [],
+    this.onTap,
+    this.inkKey,
+  });
+  final String title;
+  final String? initials;
+  final IconData? icon;
+  final String? subtitle;
+  final String? status;
+  final Color? statusColor;
+  final IconData? footIcon;
+  final String? footText;
+  final Color? footColor;
+  final String? footSub;
+  final Key? footKey;
+  final List<Widget> actions;
+  final VoidCallback? onTap;
+  final Key? inkKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final sc = statusColor ?? colors.inkMuted;
+    final hasFoot = footText != null || actions.isNotEmpty;
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: inkKey,
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.hairline),
+            boxShadow: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+                child: initials != null
+                    ? Text(initials!, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0)))
+                    : Icon(icon ?? Icons.circle_outlined, size: 20, color: const Color(0xFFEED7A0)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  if ((subtitle ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                  ],
+                ]),
+              ),
+              if (status != null) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(color: sc.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                  child: Text(status!, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: sc)),
+                ),
+              ],
+            ]),
+            if (hasFoot) ...[
+              Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: colors.hairline)),
+              Row(children: [
+                if (footIcon != null) ...[Icon(footIcon, size: 19, color: footColor ?? colors.inkMuted), const SizedBox(width: 10)],
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (footText != null)
+                      Text(footText!,
+                          key: footKey,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: footColor ?? colors.inkStrong)),
+                    if ((footSub ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(footSub!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                    ],
+                  ]),
+                ),
+                for (final a in actions) ...[const SizedBox(width: 8), a],
+              ]),
+            ],
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// A 40px rounded-square action: soft grey, or gold for the main one.
+class DvSquareAction extends StatelessWidget {
+  const DvSquareAction({super.key, required this.icon, required this.onTap, this.color, this.gold = false, this.tooltip, this.busy = false});
+  final IconData icon;
+  final VoidCallback? onTap;
+  final Color? color;
+  final bool gold;
+  final String? tooltip;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final w = DecoratedBox(
+      decoration: BoxDecoration(gradient: gold ? dvGoldGradient : null, color: gold ? null : colors.surfaceSoft, borderRadius: BorderRadius.circular(13)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(13),
+          onTap: busy ? null : onTap,
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: busy
+                ? const Padding(padding: EdgeInsets.all(11), child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(icon, size: 19, color: gold ? dvOnGold : (color ?? colors.inkStrong)),
+          ),
+        ),
+      ),
+    );
+    return tooltip == null ? w : Tooltip(message: tooltip!, child: w);
+  }
+}

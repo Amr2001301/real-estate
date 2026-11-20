@@ -791,6 +791,35 @@ class HomeBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AppPalette.calmLight) return _summary(context);
+    return _band(context);
+  }
+
+  /// Devora: one quiet line of figures (value in ink, label muted, a figure
+  /// that needs attention in amber) instead of a block of boxes.
+  Widget _summary(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Wrap(spacing: 0, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        for (var i = 0; i < figures.length; i++) ...[
+          if (i > 0) Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text('·', style: TextStyle(fontSize: 14, color: colors.inkMuted))),
+          Text.rich(
+            key: Key('home-fig-${figures[i].id}'),
+            TextSpan(children: [
+              TextSpan(
+                text: ltr(figures[i].value),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: figures[i].warn ? colors.warning : colors.inkStrong),
+              ),
+              TextSpan(text: '  ${figures[i].label}', style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+            ]),
+          ),
+        ],
+      ]),
+    );
+  }
+
+  Widget _band(BuildContext context) {
     final light = AppPalette.calmLight && !homeIsDark(context);
     final colors = context.appColors;
     return Container(
