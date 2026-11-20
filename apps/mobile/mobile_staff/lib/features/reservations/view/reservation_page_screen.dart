@@ -5,14 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/reservation_status_label.dart';
-import '../../contracts/view/contract_page_screen.dart' show ContractParty, KvTable;
+import '../../contracts/view/contract_page_screen.dart' show ContractParty;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../e_sign/presentation/signature_section.dart';
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;
 import '../presentation/screens/reservation_decision_card.dart' show askReservationRejectReason, confirmReservationApprove;
 import 'reservations_data.dart';
-import 'reservations_list_screen.dart' show reservationBadge, bookingPayLabel;
+import 'reservations_list_screen.dart' show bookingPayLabel;
 
 /// A booking's page (owner-approved design r2, 2026-11-04), as the website's
 /// booking page: the number, the state and when it ends; the booking amount
@@ -168,10 +168,10 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ReservationPageCubit>().load,
                   child: ListView(padding: const EdgeInsets.only(bottom: 20), children: [
-                    HomeOverlap(overlap: 44, top: ReservationHeader(page: p), bottom: ReservationBookingCard(page: p)),
+                    ReservationHero(page: p),
                     if (p.contractId != null)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 18, AppSpacing.md, 0),
                         child: ReservationLinkCard(
                           key: const Key('reservation-contract'),
                           icon: Icons.description_rounded,
@@ -184,7 +184,7 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
                       icon: Icons.groups_rounded,
                       title: l10n.kcParties,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                         decoration: homeCard(context, radius: 22),
                         child: Column(children: [
                           ContractParty(label: l10n.kcClient, name: r.clientName ?? '—', phone: r.clientPhone),
@@ -246,51 +246,21 @@ class _ReservationPageScreenState extends State<ReservationPageScreen> {
   }
 }
 
-/// The navy header: back, the number, the client and unit, the badges.
-class ReservationHeader extends StatelessWidget {
-  const ReservationHeader({super.key, required this.page});
+/// The navy header: back, the number and its state, the client and unit and
+/// when the booking ends; then the booking amount, whether it is paid, any
+/// [facts] (the broker's commission) and the booking's journey to a contract.
+class ReservationHero extends StatelessWidget {
+  const ReservationHero({super.key, required this.page, this.facts = const []});
   final ReservationPage page;
+  final List<DvHeroFact> facts;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    final r = page.row;
-    final left = r.daysLeft(DateTime.now());
-    return HomeListHero(
-      title: ltr(r.displayNumber),
-      subtitle: [if ((r.clientName ?? '').isNotEmpty) r.clientName!, if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!)].join(' · '),
-      back: true,
-      bottom: Padding(
-        padding: const EdgeInsets.only(bottom: 48),
-        child: Wrap(spacing: 6, runSpacing: 6, children: [
-          reservationBadge(l10n, r),
-          if (r.open && left != null && r.expiresAt != null)
-            CatalogBadge.glass(left < 0
-                ? l10n.rvExpiredOn(DateFormatter.dayMonth(r.expiresAt!, languageCode: lang))
-                : '${l10n.rvExpiresInN(left)} · ${DateFormatter.dayMonth(r.expiresAt!, languageCode: lang)}'),
-        ]),
-      ),
-    );
-  }
-}
-
-/// The floating card: the booking amount and whether it is paid, and the
-/// booking's journey to a contract.
-class ReservationBookingCard extends StatelessWidget {
-  const ReservationBookingCard({super.key, required this.page, this.extra});
-  final ReservationPage page;
-
-  /// Something under the amount (the broker's commission).
-  final Widget? extra;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
     final r = page.row;
+    final left = r.daysLeft(DateTime.now());
     String day(DateTime? d) => d == null ? '' : DateFormatter.dayMonth(d, languageCode: lang);
     final closedStep = switch (r.status) {
       'REJECTED' => l10n.rvJRejected,
@@ -298,7 +268,6 @@ class ReservationBookingCard extends StatelessWidget {
       'EXPIRED' => l10n.rvJExpired,
       _ => null,
     };
-    // Each step: label, date, done; the first not done is "now".
     final steps = <(String, DateTime?, bool)>[
       (l10n.rvJCreated, r.createdAt, true),
       (l10n.rvJBooking, r.bookingPaidAt, r.bookingSettled && r.bookingAmount > 0 ? true : r.bookingAmount <= 0),
@@ -306,76 +275,55 @@ class ReservationBookingCard extends StatelessWidget {
       (closedStep ?? l10n.rvJContract, closedStep != null ? r.closedAt : r.convertedAt, r.status == 'CONVERTED'),
     ];
     final now = closedStep == null ? steps.indexWhere((s) => !s.$3) : -1;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: homeLine(context)),
-        boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l10n.rvBooking, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              Text.rich(
-                key: const Key('reservation-amount'),
-                TextSpan(children: [
-                  TextSpan(text: r.bookingAmount <= 0 ? '—' : contractMoney(r.bookingAmount), style: homeDisplay(26, colors.inkStrong)),
-                  if (r.bookingAmount > 0) TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-                ]),
+    final paid = r.bookingStatus == 'PAID' && r.bookingPaidAt != null;
+    return HomeListHero(
+      back: true,
+      title: ltr(r.displayNumber),
+      badge: reservationHeroBadge(l10n, r),
+      subtitle: [
+        if ((r.clientName ?? '').isNotEmpty) r.clientName!,
+        if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!),
+        if (r.open && left != null && r.expiresAt != null)
+          left < 0 ? l10n.rvExpiredOn(DateFormatter.dayMonth(r.expiresAt!, languageCode: lang)) : l10n.rvExpiresInN(left),
+      ].join(' · '),
+      bottom: DvHeroFigure(
+        label: l10n.rvBooking,
+        value: r.bookingAmount <= 0 ? '—' : contractMoney(r.bookingAmount),
+        unit: r.bookingAmount > 0 ? currency : '',
+        valueKey: const Key('reservation-amount'),
+        badge: r.bookingAmount <= 0
+            ? null
+            : DvHeroBadge(
+                paid ? '✓ ${l10n.rvPaidOn(day(r.bookingPaidAt))}' : bookingPayLabel(l10n, r),
+                tone: r.bookingSettled ? DvTone.ok : DvTone.warn,
               ),
-              if (r.bookingStatus == 'PAID' && r.bookingPaidAt != null)
-                Text('✓ ${l10n.rvPaidOn(DateFormatter.mediumDate(r.bookingPaidAt!, languageCode: lang))}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable)),
-            ]),
+        facts: facts,
+        footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          DvHeroSteps(
+            keyPrefix: 'reservation-step',
+            steps: [
+              for (final (i, (label, at, done)) in steps.indexed) (label, i == now ? l10n.rvNextStep : day(at), done, i == 3 && closedStep != null),
+            ],
           ),
-          if (r.bookingAmount > 0)
-            CatalogBadge.status(bookingPayLabel(l10n, r), r.bookingSettled ? catalogAvailable : catalogReserved),
+          if (closedStep != null && (r.reason ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(l10n.rvReasonLine(r.reason!), style: const TextStyle(fontSize: 12, color: Color(0xFFAEB8CB))),
+          ],
         ]),
-        if (extra != null) ...[const SizedBox(height: 12), extra!],
-        const SizedBox(height: 14),
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          for (final (i, (label, at, done)) in steps.indexed)
-            Expanded(
-              child: Column(children: [
-                Container(
-                  key: Key('reservation-step-$i'),
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: i == 3 && closedStep != null
-                        ? const Color(0xFF9A9083)
-                        : done
-                            ? catalogAvailable
-                            : i == now
-                                ? AppPalette.gold400
-                                : homeLine(context),
-                    boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
-                  ),
-                  child: Icon(
-                    i == 3 && closedStep != null ? Icons.close_rounded : (done ? Icons.check_rounded : Icons.more_horiz_rounded),
-                    size: 15,
-                    color: done || i == 3 && closedStep != null ? Colors.white : (i == now ? AppPalette.navy : const Color(0xFF9A9083)),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                Text(i == now ? l10n.rvNextStep : day(at), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-            ),
-        ]),
-        if (closedStep != null && (r.reason ?? '').isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Text(l10n.rvReasonLine(r.reason!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ],
-      ]),
+      ),
     );
   }
 }
+
+/// A booking's state as a pill on the navy header.
+Widget reservationHeroBadge(AppLocalizations l10n, ReservationRow r) => switch (r.status) {
+      'PENDING' => DvHeroBadge(l10n.rvStPending, tone: DvTone.warn),
+      'APPROVED' => DvHeroBadge(l10n.rvStApproved, tone: DvTone.ok),
+      'CONVERTED' => DvHeroBadge(l10n.rvStConverted),
+      'REJECTED' => DvHeroBadge(l10n.rvStRejected, tone: DvTone.bad),
+      'CANCELLED' => DvHeroBadge(l10n.rvStCancelled, tone: DvTone.bad),
+      _ => DvHeroBadge(l10n.rvStExpired, tone: DvTone.bad),
+    };
 
 class ReservationLinkCard extends StatelessWidget {
   const ReservationLinkCard({super.key, required this.icon, required this.title, required this.onTap, this.subtitle});
@@ -387,26 +335,36 @@ class ReservationLinkCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Material(
-      color: colors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: colors.hairline)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(children: [
-            Icon(icon, color: AppPalette.gold500),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                if (subtitle != null) Text(subtitle!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-            ),
-            // chevron_right mirrors to ‹ in Arabic: "more", outward.
-            Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
-          ]),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF0B1426), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, size: 19, color: const Color(0xFFEED7A0)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    Text(subtitle!, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                  ],
+                ]),
+              ),
+              // chevron_right mirrors to ‹ in Arabic: "more", outward.
+              Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
+            ]),
+          ),
         ),
       ),
     );
@@ -423,13 +381,13 @@ class ReservationPlan extends StatelessWidget {
     final currency = PriceFormatter.symbol(Localizations.localeOf(context).languageCode);
     final r = page.row;
     String money(double? v) => v == null ? '—' : '${contractMoney(v)} $currency';
-    return KvTable(rows: [
-      (l10n.rvPlanName, page.planName == null ? '—' : ltrRuns(page.planName!).replaceAll('-', '\u2060-\u2060')),
-      (l10n.cvTerm, r.months == null ? '—' : l10n.cvMonthsN(r.months!)),
-      (l10n.cvDown, money(page.down)),
-      (l10n.cvMonthly, money(r.monthly)),
-      (l10n.cvTotal, money(page.total)),
-      (l10n.rvUnitPrice, money(page.unitPrice)),
+    return DvInfoCard(rows: [
+      DvInfo(l10n.rvPlanName, page.planName == null ? '—' : ltrRuns(page.planName!).replaceAll('-', '\u2060-\u2060')),
+      DvInfo(l10n.rvUnitPrice, money(page.unitPrice)),
+      DvInfo(l10n.cvDown, money(page.down)),
+      DvInfo(l10n.cvMonthly, money(r.monthly)),
+      DvInfo(l10n.cvTerm, r.months == null ? '—' : l10n.cvMonthsN(r.months!)),
+      DvInfo(l10n.cvTotal, money(page.total), strong: true),
     ]);
   }
 }
@@ -441,37 +399,17 @@ class ReservationHistory extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: homeCard(context, radius: 22),
-      child: Column(children: [
-        for (final (i, e) in events.indexed) ...[
-          if (i > 0) Divider(height: 1, color: colors.hairline),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(e.isNote ? Icons.sticky_note_2_rounded : Icons.circle, size: e.isNote ? 16 : 8, color: e.isNote ? AppPalette.gold500 : colors.inkMuted),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(e.isNote ? (e.note ?? '') : reservationEventLabel(l10n, e.type),
-                      style: TextStyle(fontSize: 12.5, fontWeight: e.isNote ? FontWeight.w500 : FontWeight.w700, color: colors.inkStrong)),
-                  Text(
-                    [
-                      if ((e.by ?? '').isNotEmpty) RegExp('[A-Za-z]').hasMatch(e.by!) ? ltr(e.by!) : e.by!,
-                      if (e.at != null) DateFormatter.mediumDate(e.at!, languageCode: lang),
-                    ].join(' · '),
-                    style: TextStyle(fontSize: 12, color: colors.inkMuted),
-                  ),
-                ]),
-              ),
-            ]),
-          ),
-        ],
-      ]),
-    );
+    return DvTimeline(events: [
+      for (final e in events)
+        DvEvent(
+          e.isNote ? (e.note ?? '') : reservationEventLabel(l10n, e.type),
+          subtitle: [
+            if ((e.by ?? '').isNotEmpty) RegExp('[A-Za-z]').hasMatch(e.by!) ? ltr(e.by!) : e.by!,
+            if (e.at != null) DateFormatter.mediumDate(e.at!, languageCode: lang),
+          ].join(' · '),
+        ),
+    ]);
   }
 }
 

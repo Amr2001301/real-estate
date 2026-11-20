@@ -62,7 +62,7 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
     final l10n = context.l10n;
     final admin = context.read<SessionCubit>().state.role == AppRole.admin;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: BlocBuilder<ContractPageCubit, DataState<ContractPage>>(
           builder: (context, state) {
@@ -85,33 +85,17 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ContractPageCubit>().load,
                   child: ListView(padding: EdgeInsets.zero, children: [
-                    _Header(page: p),
-                    _Figures(page: p, late: late),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                        height: 38,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                          child: Row(children: [
-                            for (final (t, label, badge) in [
-                              (_Tab.overview, l10n.kcTabOverview, null),
-                              (_Tab.installments, l10n.kcTabInstallments, late > 0 ? late : null),
-                              (_Tab.statement, l10n.kcTabStatement, null),
-                              (_Tab.payments, l10n.kcTabPayments, p.payments.isEmpty ? null : p.payments.length),
-                            ]) ...[
-                              _TabChip(
-                                key: Key('contract-tab-${t.name}'),
-                                label: label,
-                                badge: badge,
-                                alert: t == _Tab.installments && late > 0,
-                                selected: _tab == t,
-                                onTap: () => setState(() => _tab = t),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                          ]),
-                        ),
+                    _hero(context, p, late),
+                    DvTabs<_Tab>(
+                      keyPrefix: 'contract-tab',
+                      selected: _tab,
+                      onChanged: (t) => setState(() => _tab = t),
+                      tabs: [
+                        (_Tab.overview, l10n.kcTabOverview, null, false),
+                        (_Tab.installments, l10n.kcTabInstallments, late > 0 ? late : null, late > 0),
+                        (_Tab.statement, l10n.kcTabStatement, null, false),
+                        (_Tab.payments, l10n.kcTabPayments, p.payments.isEmpty ? null : p.payments.length, false),
+                      ],
                     ),
                     Column(children: switch (_tab) {
                         _Tab.overview => _overview(context, p, admin),
@@ -132,23 +116,56 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
                 Container(
                   padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.paddingOf(context).bottom),
                   decoration: BoxDecoration(color: context.appColors.canvas, border: Border(top: BorderSide(color: context.appColors.hairline))),
-                  child: FilledButton.icon(
-                    key: const Key('contract-record'),
-                    onPressed: () => _record(p, next),
-                    icon: const Icon(Icons.payments_rounded, size: 19),
-                    label: Text(l10n.kcRecordPayment),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      backgroundColor: homeCta(context),
-                      foregroundColor: homeOnCta(context),
-                      textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DvGoldButton(
+                      key: const Key('contract-record'),
+                      height: 50,
+                      icon: Icons.payments_rounded,
+                      label: l10n.kcRecordPayment,
+                      onTap: () => _record(p, next),
                     ),
                   ),
                 ),
             ]);
           },
         ),
+      ),
+    );
+  }
+
+  Widget _hero(BuildContext context, ContractPage p, int late) {
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
+    final currency = PriceFormatter.symbol(lang);
+    final r = p.row;
+    final signed = r.signedAt != null && !r.cancelled;
+    final overdue = late > 0 || p.overdue > 0.005;
+    return HomeListHero(
+      back: true,
+      title: ltr(r.displayNumber),
+      badge: signed ? DvHeroBadge(l10n.kcSignedOn(DateFormatter.dayMonth(r.signedAt!, languageCode: lang))) : contractBadge(l10n, r),
+      subtitle: [
+        if ((r.customerName ?? '').isNotEmpty) r.customerName!,
+        if ((r.projectName ?? '').isNotEmpty) r.projectName!,
+        if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!),
+      ].join(' · '),
+      bottom: DvHeroFigure(
+        label: l10n.kcCollectedOfValue,
+        value: contractMoney(p.paid),
+        unit: l10n.kcOfValue('${contractMoney(p.value)} $currency'),
+        valueKey: const Key('contract-value'),
+        progress: p.collectedPct / 100,
+        facts: [
+          DvHeroFact('${p.collectedPct}%', l10n.rpCollected, id: 'contract-collected'),
+          DvHeroFact(contractMoney(p.remaining), l10n.kcRemaining),
+          DvHeroFact(
+            overdue ? (p.overdue > 0.005 ? contractMoney(p.overdue) : l10n.kcOverdueN(late)) : l10n.kcNoOverdue,
+            l10n.kcOverdue,
+            alert: overdue,
+            id: 'contract-overdue',
+          ),
+        ],
       ),
     );
   }
@@ -165,20 +182,25 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
       HomeSection(
         icon: Icons.description_rounded,
         title: l10n.kcData,
-        child: KvTable(rows: [
-          (l10n.kcSignedAt, p.row.signedAt == null ? l10n.kcNotSigned : day(p.row.signedAt)),
-          (l10n.kcDelivery, [day(p.expectedDelivery), if (p.delayDays > 0) l10n.kcDelayDays(p.delayDays)].join(' · ')),
-          (l10n.kcPlan, p.row.planMonths == null ? l10n.kcNoPlan : l10n.kcPlanMonthlyN(p.row.planMonths!)),
-          (l10n.kcInstallment, p.row.planMonthly == null ? '—' : '${contractMoney(p.row.planMonthly!)} $currency'),
-          (l10n.kcStarts, day(p.planStarts)),
-          (l10n.upProject, p.row.projectName ?? '—'),
+        child: DvInfoCard(rows: [
+          DvInfo(l10n.kcSignedAt, p.row.signedAt == null ? l10n.kcNotSigned : day(p.row.signedAt)),
+          DvInfo(l10n.kcDelivery, [day(p.expectedDelivery), if (p.delayDays > 0) l10n.kcDelayDays(p.delayDays)].join(' · '),
+              color: p.delayDays > 0 ? colors.error : null),
+          DvInfo(l10n.kcPlan, p.row.planMonths == null ? l10n.kcNoPlan : l10n.kcPlanMonthlyN(p.row.planMonths!)),
+          DvInfo(l10n.kcInstallment, p.row.planMonthly == null ? '—' : '${contractMoney(p.row.planMonthly!)} $currency'),
+          DvInfo(l10n.kcStarts, day(p.planStarts)),
+          DvInfo(l10n.upProject, p.row.projectName ?? '—'),
+          DvInfo(
+            l10n.kcSource,
+            p.row.reservationNumber == null ? l10n.kcManual : l10n.kcFromReservation(ltr(p.row.reservationNumber!)),
+          ),
         ]),
       ),
       HomeSection(
         icon: Icons.groups_rounded,
         title: l10n.kcParties,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           decoration: homeCard(context, radius: 22),
           child: Column(children: [
             ContractParty(label: l10n.kcClient, name: p.row.customerName ?? '—', phone: p.row.customerPhone),
@@ -207,68 +229,41 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
       HomeSection(
         icon: Icons.folder_rounded,
         title: l10n.kcDocuments,
-        child: Material(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(22),
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-            child: Column(children: [
-              if ((p.pdfUrl ?? '').isNotEmpty) ...[
-                ListTile(
-                  key: const Key('contract-pdf'),
-                  leading: Icon(Icons.picture_as_pdf_rounded, color: AppPalette.gold500),
-                  title: Text(l10n.kcContractPdf, style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text(ltr('${p.row.displayNumber}.pdf')),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => ContactActions.openExternal(p.pdfUrl!),
-                ),
-                Divider(height: 1, color: colors.hairline),
-              ],
-              ListTile(
-                key: const Key('contract-documents'),
-                leading: Icon(Icons.folder_open_rounded, color: AppPalette.gold500),
-                title: Text(l10n.kcAllDocuments, style: const TextStyle(fontWeight: FontWeight.w700)),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => context.push(
-                  '/documents-view?ownerType=CONTRACT&ownerId=${p.row.id}&title=${Uri.encodeComponent(l10n.contractsDocumentsTitle)}',
-                ),
-              ),
-            ]),
+        child: DvActionCard(actions: [
+          if ((p.pdfUrl ?? '').isNotEmpty)
+            DvAction(
+              id: 'contract-pdf',
+              icon: Icons.picture_as_pdf_rounded,
+              title: l10n.kcContractPdf,
+              subtitle: ltr('${p.row.displayNumber}.pdf'),
+              onTap: () => ContactActions.openExternal(p.pdfUrl!),
+            ),
+          DvAction(
+            id: 'contract-documents',
+            icon: Icons.folder_open_rounded,
+            title: l10n.kcAllDocuments,
+            onTap: () => context.push(
+              '/documents-view?ownerType=CONTRACT&ownerId=${p.row.id}&title=${Uri.encodeComponent(l10n.contractsDocumentsTitle)}',
+            ),
           ),
-        ),
+        ]),
       ),
       if (admin && !p.row.cancelled)
         HomeSection(
           icon: Icons.settings_suggest_rounded,
           title: l10n.ctaSection,
-          child: Material(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(22),
-            child: Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-              child: Column(children: [
-                if (p.row.signedAt != null && !p.handedOver) ...[
-                  ListTile(
-                    key: const Key('contract-handover'),
-                    leading: Icon(Icons.key_rounded, color: AppPalette.gold500),
-                    title: Text(l10n.ctaHandover, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(l10n.ctaHandoverDesc),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => _handover(p),
-                  ),
-                  Divider(height: 1, color: colors.hairline),
-                ],
-                ListTile(
-                  key: const Key('contract-cancel'),
-                  leading: Icon(Icons.block_rounded, color: colors.error),
-                  title: Text(l10n.ctaCancelContract, style: TextStyle(fontWeight: FontWeight.w700, color: colors.error)),
-                  subtitle: Text(l10n.ctaCancelDesc),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _cancel(p),
-                ),
-              ]),
+          child: DvActionCard(actions: [
+            if (p.row.signedAt != null && !p.handedOver)
+              DvAction(id: 'contract-handover', icon: Icons.key_rounded, title: l10n.ctaHandover, subtitle: l10n.ctaHandoverDesc, onTap: () => _handover(p)),
+            DvAction(
+              id: 'contract-cancel',
+              icon: Icons.block_rounded,
+              title: l10n.ctaCancelContract,
+              subtitle: l10n.ctaCancelDesc,
+              danger: true,
+              onTap: () => _cancel(p),
             ),
-          ),
+          ]),
         ),
       const SizedBox(height: 10),
     ];
@@ -284,200 +279,13 @@ String _installmentTitle(AppLocalizations l10n, ContractPage p, ContractInstallm
   return l10n.kcInstallment;
 }
 
-/// The navy header: back, the number, the client and unit, the badges.
-class _Header extends StatelessWidget {
-  const _Header({required this.page});
-  final ContractPage page;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    final r = page.row;
-    final signed = r.signedAt != null && !r.cancelled;
-    final line = [
-      if ((r.customerName ?? '').isNotEmpty) r.customerName!,
-      if ((r.projectName ?? '').isNotEmpty) r.projectName!,
-      if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!),
-    ].join(' · ');
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, MediaQuery.paddingOf(context).top + 6, 20, 0),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        IconButton(
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          onPressed: () => Navigator.of(context).maybePop(),
-          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded, color: colors.inkStrong),
-        ),
-        Padding(
-          padding: const EdgeInsetsDirectional.only(start: 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Flexible(
-                child: Text(ltr(r.displayNumber),
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 22, height: 1.3, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              ),
-              const SizedBox(width: 10),
-              signed
-                  ? DvPill(l10n.kcSignedOn(DateFormatter.dayMonth(r.signedAt!, languageCode: lang)), tone: DvTone.ok)
-                  : contractBadge(l10n, r),
-            ]),
-            if (line.isNotEmpty) ...[
-              const SizedBox(height: 5),
-              Text(line, style: TextStyle(fontSize: 13, height: 1.45, color: colors.inkMuted)),
-            ],
-            const SizedBox(height: 3),
-            Text(r.reservationNumber == null ? l10n.kcManual : l10n.kcFromReservation(ltr(r.reservationNumber!)),
-                style: TextStyle(fontSize: 12.5, height: 1.45, color: colors.inkMuted)),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-
-/// The page's one dark card: what is collected of the value, the line, and
-/// what remains and what is late.
-class _Figures extends StatelessWidget {
-  const _Figures({required this.page, required this.late});
-  final ContractPage page;
-  final int late;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    final currency = PriceFormatter.symbol(lang);
-    const muted = Color(0xFFAEB8CB);
-    final overdue = late > 0 || page.overdue > 0.005;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF17223B), Color(0xFF0B1426), Color(0xFF070C17)]),
-        boxShadow: [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.22), blurRadius: 26, offset: const Offset(0, 12))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(l10n.kcCollectedOfValue, style: const TextStyle(fontSize: 13, height: 1.4, color: muted)),
-        const SizedBox(height: 6),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: AlignmentDirectional.centerStart,
-          child: Text.rich(
-            key: const Key('contract-value'),
-            TextSpan(children: [
-              TextSpan(text: contractMoney(page.paid), style: const TextStyle(fontSize: 34, height: 1.1, fontWeight: FontWeight.w700, color: Colors.white)),
-              TextSpan(text: '  ${l10n.kcOfValue('${contractMoney(page.value)} $currency')}', style: const TextStyle(fontSize: 13, color: muted)),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: Stack(children: [
-            Container(height: 6, color: Colors.white.withValues(alpha: 0.12)),
-            FractionallySizedBox(
-              widthFactor: (page.collectedPct / 100).clamp(0.0, 1.0),
-              child: Container(height: 6, decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFB88F35), Color(0xFFEED7A0)]))),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 14),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: AlignmentDirectional.centerStart,
-          child: Row(children: [
-            Text(ltr('${page.collectedPct}%'), key: const Key('contract-collected'), style: const TextStyle(fontSize: 12.5, color: Color(0xFFC9D1DF))),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
-            Text('${l10n.kcRemaining} ${contractMoney(page.remaining)}', style: const TextStyle(fontSize: 12.5, color: Color(0xFFC9D1DF))),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
-            Text(
-              overdue ? '${l10n.kcOverdue} ${page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late)}' : '${l10n.kcOverdue}: ${l10n.kcNoOverdue}',
-              key: const Key('contract-overdue'),
-              style: TextStyle(fontSize: 12.5, fontWeight: overdue ? FontWeight.w700 : FontWeight.w400, color: overdue ? const Color(0xFFF29AA2) : const Color(0xFFC9D1DF)),
-            ),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-
-class _TabChip extends StatelessWidget {
-  const _TabChip({super.key, required this.label, required this.selected, required this.onTap, this.badge, this.alert = false});
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final int? badge;
-  final bool alert;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500 : AppPalette.navy) : colors.surface,
-      shape: StadiumBorder(side: BorderSide(color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.gold500 : AppPalette.navy) : colors.hairline)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: selected ? (Theme.of(context).brightness == Brightness.dark ? AppPalette.navy : Colors.white) : colors.inkStrong)),
-            if (badge != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: alert ? colors.error.withValues(alpha: 0.14) : colors.surfaceSoft,
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(ltr('$badge'),
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: alert ? colors.error : colors.inkMuted)),
-              ),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-/// A two-column table of facts.
+/// Facts as rows: the label at the start, the value at the end.
 class KvTable extends StatelessWidget {
   const KvTable({super.key, required this.rows});
   final List<(String, String)> rows;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      decoration: homeCard(context, radius: 22),
-      clipBehavior: Clip.antiAlias,
-      child: LayoutBuilder(builder: (context, box) {
-        final w = box.maxWidth / 2;
-        return Wrap(children: [
-          for (final (i, (k, v)) in rows.indexed)
-            Container(
-              width: w,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-              decoration: BoxDecoration(
-                border: BorderDirectional(
-                  end: i.isEven ? BorderSide(color: colors.hairline) : BorderSide.none,
-                  bottom: i < rows.length - (rows.length.isEven ? 2 : 1) ? BorderSide(color: colors.hairline) : BorderSide.none,
-                ),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                const SizedBox(height: 2),
-                Text(v, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              ]),
-            ),
-        ]);
-      }),
-    );
-  }
+  Widget build(BuildContext context) => DvInfoCard(rows: [for (final (k, v) in rows) DvInfo(k, v)]);
 }
 
 class ContractParty extends StatelessWidget {
@@ -490,38 +298,30 @@ class ContractParty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    Widget round(IconData i, Color c, VoidCallback onTap, Key key) => Material(
-          color: c.withValues(alpha: 0.10),
-          shape: const CircleBorder(),
-          child: InkWell(
-            key: key,
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(width: 34, height: 34, child: Icon(i, size: 17, color: c)),
-          ),
-        );
+    final has = (phone ?? '').isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(children: [
         Container(
-          width: 38,
-          height: 38,
+          width: 42,
+          height: 42,
           alignment: Alignment.center,
-          decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(12)),
-          child: icon != null ? Icon(icon, size: 18, color: AppPalette.gold300) : Text(homeInitials(name), style: homeDisplay(13, AppPalette.gold300)),
+          decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+          child: icon != null ? Icon(icon, size: 18, color: const Color(0xFFEED7A0)) : Text(homeInitials(name), style: homeDisplay(14, const Color(0xFFEED7A0))),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            Text(name, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-            if ((phone ?? '').isNotEmpty) Text(ltr(phone!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+            const SizedBox(height: 2),
+            Text(name, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+            if (has) Text(ltr(phone!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
           ]),
         ),
-        if ((phone ?? '').isNotEmpty) ...[
-          round(Icons.chat_rounded, const Color(0xFF1E9E5A), () => ContactActions.whatsApp(number: phone!), const Key('contract-whatsapp')),
-          const SizedBox(width: 6),
-          round(Icons.call_rounded, AppPalette.navy, () => ContactActions.call(phone!), const Key('contract-call')),
+        if (has) ...[
+          DvSquareAction(key: const Key('contract-whatsapp'), icon: Icons.chat_rounded, color: const Color(0xFF1E7A55), onTap: () => ContactActions.whatsApp(number: phone!)),
+          const SizedBox(width: 8),
+          DvSquareAction(key: const Key('contract-call'), icon: Icons.call_rounded, gold: true, onTap: () => ContactActions.call(phone!)),
         ],
       ]),
     );
@@ -549,58 +349,51 @@ class _Installments extends StatelessWidget {
         child: Text(l10n.kcNoInstallments, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
       );
     }
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-        child: Column(children: [
-          for (final (n, i) in rows.indexed) ...[
-            if (n > 0) Divider(height: 1, color: colors.hairline),
-            Padding(
-              key: Key('contract-inst-${i.id}'),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(children: [
-                SizedBox(
-                  width: 44,
-                  child: Column(children: [
-                    Text(i.dueDate == null ? '—' : ltr('${i.dueDate!.day}'), style: homeDisplay(16, colors.inkStrong)),
-                    if (i.dueDate != null) Text(DateFormatter.monthShort(i.dueDate!, languageCode: lang), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
-                ),
+    final currency = PriceFormatter.symbol(lang);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      decoration: homeCard(context, radius: 22),
+      child: Column(children: [
+        for (final (n, i) in rows.indexed) ...[
+          if (n > 0) Divider(height: 1, color: colors.hairline),
+          Padding(
+            key: Key('contract-inst-${i.id}'),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(children: [
+              DvDateBox(date: i.dueDate, alert: !i.paid && i.late(today)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_installmentTitle(l10n, page, i), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                  const SizedBox(height: 5),
+                  i.paid
+                      ? DvPill(l10n.kcPaid, tone: DvTone.ok, small: true)
+                      : i.awaiting
+                          ? DvPill(l10n.kcAwaiting, tone: DvTone.warn, small: true)
+                          : i.late(today)
+                              ? DvPill(l10n.kcLate, tone: DvTone.bad, small: true)
+                              : DvPill(l10n.kcUpcoming, small: true),
+                ]),
+              ),
+              if (i.amount != null)
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(contractMoney(i.amount!), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  Text(currency, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+                ]),
+              if (admin && !i.paid && !i.awaiting) ...[
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_installmentTitle(l10n, page, i), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                    if (i.dueDate != null) Text(ltr('${i.dueDate!.year}'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
+                DvSquareAction(
+                  key: Key('contract-inst-record-${i.id}'),
+                  icon: Icons.add_rounded,
+                  color: AppPalette.gold600,
+                  tooltip: l10n.kcRecordPayment,
+                  onTap: () => onRecord(i),
                 ),
-                if (i.amount != null) Text(contractMoney(i.amount!), style: homeDisplay(14.5, colors.inkStrong)),
-                const SizedBox(width: 8),
-                i.paid
-                    ? CatalogBadge.status(l10n.kcPaid, catalogAvailable)
-                    : i.awaiting
-                        ? CatalogBadge.status(l10n.kcAwaiting, catalogReserved)
-                        : i.late(today)
-                            ? CatalogBadge.status(l10n.kcLate, colors.error)
-                            : CatalogBadge.status(l10n.kcUpcoming, const Color(0xFF6B6256)),
-                if (admin && !i.paid && !i.awaiting)
-                  IconButton(
-                    key: Key('contract-inst-record-${i.id}'),
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                    iconSize: 20,
-                    color: AppPalette.gold600,
-                    visualDensity: VisualDensity.compact,
-                    tooltip: l10n.kcRecordPayment,
-                    onPressed: () => onRecord(i),
-                  ),
-              ]),
-            ),
-          ],
-        ]),
-      ),
+              ],
+            ]),
+          ),
+        ],
+      ]),
     );
   }
 }
@@ -615,14 +408,6 @@ class _Statement extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    Widget row(String k, double v, {Color? color, Key? key}) => Padding(
-          key: key,
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          child: Row(children: [
-            Expanded(child: Text(k, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-            Text(contractMoney(v), style: homeDisplay(14, color ?? colors.inkStrong)),
-          ]),
-        );
     String lineLabel(ContractStatementLine l) => switch ((l.kind, l.rowType)) {
           ('CONTRACT', _) => l10n.kcLineContract,
           ('PAYMENT', 'BOOKING') => l10n.kcLineBooking,
@@ -633,20 +418,13 @@ class _Statement extends StatelessWidget {
           (final k, _) => k,
         };
     return Column(children: [
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: homeCard(context, radius: 22),
-        child: Column(children: [
-          row(l10n.kcLineContract, page.value),
-          Divider(height: 1, color: colors.hairline),
-          row(l10n.kcStPaid, page.paid, color: catalogAvailable, key: const Key('statement-paid')),
-          Divider(height: 1, color: colors.hairline),
-          row(l10n.kcStBalance, page.remaining),
-          Divider(height: 1, color: colors.hairline),
-          row(l10n.kcStOverdue, page.overdue, color: page.overdue > 0.005 ? colors.error : null),
-          if (page.openFees > 0.005) ...[Divider(height: 1, color: colors.hairline), row(l10n.kcStFees, page.openFees)],
-        ]),
-      ),
+      DvInfoCard(rows: [
+        DvInfo(l10n.kcLineContract, contractMoney(page.value)),
+        DvInfo(l10n.kcStPaid, contractMoney(page.paid), color: catalogAvailable, id: 'statement-paid'),
+        DvInfo(l10n.kcStBalance, contractMoney(page.remaining), strong: true),
+        DvInfo(l10n.kcStOverdue, contractMoney(page.overdue), color: page.overdue > 0.005 ? colors.error : null),
+        if (page.openFees > 0.005) DvInfo(l10n.kcStFees, contractMoney(page.openFees)),
+      ]),
       if (full && page.lines.isNotEmpty) ...[
         const SizedBox(height: 10),
         Container(

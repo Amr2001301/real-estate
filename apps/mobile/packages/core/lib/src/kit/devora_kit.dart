@@ -228,9 +228,12 @@ enum DvTone { neutral, warn, bad, ok }
 
 /// A count or status in a soft pill.
 class DvPill extends StatelessWidget {
-  const DvPill(this.text, {super.key, this.tone = DvTone.neutral});
+  const DvPill(this.text, {super.key, this.tone = DvTone.neutral, this.small = false});
   final String text;
   final DvTone tone;
+
+  /// A shorter pill for a status under a title.
+  final bool small;
 
   @override
   Widget build(BuildContext context) {
@@ -243,12 +246,11 @@ class DvPill extends StatelessWidget {
       DvTone.neutral => (colors.inkMuted, colors.surfaceSoft),
     };
     return Container(
-      constraints: const BoxConstraints(minWidth: 28),
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      alignment: Alignment.center,
+      constraints: BoxConstraints(minWidth: small ? 22 : 28),
+      height: small ? 22 : 28,
+      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 10),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
-      child: Text(ltr(text), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: fg)),
+      child: Center(widthFactor: 1, child: Text(ltr(text), style: TextStyle(fontSize: small ? 11 : 12.5, fontWeight: FontWeight.w700, color: fg))),
     );
   }
 }
@@ -824,6 +826,466 @@ class DvRankList extends StatelessWidget {
       decoration: homeCard(context, radius: 24),
       clipBehavior: Clip.antiAlias,
       child: Column(children: out),
+    );
+  }
+}
+
+// ── Detail pages ────────────────────────────────────────────────────────────
+
+const _dvOnNavyMuted = Color(0xFFAEB8CB);
+
+/// A status in the navy header: a soft glass pill.
+class DvHeroBadge extends StatelessWidget {
+  const DvHeroBadge(this.text, {super.key, this.tone = DvTone.neutral});
+  final String text;
+  final DvTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (fg, bg) = switch (tone) {
+      DvTone.ok => (const Color(0xFF7FD8B2), const Color(0x2946BE8C)),
+      DvTone.bad => (const Color(0xFFF29AA2), const Color(0x29E65A64)),
+      DvTone.warn => (const Color(0xFFF0C27E), const Color(0x29E6A03C)),
+      DvTone.neutral => (const Color(0xFFEED7A0), const Color(0x29D2AE58)),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(13)),
+      child: Text(text, maxLines: 1, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w600, color: fg)),
+    );
+  }
+}
+
+/// A small figure under the header's headline.
+class DvHeroFact {
+  const DvHeroFact(this.value, this.label, {this.alert = false, this.id});
+  final String value;
+  final String label;
+  final bool alert;
+  final String? id;
+}
+
+/// The headline of a detail page, inside the navy header under a hairline:
+/// the label, the figure large, an optional pill, a gold progress line, then
+/// a row of small figures or any [footer].
+class DvHeroFigure extends StatelessWidget {
+  const DvHeroFigure({
+    super.key,
+    required this.label,
+    required this.value,
+    this.unit = '',
+    this.valueKey,
+    this.badge,
+    this.progress,
+    this.facts = const [],
+    this.footer,
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+  final Key? valueKey;
+  final Widget? badge;
+  final double? progress;
+  final List<DvHeroFact> facts;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      const Divider(height: 1, thickness: 1, color: Color(0x1AFFFFFF)),
+      const SizedBox(height: 14),
+      Text(label, style: const TextStyle(fontSize: 12.5, height: 1.4, color: _dvOnNavyMuted)),
+      const SizedBox(height: 4),
+      Row(children: [
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text.rich(
+              key: valueKey,
+              TextSpan(children: [
+                TextSpan(text: ltr(value), style: const TextStyle(fontSize: 32, height: 1.15, fontWeight: FontWeight.w700, color: Colors.white)),
+                if (unit.isNotEmpty) TextSpan(text: '  $unit', style: const TextStyle(fontSize: 13, color: _dvOnNavyMuted)),
+              ]),
+            ),
+          ),
+        ),
+        if (badge != null) ...[const SizedBox(width: 10), badge!],
+      ]),
+      if (progress != null) ...[
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: SizedBox(
+            height: 7,
+            child: Stack(children: [
+              const Positioned.fill(child: ColoredBox(color: Color(0x1FFFFFFF))),
+              FractionallySizedBox(
+                widthFactor: progress!.clamp(0.0, 1.0),
+                child: const DecoratedBox(decoration: BoxDecoration(gradient: dvGoldGradient), child: SizedBox.expand()),
+              ),
+            ]),
+          ),
+        ),
+      ],
+      if (facts.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final f in facts)
+            Expanded(
+              child: Column(key: f.id == null ? null : Key(f.id!), crossAxisAlignment: CrossAxisAlignment.start, children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(ltr(f.value),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: f.alert ? const Color(0xFFF29AA2) : Colors.white)),
+                ),
+                const SizedBox(height: 2),
+                Text(f.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: _dvOnNavyMuted)),
+              ]),
+            ),
+        ]),
+      ],
+      if (footer != null) ...[const SizedBox(height: 14), footer!],
+    ]);
+  }
+}
+
+/// Steps in the navy header: gold dots joined by a line, done or not.
+class DvHeroSteps extends StatelessWidget {
+  const DvHeroSteps({super.key, required this.steps, this.keyPrefix});
+
+  /// (label, date or note, done, failed).
+  final List<(String, String?, bool, bool)> steps;
+
+  /// Each dot is keyed '$keyPrefix-$i' when given.
+  final String? keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (var i = 0; i < steps.length; i++)
+        Expanded(
+          child: Column(children: [
+            SizedBox(
+              height: 24,
+              child: Stack(alignment: Alignment.center, children: [
+                Row(children: [
+                  Expanded(child: i == 0 ? const SizedBox() : Container(height: 2, color: steps[i].$3 ? const Color(0xFFD2AE58) : const Color(0x26FFFFFF))),
+                  const SizedBox(width: 24),
+                  Expanded(
+                      child: i == steps.length - 1
+                          ? const SizedBox()
+                          : Container(height: 2, color: steps[i + 1].$3 ? const Color(0xFFD2AE58) : const Color(0x26FFFFFF))),
+                ]),
+                Container(
+                  key: keyPrefix == null ? null : Key('$keyPrefix-$i'),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: steps[i].$3 && !steps[i].$4 ? dvGoldGradient : null,
+                    color: steps[i].$4 ? const Color(0xFFB3303D) : (steps[i].$3 ? null : const Color(0x14FFFFFF)),
+                    border: steps[i].$3 || steps[i].$4 ? null : Border.all(color: const Color(0x40FFFFFF)),
+                  ),
+                  child: steps[i].$4
+                      ? const Icon(Icons.close_rounded, size: 14, color: Colors.white)
+                      : (steps[i].$3 ? const Icon(Icons.check_rounded, size: 14, color: dvOnGold) : null),
+                ),
+              ]),
+            ),
+            const SizedBox(height: 6),
+            Text(steps[i].$1,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: steps[i].$3 ? Colors.white : _dvOnNavyMuted)),
+            if ((steps[i].$2 ?? '').isNotEmpty)
+              Text(steps[i].$2!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10.5, color: _dvOnNavyMuted)),
+          ]),
+        ),
+    ]);
+  }
+}
+
+/// A detail page's tabs: one white bar, the chosen one navy.
+class DvTabs<T> extends StatelessWidget {
+  const DvTabs({super.key, required this.tabs, required this.selected, required this.onChanged, this.keyPrefix = 'tab'});
+
+  /// (value, label, count or null, count is an alert).
+  final List<(T, String, int?, bool)> tabs;
+  final T selected;
+  final ValueChanged<T> onChanged;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: colors.surface, border: Border.all(color: colors.hairline), borderRadius: BorderRadius.circular(16)),
+      child: Row(children: [
+        for (final (v, label, count, alert) in tabs)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Material(
+                color: v == selected ? (dark ? AppPalette.gold500 : const Color(0xFF0B1426)) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  key: Key('$keyPrefix-${v is Enum ? v.name : v}'),
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => onChanged(v),
+                  child: SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Text(label,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: v == selected ? (dark ? const Color(0xFF0B1426) : Colors.white) : colors.inkMuted,
+                                )),
+                            if (count != null) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: alert ? colors.error.withValues(alpha: 0.16) : (v == selected ? const Color(0x33FFFFFF) : colors.surfaceSoft),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                                child: Text(ltr('$count'),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: alert ? colors.error : (v == selected ? Colors.white : colors.inkMuted),
+                                    )),
+                              ),
+                            ],
+                          ]),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+class DvInfo {
+  const DvInfo(this.label, this.value, {this.color, this.onTap, this.id, this.strong = false});
+  final String label;
+  final String value;
+  final Color? color;
+  final VoidCallback? onTap;
+  final String? id;
+  final bool strong;
+}
+
+/// Facts in one white card: the label at the start, the value at the end,
+/// a hairline between rows. A row with [DvInfo.onTap] reads as a gold link.
+class DvInfoCard extends StatelessWidget {
+  const DvInfoCard({super.key, required this.rows});
+  final List<DvInfo> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final out = <Widget>[];
+    for (var i = 0; i < rows.length; i++) {
+      final r = rows[i];
+      if (i > 0) out.add(Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline));
+      final link = r.onTap != null;
+      out.add(InkWell(
+        key: r.id == null ? null : Key(r.id!),
+        onTap: r.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(r.label, style: TextStyle(fontSize: 13, height: 1.45, color: colors.inkMuted)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                link ? '${r.value}  ›' : r.value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  fontWeight: r.strong ? FontWeight.w700 : FontWeight.w600,
+                  color: r.color ?? (link ? AppPalette.gold600 : colors.inkStrong),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ));
+    }
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
+      child: Material(color: Colors.transparent, child: Column(children: out)),
+    );
+  }
+}
+
+class DvEvent {
+  const DvEvent(this.title, {this.subtitle, this.trailing, this.id, this.onTap});
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final String? id;
+  final VoidCallback? onTap;
+}
+
+/// A history: dots on a line, the newest gold, each title wrapping.
+class DvTimeline extends StatelessWidget {
+  const DvTimeline({super.key, required this.events});
+  final List<DvEvent> events;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: homeCard(context, radius: 22),
+      child: Column(children: [
+        for (var i = 0; i < events.length; i++)
+          InkWell(
+            key: events[i].id == null ? null : Key(events[i].id!),
+            onTap: events[i].onTap,
+            child: IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                SizedBox(
+                  width: 12,
+                  child: Column(children: [
+                    const SizedBox(height: 16),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i == 0 ? AppPalette.gold500 : (dark ? const Color(0xFF8D96A5) : const Color(0xFF1B2A48)),
+                      ),
+                    ),
+                    if (i < events.length - 1) Expanded(child: Container(width: 2, margin: const EdgeInsets.only(top: 4), color: colors.hairline)),
+                  ]),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(events[i].title, style: TextStyle(fontSize: 13.5, height: 1.5, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                      if ((events[i].subtitle ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(events[i].subtitle!, style: TextStyle(fontSize: 12, height: 1.4, color: colors.inkMuted)),
+                      ],
+                    ]),
+                  ),
+                ),
+                if (events[i].trailing != null) Center(child: events[i].trailing!),
+              ]),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// A due date in a soft square: the day large, the month under it.
+class DvDateBox extends StatelessWidget {
+  const DvDateBox({super.key, required this.date, this.alert = false});
+  final DateTime? date;
+  final bool alert;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    return Container(
+      width: 46,
+      height: 50,
+      decoration: BoxDecoration(
+        color: alert ? colors.error.withValues(alpha: 0.10) : colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text(date == null ? '—' : ltr('${date!.day}'),
+            style: TextStyle(fontSize: 17, height: 1.1, fontWeight: FontWeight.w700, color: alert ? colors.error : colors.inkStrong)),
+        if (date != null)
+          Text(DateFormatter.monthShort(date!, languageCode: lang), style: TextStyle(fontSize: 10.5, color: alert ? colors.error : colors.inkMuted)),
+      ]),
+    );
+  }
+}
+
+class DvAction {
+  const DvAction({required this.icon, required this.title, this.subtitle, required this.onTap, this.danger = false, this.id});
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final bool danger;
+  final String? id;
+}
+
+/// Actions or links in one white card: an icon square, the title and a line.
+class DvActionCard extends StatelessWidget {
+  const DvActionCard({super.key, required this.actions});
+  final List<DvAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final out = <Widget>[];
+    for (var i = 0; i < actions.length; i++) {
+      final a = actions[i];
+      if (i > 0) out.add(Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline));
+      out.add(InkWell(
+        key: a.id == null ? null : Key(a.id!),
+        onTap: a.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: a.danger ? colors.error.withValues(alpha: 0.10) : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(a.icon, size: 19, color: a.danger ? colors.error : colors.inkStrong),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(a.title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: a.danger ? colors.error : colors.inkStrong)),
+                if ((a.subtitle ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(a.subtitle!, style: TextStyle(fontSize: 12, height: 1.4, color: colors.inkMuted)),
+                ],
+              ]),
+            ),
+            if (!a.danger && a.onTap != null) Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
+          ]),
+        ),
+      ));
+    }
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
+      child: Material(color: Colors.transparent, child: Column(children: out)),
     );
   }
 }

@@ -169,7 +169,10 @@ Widget _unpadded(Widget w) {
 }
 
 class HomeListHero extends StatelessWidget {
-  const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false, this.leading});
+  const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false, this.leading, this.badge});
+
+  /// A small status pill after the title (detail pages).
+  final Widget? badge;
 
   final String title;
   final String? subtitle;
@@ -216,7 +219,12 @@ class HomeListHero extends StatelessWidget {
                   for (var i = 0; i < actions.length; i++) ...[if (i > 0) const SizedBox(width: 10), actions[i]],
                 ]),
                 const SizedBox(height: 14),
-                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 26, height: 1.3, fontWeight: FontWeight.w700, color: Colors.white)),
+                Row(children: [
+                  Expanded(
+                    child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 26, height: 1.3, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  if (badge != null) ...[const SizedBox(width: 10), badge!],
+                ]),
                 if ((subtitle ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFC9B27A), fontWeight: FontWeight.w600)),
@@ -766,18 +774,26 @@ class HomeSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: homeTint(context),
-                    border: Border.all(color: homeTintBorder(context)),
-                    borderRadius: BorderRadius.circular(9),
+                // Devora: the title alone, no icon tile.
+                if (!AppPalette.calmLight) ...[
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: homeTint(context),
+                      border: Border.all(color: homeTintBorder(context)),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, size: 16, color: AppPalette.gold500),
                   ),
-                  child: Icon(icon, size: 16, color: AppPalette.gold500),
+                  const SizedBox(width: 9),
+                ],
+                Expanded(
+                  child: Text(title,
+                      style: AppPalette.calmLight
+                          ? TextStyle(fontSize: 17, height: 1.4, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)
+                          : homeDisplay(18.5, context.appColors.inkStrong)),
                 ),
-                const SizedBox(width: 9),
-                Expanded(child: Text(title, style: homeDisplay(18.5, context.appColors.inkStrong))),
                 if (action != null)
                   InkWell(
                     onTap: onAction,
