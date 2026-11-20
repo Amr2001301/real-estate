@@ -10272,4 +10272,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ctaReasonRequired => 'Write the reason for cancelling.';
+
+  @override
+  String get audTitle => 'Audit log';
+
+  @override
+  String get audProfileDesc => 'Who did what and when (read-only)';
+
+  @override
+  String audCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n events',
+      one: '1 event',
+      zero: 'No events',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get audSearchHint => 'Search by action or record type';
+
+  @override
+  String get audEmpty => 'No matching events.';
+
+  @override
+  String get audActor => 'Done by';
+
+  @override
+  String get audSystem => 'System';
+
+  @override
+  String get audEntity => 'Record';
+
+  @override
+  String get audIp => 'IP address';
+
+  @override
+  String get audWhen => 'When';
+
+  @override
+  String get audBefore => 'Before';
+
+  @override
+  String get audAfter => 'After';
+
+  @override
+  String get audNoChanges => 'No details recorded.';
 }

@@ -55,6 +55,9 @@ abstract final class StaffAccess {
   /// is ADMIN-only; the supervisor has her own screens).
   static bool maintenance(AppRole? r, StaffPermissions p) => r == AppRole.admin;
 
+  /// «سجل التدقيق» (audit:read; the API's /audit-logs is ADMIN-only).
+  static bool auditLog(AppRole? r, StaffPermissions p) => r == AppRole.admin;
+
   /// «العملاء المكررون» (leads:read; the API lets only the admin and the sales manager in).
   static bool duplicates(AppRole? r, StaffPermissions p) => _manager(r);
 

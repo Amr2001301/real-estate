@@ -171,6 +171,7 @@ import '../features/maintenance/presentation/cubit/maintenance_list_cubit.dart';
 import '../features/maintenance/presentation/screens/maintenance_detail_screen.dart';
 import '../features/maintenance/presentation/screens/maintenance_list_screen.dart';
 import '../features/maintenance/presentation/admin/admin_maintenance.dart';
+import '../features/audit/audit_screen.dart';
 import '../features/shell/presentation/staff_shell.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/notifications/data/notification_preferences_api.dart';
@@ -693,6 +694,15 @@ GoRouter createStaffRouter(
               id: state.pathParameters['id']!,
             );
           }),
+        ),
+      ),
+
+      // ── The audit log, read-only (/audit-logs is ADMIN-only) ──
+      GoRoute(
+        path: '/audit-log',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.auditLog,
+          child: Builder(builder: (ctx) => AuditScreen(repository: AuditRepository(ctx.read<Dio>()))),
         ),
       ),
 

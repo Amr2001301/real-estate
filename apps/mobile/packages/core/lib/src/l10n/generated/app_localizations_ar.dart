@@ -10311,4 +10311,54 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ctaReasonRequired => 'اكتب سبب الإلغاء.';
+
+  @override
+  String get audTitle => 'سجل التدقيق';
+
+  @override
+  String get audProfileDesc => 'من فعل ماذا ومتى (للقراءة فقط)';
+
+  @override
+  String audCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حدثًا',
+      few: '$n أحداث',
+      two: 'حدثان',
+      one: 'حدث واحد',
+      zero: 'لا أحداث',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get audSearchHint => 'ابحث بالإجراء أو نوع السجل';
+
+  @override
+  String get audEmpty => 'لا أحداث مطابقة.';
+
+  @override
+  String get audActor => 'المنفّذ';
+
+  @override
+  String get audSystem => 'النظام';
+
+  @override
+  String get audEntity => 'السجل';
+
+  @override
+  String get audIp => 'عنوان IP';
+
+  @override
+  String get audWhen => 'الوقت';
+
+  @override
+  String get audBefore => 'قبل';
+
+  @override
+  String get audAfter => 'بعد';
+
+  @override
+  String get audNoChanges => 'لا تفاصيل مسجّلة.';
 }

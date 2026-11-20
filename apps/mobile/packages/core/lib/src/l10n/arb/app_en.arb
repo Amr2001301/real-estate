@@ -3404,5 +3404,19 @@
   "ctaCancelNotes": "Financial notes (optional)",
   "ctaCancelWarn": "A cancellation can't be undone.",
   "ctaConfirmCancel": "Confirm cancellation",
-  "ctaReasonRequired": "Write the reason for cancelling."
+  "ctaReasonRequired": "Write the reason for cancelling.",
+  "audTitle": "Audit log",
+  "audProfileDesc": "Who did what and when (read-only)",
+  "audCountN": "{n, plural, =0{No events} =1{1 event} other{{n} events}}",
+  "@audCountN": {"placeholders": {"n": {"type": "int"}}},
+  "audSearchHint": "Search by action or record type",
+  "audEmpty": "No matching events.",
+  "audActor": "Done by",
+  "audSystem": "System",
+  "audEntity": "Record",
+  "audIp": "IP address",
+  "audWhen": "When",
+  "audBefore": "Before",
+  "audAfter": "After",
+  "audNoChanges": "No details recorded."
 }

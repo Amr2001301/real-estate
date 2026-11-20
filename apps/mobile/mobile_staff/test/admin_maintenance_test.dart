@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_staff/features/audit/audit_screen.dart';
 import 'package:mobile_staff/features/maintenance/domain/entities/maintenance_request.dart';
 import 'package:mobile_staff/features/maintenance/presentation/admin/admin_maintenance.dart';
 import 'package:mobile_staff/features/permissions/staff_permissions.dart';
@@ -95,5 +96,23 @@ void main() {
     await repo.setStatus('r1', MaintenanceStatus.inProgress);
     expect(adapter.requests.last.path, '/maintenance-requests/r1/status');
     expect(adapter.requests.last.data, {'status': 'IN_PROGRESS'});
+  });
+
+  test('the audit log is the admin\'s, read through /audit-logs with the search', () async {
+    expect(StaffAccess.auditLog(AppRole.admin, none), isTrue);
+    expect(StaffAccess.auditLog(AppRole.salesManager, none), isFalse);
+
+    final adapter = _Adapter({
+      'data': [
+        {'id': 'a1', 'action': 'contract.cancel', 'entityType': 'Contract', 'entityId': 'c1', 'ip': '1.2.3.4', 'createdAt': '2026-11-05T10:00:00Z', 'actor': {'fullName': 'Maha'}},
+      ],
+      'meta': {'page': 1, 'pageSize': 25, 'total': 1, 'totalPages': 1},
+    });
+    final repo = AuditRepository(Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = adapter);
+    final page = (await repo.list(q: ' cancel ')).dataOrNull!;
+    expect(adapter.requests.single.path, '/audit-logs');
+    expect(adapter.requests.single.queryParameters, containsPair('q', 'cancel'));
+    expect(page.data.single.actorName, 'Maha');
+    expect(page.data.single.action, 'contract.cancel');
   });
 }

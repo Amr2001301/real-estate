@@ -18247,6 +18247,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Write the reason for cancelling.'**
   String get ctaReasonRequired;
+
+  /// No description provided for @audTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit log'**
+  String get audTitle;
+
+  /// No description provided for @audProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Who did what and when (read-only)'**
+  String get audProfileDesc;
+
+  /// No description provided for @audCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No events} =1{1 event} other{{n} events}}'**
+  String audCountN(int n);
+
+  /// No description provided for @audSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by action or record type'**
+  String get audSearchHint;
+
+  /// No description provided for @audEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching events.'**
+  String get audEmpty;
+
+  /// No description provided for @audActor.
+  ///
+  /// In en, this message translates to:
+  /// **'Done by'**
+  String get audActor;
+
+  /// No description provided for @audSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get audSystem;
+
+  /// No description provided for @audEntity.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get audEntity;
+
+  /// No description provided for @audIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP address'**
+  String get audIp;
+
+  /// No description provided for @audWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get audWhen;
+
+  /// No description provided for @audBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get audBefore;
+
+  /// No description provided for @audAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get audAfter;
+
+  /// No description provided for @audNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No details recorded.'**
+  String get audNoChanges;
 }
 
 class _AppLocalizationsDelegate

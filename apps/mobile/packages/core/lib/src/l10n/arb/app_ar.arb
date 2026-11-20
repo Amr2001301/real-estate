@@ -3396,5 +3396,19 @@
   "ctaCancelNotes": "ملاحظات مالية (اختياري)",
   "ctaCancelWarn": "لا يمكن التراجع عن الإلغاء.",
   "ctaConfirmCancel": "تأكيد الإلغاء",
-  "ctaReasonRequired": "اكتب سبب الإلغاء."
+  "ctaReasonRequired": "اكتب سبب الإلغاء.",
+  "audTitle": "سجل التدقيق",
+  "audProfileDesc": "من فعل ماذا ومتى (للقراءة فقط)",
+  "audCountN": "{n, plural, =0{لا أحداث} =1{حدث واحد} =2{حدثان} few{{n} أحداث} other{{n} حدثًا}}",
+  "@audCountN": {"placeholders": {"n": {"type": "int"}}},
+  "audSearchHint": "ابحث بالإجراء أو نوع السجل",
+  "audEmpty": "لا أحداث مطابقة.",
+  "audActor": "المنفّذ",
+  "audSystem": "النظام",
+  "audEntity": "السجل",
+  "audIp": "عنوان IP",
+  "audWhen": "الوقت",
+  "audBefore": "قبل",
+  "audAfter": "بعد",
+  "audNoChanges": "لا تفاصيل مسجّلة."
 }
