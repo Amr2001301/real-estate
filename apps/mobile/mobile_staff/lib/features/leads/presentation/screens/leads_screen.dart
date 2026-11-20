@@ -124,8 +124,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
           padding: const EdgeInsets.only(bottom: 84),
           child: FloatingActionButton(
             key: const Key('leads-add'),
-            backgroundColor: AppPalette.gold400,
-            foregroundColor: AppPalette.navy,
+            backgroundColor: homeCta(context),
+            foregroundColor: homeOnCta(context),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             onPressed: () async {
               final created = await context.push<bool>('/leads/new');

@@ -95,8 +95,8 @@ class _BrokerLeadsScreenState extends State<BrokerLeadsScreen> {
           padding: const EdgeInsets.only(bottom: 84),
           child: FloatingActionButton(
             key: const Key('broker-leads-add'),
-            backgroundColor: AppPalette.gold400,
-            foregroundColor: AppPalette.navy,
+            backgroundColor: homeCta(context),
+            foregroundColor: homeOnCta(context),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             onPressed: _create,
             child: const Icon(Icons.person_add_rounded),

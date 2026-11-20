@@ -283,8 +283,8 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                         label: Text(p != null && p.recipients > 0 && needEstimate ? l10n.bcSendN(p.recipients) : l10n.bcSend, maxLines: 1, overflow: TextOverflow.ellipsis),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
-                          backgroundColor: AppPalette.gold400,
-                          foregroundColor: AppPalette.navy,
+                          backgroundColor: homeCta(context),
+                          foregroundColor: homeOnCta(context),
                           textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),

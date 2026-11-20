@@ -217,8 +217,8 @@ class FormBottomBar extends StatelessWidget {
             label: Text(label),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
-              backgroundColor: AppPalette.gold400,
-              foregroundColor: AppPalette.navy,
+              backgroundColor: homeCta(context),
+              foregroundColor: homeOnCta(context),
               disabledBackgroundColor: const Color(0xFFE9E3D9),
               disabledForegroundColor: const Color(0xFF9A9083),
               textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),

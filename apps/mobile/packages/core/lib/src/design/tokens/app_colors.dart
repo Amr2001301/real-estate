@@ -157,13 +157,36 @@ abstract final class AppPalette {
   }
 
   // ---- Light surfaces -------------------------------------------------------
-  static const lightCanvas = Color(0xFFFAF7F2);
-  static const lightSurface = Color(0xFFFFFFFF);
-  static const lightSurfaceSoft = Color(0xFFF4EFE8);
-  static const lightHairline = Color(0xFFE7DFD3);
-  static const lightInk = Color(0xFF1A2230);
-  static const lightInkMuted = Color(0xFF6B6256);
-  static const lightInkStrong = Color(0xFF0E1626);
+  // Warm cream by default (a company's customer app). The platform's own staff
+  // app asks for cool neutral ones ([applySurfaces] `cool`), to sit with its
+  // midnight-and-platinum identity.
+  static const _lightWarm = [
+    Color(0xFFFAF7F2), Color(0xFFFFFFFF), Color(0xFFF4EFE8), Color(0xFFE7DFD3),
+    Color(0xFF1A2230), Color(0xFF6B6256), Color(0xFF0E1626), Color(0xFFECE4D6), Color(0xFFFBF7F0),
+  ];
+  static const _lightCool = [
+    Color(0xFFF3F5F8), Color(0xFFFFFFFF), Color(0xFFEDF0F4), Color(0xFFE1E6ED),
+    Color(0xFF1B2333), Color(0xFF5E687A), Color(0xFF0B1426), Color(0xFFE3E8EF), Color(0xFFFFFFFF),
+  ];
+  static List<Color> _l = _lightWarm;
+  static Color get lightCanvas => _l[0];
+  static Color get lightSurface => _l[1];
+  static Color get lightSurfaceSoft => _l[2];
+  static Color get lightHairline => _l[3];
+  static Color get lightInk => _l[4];
+  static Color get lightInkMuted => _l[5];
+  static Color get lightInkStrong => _l[6];
+
+  /// The kit's card border and bottom-sheet colour in the light theme.
+  static Color get lightLine => _l[7];
+  static Color get lightSheet => _l[8];
+
+  /// The primary action's fill is the brand's dark colour (navy, white text)
+  /// in the light theme rather than its accent — set by the platform's staff
+  /// app, whose accent (platinum) does not read as a button on white.
+  static bool ctaIsPrimary = false;
+
+  static void applySurfaces({bool cool = false}) => _l = cool ? _lightCool : _lightWarm;
 
   // ---- Dark surfaces --------------------------------------------------------
   // The platform's own tools keep the navy dark surfaces. A company's customer

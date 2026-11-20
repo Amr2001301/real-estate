@@ -115,8 +115,8 @@ class FilterSheet extends StatelessWidget {
                   label: Text(applyLabel),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
-                    backgroundColor: AppPalette.gold400,
-                    foregroundColor: AppPalette.navy,
+                    backgroundColor: homeCta(context),
+                    foregroundColor: homeOnCta(context),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
                   ),

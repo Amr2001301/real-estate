@@ -176,8 +176,8 @@ class PaymentReviewTile extends StatelessWidget {
                 label: Text(l10n.paymentApprove),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  backgroundColor: AppPalette.gold400,
-                  foregroundColor: AppPalette.navy,
+                  backgroundColor: homeCta(context),
+                  foregroundColor: homeOnCta(context),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                   textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                 ),

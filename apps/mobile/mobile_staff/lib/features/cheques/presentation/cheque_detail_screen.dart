@@ -75,8 +75,8 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
                     label: Text(c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      backgroundColor: AppPalette.gold400,
-                      foregroundColor: AppPalette.navy,
+                      backgroundColor: homeCta(context),
+                      foregroundColor: homeOnCta(context),
                       textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),

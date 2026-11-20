@@ -1031,8 +1031,8 @@ class AppDetailPrimaryButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 50),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          backgroundColor: AppPalette.gold400,
-          foregroundColor: AppPalette.navy,
+          backgroundColor: homeCta(context),
+          foregroundColor: homeOnCta(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
           textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
         ),

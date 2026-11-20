@@ -319,7 +319,7 @@ class _TargetSheetState extends State<TargetSheet> {
                       onPressed: saving ? null : _save,
                       icon: saving ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
                       label: Text(l10n.actionSave),
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: AppPalette.gold400, foregroundColor: AppPalette.navy, textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: homeCta(context), foregroundColor: homeOnCta(context), textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                     ),
                   ),
                 ]),

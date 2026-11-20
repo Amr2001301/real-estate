@@ -38,6 +38,8 @@ Future<void> bootstrap(EnvConfig env) async {
   // The staff app wears the platform's identity (the Devora crystal: midnight
   // blue-black with platinum steel), not the company's colours.
   AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFFB4BFD6));
+  AppPalette.applySurfaces(cool: true);
+  AppPalette.ctaIsPrimary = true;
 
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
 

@@ -593,8 +593,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
           onPressed: () => Navigator.of(context).pop((_paidAt, _method)),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(50),
-            backgroundColor: AppPalette.gold400,
-            foregroundColor: AppPalette.navy,
+            backgroundColor: homeCta(context),
+            foregroundColor: homeOnCta(context),
             textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           ),

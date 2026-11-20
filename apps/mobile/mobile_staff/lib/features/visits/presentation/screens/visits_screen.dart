@@ -125,8 +125,8 @@ class _VisitsScreenState extends State<VisitsScreen> {
         floatingActionButton: FloatingActionButton(
           onPressed: _create,
           tooltip: l10n.visitNew,
-          backgroundColor: AppPalette.gold400,
-          foregroundColor: AppPalette.navy,
+          backgroundColor: homeCta(context),
+          foregroundColor: homeOnCta(context),
           child: const Icon(Icons.add_rounded),
         ),
       ),

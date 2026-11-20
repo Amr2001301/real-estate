@@ -138,8 +138,8 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
                     label: Text(l10n.kcRecordPayment),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
-                      backgroundColor: AppPalette.gold400,
-                      foregroundColor: AppPalette.navy,
+                      backgroundColor: homeCta(context),
+                      foregroundColor: homeOnCta(context),
                       textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),

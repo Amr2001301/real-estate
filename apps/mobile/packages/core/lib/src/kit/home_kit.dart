@@ -72,13 +72,19 @@ Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors
 
 /// A chosen option's fill: a cream by day, a gold wash by night.
 Color homeSelected(BuildContext context) =>
-    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : const Color(0xFFFFFCF5);
+    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : (AppPalette.ctaIsPrimary ? const Color(0xFFF2F5FA) : const Color(0xFFFFFCF5));
 
 /// A fine line or a track on a card: warm grey by day, the hairline by night.
-Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : const Color(0xFFECE4D6);
+Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : AppPalette.lightLine;
 
 /// The page of a bottom sheet.
-Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : const Color(0xFFFBF7F0);
+Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : AppPalette.lightSheet;
+
+/// The primary action's fill and its text: the accent with navy text, or —
+/// where the brand asks for it ([AppPalette.ctaIsPrimary]) — navy with white
+/// text on the light theme.
+Color homeCta(BuildContext context) => AppPalette.ctaIsPrimary && !homeIsDark(context) ? AppPalette.navy : AppPalette.gold400;
+Color homeOnCta(BuildContext context) => AppPalette.ctaIsPrimary && !homeIsDark(context) ? Colors.white : AppPalette.navy;
 
 /// Pale fills for a warning, a good state and a bad one (a wash of the colour by night).
 Color homeWarnFill(BuildContext context) =>
@@ -452,7 +458,7 @@ class HomeGoalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: [BoxShadow(color: AppPalette.navy.withValues(alpha: 0.16), blurRadius: 40, offset: const Offset(0, 18))],
       ),
       child: percent == null && emptyText != null
@@ -605,22 +611,39 @@ class HomeActions extends StatelessWidget {
                   onTap: actions[i].onTap,
                   child: Column(
                     children: [
-                      Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          gradient: i == 0 ? homeGoldGradient : homeNavyGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (i == 0 ? AppPalette.gold500 : AppPalette.navy).withValues(alpha: i == 0 ? 0.32 : 0.22),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+                      if (AppPalette.ctaIsPrimary && !homeIsDark(context))
+                        // Light and calm: one navy tile for the main action,
+                        // white tiles with a hairline for the rest.
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: i == 0 ? AppPalette.navy : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: i == 0 ? null : Border.all(color: homeLine(context)),
+                            boxShadow: [
+                              BoxShadow(color: AppPalette.navy.withValues(alpha: i == 0 ? 0.22 : 0.06), blurRadius: 16, offset: const Offset(0, 6)),
+                            ],
+                          ),
+                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? Colors.white : AppPalette.navy),
+                        )
+                      else
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            gradient: i == 0 ? homeGoldGradient : homeNavyGradient,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (i == 0 ? AppPalette.gold500 : AppPalette.navy).withValues(alpha: i == 0 ? 0.32 : 0.22),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? AppPalette.navy : AppPalette.gold300),
                         ),
-                        child: Icon(actions[i].icon, size: 24, color: i == 0 ? AppPalette.navy : AppPalette.gold300),
-                      ),
                       const SizedBox(height: 7),
                       Text(actions[i].label,
                           textAlign: TextAlign.center,
@@ -702,43 +725,62 @@ class HomeBand extends StatelessWidget {
   final List<HomeFigure> figures;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-        decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(24)),
-        child: Row(
-          children: [
-            for (var i = 0; i < figures.length; i++) ...[
-              if (i > 0) Container(width: 1, height: 60, color: Colors.white.withValues(alpha: 0.10)),
-              Expanded(
+  Widget build(BuildContext context) {
+    final light = AppPalette.ctaIsPrimary && !homeIsDark(context);
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      decoration: light
+          ? BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: homeLine(context)))
+          : BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(24)),
+      child: Row(
+        children: [
+          for (var i = 0; i < figures.length; i++) ...[
+            if (i > 0) Container(width: 1, height: 52, color: light ? homeLine(context) : Colors.white.withValues(alpha: 0.10)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   key: Key('home-fig-${figures[i].id}'),
                   children: [
-                    FittedBox(fit: BoxFit.scaleDown, child: Text(ltr(figures[i].value), style: homeDisplay(28, Colors.white))),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(ltr(figures[i].value), style: homeDisplay(light ? 26 : 28, light ? colors.inkStrong : Colors.white))),
                     const SizedBox(height: 2),
-                    Text(figures[i].label,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFFC9D2DE))),
-                    const SizedBox(height: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: figures[i].warn ? AppPalette.warningLight.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(figures[i].hint,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(figures[i].label,
+                          textAlign: TextAlign.center,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
+                          style: TextStyle(fontSize: 12.5, fontWeight: light ? FontWeight.w600 : FontWeight.w400, color: light ? colors.inkMuted : const Color(0xFFC9D2DE))),
                     ),
+                    const SizedBox(height: 5),
+                    if (light)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(figures[i].hint,
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 12, color: figures[i].warn ? colors.warning : colors.inkMuted.withValues(alpha: 0.85))),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: figures[i].warn ? AppPalette.warningLight.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(figures[i].hint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
+                      ),
                   ],
                 ),
               ),
-            ],
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }
 
 class HomeTile {

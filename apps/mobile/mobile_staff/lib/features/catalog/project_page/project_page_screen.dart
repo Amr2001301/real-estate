@@ -423,8 +423,8 @@ class _Bar extends StatelessWidget {
             label: Text(l10n.staffAddInterestedClient),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
-              backgroundColor: AppPalette.gold400,
-              foregroundColor: AppPalette.navy,
+              backgroundColor: homeCta(context),
+              foregroundColor: homeOnCta(context),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
             ),
           ),
