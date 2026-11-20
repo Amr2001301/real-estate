@@ -347,15 +347,13 @@ class LeadCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(lead.fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 14.5, height: 1.4, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                  const SizedBox(height: 5),
                   Row(children: [
-                    Flexible(
-                      child: Text(lead.fullName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 14.5, height: 1.4, fontWeight: FontWeight.w600, color: colors.inkStrong)),
-                    ),
                     if (due != null) ...[
-                      const SizedBox(width: 8),
                       Flexible(child: Container(
                         key: Key('lead-next-${lead.id}'),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -366,12 +364,12 @@ class LeadCard extends StatelessWidget {
                         child: Text(due,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
+                            style: TextStyle(fontSize: 11.5, height: 1.4, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
                       )),
+                      const SizedBox(width: 8),
                     ],
+                    Expanded(child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted))),
                   ]),
-                  const SizedBox(height: 5),
-                  Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
                 ]),
               ),
               const SizedBox(width: 10),

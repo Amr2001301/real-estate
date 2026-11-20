@@ -393,7 +393,7 @@ class _Figures extends StatelessWidget {
             Text('${l10n.kcRemaining} ${contractMoney(page.remaining)}', style: const TextStyle(fontSize: 12.5, color: Color(0xFFC9D1DF))),
             const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
             Text(
-              overdue ? '${l10n.kcOverdue} ${page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late)}' : l10n.kcNoOverdue,
+              overdue ? '${l10n.kcOverdue} ${page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late)}' : '${l10n.kcOverdue}: ${l10n.kcNoOverdue}',
               key: const Key('contract-overdue'),
               style: TextStyle(fontSize: 12.5, fontWeight: overdue ? FontWeight.w700 : FontWeight.w400, color: overdue ? const Color(0xFFF29AA2) : const Color(0xFFC9D1DF)),
             ),
