@@ -9157,6 +9157,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rpResCancelled => 'Cancelled';
 
   @override
+  String get rpResRejected => 'Rejected';
+
+  @override
   String get rpResExpired => 'Expired';
 
   @override

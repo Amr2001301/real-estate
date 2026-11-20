@@ -552,3 +552,159 @@ class DvStatsCard extends StatelessWidget {
     );
   }
 }
+
+/// A report's headline in a navy card: the main figure large with its change,
+/// a gold curve of the year so far, then up to four small figures in a row.
+class DvHeroStats extends StatelessWidget {
+  const DvHeroStats({
+    super.key,
+    required this.label,
+    required this.value,
+    this.unit = '',
+    this.change,
+    this.note,
+    this.curve = const [],
+    this.curveLabel,
+    this.figures = const [],
+  });
+
+  final String label;
+  final String value;
+  final String unit;
+
+  /// Percent change against the previous period; null hides the pill.
+  final int? change;
+
+  /// A short line under the figure when there is no change to show.
+  final String? note;
+  final List<num> curve;
+  final String? curveLabel;
+  final List<DvStat> figures;
+
+  static const _muted = Color(0xFF9AA4B4);
+
+  @override
+  Widget build(BuildContext context) {
+    final up = (change ?? 0) >= 0;
+    return Container(
+      key: const Key('dv-hero-stats'),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF17233D), Color(0xFF080E1A)]),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: const [BoxShadow(color: Color(0x290B1426), blurRadius: 24, offset: Offset(0, 10))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: _muted)),
+        const SizedBox(height: 6),
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(
+            child: FittedBox(
+              key: const Key('dv-stat-sales'),
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text.rich(TextSpan(children: [
+                TextSpan(text: ltr(value), style: const TextStyle(fontSize: 38, height: 1.1, fontWeight: FontWeight.w800, color: Colors.white)),
+                if (unit.isNotEmpty) TextSpan(text: '  $unit', style: const TextStyle(fontSize: 13, color: _muted)),
+              ])),
+            ),
+          ),
+          if (change != null)
+            Container(
+              key: const Key('dv-hero-change'),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: up ? const Color(0xFFDDF3E6) : const Color(0xFFFBE3E3),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(ltr('${up ? '▲' : '▼'} ${change!.abs()}%'),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: up ? const Color(0xFF1E7A4C) : const Color(0xFFB3261E))),
+            ),
+        ]),
+        if ((note ?? '').isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(note!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFFC9B27A))),
+        ],
+        if (curve.length >= 2) ...[
+          const SizedBox(height: 14),
+          SizedBox(height: 62, child: CustomPaint(painter: _DvCurvePainter(curve))),
+          if ((curveLabel ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(curveLabel!, style: const TextStyle(fontSize: 11, color: _muted)),
+            ),
+        ],
+        if (figures.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 1, color: Color(0x1FFFFFFF)),
+          const SizedBox(height: 14),
+          Row(children: [
+            for (final f in figures)
+              Expanded(
+                child: Column(key: f.id == null ? null : Key('dv-stat-${f.id}'), children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(text: ltr(f.value), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Colors.white)),
+                      if (f.unit.isNotEmpty) TextSpan(text: ' ${f.unit}', style: const TextStyle(fontSize: 11, color: _muted)),
+                    ])),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(f.label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, color: f.warn ? const Color(0xFFE9CF8E) : _muted)),
+                ]),
+              ),
+          ]),
+        ],
+      ]),
+    );
+  }
+}
+
+class _DvCurvePainter extends CustomPainter {
+  _DvCurvePainter(this.values);
+  final List<num> values;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final hi = values.fold<num>(0, (a, v) => v > a ? v : a);
+    final lo = values.fold<num>(hi, (a, v) => v < a ? v : a);
+    final span = (hi - lo) == 0 ? 1 : (hi - lo);
+    Offset at(int i) {
+      final x = size.width * i / (values.length - 1);
+      final y = size.height - 4 - (values[i] - lo) / span * (size.height - 10);
+      return Offset(x, y);
+    }
+
+    final line = Path()..moveTo(at(0).dx, at(0).dy);
+    for (var i = 1; i < values.length; i++) {
+      final a = at(i - 1), b = at(i);
+      final mx = (a.dx + b.dx) / 2;
+      line.cubicTo(mx, a.dy, mx, b.dy, b.dx, b.dy);
+    }
+    final fill = Path.from(line)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      fill,
+      Paint()
+        ..shader = const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0x55D2AE58), Color(0x00D2AE58)])
+            .createShader(Offset.zero & size),
+    );
+    canvas.drawPath(
+      line,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeCap = StrokeCap.round
+        ..shader = dvGoldGradient.createShader(Offset.zero & size),
+    );
+    final end = at(values.length - 1);
+    canvas.drawCircle(end, 4.5, Paint()..color = const Color(0xFFE9CF8E));
+  }
+
+  @override
+  bool shouldRepaint(_DvCurvePainter old) => old.values != values;
+}

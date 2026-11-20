@@ -3037,6 +3037,7 @@
   "rpResApproved": "Approved",
   "rpResConverted": "Converted",
   "rpResCancelled": "Cancelled",
+  "rpResRejected": "Rejected",
   "rpResExpired": "Expired",
   "rpProjects": "Projects by sales",
   "rpUnknownProject": "Unknown project",

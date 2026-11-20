@@ -9195,6 +9195,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rpResCancelled => 'ملغى';
 
   @override
+  String get rpResRejected => 'مرفوض';
+
+  @override
   String get rpResExpired => 'منتهٍ';
 
   @override

@@ -3029,6 +3029,7 @@
   "rpResApproved": "معتمد",
   "rpResConverted": "تحوّل إلى عقد",
   "rpResCancelled": "ملغى",
+  "rpResRejected": "مرفوض",
   "rpResExpired": "منتهٍ",
   "rpProjects": "المشاريع حسب المبيعات",
   "rpUnknownProject": "مشروع غير معروف",

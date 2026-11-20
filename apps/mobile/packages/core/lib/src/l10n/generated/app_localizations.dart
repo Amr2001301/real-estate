@@ -16208,6 +16208,12 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get rpResCancelled;
 
+  /// No description provided for @rpResRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rpResRejected;
+
   /// No description provided for @rpResExpired.
   ///
   /// In en, this message translates to:
