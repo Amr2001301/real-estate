@@ -155,9 +155,16 @@ class DvHeroCard extends StatelessWidget {
         ],
         if (facts.isNotEmpty) ...[
           const SizedBox(height: 14),
-          Wrap(spacing: 18, runSpacing: 6, children: [
-            for (final f in facts) Text(f, style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFC9D1DF))),
-          ]),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Row(children: [
+              for (var i = 0; i < facts.length; i++) ...[
+                if (i > 0) const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
+                Text(facts[i], style: const TextStyle(fontSize: 12.5, height: 1.4, color: Color(0xFFC9D1DF))),
+              ],
+            ]),
+          ),
         ],
       ]),
     );

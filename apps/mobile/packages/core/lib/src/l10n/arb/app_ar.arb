@@ -3424,5 +3424,14 @@
   "dvOverdueAmount": "متأخر {v}",
   "@dvOverdueAmount": {"placeholders": {"v": {"type": "String"}}},
   "dvCollectionPct": "{p}% نسبة التحصيل",
-  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}}
+  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}},
+  "dvOverdueDays": "{n, plural, =0{متأخرة اليوم} =1{متأخرة يومًا} =2{متأخرة يومين} few{متأخرة {n} أيام} other{متأخرة {n} يومًا}}",
+  "@dvOverdueDays": {"placeholders": {"n": {"type": "int"}}},
+  "dvTodayAt": "اليوم {t}",
+  "@dvTodayAt": {"placeholders": {"t": {"type": "String"}}},
+  "dvNewLead": "عميل",
+  "dvSearchLeads": "بحث بالاسم أو الهاتف",
+  "kcCollectedOfValue": "المحصَّل من قيمة العقد",
+  "kcOfValue": "من {v}",
+  "@kcOfValue": {"placeholders": {"v": {"type": "String"}}}
 }

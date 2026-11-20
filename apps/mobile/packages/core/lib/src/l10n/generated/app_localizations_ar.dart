@@ -10399,4 +10399,37 @@ class AppLocalizationsAr extends AppLocalizations {
   String dvCollectionPct(int p) {
     return '$p% نسبة التحصيل';
   }
+
+  @override
+  String dvOverdueDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'متأخرة $n يومًا',
+      few: 'متأخرة $n أيام',
+      two: 'متأخرة يومين',
+      one: 'متأخرة يومًا',
+      zero: 'متأخرة اليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dvTodayAt(String t) {
+    return 'اليوم $t';
+  }
+
+  @override
+  String get dvNewLead => 'عميل';
+
+  @override
+  String get dvSearchLeads => 'بحث بالاسم أو الهاتف';
+
+  @override
+  String get kcCollectedOfValue => 'المحصَّل من قيمة العقد';
+
+  @override
+  String kcOfValue(String v) {
+    return 'من $v';
+  }
 }

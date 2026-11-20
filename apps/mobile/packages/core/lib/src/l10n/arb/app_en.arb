@@ -3432,5 +3432,14 @@
   "dvOverdueAmount": "{v} overdue",
   "@dvOverdueAmount": {"placeholders": {"v": {"type": "String"}}},
   "dvCollectionPct": "{p}% collected",
-  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}}
+  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}},
+  "dvOverdueDays": "{n, plural, =0{Overdue today} =1{1 day overdue} other{{n} days overdue}}",
+  "@dvOverdueDays": {"placeholders": {"n": {"type": "int"}}},
+  "dvTodayAt": "Today {t}",
+  "@dvTodayAt": {"placeholders": {"t": {"type": "String"}}},
+  "dvNewLead": "Lead",
+  "dvSearchLeads": "Search by name or phone",
+  "kcCollectedOfValue": "Collected of the contract value",
+  "kcOfValue": "of {v}",
+  "@kcOfValue": {"placeholders": {"v": {"type": "String"}}}
 }

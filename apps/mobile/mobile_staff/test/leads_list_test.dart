@@ -114,10 +114,11 @@ void main() {
     expect(find.byKey(const Key('home-fig-total')), findsNothing); // no stats band above the filters
     expect(find.byKey(const Key('home-pill-unassigned')), findsNothing);
     expect(find.byKey(const Key('leads-duplicates')), findsNothing);
-    expect(find.textContaining('متابعة متأخرة'), findsOneWidget);
-    expect(find.textContaining('A-101'), findsOneWidget);
-    expect(find.text('موقع الويب'), findsOneWidget);
-    expect(find.text('محمود البنا'), findsNothing); // reps don't see whose it is
+    // One line per lead: the overdue follow-up as a small chip, the project and source under the name.
+    expect(find.byKey(const Key('lead-next-l1')), findsOneWidget);
+    expect(find.textContaining('متأخرة'), findsWidgets);
+    expect(find.textContaining('موقع الويب'), findsOneWidget);
+    expect(find.textContaining('محمود البنا'), findsNothing); // reps don't see whose it is
 
     await t.tap(find.byKey(const Key('lead-call-l1')));
     await t.pumpAndSettle();
@@ -128,8 +129,8 @@ void main() {
     final repo = await _pump(t, AppRole.salesManager, [_lead('l1'), _lead('l2', rep: null)]);
     expect(find.byKey(const Key('home-pill-unassigned')), findsOneWidget);
     expect(find.byKey(const Key('leads-duplicates')), findsOneWidget);
-    expect(find.text('محمود البنا'), findsOneWidget);
-    expect(find.text('غير مُسنَد'), findsWidgets);
+    expect(find.textContaining('محمود البنا'), findsOneWidget);
+    expect(find.textContaining('غير مُسنَد'), findsWidgets);
 
     await t.tap(find.byKey(const Key('home-pill-unassigned')));
     await t.pumpAndSettle();

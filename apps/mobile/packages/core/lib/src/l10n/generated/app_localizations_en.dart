@@ -10358,4 +10358,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String dvCollectionPct(int p) {
     return '$p% collected';
   }
+
+  @override
+  String dvOverdueDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days overdue',
+      one: '1 day overdue',
+      zero: 'Overdue today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dvTodayAt(String t) {
+    return 'Today $t';
+  }
+
+  @override
+  String get dvNewLead => 'Lead';
+
+  @override
+  String get dvSearchLeads => 'Search by name or phone';
+
+  @override
+  String get kcCollectedOfValue => 'Collected of the contract value';
+
+  @override
+  String kcOfValue(String v) {
+    return 'of $v';
+  }
 }

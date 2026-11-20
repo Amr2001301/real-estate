@@ -18385,6 +18385,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{p}% collected'**
   String dvCollectionPct(int p);
+
+  /// No description provided for @dvOverdueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Overdue today} =1{1 day overdue} other{{n} days overdue}}'**
+  String dvOverdueDays(int n);
+
+  /// No description provided for @dvTodayAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Today {t}'**
+  String dvTodayAt(String t);
+
+  /// No description provided for @dvNewLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get dvNewLead;
+
+  /// No description provided for @dvSearchLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get dvSearchLeads;
+
+  /// No description provided for @kcCollectedOfValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected of the contract value'**
+  String get kcCollectedOfValue;
+
+  /// No description provided for @kcOfValue.
+  ///
+  /// In en, this message translates to:
+  /// **'of {v}'**
+  String kcOfValue(String v);
 }
 
 class _AppLocalizationsDelegate

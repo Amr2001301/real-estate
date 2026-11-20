@@ -118,23 +118,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final lang = Localizations.localeOf(context).languageCode;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 84),
-          child: FloatingActionButton(
-            key: const Key('leads-add'),
-            backgroundColor: homeCta(context),
-            foregroundColor: homeOnCta(context),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            onPressed: () async {
-              final created = await context.push<bool>('/leads/new');
-              if (created == true && context.mounted) cubit.load();
-            },
-            tooltip: l10n.leadNew,
-            child: const Icon(Icons.person_add_rounded),
-          ),
-        ),
         body: BlocBuilder<LeadsCubit, LeadsListState>(
           builder: (context, state) {
             return RefreshIndicator(
@@ -144,41 +129,63 @@ class _LeadsScreenState extends State<LeadsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
-                    child: HomeListHero(
+                    child: DvPageTitle(
                       title: l10n.navLeads,
-                      subtitle: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
-                      actions: [
+                      overline: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
+                      trailing: [
+                        SizedBox(
+                          width: 104,
+                          child: DvGoldButton(
+                            key: const Key('leads-add'),
+                            label: l10n.dvNewLead,
+                            icon: Icons.add_rounded,
+                            height: 42,
+                            onTap: () async {
+                              final created = await context.push<bool>('/leads/new');
+                              if (created == true && context.mounted) cubit.load();
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Row(children: [
+                        Expanded(
+                          child: TextField(
+                            key: const Key('leads-search'),
+                            controller: _search,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: cubit.setSearch,
+                            style: const TextStyle(fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: l10n.dvSearchLeads,
+                              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                              filled: true,
+                              fillColor: context.appColors.surface,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: context.appColors.hairline)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppPalette.navy, width: 1.3)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         if (!_manager)
-                          HomeHeroButton(
-                            icon: Icons.person_rounded,
-                            active: state.mine,
-                            tooltip: l10n.lvMine,
-                            onTap: cubit.toggleMine,
-                          )
+                          DvIconButton(icon: state.mine ? Icons.person_rounded : Icons.person_outline_rounded, dot: state.mine, tooltip: l10n.lvMine, onTap: cubit.toggleMine)
                         else
                           // Admins and sales managers merge duplicates, as on the website.
-                          HomeHeroButton(
-                            key: const Key('leads-duplicates'),
-                            icon: Icons.content_copy_rounded,
-                            tooltip: l10n.duplicatesTitle,
-                            onTap: () => context.push('/duplicates'),
-                          ),
-                        HomeHeroButton(
+                          DvIconButton(key: const Key('leads-duplicates'), icon: Icons.content_copy_rounded, tooltip: l10n.duplicatesTitle, onTap: () => context.push('/duplicates')),
+                        const SizedBox(width: 10),
+                        DvIconButton(
+                          key: const Key('leads-filters'),
                           icon: Icons.tune_rounded,
                           dot: state.hasAdvancedFilters,
                           tooltip: l10n.lvFilters,
                           onTap: () => _showFilterSheet(context, cubit),
                         ),
-                      ],
-                      bottom: HomeSearchField(
-                        controller: _search,
-                        hint: l10n.leadsSearchHint,
-                        onSubmitted: cubit.setSearch,
-                        onClear: () {
-                          _search.clear();
-                          cubit.setSearch('');
-                        },
-                      ),
+                      ]),
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -254,11 +261,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
       case DataStatus.success:
         return [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-            sliver: SliverList.separated(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            sliver: SliverList.builder(
               itemCount: state.leads.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, i) => LeadCard(lead: state.leads[i], showRep: _manager),
+              itemBuilder: (context, i) => LeadCard(
+                lead: state.leads[i],
+                showRep: _manager,
+                first: i == 0,
+                last: i == state.leads.length - 1,
+              ),
             ),
           ),
         ];
@@ -270,11 +281,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
 /// comes next (the follow-up, else the visit, else the last contact), with
 /// call and WhatsApp.
 class LeadCard extends StatelessWidget {
-  const LeadCard({super.key, required this.lead, this.showRep = false});
+  const LeadCard({super.key, required this.lead, this.showRep = false, this.first = true, this.last = true});
   final Lead lead;
 
   /// Managers see whose lead it is.
   final bool showRep;
+
+  /// The rows share one white card: the first rounds the top, the last the bottom.
+  final bool first;
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
@@ -284,167 +299,100 @@ class LeadCard extends StatelessWidget {
     final now = DateTime.now();
     final stageColor = leadStageColor(lead.stage, colors);
     final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
-    final where = [
-      if ((project ?? '').isNotEmpty) project!,
-      if ((lead.unitCode ?? '').isNotEmpty) ltr(lead.unitCode!),
-    ].join(' · ');
-    final source = lead.brokerName != null ? '${l10n.lvBroker} · ${lead.brokerName}' : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect);
+    final source = lead.brokerName ?? lead.sourceName?.resolve(lang) ?? l10n.lvDirect;
+    final rep = showRep ? (lead.unassigned ? l10n.lvUnassigned : lead.assignedSalesName) : null;
+    final line = [if ((project ?? '').isNotEmpty) project!, source, if ((rep ?? '').isNotEmpty) rep!].join(' · ');
 
-    // What comes next: the follow-up, else the booked visit, else the last contact.
-    final (IconData nextIcon, String nextText, Color nextColor) = () {
-      final f = lead.nextActionAt;
-      if (f != null && lead.stage != 'WON' && lead.stage != 'LOST') {
-        return switch (leadFollowState(f, now)) {
-          LeadFollowState.overdue => (Icons.alarm_rounded, l10n.lvFollowOverdue(leadWhen(context, f)), colors.error),
-          LeadFollowState.today => (Icons.alarm_rounded, l10n.lvFollowToday(DateFormatter.time(f, languageCode: lang)), colors.warning),
-          LeadFollowState.upcoming => (Icons.event_repeat_rounded, l10n.lvFollowNext(leadWhen(context, f)), AppPalette.gold600),
-        };
-      }
-      if (lead.upcomingVisitAt != null) {
-        return (Icons.event_rounded, l10n.lvVisit(leadWhen(context, lead.upcomingVisitAt!)), colors.info);
-      }
-      if (lead.lastContactAt != null) {
-        return (Icons.history_rounded, l10n.lvLastContact(leadWhen(context, lead.lastContactAt!, withTime: false)), colors.inkMuted);
-      }
-      return (Icons.history_rounded, l10n.lvNoContact, colors.inkMuted);
-    }();
-    final days = lead.stageChangedAt == null ? null : homeDay(now).difference(homeDay(lead.stageChangedAt!)).inDays;
+    // Only what needs attention: an overdue follow-up, or one due today.
+    final f = lead.nextActionAt;
+    final open = lead.stage != 'WON' && lead.stage != 'LOST';
+    final state = f == null || !open ? null : leadFollowState(f, now);
+    final (String? due, DvTone tone) = switch (state) {
+      LeadFollowState.overdue => (l10n.dvOverdueDays(homeDay(now).difference(homeDay(f!)).inDays), DvTone.bad),
+      LeadFollowState.today => (l10n.dvTodayAt(DateFormatter.time(f!, languageCode: lang)), DvTone.warn),
+      _ => (null, DvTone.neutral),
+    };
+    final radius = BorderRadius.vertical(top: Radius.circular(first ? 20 : 0), bottom: Radius.circular(last ? 20 : 0));
 
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        key: Key('lead-card-${lead.id}'),
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push('/leads/${lead.id}', extra: lead).then((_) {
-          if (context.mounted) context.read<LeadsCubit>().loadSummary();
-        }),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colors.hairline),
-          ),
-          child: Column(children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                  child: Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(lead.fullName,
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: radius,
+        border: Border(
+          top: first ? BorderSide(color: colors.hairline) : BorderSide.none,
+          left: BorderSide(color: colors.hairline),
+          right: BorderSide(color: colors.hairline),
+          bottom: BorderSide(color: colors.hairline),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        child: InkWell(
+          key: Key('lead-card-${lead.id}'),
+          borderRadius: radius,
+          onTap: () => context.push('/leads/${lead.id}', extra: lead).then((_) {
+            if (context.mounted) context.read<LeadsCubit>().loadSummary();
+          }),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+            child: Row(children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: colors.surfaceSoft, shape: BoxShape.circle),
+                child: Text(homeInitials(lead.fullName), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Flexible(
+                      child: Text(lead.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 14.5, height: 1.4, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                    ),
+                    if (due != null) ...[
+                      const SizedBox(width: 8),
+                      Flexible(child: Container(
+                        key: Key('lead-next-${lead.id}'),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (tone == DvTone.bad ? colors.error : colors.warning).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(due,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
-                        child: Text(leadStageLabel(l10n, lead.stage),
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stageColor)),
-                      ),
-                    ]),
-                    if (where.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Row(children: [
-                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(where,
-                              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                        ),
-                      ]),
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
+                      )),
                     ],
-                    const SizedBox(height: 6),
-                    Wrap(spacing: 6, runSpacing: 4, children: [
-                      _Tag(icon: lead.brokerName != null ? Icons.handshake_rounded : Icons.call_received_rounded, text: source),
-                      if (showRep)
-                        lead.unassigned
-                            ? _Tag(icon: Icons.person_off_rounded, text: l10n.lvUnassigned, color: AppPalette.gold600)
-                            : _Tag(icon: Icons.person_rounded, text: lead.assignedSalesName!),
-                    ]),
                   ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-              decoration: BoxDecoration(
-                color: colors.surfaceSoft.withValues(alpha: 0.6),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                border: Border(top: BorderSide(color: colors.hairline)),
+                  const SizedBox(height: 5),
+                  Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                ]),
               ),
-              child: Row(children: [
-                Icon(nextIcon, size: 15, color: nextColor),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(nextText,
-                        key: Key('lead-next-${lead.id}'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: nextColor)),
-                    if (days != null)
-                      Text(l10n.lvInStage(days),
-                          style: TextStyle(fontSize: 12, color: days >= 14 ? colors.warning : colors.inkMuted)),
-                  ]),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stageColor)),
+              ),
+              if ((lead.phone ?? '').isNotEmpty) ...[
+                const SizedBox(width: 8),
+                _RoundAction(
+                  key: Key('lead-call-${lead.id}'),
+                  icon: Icons.phone_rounded,
+                  color: colors.inkStrong,
+                  onTap: () => leadContact(context, lead, 'CALL'),
                 ),
-                if ((lead.phone ?? '').isNotEmpty) ...[
-                  _RoundAction(
-                    key: Key('lead-whatsapp-${lead.id}'),
-                    icon: Icons.chat_rounded,
-                    color: const Color(0xFF1E9E5A),
-                    onTap: () => leadContact(context, lead, 'WHATSAPP'),
-                  ),
-                  const SizedBox(width: 6),
-                  _RoundAction(
-                    key: Key('lead-call-${lead.id}'),
-                    icon: Icons.phone_rounded,
-                    color: AppPalette.navy,
-                    onTap: () => leadContact(context, lead, 'CALL'),
-                  ),
-                ],
-              ]),
-            ),
-          ]),
+              ],
+            ]),
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.icon, required this.text, this.color});
-  final IconData icon;
-  final String text;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? context.appColors.inkMuted;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: context.appColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 12, color: c),
-        const SizedBox(width: 4),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 170),
-          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c)),
-        ),
-      ]),
     );
   }
 }

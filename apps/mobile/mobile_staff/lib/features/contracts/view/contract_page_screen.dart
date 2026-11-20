@@ -62,7 +62,7 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
     final l10n = context.l10n;
     final admin = context.read<SessionCubit>().state.role == AppRole.admin;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
         body: BlocBuilder<ContractPageCubit, DataState<ContractPage>>(
           builder: (context, state) {
@@ -85,7 +85,8 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<ContractPageCubit>().load,
                   child: ListView(padding: EdgeInsets.zero, children: [
-                    HomeOverlap(overlap: 44, top: _Header(page: p), bottom: _Figures(page: p, late: late)),
+                    _Header(page: p),
+                    _Figures(page: p, late: late),
                     const SizedBox(height: 14),
                     SizedBox(
                         height: 38,
@@ -291,27 +292,52 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final r = page.row;
-    return HomeListHero(
-      title: ltr(r.displayNumber),
-      subtitle: [if ((r.customerName ?? '').isNotEmpty) r.customerName!, if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!)].join(' · '),
-      back: true,
-      bottom: Padding(
-        padding: const EdgeInsets.only(bottom: 48),
-        child: Wrap(spacing: 6, runSpacing: 6, children: [
-          r.signedAt != null && !r.cancelled
-              ? CatalogBadge.status(l10n.kcSignedOn(DateFormatter.dayMonth(r.signedAt!, languageCode: lang)), catalogAvailable, icon: Icons.verified_rounded)
-              : contractBadge(l10n, r),
-          CatalogBadge.glass(r.reservationNumber == null ? l10n.kcManual : l10n.kcFromReservation(ltr(r.reservationNumber!))),
-        ]),
-      ),
+    final signed = r.signedAt != null && !r.cancelled;
+    final line = [
+      if ((r.customerName ?? '').isNotEmpty) r.customerName!,
+      if ((r.projectName ?? '').isNotEmpty) r.projectName!,
+      if ((r.unitCode ?? '').isNotEmpty) ltr(r.unitCode!),
+    ].join(' · ');
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, MediaQuery.paddingOf(context).top + 6, 20, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded, color: colors.inkStrong),
+        ),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Flexible(
+                child: Text(ltr(r.displayNumber),
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 22, height: 1.3, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              ),
+              const SizedBox(width: 10),
+              signed
+                  ? DvPill(l10n.kcSignedOn(DateFormatter.dayMonth(r.signedAt!, languageCode: lang)), tone: DvTone.ok)
+                  : contractBadge(l10n, r),
+            ]),
+            if (line.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(line, style: TextStyle(fontSize: 13, height: 1.45, color: colors.inkMuted)),
+            ],
+            const SizedBox(height: 3),
+            Text(r.reservationNumber == null ? l10n.kcManual : l10n.kcFromReservation(ltr(r.reservationNumber!)),
+                style: TextStyle(fontSize: 12.5, height: 1.45, color: colors.inkMuted)),
+          ]),
+        ),
+      ]),
     );
   }
 }
 
-/// The floating card: the value and the down payment, what is collected
-/// (bar and share), what remains (and the open fees) and what is late.
+/// The page's one dark card: what is collected of the value, the line, and
+/// what remains and what is late.
 class _Figures extends StatelessWidget {
   const _Figures({required this.page, required this.late});
   final ContractPage page;
@@ -320,77 +346,59 @@ class _Figures extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
-    Widget tile(String k, String v, {Color? bg, Color? border, String? note, Key? key}) => Expanded(
-          child: Container(
-            key: key,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: bg ?? homeTint(context),
-              border: Border.all(color: border ?? homeTintBorder(context)),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(16, colors.inkStrong)),
-              if (note != null) Text(note, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            ]),
-          ),
-        );
+    const muted = Color(0xFFAEB8CB);
+    final overdue = late > 0 || page.overdue > 0.005;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.hairline),
-        boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF17223B), Color(0xFF0B1426), Color(0xFF070C17)]),
+        boxShadow: [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.22), blurRadius: 26, offset: const Offset(0, 12))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(l10n.kcValue, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        Text.rich(
-          key: const Key('contract-value'),
-          TextSpan(children: [
-            TextSpan(text: contractMoney(page.value), style: homeDisplay(26, colors.inkStrong)),
-            TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
+        Text(l10n.kcCollectedOfValue, style: const TextStyle(fontSize: 13, height: 1.4, color: muted)),
+        const SizedBox(height: 6),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text.rich(
+            key: const Key('contract-value'),
+            TextSpan(children: [
+              TextSpan(text: contractMoney(page.paid), style: const TextStyle(fontSize: 34, height: 1.1, fontWeight: FontWeight.w700, color: Colors.white)),
+              TextSpan(text: '  ${l10n.kcOfValue('${contractMoney(page.value)} $currency')}', style: const TextStyle(fontSize: 13, color: muted)),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Stack(children: [
+            Container(height: 6, color: Colors.white.withValues(alpha: 0.12)),
+            FractionallySizedBox(
+              widthFactor: (page.collectedPct / 100).clamp(0.0, 1.0),
+              child: Container(height: 6, decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFB88F35), Color(0xFFEED7A0)]))),
+            ),
           ]),
         ),
-        if ((page.row.downPayment ?? 0) > 0)
-          Text(l10n.kcDown('${contractMoney(page.row.downPayment!)} $currency'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: page.collectedPct / 100,
-            minHeight: 8,
-            backgroundColor: colors.surfaceSoft,
-            valueColor: AlwaysStoppedAnimation(AppPalette.gold500),
-          ),
+        const SizedBox(height: 14),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Row(children: [
+            Text(ltr('${page.collectedPct}%'), key: const Key('contract-collected'), style: const TextStyle(fontSize: 12.5, color: Color(0xFFC9D1DF))),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
+            Text('${l10n.kcRemaining} ${contractMoney(page.remaining)}', style: const TextStyle(fontSize: 12.5, color: Color(0xFFC9D1DF))),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 9), child: Text('·', style: TextStyle(color: Color(0xFF6F7B93)))),
+            Text(
+              overdue ? '${l10n.kcOverdue} ${page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late)}' : l10n.kcNoOverdue,
+              key: const Key('contract-overdue'),
+              style: TextStyle(fontSize: 12.5, fontWeight: overdue ? FontWeight.w700 : FontWeight.w400, color: overdue ? const Color(0xFFF29AA2) : const Color(0xFFC9D1DF)),
+            ),
+          ]),
         ),
-        const SizedBox(height: 5),
-        Text(l10n.kcCollected('${contractMoney(page.paid)} $currency', ltr('${page.collectedPct}%')),
-            key: const Key('contract-collected'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        const SizedBox(height: 10),
-        Row(children: [
-          tile(
-            l10n.kcRemaining,
-            contractMoney(page.remaining),
-            note: page.openFees > 0.005 ? l10n.kcPlusFees(contractMoney(page.openFees)) : null,
-          ),
-          const SizedBox(width: 8),
-          late > 0 || page.overdue > 0.005
-              ? tile(
-                  l10n.kcOverdue,
-                  page.overdue > 0.005 ? contractMoney(page.overdue) : l10n.kcOverdueN(late),
-                  note: late > 0 && page.overdue > 0.005 ? l10n.kcOverdueN(late) : null,
-                  bg: colors.error.withValues(alpha: 0.12),
-                  border: colors.error.withValues(alpha: 0.35),
-                  key: const Key('contract-overdue'),
-                )
-              : tile(l10n.kcOverdue, l10n.kcNoOverdue, bg: colors.success.withValues(alpha: 0.12), border: colors.success.withValues(alpha: 0.35), key: const Key('contract-overdue')),
-        ]),
       ]),
     );
   }
