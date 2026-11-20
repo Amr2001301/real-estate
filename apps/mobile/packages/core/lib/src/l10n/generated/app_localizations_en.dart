@@ -1838,6 +1838,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitLocation => 'Location';
 
   @override
+  String get visitWhere => 'Place';
+
+  @override
+  String get visitNumberLabel => 'Visit number';
+
+  @override
   String get visitNotes => 'Notes';
 
   @override

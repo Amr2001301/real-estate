@@ -3506,6 +3506,18 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get visitLocation;
 
+  /// No description provided for @visitWhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get visitWhere;
+
+  /// No description provided for @visitNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit number'**
+  String get visitNumberLabel;
+
   /// No description provided for @visitNotes.
   ///
   /// In en, this message translates to:

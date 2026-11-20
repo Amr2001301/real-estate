@@ -644,6 +644,8 @@
   "visitPickDateTime": "Pick date & time",
   "visitScheduleRequired": "Please pick a date & time.",
   "visitLocation": "Location",
+  "visitWhere": "Place",
+  "visitNumberLabel": "Visit number",
   "visitNotes": "Notes",
   "visitSectionClient": "Client",
   "visitSectionClientSubtitle": "Choose the client type linked to this visit.",

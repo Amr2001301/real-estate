@@ -641,6 +641,8 @@
   "visitPickDateTime": "اختر التاريخ والوقت",
   "visitScheduleRequired": "يرجى اختيار التاريخ والوقت.",
   "visitLocation": "الموقع",
+  "visitWhere": "المكان",
+  "visitNumberLabel": "رقم الزيارة",
   "visitNotes": "ملاحظات",
   "visitSectionClient": "العميل",
   "visitSectionClientSubtitle": "اختر نوع العميل والعميل المحتمل المرتبط بالزيارة.",

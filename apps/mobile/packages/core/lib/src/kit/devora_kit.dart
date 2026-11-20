@@ -1289,3 +1289,53 @@ class DvActionCard extends StatelessWidget {
     );
   }
 }
+
+/// A button on the navy header: gold for the main action, glass otherwise.
+class DvHeroButton extends StatelessWidget {
+  const DvHeroButton({super.key, required this.icon, required this.label, required this.onTap, this.gold = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool gold;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gold ? dvGoldGradient : null,
+        color: gold ? null : const Color(0x14FFFFFF),
+        border: gold ? null : Border.all(color: const Color(0x24FFFFFF)),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(13),
+          onTap: onTap,
+          child: SizedBox(
+            height: 42,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(icon, size: 17, color: gold ? dvOnGold : Colors.white),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(label,
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: gold ? dvOnGold : Colors.white)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A row of [DvHeroButton]s, equal widths.
+class DvHeroButtons extends StatelessWidget {
+  const DvHeroButtons({super.key, required this.buttons});
+  final List<Widget> buttons;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        for (var i = 0; i < buttons.length; i++) ...[if (i > 0) const SizedBox(width: 8), Expanded(child: buttons[i])],
+      ]);
+}

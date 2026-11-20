@@ -1821,6 +1821,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitLocation => 'الموقع';
 
   @override
+  String get visitWhere => 'المكان';
+
+  @override
+  String get visitNumberLabel => 'رقم الزيارة';
+
+  @override
   String get visitNotes => 'ملاحظات';
 
   @override
