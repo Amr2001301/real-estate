@@ -273,29 +273,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
               else if (_failure != null && d == null)
                 ErrorState(failure: _failure, onRetry: _load)
               else if (d != null) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                  child: HomeBand(figures: [
-                    HomeFigure(id: 'sales', value: homeCompact(d.sales, l10n).$1, label: '${l10n.rpSales} · ${homeCompact(d.sales, l10n).$2}'.replaceAll(RegExp(r' · $'), ''), hint: _vs(l10n, d.sales, _before?.sales) ?? l10n.rpAvgContract(money(d.average)), warn: _before != null && d.sales < _before!.sales),
-                    HomeFigure(id: 'contracts', value: '${d.contracts}', label: l10n.rpContracts, hint: _vs(l10n, d.contracts, _before?.contracts) ?? l10n.rpContractsHint, warn: _before != null && d.contracts < _before!.contracts),
-                    HomeFigure(
-                      id: 'conversion',
-                      value: d.conversion == null ? '—' : '${d.conversion}%',
-                      label: l10n.rpConversion,
-                      hint: l10n.rpConversionHint,
-                      warn: d.conversion != null && d.conversion! < 10,
-                    ),
-                  ]),
-                ),
-                HomeTiles(tiles: [
-                  HomeTile(
+                const SizedBox(height: 18),
+                DvStatsCard(stats: [
+                  DvStat(
+                    id: 'sales',
+                    label: l10n.rpSales,
+                    value: homeCompact(d.sales, l10n).$1,
+                    unit: '${homeCompact(d.sales, l10n).$2} $symbol'.trim(),
+                    hint: _vs(l10n, d.sales, _before?.sales) ?? l10n.rpAvgContract(money(d.average)),
+                    warn: _before != null && d.sales < _before!.sales,
+                  ),
+                  DvStat(
+                    id: 'contracts',
+                    label: l10n.rpContracts,
+                    value: '${d.contracts}',
+                    hint: _vs(l10n, d.contracts, _before?.contracts) ?? l10n.rpContractsHint,
+                    warn: _before != null && d.contracts < _before!.contracts,
+                  ),
+                  DvStat(
+                    id: 'collected',
                     label: l10n.rpCollected,
                     value: homeCompact(d.collected, l10n).$1,
                     unit: '${homeCompact(d.collected, l10n).$2} $symbol'.trim(),
-                    sub: l10n.rpCollectedSub,
+                    hint: l10n.rpCollectedSub,
+                  ),
+                  DvStat(
+                    id: 'conversion',
+                    label: l10n.rpConversion,
+                    value: d.conversion == null ? '—' : '${d.conversion}%',
+                    hint: l10n.rpConversionHint,
+                    warn: d.conversion != null && d.conversion! < 10,
                   ),
                   if (d.fees > 0)
-                    HomeTile(label: l10n.rpFees, value: homeCompact(d.fees, l10n).$1, unit: '${homeCompact(d.fees, l10n).$2} $symbol'.trim(), sub: l10n.ahFees),
+                    DvStat(id: 'fees', label: l10n.rpFees, value: homeCompact(d.fees, l10n).$1, unit: '${homeCompact(d.fees, l10n).$2} $symbol'.trim(), hint: l10n.ahFees),
                 ]),
                 HomeSection(
                   icon: Icons.filter_alt_rounded,

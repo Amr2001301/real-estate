@@ -484,3 +484,71 @@ class DvSquareAction extends StatelessWidget {
     return tooltip == null ? w : Tooltip(message: tooltip!, child: w);
   }
 }
+
+/// One figure of a [DvStatsCard].
+class DvStat {
+  const DvStat({required this.label, required this.value, this.unit = '', this.hint, this.warn = false, this.id});
+  final String label;
+  final String value;
+  final String unit;
+  final String? hint;
+  final bool warn;
+  final String? id;
+}
+
+/// A report's figures in one white card: two per row, hairlines between,
+/// the label small, the figure large, a short hint under it.
+class DvStatsCard extends StatelessWidget {
+  const DvStatsCard({super.key, required this.stats});
+  final List<DvStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    Widget cell(DvStat s) => Padding(
+          key: s.id == null ? null : Key('dv-stat-${s.id}'),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(s.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text.rich(TextSpan(children: [
+                TextSpan(text: ltr(s.value), style: TextStyle(fontSize: 24, height: 1.15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                if (s.unit.isNotEmpty) TextSpan(text: '  ${s.unit}', style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+              ])),
+            ),
+            if ((s.hint ?? '').isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(s.hint!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, height: 1.4, fontWeight: s.warn ? FontWeight.w600 : FontWeight.w400, color: s.warn ? colors.warning : colors.inkMuted)),
+            ],
+          ]),
+        );
+    final rows = <Widget>[];
+    for (var i = 0; i < stats.length; i += 2) {
+      if (i > 0) rows.add(Divider(height: 1, thickness: 1, color: colors.hairline));
+      rows.add(IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(child: cell(stats[i])),
+          VerticalDivider(width: 1, thickness: 1, color: colors.hairline),
+          Expanded(child: i + 1 < stats.length ? cell(stats[i + 1]) : const SizedBox()),
+        ]),
+      ));
+    }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.hairline),
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? null
+            : [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: rows),
+    );
+  }
+}

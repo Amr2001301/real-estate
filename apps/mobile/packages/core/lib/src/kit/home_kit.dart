@@ -158,6 +158,16 @@ class HomePage extends StatelessWidget {
 
 /// The navy header of a list page, in the homes' look: the title and a
 /// count, round actions, and what goes under (a search field, chips).
+/// A header's bottom wrapped in a bottom-only padding made room for a card
+/// drawn over the header; the Devora header has no card over it.
+Widget _unpadded(Widget w) {
+  if (w is Padding && w.padding is EdgeInsets) {
+    final e = w.padding as EdgeInsets;
+    if (e.left == 0 && e.right == 0 && e.top == 0 && e.bottom > 0 && w.child != null) return w.child!;
+  }
+  return w;
+}
+
 class HomeListHero extends StatelessWidget {
   const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false, this.leading});
 
@@ -211,7 +221,7 @@ class HomeListHero extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFC9B27A), fontWeight: FontWeight.w600)),
                 ],
-                if (bottom != null) ...[const SizedBox(height: 16), bottom!],
+                if (bottom != null) ...[const SizedBox(height: 16), _unpadded(bottom!)],
               ]),
             ),
           ]),
@@ -1353,11 +1363,14 @@ class HomeOverlap extends MultiChildRenderObjectWidget {
 
   final double overlap;
 
-  @override
-  RenderObject createRenderObject(BuildContext context) => RenderHomeOverlap(overlap);
+  // Devora: the card sits under the header with a gap, not over it.
+  double get _overlap => AppPalette.calmLight ? -16 : overlap;
 
   @override
-  void updateRenderObject(BuildContext context, RenderHomeOverlap renderObject) => renderObject.overlap = overlap;
+  RenderObject createRenderObject(BuildContext context) => RenderHomeOverlap(_overlap);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderHomeOverlap renderObject) => renderObject.overlap = _overlap;
 }
 
 class _HomeOverlapData extends ContainerBoxParentData<RenderBox> {}
