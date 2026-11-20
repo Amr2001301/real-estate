@@ -119,7 +119,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final lang = Localizations.localeOf(context).languageCode;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: Theme.of(context).brightness == Brightness.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: BlocBuilder<LeadsCubit, LeadsListState>(
           builder: (context, state) {
@@ -130,63 +130,42 @@ class _LeadsScreenState extends State<LeadsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
                   SliverToBoxAdapter(
-                    child: DvPageTitle(
+                    child: HomeListHero(
                       title: l10n.navLeads,
-                      overline: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
-                      trailing: [
-                        SizedBox(
-                          width: 104,
-                          child: DvGoldButton(
-                            key: const Key('leads-add'),
-                            label: l10n.dvNewLead,
-                            icon: Icons.add_rounded,
-                            height: 42,
-                            onTap: () async {
-                              final created = await context.push<bool>('/leads/new');
-                              if (created == true && context.mounted) cubit.load();
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                      child: Row(children: [
-                        Expanded(
-                          child: TextField(
-                            key: const Key('leads-search'),
-                            controller: _search,
-                            textInputAction: TextInputAction.search,
-                            onSubmitted: cubit.setSearch,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              hintText: l10n.dvSearchLeads,
-                              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                              filled: true,
-                              fillColor: context.appColors.surface,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: context.appColors.hairline)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppPalette.navy, width: 1.3)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                      subtitle: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
+                      actions: [
                         if (!_manager)
-                          DvIconButton(icon: state.mine ? Icons.person_rounded : Icons.person_outline_rounded, dot: state.mine, tooltip: l10n.lvMine, onTap: cubit.toggleMine)
+                          HomeHeroButton(icon: Icons.person_rounded, active: state.mine, tooltip: l10n.lvMine, onTap: cubit.toggleMine)
                         else
                           // Admins and sales managers merge duplicates, as on the website.
-                          DvIconButton(key: const Key('leads-duplicates'), icon: Icons.content_copy_rounded, tooltip: l10n.duplicatesTitle, onTap: () => context.push('/duplicates')),
-                        const SizedBox(width: 10),
-                        DvIconButton(
+                          HomeHeroButton(key: const Key('leads-duplicates'), icon: Icons.content_copy_rounded, tooltip: l10n.duplicatesTitle, onTap: () => context.push('/duplicates')),
+                        HomeHeroButton(
                           key: const Key('leads-filters'),
                           icon: Icons.tune_rounded,
                           dot: state.hasAdvancedFilters,
                           tooltip: l10n.lvFilters,
                           onTap: () => _showFilterSheet(context, cubit),
                         ),
-                      ]),
+                        HomeHeroButton(
+                          key: const Key('leads-add'),
+                          icon: Icons.person_add_alt_1_rounded,
+                          active: true,
+                          tooltip: l10n.leadNew,
+                          onTap: () async {
+                            final created = await context.push<bool>('/leads/new');
+                            if (created == true && context.mounted) cubit.load();
+                          },
+                        ),
+                      ],
+                      bottom: HomeSearchField(
+                        controller: _search,
+                        hint: l10n.leadsSearchHint,
+                        onSubmitted: cubit.setSearch,
+                        onClear: () {
+                          _search.clear();
+                          cubit.setSearch('');
+                        },
+                      ),
                     ),
                   ),
                   SliverToBoxAdapter(
