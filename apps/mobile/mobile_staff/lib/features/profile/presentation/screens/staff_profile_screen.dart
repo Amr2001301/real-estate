@@ -159,6 +159,13 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                     label: l10n.targetsTitle,
                     subtitle: l10n.staffMyTargetsDesc,
                     onTap: () => context.push('/targets')),
+                if (StaffAccess.maintenance(role, perms))
+                  ProfileItem(
+                      id: 'maintenance',
+                      icon: Icons.build_rounded,
+                      label: l10n.mtaTitle,
+                      subtitle: l10n.mtaProfileDesc,
+                      onTap: () => context.push('/admin-maintenance')),
                 if (StaffAccess.inquiries(role, perms))
                   ProfileItem(
                       id: 'inquiries',

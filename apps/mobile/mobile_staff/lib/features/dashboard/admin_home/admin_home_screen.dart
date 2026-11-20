@@ -287,7 +287,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             tone: HomeTone.rose,
             count: a.openMaintenance,
             label: l10n.ahAttMaintenance,
-            onTap: () => context.push('/maintenance'),
+            onTap: () => context.push('/admin-maintenance'),
           ),
           HomeAttention(
             id: 'inquiries',

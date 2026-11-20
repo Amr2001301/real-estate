@@ -170,6 +170,7 @@ import '../features/maintenance/presentation/cubit/maintenance_detail_cubit.dart
 import '../features/maintenance/presentation/cubit/maintenance_list_cubit.dart';
 import '../features/maintenance/presentation/screens/maintenance_detail_screen.dart';
 import '../features/maintenance/presentation/screens/maintenance_list_screen.dart';
+import '../features/maintenance/presentation/admin/admin_maintenance.dart';
 import '../features/shell/presentation/staff_shell.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/notifications/data/notification_preferences_api.dart';
@@ -212,6 +213,10 @@ String? staffRedirect(SessionState session, String loc) {
     }
     return null;
   }
+
+  // The brokerage pages (listings, deals, shares, targets, launches) exist only for a
+  // brokerage company; a developer company's account has none of them.
+  if (loc.startsWith('/bx') && session.sessionOrNull?.companyType != 'BROKERAGE') return '/home';
 
   // Sales / Manager / Admin: never enter the broker / maintenance workspaces.
   if (loc.startsWith('/broker')) return '/home';
@@ -374,9 +379,12 @@ GoRouter createStaffRouter(
       GoRoute(
         path: '/performance/brokers',
         // The admin's report (the API refuses anyone else).
-        builder: (context, _) => BlocProvider(
-          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).all),
-          child: const BrokersPerformanceScreen(),
+        builder: (context, _) => StaffAccessGate(
+          allows: StaffAccess.brokerReports,
+          child: BlocProvider(
+            create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).all),
+            child: const BrokersPerformanceScreen(),
+          ),
         ),
       ),
       GoRoute(
@@ -472,9 +480,12 @@ GoRouter createStaffRouter(
       // ── Duplicate leads (DUP1): admin, sales manager over their team ─────
       GoRoute(
         path: '/duplicates',
-        builder: (context, state) => BlocProvider(
-          create: (ctx) => DuplicatesCubit(ctx.read<DuplicatesRepository>()),
-          child: const DuplicatesScreen(),
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.duplicates,
+          child: BlocProvider(
+            create: (ctx) => DuplicatesCubit(ctx.read<DuplicatesRepository>()),
+            child: const DuplicatesScreen(),
+          ),
         ),
       ),
 
@@ -657,6 +668,32 @@ GoRouter createStaffRouter(
             ),
           );
         },
+      ),
+
+      // ── The admin's maintenance pages (/maintenance-requests is ADMIN-only) ──
+      GoRoute(
+        path: '/admin-maintenance',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.maintenance,
+          child: Builder(builder: (ctx) {
+            return AdminMaintenanceScreen(
+              repository: AdminMaintenanceRepository(ctx.read<Dio>()),
+              onOpen: (id) => ctx.push('/admin-maintenance/$id'),
+            );
+          }),
+        ),
+      ),
+      GoRoute(
+        path: '/admin-maintenance/:id',
+        builder: (context, state) => StaffAccessGate(
+          allows: StaffAccess.maintenance,
+          child: Builder(builder: (ctx) {
+            return AdminMaintenanceDetailScreen(
+              repository: AdminMaintenanceRepository(ctx.read<Dio>()),
+              id: state.pathParameters['id']!,
+            );
+          }),
+        ),
       ),
 
       // ── Customer inquiries (visits:read, as on the website) ─────────────
@@ -994,16 +1031,19 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/team-targets',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) {
-            final repo = ctx.read<PerformanceRepository>();
-            return TeamTargetsCubit(
-              ListSalesActors(repo),
-              GetSalesTargets(repo),
-              UpsertSalesTarget(repo),
-            );
-          },
-          child: const TeamTargetsScreen(),
+        builder: (context, _) => StaffAccessGate(
+          allows: StaffAccess.teamTargets,
+          child: BlocProvider(
+            create: (ctx) {
+              final repo = ctx.read<PerformanceRepository>();
+              return TeamTargetsCubit(
+                ListSalesActors(repo),
+                GetSalesTargets(repo),
+                UpsertSalesTarget(repo),
+              );
+            },
+            child: const TeamTargetsScreen(),
+          ),
         ),
       ),
 
