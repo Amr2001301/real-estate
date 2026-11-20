@@ -245,6 +245,44 @@ class FilterTiles<T> extends StatelessWidget {
   }
 }
 
+/// Short choices as pills in a wrapping row — for lists too long for
+/// segments but not worth a column of cards (sources, people). The chosen one
+/// is filled navy with a check.
+class FilterChips<T> extends StatelessWidget {
+  const FilterChips({super.key, required this.options, required this.selected, required this.onSelect, this.keyPrefix = 'filter-chip'});
+  final List<FilterOption<T>> options;
+  final T selected;
+  final ValueChanged<T> onSelect;
+  final String keyPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Wrap(spacing: 8, runSpacing: 8, children: [
+      for (final o in options)
+        Builder(builder: (context) {
+          final on = o.value == selected;
+          return Material(
+            color: on ? AppPalette.navy : homeField(context),
+            shape: StadiumBorder(side: BorderSide(color: on ? AppPalette.navy : homeLine(context))),
+            child: InkWell(
+              key: Key('$keyPrefix-${o.value ?? 'all'}'),
+              customBorder: const StadiumBorder(),
+              onTap: () => onSelect(o.value),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (on) ...[Icon(Icons.check_rounded, size: 15, color: AppPalette.gold300), const SizedBox(width: 5)],
+                  Text(o.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: on ? Colors.white : colors.inkStrong)),
+                ]),
+              ),
+            ),
+          );
+        }),
+    ]);
+  }
+}
+
 /// One track, equal parts, the chosen one raised in white.
 class FilterSegments<T> extends StatelessWidget {
   const FilterSegments({super.key, required this.options, required this.selected, required this.onSelect, this.keyPrefix = 'filter-seg'});

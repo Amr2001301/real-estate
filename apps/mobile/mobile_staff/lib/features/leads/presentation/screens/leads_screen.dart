@@ -747,13 +747,13 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
           title: l10n.leadsFilterSource,
           child: _loadingSources
               ? const Padding(padding: EdgeInsets.all(12), child: Center(child: SizedBox(height: 26, width: 26, child: CircularProgressIndicator(strokeWidth: 2))))
-              : FilterTiles<String?>(
+              : FilterChips<String?>(
                   keyPrefix: 'lead-source',
                   selected: _sourceId,
                   onSelect: (v) => setState(() => _sourceId = v),
                   options: [
-                    FilterOption<String?>(null, lang == 'ar' ? 'الكل' : 'All', icon: Icons.apps_rounded),
-                    for (final src in _sources) FilterOption<String?>(src.id, src.name, icon: Icons.alt_route_rounded),
+                    FilterOption<String?>(null, lang == 'ar' ? 'الكل' : 'All'),
+                    for (final src in _sources) FilterOption<String?>(src.id, src.name),
                   ],
                 ),
         ),
@@ -784,7 +784,7 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
           FilterSection(
             icon: Icons.badge_outlined,
             title: l10n.lvRep,
-            child: FilterRadioList<String?>(
+            child: FilterChips<String?>(
               keyPrefix: 'lead-rep',
               selected: _salesId,
               onSelect: (v) => setState(() => _salesId = v),

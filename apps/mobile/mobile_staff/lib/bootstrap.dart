@@ -35,6 +35,10 @@ Future<void> bootstrap(EnvConfig env) async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = EnvConfig.initialize(env);
 
+  // The staff app wears the platform's identity (the Devora crystal: midnight
+  // blue-black with an electric-blue light), not the company's colours.
+  AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFF7FAEFF));
+
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
 
   await _initLocalNotifications();
