@@ -276,44 +276,23 @@ class _RequestCard extends StatelessWidget {
     final r = row.request;
     final title = r.categoryName?.resolve(lang) ?? l10n.mtaTitle;
     final who = [if (r.customerName != null) r.customerName!, if (r.unitCode != null) ltr(r.unitCode!)].join(' · ');
-    return InkWell(
-      key: Key('maintenance-${r.id}'),
-      borderRadius: BorderRadius.circular(22),
+    final tone = switch (r.reviewStatus) {
+      'APPROVED' => colors.success,
+      'REJECTED' => colors.error,
+      _ => colors.warning,
+    };
+    return DvEntityCard(
+      inkKey: Key('maintenance-${r.id}'),
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: homeCard(context, radius: 22),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(
-              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-            ),
-            const SizedBox(width: 8),
-            StatusBadge(label: reviewLabel(l10n, r.reviewStatus), tone: reviewTone(r.reviewStatus)),
-          ]),
-          if (who.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(who, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-          ],
-          const SizedBox(height: 8),
-          Text(r.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, height: 1.5, color: colors.ink)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            StatusBadge(label: maintenanceStatusLabel(l10n, r.status), tone: maintenanceStatusTone(r.status)),
-            StatusBadge(label: maintenancePriorityLabel(l10n, r.priority), tone: maintenancePriorityTone(r.priority)),
-            if (r.createdAt != null) Text(leadWhen(context, r.createdAt!.toLocal()), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.person_outline_rounded, size: 15, color: colors.inkMuted),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(row.assignedName ?? l10n.mtaUnassigned,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            ),
-          ]),
-        ]),
-      ),
+      icon: Icons.build_rounded,
+      title: who.isEmpty ? title : who,
+      subtitle: '$title · ${maintenanceStatusLabel(l10n, r.status)} · ${maintenancePriorityLabel(l10n, r.priority)}',
+      status: reviewLabel(l10n, r.reviewStatus),
+      statusColor: tone,
+      footIcon: Icons.notes_rounded,
+      footColor: colors.ink,
+      footText: r.description,
+      footSub: [row.assignedName ?? l10n.mtaUnassigned, if (r.createdAt != null) leadWhen(context, r.createdAt!.toLocal())].join(' · '),
     );
   }
 }
