@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../payments_review/domain/entities/payment_review_item.dart';
 import '../../payments_review/presentation/widgets/payment_review_tile.dart' show paymentMethodLabel;
+import 'contract_actions.dart';
 import 'contracts_data.dart';
 import 'contracts_list_screen.dart' show contractBadge, contractMoney;
 
@@ -43,6 +45,16 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
       'label': [_installmentTitle(l10n, p, i), if (i.dueDate != null) DateFormatter.mediumDate(i.dueDate!, languageCode: lang)].join('  ·  '),
     });
     if (recorded == true && mounted) await context.read<ContractPageCubit>().load();
+  }
+
+  Future<void> _handover(ContractPage p) async {
+    final ok = await showHandoverSheet(context, repository: ContractActionsRepository(context.read<Dio>()), contractId: p.row.id);
+    if (ok && mounted) await context.read<ContractPageCubit>().load();
+  }
+
+  Future<void> _cancel(ContractPage p) async {
+    final ok = await showCancelContractSheet(context, repository: ContractActionsRepository(context.read<Dio>()), contractId: p.row.id);
+    if (ok && mounted) await context.read<ContractPageCubit>().load();
   }
 
   @override
@@ -224,6 +236,39 @@ class _ContractPageScreenState extends State<ContractPageScreen> {
           ),
         ),
       ),
+      if (admin && !p.row.cancelled)
+        HomeSection(
+          icon: Icons.settings_suggest_rounded,
+          title: l10n.ctaSection,
+          child: Material(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(22),
+            child: Container(
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
+              child: Column(children: [
+                if (p.row.signedAt != null && !p.handedOver) ...[
+                  ListTile(
+                    key: const Key('contract-handover'),
+                    leading: Icon(Icons.key_rounded, color: AppPalette.gold500),
+                    title: Text(l10n.ctaHandover, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(l10n.ctaHandoverDesc),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => _handover(p),
+                  ),
+                  Divider(height: 1, color: colors.hairline),
+                ],
+                ListTile(
+                  key: const Key('contract-cancel'),
+                  leading: Icon(Icons.block_rounded, color: colors.error),
+                  title: Text(l10n.ctaCancelContract, style: TextStyle(fontWeight: FontWeight.w700, color: colors.error)),
+                  subtitle: Text(l10n.ctaCancelDesc),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _cancel(p),
+                ),
+              ]),
+            ),
+          ),
+        ),
       const SizedBox(height: 10),
     ];
   }

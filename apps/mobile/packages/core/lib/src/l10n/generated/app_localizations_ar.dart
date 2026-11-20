@@ -10140,4 +10140,225 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bxNoAgent => 'بدون مندوب';
+
+  @override
+  String get mtaTitle => 'طلبات الصيانة';
+
+  @override
+  String get mtaProfileDesc => 'مراجعة الطلبات واعتمادها وإسنادها';
+
+  @override
+  String mtaCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n طلبًا',
+      few: '$n طلبات',
+      two: 'طلبان',
+      one: 'طلب واحد',
+      zero: 'لا طلبات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mtaReviewPending => 'بانتظار المراجعة';
+
+  @override
+  String get mtaReviewApproved => 'معتمد';
+
+  @override
+  String get mtaReviewRejected => 'مرفوض';
+
+  @override
+  String get mtaFilterTitle => 'تصفية الطلبات';
+
+  @override
+  String get mtaFilterApply => 'تطبيق';
+
+  @override
+  String get mtaFilterReview => 'المراجعة';
+
+  @override
+  String get mtaSearchHint => 'ابحث بالعميل أو الوحدة أو الوصف';
+
+  @override
+  String get mtaEmpty => 'لا طلبات بهذه التصفية.';
+
+  @override
+  String get mtaApprove => 'اعتماد الطلب';
+
+  @override
+  String get mtaReject => 'رفض الطلب';
+
+  @override
+  String get mtaRejectAsk => 'رفض هذا الطلب؟ لا يمكن التراجع.';
+
+  @override
+  String get mtaConfirmReject => 'نعم، ارفض';
+
+  @override
+  String get mtaKeep => 'تراجع';
+
+  @override
+  String get mtaAssign => 'إسناد';
+
+  @override
+  String get mtaReassign => 'تغيير المُسند إليه';
+
+  @override
+  String get mtaAssignTitle => 'إسناد الطلب إلى';
+
+  @override
+  String get mtaAssignedTo => 'المُسند إليه';
+
+  @override
+  String get mtaUnassigned => 'لم يُسند بعد';
+
+  @override
+  String get mtaNoStaff => 'لا يوجد موظفون متاحون للإسناد.';
+
+  @override
+  String get mtaActionFailed => 'تعذّر تنفيذ الإجراء. حاول مرة أخرى.';
+
+  @override
+  String get mtaActionDone => 'تم تنفيذ الإجراء.';
+
+  @override
+  String get mtaStatusTitle => 'تحديث الحالة';
+
+  @override
+  String mtaMoveTo(String status) {
+    return 'نقل إلى «$status»';
+  }
+
+  @override
+  String get mtaNoActions => 'لا إجراءات متاحة لهذا الطلب.';
+
+  @override
+  String get mtaReviewTitle => 'مراجعة الطلب';
+
+  @override
+  String get ctaSection => 'إجراءات العقد';
+
+  @override
+  String get ctaHandover => 'تسجيل تسليم الوحدة';
+
+  @override
+  String get ctaHandoverDesc =>
+      'تبدأ الضمانات وتُفتح طلبات الصيانة من تاريخ التسليم.';
+
+  @override
+  String get ctaHandoverDate => 'تاريخ التسليم';
+
+  @override
+  String get ctaChecklist => 'قائمة التسليم';
+
+  @override
+  String get ctaCheckKeys => 'تسليم المفاتيح';
+
+  @override
+  String get ctaCheckMeters => 'قراءة العدادات';
+
+  @override
+  String get ctaCheckInspection => 'معاينة الوحدة مع العميل';
+
+  @override
+  String get ctaCheckSnags => 'تسجيل الملاحظات والعيوب';
+
+  @override
+  String get ctaCheckDocuments => 'تسليم المستندات';
+
+  @override
+  String get ctaNotes => 'ملاحظات (اختياري)';
+
+  @override
+  String get ctaSave => 'حفظ';
+
+  @override
+  String get ctaSaved => 'تم الحفظ.';
+
+  @override
+  String get ctaFailed => 'تعذّر تنفيذ الإجراء. حاول مرة أخرى.';
+
+  @override
+  String get ctaCancelContract => 'إلغاء العقد';
+
+  @override
+  String get ctaCancelDesc =>
+      'يُحرَّر الوحدة وتُسوَّى المبالغ حسب سياسة الشركة.';
+
+  @override
+  String get ctaCancelReason => 'سبب الإلغاء';
+
+  @override
+  String get ctaCollected => 'المحصَّل حتى الآن';
+
+  @override
+  String get ctaRetained => 'المبلغ المحتجز (ج.م)';
+
+  @override
+  String get ctaRefund => 'المبلغ المسترد (ج.م)';
+
+  @override
+  String get ctaCancelNotes => 'ملاحظات مالية (اختياري)';
+
+  @override
+  String get ctaCancelWarn => 'لا يمكن التراجع عن الإلغاء.';
+
+  @override
+  String get ctaConfirmCancel => 'تأكيد الإلغاء';
+
+  @override
+  String get ctaReasonRequired => 'اكتب سبب الإلغاء.';
+
+  @override
+  String get audTitle => 'سجل التدقيق';
+
+  @override
+  String get audProfileDesc => 'من فعل ماذا ومتى (للقراءة فقط)';
+
+  @override
+  String audCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n حدثًا',
+      few: '$n أحداث',
+      two: 'حدثان',
+      one: 'حدث واحد',
+      zero: 'لا أحداث',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get audSearchHint => 'ابحث بالإجراء أو نوع السجل';
+
+  @override
+  String get audEmpty => 'لا أحداث مطابقة.';
+
+  @override
+  String get audActor => 'المنفّذ';
+
+  @override
+  String get audSystem => 'النظام';
+
+  @override
+  String get audEntity => 'السجل';
+
+  @override
+  String get audIp => 'عنوان IP';
+
+  @override
+  String get audWhen => 'الوقت';
+
+  @override
+  String get audBefore => 'قبل';
+
+  @override
+  String get audAfter => 'بعد';
+
+  @override
+  String get audNoChanges => 'لا تفاصيل مسجّلة.';
 }

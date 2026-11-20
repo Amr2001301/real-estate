@@ -51,6 +51,22 @@ abstract final class StaffAccess {
       const ['brokers:read', 'broker_leads:read', 'broker_reservations:read', 'broker_contracts:read', 'broker_commissions:read', 'broker_payouts:read']
           .any(p.has);
 
+  /// «الصيانة» — the admin's maintenance pages (the API's /maintenance-requests
+  /// is ADMIN-only; the supervisor has her own screens).
+  static bool maintenance(AppRole? r, StaffPermissions p) => r == AppRole.admin;
+
+  /// «سجل التدقيق» (audit:read; the API's /audit-logs is ADMIN-only).
+  static bool auditLog(AppRole? r, StaffPermissions p) => r == AppRole.admin;
+
+  /// «العملاء المكررون» (leads:read; the API lets only the admin and the sales manager in).
+  static bool duplicates(AppRole? r, StaffPermissions p) => _manager(r);
+
+  /// «أهداف الفريق» — setting the team's targets (admin and sales manager).
+  static bool teamTargets(AppRole? r, StaffPermissions p) => _manager(r);
+
+  /// «أداء الوسطاء» (broker_reports:read; the admin has it).
+  static bool brokerReports(AppRole? r, StaffPermissions p) => r == AppRole.admin || p.has('broker_reports:read');
+
   /// «الحملات» (campaigns:manage).
   static bool campaigns(AppRole? r, StaffPermissions p) => _manager(r) || p.has('campaigns:manage');
 }

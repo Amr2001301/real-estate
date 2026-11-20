@@ -194,6 +194,7 @@ class ContractPage extends Equatable {
     this.overdue = 0,
     this.openFees = 0,
     this.upcoming = 0,
+    this.handedOver = false,
   });
 
   final ContractRow row;
@@ -216,6 +217,9 @@ class ContractPage extends Equatable {
   final double overdue;
   final double openFees;
   final double upcoming;
+
+  /// The unit was handed over (the website's handover panel).
+  final bool handedOver;
 
   double get value => contractValue ?? row.total ?? 0;
   double get remaining => balance ?? (value - paid);
@@ -290,11 +294,12 @@ class ContractPage extends Equatable {
       overdue: readAmount(totals['overdue']) ?? 0,
       openFees: readAmount(totals['openFees']) ?? 0,
       upcoming: readAmount(totals['upcoming']) ?? 0,
+      handedOver: j['handover'] != null,
     );
   }
 
   @override
-  List<Object?> get props => [row, installments, lines, payments, paid, balance, overdue];
+  List<Object?> get props => [row, installments, lines, payments, paid, balance, overdue, handedOver];
 }
 
 class ContractsViewRepository {

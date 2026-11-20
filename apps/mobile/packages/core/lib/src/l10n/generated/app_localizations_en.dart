@@ -10103,4 +10103,221 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bxNoAgent => 'No agent';
+
+  @override
+  String get mtaTitle => 'Maintenance requests';
+
+  @override
+  String get mtaProfileDesc => 'Review, approve and assign requests';
+
+  @override
+  String mtaCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n requests',
+      one: '1 request',
+      zero: 'No requests',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mtaReviewPending => 'Awaiting review';
+
+  @override
+  String get mtaReviewApproved => 'Approved';
+
+  @override
+  String get mtaReviewRejected => 'Rejected';
+
+  @override
+  String get mtaFilterTitle => 'Filter requests';
+
+  @override
+  String get mtaFilterApply => 'Apply';
+
+  @override
+  String get mtaFilterReview => 'Review';
+
+  @override
+  String get mtaSearchHint => 'Search by customer, unit or description';
+
+  @override
+  String get mtaEmpty => 'No requests match this filter.';
+
+  @override
+  String get mtaApprove => 'Approve request';
+
+  @override
+  String get mtaReject => 'Reject request';
+
+  @override
+  String get mtaRejectAsk => 'Reject this request? This cannot be undone.';
+
+  @override
+  String get mtaConfirmReject => 'Yes, reject';
+
+  @override
+  String get mtaKeep => 'Keep it';
+
+  @override
+  String get mtaAssign => 'Assign';
+
+  @override
+  String get mtaReassign => 'Change assignee';
+
+  @override
+  String get mtaAssignTitle => 'Assign the request to';
+
+  @override
+  String get mtaAssignedTo => 'Assigned to';
+
+  @override
+  String get mtaUnassigned => 'Not assigned yet';
+
+  @override
+  String get mtaNoStaff => 'No staff available to assign.';
+
+  @override
+  String get mtaActionFailed => 'Couldn\'t complete the action. Try again.';
+
+  @override
+  String get mtaActionDone => 'Done.';
+
+  @override
+  String get mtaStatusTitle => 'Update status';
+
+  @override
+  String mtaMoveTo(String status) {
+    return 'Move to “$status”';
+  }
+
+  @override
+  String get mtaNoActions => 'No actions available for this request.';
+
+  @override
+  String get mtaReviewTitle => 'Request review';
+
+  @override
+  String get ctaSection => 'Contract actions';
+
+  @override
+  String get ctaHandover => 'Record unit handover';
+
+  @override
+  String get ctaHandoverDesc =>
+      'Warranties start and maintenance opens from the handover date.';
+
+  @override
+  String get ctaHandoverDate => 'Handover date';
+
+  @override
+  String get ctaChecklist => 'Handover checklist';
+
+  @override
+  String get ctaCheckKeys => 'Keys handed over';
+
+  @override
+  String get ctaCheckMeters => 'Meter readings taken';
+
+  @override
+  String get ctaCheckInspection => 'Unit inspected with the customer';
+
+  @override
+  String get ctaCheckSnags => 'Snags recorded';
+
+  @override
+  String get ctaCheckDocuments => 'Documents handed over';
+
+  @override
+  String get ctaNotes => 'Notes (optional)';
+
+  @override
+  String get ctaSave => 'Save';
+
+  @override
+  String get ctaSaved => 'Saved.';
+
+  @override
+  String get ctaFailed => 'Couldn\'t complete the action. Try again.';
+
+  @override
+  String get ctaCancelContract => 'Cancel contract';
+
+  @override
+  String get ctaCancelDesc =>
+      'Releases the unit and settles the amounts per the company\'s policy.';
+
+  @override
+  String get ctaCancelReason => 'Reason for cancelling';
+
+  @override
+  String get ctaCollected => 'Collected so far';
+
+  @override
+  String get ctaRetained => 'Amount retained (EGP)';
+
+  @override
+  String get ctaRefund => 'Amount refunded (EGP)';
+
+  @override
+  String get ctaCancelNotes => 'Financial notes (optional)';
+
+  @override
+  String get ctaCancelWarn => 'A cancellation can\'t be undone.';
+
+  @override
+  String get ctaConfirmCancel => 'Confirm cancellation';
+
+  @override
+  String get ctaReasonRequired => 'Write the reason for cancelling.';
+
+  @override
+  String get audTitle => 'Audit log';
+
+  @override
+  String get audProfileDesc => 'Who did what and when (read-only)';
+
+  @override
+  String audCountN(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n events',
+      one: '1 event',
+      zero: 'No events',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get audSearchHint => 'Search by action or record type';
+
+  @override
+  String get audEmpty => 'No matching events.';
+
+  @override
+  String get audActor => 'Done by';
+
+  @override
+  String get audSystem => 'System';
+
+  @override
+  String get audEntity => 'Record';
+
+  @override
+  String get audIp => 'IP address';
+
+  @override
+  String get audWhen => 'When';
+
+  @override
+  String get audBefore => 'Before';
+
+  @override
+  String get audAfter => 'After';
+
+  @override
+  String get audNoChanges => 'No details recorded.';
 }

@@ -17935,6 +17935,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No agent'**
   String get bxNoAgent;
+
+  /// No description provided for @mtaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance requests'**
+  String get mtaTitle;
+
+  /// No description provided for @mtaProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Review, approve and assign requests'**
+  String get mtaProfileDesc;
+
+  /// No description provided for @mtaCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No requests} =1{1 request} other{{n} requests}}'**
+  String mtaCountN(int n);
+
+  /// No description provided for @mtaReviewPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting review'**
+  String get mtaReviewPending;
+
+  /// No description provided for @mtaReviewApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get mtaReviewApproved;
+
+  /// No description provided for @mtaReviewRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get mtaReviewRejected;
+
+  /// No description provided for @mtaFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter requests'**
+  String get mtaFilterTitle;
+
+  /// No description provided for @mtaFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get mtaFilterApply;
+
+  /// No description provided for @mtaFilterReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get mtaFilterReview;
+
+  /// No description provided for @mtaSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by customer, unit or description'**
+  String get mtaSearchHint;
+
+  /// No description provided for @mtaEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests match this filter.'**
+  String get mtaEmpty;
+
+  /// No description provided for @mtaApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve request'**
+  String get mtaApprove;
+
+  /// No description provided for @mtaReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject request'**
+  String get mtaReject;
+
+  /// No description provided for @mtaRejectAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject this request? This cannot be undone.'**
+  String get mtaRejectAsk;
+
+  /// No description provided for @mtaConfirmReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, reject'**
+  String get mtaConfirmReject;
+
+  /// No description provided for @mtaKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it'**
+  String get mtaKeep;
+
+  /// No description provided for @mtaAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign'**
+  String get mtaAssign;
+
+  /// No description provided for @mtaReassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Change assignee'**
+  String get mtaReassign;
+
+  /// No description provided for @mtaAssignTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign the request to'**
+  String get mtaAssignTitle;
+
+  /// No description provided for @mtaAssignedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned to'**
+  String get mtaAssignedTo;
+
+  /// No description provided for @mtaUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned yet'**
+  String get mtaUnassigned;
+
+  /// No description provided for @mtaNoStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'No staff available to assign.'**
+  String get mtaNoStaff;
+
+  /// No description provided for @mtaActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete the action. Try again.'**
+  String get mtaActionFailed;
+
+  /// No description provided for @mtaActionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done.'**
+  String get mtaActionDone;
+
+  /// No description provided for @mtaStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update status'**
+  String get mtaStatusTitle;
+
+  /// No description provided for @mtaMoveTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to “{status}”'**
+  String mtaMoveTo(String status);
+
+  /// No description provided for @mtaNoActions.
+  ///
+  /// In en, this message translates to:
+  /// **'No actions available for this request.'**
+  String get mtaNoActions;
+
+  /// No description provided for @mtaReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request review'**
+  String get mtaReviewTitle;
+
+  /// No description provided for @ctaSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract actions'**
+  String get ctaSection;
+
+  /// No description provided for @ctaHandover.
+  ///
+  /// In en, this message translates to:
+  /// **'Record unit handover'**
+  String get ctaHandover;
+
+  /// No description provided for @ctaHandoverDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Warranties start and maintenance opens from the handover date.'**
+  String get ctaHandoverDesc;
+
+  /// No description provided for @ctaHandoverDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover date'**
+  String get ctaHandoverDate;
+
+  /// No description provided for @ctaChecklist.
+  ///
+  /// In en, this message translates to:
+  /// **'Handover checklist'**
+  String get ctaChecklist;
+
+  /// No description provided for @ctaCheckKeys.
+  ///
+  /// In en, this message translates to:
+  /// **'Keys handed over'**
+  String get ctaCheckKeys;
+
+  /// No description provided for @ctaCheckMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'Meter readings taken'**
+  String get ctaCheckMeters;
+
+  /// No description provided for @ctaCheckInspection.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit inspected with the customer'**
+  String get ctaCheckInspection;
+
+  /// No description provided for @ctaCheckSnags.
+  ///
+  /// In en, this message translates to:
+  /// **'Snags recorded'**
+  String get ctaCheckSnags;
+
+  /// No description provided for @ctaCheckDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents handed over'**
+  String get ctaCheckDocuments;
+
+  /// No description provided for @ctaNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes (optional)'**
+  String get ctaNotes;
+
+  /// No description provided for @ctaSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get ctaSave;
+
+  /// No description provided for @ctaSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get ctaSaved;
+
+  /// No description provided for @ctaFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t complete the action. Try again.'**
+  String get ctaFailed;
+
+  /// No description provided for @ctaCancelContract.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel contract'**
+  String get ctaCancelContract;
+
+  /// No description provided for @ctaCancelDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Releases the unit and settles the amounts per the company\'s policy.'**
+  String get ctaCancelDesc;
+
+  /// No description provided for @ctaCancelReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for cancelling'**
+  String get ctaCancelReason;
+
+  /// No description provided for @ctaCollected.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected so far'**
+  String get ctaCollected;
+
+  /// No description provided for @ctaRetained.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount retained (EGP)'**
+  String get ctaRetained;
+
+  /// No description provided for @ctaRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount refunded (EGP)'**
+  String get ctaRefund;
+
+  /// No description provided for @ctaCancelNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial notes (optional)'**
+  String get ctaCancelNotes;
+
+  /// No description provided for @ctaCancelWarn.
+  ///
+  /// In en, this message translates to:
+  /// **'A cancellation can\'t be undone.'**
+  String get ctaCancelWarn;
+
+  /// No description provided for @ctaConfirmCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cancellation'**
+  String get ctaConfirmCancel;
+
+  /// No description provided for @ctaReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Write the reason for cancelling.'**
+  String get ctaReasonRequired;
+
+  /// No description provided for @audTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit log'**
+  String get audTitle;
+
+  /// No description provided for @audProfileDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Who did what and when (read-only)'**
+  String get audProfileDesc;
+
+  /// No description provided for @audCountN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{No events} =1{1 event} other{{n} events}}'**
+  String audCountN(int n);
+
+  /// No description provided for @audSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by action or record type'**
+  String get audSearchHint;
+
+  /// No description provided for @audEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching events.'**
+  String get audEmpty;
+
+  /// No description provided for @audActor.
+  ///
+  /// In en, this message translates to:
+  /// **'Done by'**
+  String get audActor;
+
+  /// No description provided for @audSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get audSystem;
+
+  /// No description provided for @audEntity.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get audEntity;
+
+  /// No description provided for @audIp.
+  ///
+  /// In en, this message translates to:
+  /// **'IP address'**
+  String get audIp;
+
+  /// No description provided for @audWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get audWhen;
+
+  /// No description provided for @audBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get audBefore;
+
+  /// No description provided for @audAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get audAfter;
+
+  /// No description provided for @audNoChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No details recorded.'**
+  String get audNoChanges;
 }
 
 class _AppLocalizationsDelegate
