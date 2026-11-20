@@ -175,6 +175,35 @@ class HomeListHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
+    if (AppPalette.calmLight) {
+      // Devora: the title on the page itself, no navy block.
+      final colors = context.appColors;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(20, top + 14, 20, 4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 10),
+            ] else if (back) ...[
+              HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if ((subtitle ?? '').isNotEmpty) ...[
+                  Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, height: 1.4, color: colors.inkMuted)),
+                  const SizedBox(height: 3),
+                ],
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 23, height: 1.3, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              ]),
+            ),
+            for (final a in actions) ...[const SizedBox(width: 8), a],
+          ]),
+          if (bottom != null) ...[const SizedBox(height: 16), bottom!],
+        ]),
+      );
+    }
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
@@ -230,6 +259,38 @@ class HomeHeroButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AppPalette.calmLight) {
+      final colors = context.appColors;
+      final light = DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: active ? dvGoldGradient : null,
+          color: active ? null : colors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: active ? null : Border.all(color: colors.hairline),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Stack(alignment: Alignment.center, children: [
+                Icon(icon, size: 21, color: active ? dvOnGold : colors.inkStrong),
+                if (dot)
+                  PositionedDirectional(
+                    top: 9,
+                    end: 9,
+                    child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFD2AE58), shape: BoxShape.circle)),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      );
+      return tooltip == null ? light : Tooltip(message: tooltip!, child: light);
+    }
     final button = Material(
       color: active ? AppPalette.gold400 : Colors.white.withValues(alpha: 0.10),
       shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: active ? 0 : 0.16))),
@@ -266,17 +327,21 @@ class HomeSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: 46,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: AppPalette.calmLight ? context.appColors.surface : Colors.white,
+          borderRadius: BorderRadius.circular(AppPalette.calmLight ? 14 : 16),
+          border: AppPalette.calmLight ? Border.all(color: context.appColors.hairline) : null,
+        ),
         child: Row(children: [
           const SizedBox(width: 12),
-          Icon(Icons.search_rounded, size: 20, color: AppPalette.navy),
+          Icon(Icons.search_rounded, size: 20, color: AppPalette.calmLight ? context.appColors.inkMuted : AppPalette.navy),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.search,
               onSubmitted: onSubmitted,
-              style: TextStyle(fontSize: 14, color: AppPalette.navy),
+              style: TextStyle(fontSize: 14, color: AppPalette.calmLight ? context.appColors.inkStrong : AppPalette.navy),
               decoration: InputDecoration(
                 hintText: hint,
                 hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF8A94A6)),
