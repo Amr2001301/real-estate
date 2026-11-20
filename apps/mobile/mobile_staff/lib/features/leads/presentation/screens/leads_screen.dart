@@ -352,32 +352,23 @@ class LeadCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 14.5, height: 1.4, fontWeight: FontWeight.w600, color: colors.inkStrong)),
                   const SizedBox(height: 5),
-                  Row(children: [
-                    if (due != null) ...[
-                      Flexible(child: Container(
-                        key: Key('lead-next-${lead.id}'),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (tone == DvTone.bad ? colors.error : colors.warning).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(due,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11.5, height: 1.4, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
-                      )),
-                      const SizedBox(width: 8),
-                    ],
-                    Expanded(child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted))),
-                  ]),
+                  Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
                 ]),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stageColor)),
-              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                  child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: stageColor)),
+                ),
+                if (due != null) ...[
+                  const SizedBox(height: 6),
+                  Text(due,
+                      key: Key('lead-next-${lead.id}'),
+                      style: TextStyle(fontSize: 11.5, height: 1.3, fontWeight: FontWeight.w700, color: tone == DvTone.bad ? colors.error : colors.warning)),
+                ],
+              ]),
               if ((lead.phone ?? '').isNotEmpty) ...[
                 const SizedBox(width: 8),
                 _RoundAction(
