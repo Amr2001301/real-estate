@@ -3410,5 +3410,19 @@
   "audWhen": "الوقت",
   "audBefore": "قبل",
   "audAfter": "بعد",
-  "audNoChanges": "لا تفاصيل مسجّلة."
+  "audNoChanges": "لا تفاصيل مسجّلة.",
+  "dvAwaiting": "ينتظر قرارك",
+  "dvAllClear": "لا شيء ينتظرك الآن",
+  "dvReports": "التقارير والأداء",
+  "dvReportsSub": "المسار والمستشارون والوسطاء والتدفق النقدي",
+  "dvCollectedMonth": "المحصَّل هذا الشهر",
+  "dvLastMonth": "الشهر الماضي",
+  "dvSignedN": "{n} عقود موقَّعة",
+  "@dvSignedN": {"placeholders": {"n": {"type": "int"}}},
+  "dvNewLeadsN": "{n} عملاء جدد",
+  "@dvNewLeadsN": {"placeholders": {"n": {"type": "int"}}},
+  "dvOverdueAmount": "متأخر {v}",
+  "@dvOverdueAmount": {"placeholders": {"v": {"type": "String"}}},
+  "dvCollectionPct": "{p}% نسبة التحصيل",
+  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}}
 }

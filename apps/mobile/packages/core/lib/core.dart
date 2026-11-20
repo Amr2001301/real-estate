@@ -141,5 +141,6 @@ export 'src/gallery/component_gallery_screen.dart';
 // Staff-look kit (hero, bands, pills, filter sheet, catalog pieces) shared by both apps
 export 'src/kit/catalog_kit.dart';
 export 'src/kit/filter_kit.dart';
+export 'src/kit/devora_kit.dart';
 export 'src/kit/home_kit.dart';
 export 'src/kit/profile_kit.dart';

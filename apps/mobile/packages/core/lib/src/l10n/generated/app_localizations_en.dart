@@ -10320,4 +10320,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audNoChanges => 'No details recorded.';
+
+  @override
+  String get dvAwaiting => 'Awaiting you';
+
+  @override
+  String get dvAllClear => 'Nothing is waiting for you';
+
+  @override
+  String get dvReports => 'Reports & performance';
+
+  @override
+  String get dvReportsSub => 'Funnel, reps, brokers and cash flow';
+
+  @override
+  String get dvCollectedMonth => 'Collected this month';
+
+  @override
+  String get dvLastMonth => 'Last month';
+
+  @override
+  String dvSignedN(int n) {
+    return '$n signed';
+  }
+
+  @override
+  String dvNewLeadsN(int n) {
+    return '$n new leads';
+  }
+
+  @override
+  String dvOverdueAmount(String v) {
+    return '$v overdue';
+  }
+
+  @override
+  String dvCollectionPct(int p) {
+    return '$p% collected';
+  }
 }

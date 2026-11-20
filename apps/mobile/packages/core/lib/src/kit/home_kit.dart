@@ -72,7 +72,7 @@ Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors
 
 /// A chosen option's fill: a cream by day, a gold wash by night.
 Color homeSelected(BuildContext context) =>
-    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : (AppPalette.ctaIsPrimary ? const Color(0xFFF2F5FA) : const Color(0xFFFFFCF5));
+    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : (AppPalette.calmLight ? const Color(0xFFF2F5FA) : const Color(0xFFFFFCF5));
 
 /// A fine line or a track on a card: warm grey by day, the hairline by night.
 Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : AppPalette.lightLine;
@@ -611,21 +611,21 @@ class HomeActions extends StatelessWidget {
                   onTap: actions[i].onTap,
                   child: Column(
                     children: [
-                      if (AppPalette.ctaIsPrimary && !homeIsDark(context))
+                      if (AppPalette.calmLight && !homeIsDark(context))
                         // Light and calm: one navy tile for the main action,
                         // white tiles with a hairline for the rest.
                         Container(
                           width: 58,
                           height: 58,
                           decoration: BoxDecoration(
-                            color: i == 0 ? AppPalette.navy : Colors.white,
+                            color: i == 0 ? homeCta(context) : Colors.white,
                             borderRadius: BorderRadius.circular(18),
                             border: i == 0 ? null : Border.all(color: homeLine(context)),
                             boxShadow: [
                               BoxShadow(color: AppPalette.navy.withValues(alpha: i == 0 ? 0.22 : 0.06), blurRadius: 16, offset: const Offset(0, 6)),
                             ],
                           ),
-                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? Colors.white : AppPalette.navy),
+                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? homeOnCta(context) : AppPalette.navy),
                         )
                       else
                         Container(
@@ -726,7 +726,7 @@ class HomeBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final light = AppPalette.ctaIsPrimary && !homeIsDark(context);
+    final light = AppPalette.calmLight && !homeIsDark(context);
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),

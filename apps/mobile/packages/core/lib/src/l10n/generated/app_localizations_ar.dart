@@ -10361,4 +10361,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audNoChanges => 'لا تفاصيل مسجّلة.';
+
+  @override
+  String get dvAwaiting => 'ينتظر قرارك';
+
+  @override
+  String get dvAllClear => 'لا شيء ينتظرك الآن';
+
+  @override
+  String get dvReports => 'التقارير والأداء';
+
+  @override
+  String get dvReportsSub => 'المسار والمستشارون والوسطاء والتدفق النقدي';
+
+  @override
+  String get dvCollectedMonth => 'المحصَّل هذا الشهر';
+
+  @override
+  String get dvLastMonth => 'الشهر الماضي';
+
+  @override
+  String dvSignedN(int n) {
+    return '$n عقود موقَّعة';
+  }
+
+  @override
+  String dvNewLeadsN(int n) {
+    return '$n عملاء جدد';
+  }
+
+  @override
+  String dvOverdueAmount(String v) {
+    return 'متأخر $v';
+  }
+
+  @override
+  String dvCollectionPct(int p) {
+    return '$p% نسبة التحصيل';
+  }
 }

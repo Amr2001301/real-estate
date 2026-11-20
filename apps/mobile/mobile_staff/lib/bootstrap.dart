@@ -35,11 +35,13 @@ Future<void> bootstrap(EnvConfig env) async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = EnvConfig.initialize(env);
 
-  // The staff app wears the platform's identity (the Devora crystal: midnight
-  // blue-black with platinum steel), not the company's colours.
-  AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFFB4BFD6));
+  // The staff app wears the platform's identity (the Devora crystal's midnight
+  // blue-black, champagne-gold actions, frosted glass, Noto Kufi Arabic), not the company's colours.
+  AppPalette.applyBrand(primary: const Color(0xFF0B1426), accent: const Color(0xFFD2AE58));
   AppPalette.applySurfaces(cool: true);
-  AppPalette.ctaIsPrimary = true;
+  AppPalette.calmLight = true;
+  AppPalette.glassNav = true;
+  AppTypography.useNotoKufi();
 
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
 

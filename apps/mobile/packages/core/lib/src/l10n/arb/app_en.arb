@@ -3418,5 +3418,19 @@
   "audWhen": "When",
   "audBefore": "Before",
   "audAfter": "After",
-  "audNoChanges": "No details recorded."
+  "audNoChanges": "No details recorded.",
+  "dvAwaiting": "Awaiting you",
+  "dvAllClear": "Nothing is waiting for you",
+  "dvReports": "Reports & performance",
+  "dvReportsSub": "Funnel, reps, brokers and cash flow",
+  "dvCollectedMonth": "Collected this month",
+  "dvLastMonth": "Last month",
+  "dvSignedN": "{n} signed",
+  "@dvSignedN": {"placeholders": {"n": {"type": "int"}}},
+  "dvNewLeadsN": "{n} new leads",
+  "@dvNewLeadsN": {"placeholders": {"n": {"type": "int"}}},
+  "dvOverdueAmount": "{v} overdue",
+  "@dvOverdueAmount": {"placeholders": {"v": {"type": "String"}}},
+  "dvCollectionPct": "{p}% collected",
+  "@dvCollectionPct": {"placeholders": {"p": {"type": "int"}}}
 }

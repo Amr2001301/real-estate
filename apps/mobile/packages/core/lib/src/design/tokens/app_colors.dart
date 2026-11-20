@@ -186,6 +186,14 @@ abstract final class AppPalette {
   /// app, whose accent (platinum) does not read as a button on white.
   static bool ctaIsPrimary = false;
 
+  /// Light figure bands and quick actions (white cards with a hairline)
+  /// instead of navy blocks — the staff app's calmer home.
+  static bool calmLight = false;
+
+  /// The floating bottom bar as frosted glass with a gold pill for the
+  /// chosen tab (the staff app), instead of the navy bar.
+  static bool glassNav = false;
+
   static void applySurfaces({bool cool = false}) => _l = cool ? _lightCool : _lightWarm;
 
   // ---- Dark surfaces --------------------------------------------------------

@@ -18325,6 +18325,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No details recorded.'**
   String get audNoChanges;
+
+  /// No description provided for @dvAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting you'**
+  String get dvAwaiting;
+
+  /// No description provided for @dvAllClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is waiting for you'**
+  String get dvAllClear;
+
+  /// No description provided for @dvReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports & performance'**
+  String get dvReports;
+
+  /// No description provided for @dvReportsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Funnel, reps, brokers and cash flow'**
+  String get dvReportsSub;
+
+  /// No description provided for @dvCollectedMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected this month'**
+  String get dvCollectedMonth;
+
+  /// No description provided for @dvLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get dvLastMonth;
+
+  /// No description provided for @dvSignedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} signed'**
+  String dvSignedN(int n);
+
+  /// No description provided for @dvNewLeadsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} new leads'**
+  String dvNewLeadsN(int n);
+
+  /// No description provided for @dvOverdueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{v} overdue'**
+  String dvOverdueAmount(String v);
+
+  /// No description provided for @dvCollectionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'{p}% collected'**
+  String dvCollectionPct(int p);
 }
 
 class _AppLocalizationsDelegate
