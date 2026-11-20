@@ -337,12 +337,17 @@ class UnitFacts extends StatelessWidget {
             if (i > 0) VerticalDivider(width: 1, color: colors.hairline),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
                 child: Column(children: [
                   Icon(icon, size: 20, color: AppPalette.gold500),
-                  const SizedBox(height: 3),
-                  Text(value, style: homeDisplay(value.length > 7 ? 15 : 18, colors.inkStrong)),
-                  Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                  const SizedBox(height: 6),
+                  // One line: a long value ("الدور الأرضي") shrinks, never wraps.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(value, maxLines: 1, style: TextStyle(fontSize: 17, height: 1.3, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, height: 1.4, color: colors.inkMuted)),
                 ]),
               ),
             ),
