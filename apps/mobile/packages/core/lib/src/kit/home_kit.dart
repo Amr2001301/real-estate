@@ -1177,7 +1177,7 @@ class HomeFunnelStep {
   final List<Color> colors;
 }
 
-const homeTaupe = [Color(0xFF8A7F70), Color(0xFF6B6256)];
+const homeTaupe = [Color(0xFF9AA4B4), Color(0xFF6B7587)];
 List<Color> get homeNavy => [AppPalette.navy600, AppPalette.navy];
 List<Color> get homeGold => [AppPalette.gold300, AppPalette.gold500];
 const homeAmber = [Color(0xFFDDA14A), AppPalette.warningLight];
