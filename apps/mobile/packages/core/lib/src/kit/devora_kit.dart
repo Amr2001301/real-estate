@@ -1389,7 +1389,7 @@ class DvDonut extends StatelessWidget {
       height: size,
       child: Stack(alignment: Alignment.center, children: [
         CustomPaint(size: Size.square(size), painter: _DonutPainter(parts, stroke, context.appColors.surfaceSoft)),
-        if (center != null) center!,
+        ?center,
       ]),
     );
   }
