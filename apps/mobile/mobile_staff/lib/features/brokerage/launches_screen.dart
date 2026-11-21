@@ -109,62 +109,27 @@ class BxLaunchCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final x = launch;
-    final tone = bxLaunchColor(x.status, colors);
-    return BxCard(
+    Widget fig(String label, String value) => Expanded(
+          child: Column(children: [
+            Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            const SizedBox(height: 2),
+            Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          ]),
+        );
+    return BxTileCard(
       key: ValueKey('bx-launch-${x.id}'),
       onTap: onTap,
-      footer: Row(children: [
-        Expanded(
-          child: Text(
-            [l10n.bxPaidN(x.paid), l10n.bxPendingN(x.pending), l10n.bxAllocatedN(x.allocated)].join(' · '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12, color: colors.inkMuted),
-          ),
-        ),
-        Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-      ]),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        BxIconTile(Icons.rocket_launch_rounded, tone),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(x.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong, height: 1.3)),
-            const SizedBox(height: 2),
-            Text(
-              [x.developerName, if (x.projectName != null && x.projectName != x.name) x.projectName!].join(' · '),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: colors.inkMuted),
-            ),
-            const SizedBox(height: 7),
-            Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              CatalogBadge.status(bxLaunchStatus(l10n, x.status), tone),
-              if (x.launchDate != null) Text(l10n.bxLaunchOn(bxDate(context, x.launchDate)), style: TextStyle(fontSize: 12, color: colors.ink)),
-            ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: _Fig(label: l10n.bxEoiAmount, child: BxAmount(x.eoiAmount, size: 14))),
-              Expanded(child: _Fig(label: l10n.bxEois, child: Text(ltr('${x.total}'), style: homeDisplay(14, colors.inkStrong)))),
-              Expanded(child: _Fig(label: l10n.bxHeld, child: BxAmount(x.held, size: 14))),
-            ]),
-          ]),
-        ),
+      icon: Icons.rocket_launch_rounded,
+      title: x.name,
+      subtitle: [x.developerName, if (x.launchDate != null) bxDate(context, x.launchDate)].join(' · '),
+      trailing: BxPill(bxLaunchStatus(l10n, x.status), bxLaunchColor(x.status, colors)),
+      strip: Row(children: [
+        fig(l10n.bxEoiAmount, homeCompactText(x.eoiAmount, l10n)),
+        fig(l10n.bxEois, ltr('${x.total}')),
+        fig(l10n.bxHeld, homeCompactText(x.held, l10n)),
       ]),
     );
   }
-}
-
-class _Fig extends StatelessWidget {
-  const _Fig({required this.label, required this.child});
-  final String label;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
-        FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: child),
-      ]);
 }
 
 /// One launch: its facts, then the EOIs the caller may see — the paid ones

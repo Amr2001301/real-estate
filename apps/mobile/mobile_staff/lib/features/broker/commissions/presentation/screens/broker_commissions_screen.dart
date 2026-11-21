@@ -5,9 +5,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../common/staff_list_skeleton.dart';
+import '../../../../brokerage/brokerage_kit.dart' show BxPill, BxTileCard;
 import '../../../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../domain/entities/broker_commission.dart';
 import '../../view/broker_payouts_data.dart';
+import '../../../profile/presentation/cubit/broker_profile_cubit.dart';
 import '../cubit/broker_commissions_cubit.dart';
 
 /// «عمولاتي» for the broker (the same look as the rep's dues, owner-approved
@@ -62,11 +64,16 @@ class _BrokerCommissionsScreenState extends State<BrokerCommissionsScreen> {
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                            child: HomeBand(figures: [
-                              HomeFigure(id: 'net', value: netF.$1, label: l10n.bkNet, hint: unit(netF.$2)),
-                              HomeFigure(id: 'pending', value: pend.$1, label: l10n.bonusStatusPending, hint: unit(pend.$2), warn: state.pendingTotal > 0),
-                              HomeFigure(id: 'paid', value: paid.$1, label: l10n.bkPayouts, hint: unit(paid.$2)),
-                            ]),
+                            child: DvHeroStats(
+                              id: 'net',
+                              label: l10n.bkNet,
+                              value: netF.$1,
+                              unit: unit(netF.$2),
+                              figures: [
+                                DvStat(id: 'pending', label: l10n.bonusStatusPending, value: pend.$1, unit: pend.$2, warn: state.pendingTotal > 0),
+                                DvStat(id: 'paid', label: l10n.bkPayouts, value: paid.$1, unit: paid.$2),
+                              ],
+                            ),
                           ),
                         ),
                         if (payouts.isNotEmpty)
@@ -92,7 +99,7 @@ class _BrokerCommissionsScreenState extends State<BrokerCommissionsScreen> {
                       ],
                       ...switch (state.status) {
                         DataStatus.initial || DataStatus.loading when all.isEmpty => [const SliverToBoxAdapter(child: SizedBox(height: 500, child: StaffListSkeleton()))],
-                        DataStatus.failure when all.isEmpty => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                        DataStatus.failure when all.isEmpty => [SliverToBoxAdapter(child: (context.read<BrokerProfileCubit>().state.data?.canViewCommissions == false ? EmptyState(icon: Icons.lock_outline_rounded, title: l10n.bkNoCommissionAccess) : ErrorState(failure: state.failure, onRetry: cubit.load)))],
                         DataStatus.empty when all.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.payments_rounded, title: l10n.brokerCommissionsEmptyTitle, message: l10n.brokerCommissionsEmptyMessage))],
                         _ when state.commissions.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.filter_list_off_rounded, title: l10n.pmNoMatch))],
                         _ => [
@@ -142,63 +149,32 @@ class CommissionCard extends StatelessWidget {
     final basis = double.tryParse(c.basisAmount ?? '');
     final pct = double.tryParse(c.commissionPct ?? '');
     final foot = c.payoutId != null ? l10n.bkOnPayout : (c.status == 'APPROVED' ? l10n.bkWaitingPayout : '');
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('commission-${c.id}'),
-        onTap: c.contractId == null ? null : () => context.push('/broker/contracts/${c.contractId}'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(icon, color: tone, size: 22),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(child: Text(c.clientName ?? c.projectName ?? l10n.navCommissions, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-                      const SizedBox(width: 6),
-                      Text.rich(TextSpan(children: [
-                        TextSpan(text: contractMoney(net), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ])),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(children: [
-                        if (c.contractNumber != null) TextSpan(text: ltr(c.contractNumber!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if (basis != null && pct != null) TextSpan(text: ' · ${context.l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 5),
-                    CatalogBadge.status(label, tone, icon: icon),
-                  ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
-              child: Row(children: [
-                if (c.earnedAt != null) Text(l10n.bkEarnedOn(DateFormatter.dayMonth(c.earnedAt!.toLocal(), languageCode: lang)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                const Spacer(),
-                if (foot.isNotEmpty) Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-              ]),
-            ),
-          ]),
+    return BxTileCard(
+      inkKey: Key('commission-${c.id}'),
+      onTap: c.contractId == null ? null : () => context.push('/broker/contracts/${c.contractId}'),
+      icon: icon,
+      title: c.clientName ?? c.projectName ?? l10n.navCommissions,
+      subtitle: [
+        if (c.contractNumber != null) ltr(c.contractNumber!),
+        if (basis != null && pct != null) context.l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%')),
+      ].join(' · '),
+      trailing: BxPill(label, tone),
+      strip: Row(children: [
+        Expanded(
+          child: Text.rich(TextSpan(children: [
+            TextSpan(text: contractMoney(net), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+          ])),
         ),
-      ),
+        Flexible(
+          child: Text(
+            [if (c.earnedAt != null) l10n.bkEarnedOn(DateFormatter.dayMonth(c.earnedAt!.toLocal(), languageCode: lang)), if (foot.isNotEmpty) foot].join(' · '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: colors.inkMuted),
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -226,28 +202,16 @@ class _PayoutCard extends StatelessWidget {
       if (p.status == 'PAID' && p.paidAt != null) l10n.bkPaidOn(DateFormatter.dayMonth(p.paidAt!, languageCode: lang)),
       if (p.method == 'BANK_TRANSFER') l10n.bkMethodBank,
     ].join(' · ');
-    return Container(
+    return BxTileCard(
       key: Key('payout-${p.id}'),
-      padding: const EdgeInsets.all(12),
-      decoration: homeCard(context, radius: 20),
-      child: Row(children: [
-        Container(width: 40, height: 40, decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(13)), child: Icon(Icons.account_balance_rounded, color: tone, size: 20)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Flexible(child: Text(p.number == null ? '—' : ltr(p.number!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppPalette.gold600))),
-              const SizedBox(width: 6),
-              CatalogBadge.status(label, tone),
-            ]),
-            if (sub.isNotEmpty) Text(sub, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          ]),
-        ),
-        Text.rich(TextSpan(children: [
-          TextSpan(text: contractMoney(p.totalNet), style: homeDisplay(15, colors.inkStrong)),
-          TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ])),
-      ]),
+      icon: Icons.account_balance_rounded,
+      title: p.number == null ? '—' : ltr(p.number!),
+      subtitle: sub,
+      trailing: BxPill(label, tone),
+      strip: Text.rich(TextSpan(children: [
+        TextSpan(text: contractMoney(p.totalNet), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+      ])),
     );
   }
 }

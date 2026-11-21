@@ -107,7 +107,7 @@ class _BrokerageHomeScreenState extends State<BrokerageHomeScreen> {
             : [
                 HomeActions(actions: [
                   HomeAction(id: 'add-lead', icon: Icons.person_add_rounded, label: l10n.shActLead, onTap: () => context.push('/leads/new')),
-                  HomeAction(id: 'listings', icon: Icons.home_work_rounded, label: l10n.bxListingsTitle, onTap: () => context.push('/bx/listings')),
+                  HomeAction(id: 'listings', icon: Icons.home_work_rounded, label: l10n.bxListingsShort, onTap: () => context.push('/bx/listings')),
                   HomeAction(id: 'deals', icon: Icons.handshake_rounded, label: l10n.bxDealsTitle, onTap: () => context.push('/bx/deals')),
                   HomeAction(id: 'launches', icon: Icons.rocket_launch_rounded, label: l10n.bxLaunchesTitle, onTap: () => context.push('/bx/launches')),
                 ]),
@@ -117,10 +117,10 @@ class _BrokerageHomeScreenState extends State<BrokerageHomeScreen> {
                     title: rep ? l10n.bxSharesMine : l10n.bxSharesTeam,
                     action: l10n.shAll,
                     onAction: () => context.push('/bx/commissions'),
-                    child: HomeTiles(tiles: [
-                      HomeTile(label: l10n.bxTotalPayable, value: homeCompactText(_shares!.payable, l10n), sub: bxCurrency(context)),
-                      HomeTile(label: l10n.bxTotalAwaiting, value: homeCompactText(_shares!.awaitingCollection, l10n), sub: bxCurrency(context)),
-                      HomeTile(label: l10n.bxTotalPaid, value: homeCompactText(_shares!.paid, l10n), sub: bxCurrency(context)),
+                    child: DvListCard(children: [
+                      DvRow(icon: Icons.account_balance_wallet_outlined, title: l10n.bxTotalPayable, trailing: _money(context, _shares!.payable), chevron: false),
+                      DvRow(icon: Icons.hourglass_bottom_rounded, title: l10n.bxTotalAwaiting, trailing: _money(context, _shares!.awaitingCollection), chevron: false),
+                      DvRow(icon: Icons.check_circle_outline_rounded, title: l10n.bxTotalPaid, trailing: _money(context, _shares!.paid), chevron: false),
                     ]),
                   ),
                 if (_launches.isNotEmpty)
@@ -153,6 +153,9 @@ class _BrokerageHomeScreenState extends State<BrokerageHomeScreen> {
       ),
     );
   }
+
+  Widget _money(BuildContext context, double v) => Text('${homeCompactText(v, context.l10n)} ${bxCurrency(context)}',
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appColors.inkStrong));
 
   /// A rep's own target; for a manager and the admin, the team's together.
   Widget _goal(BuildContext context, bool rep, String userId) {

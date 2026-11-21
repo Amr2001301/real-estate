@@ -15092,6 +15092,12 @@ abstract class AppLocalizations {
   /// **'Paid to you'**
   String get bpPaidOutLbl;
 
+  /// No description provided for @bkNoCommissionAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions are not available for your account'**
+  String get bkNoCommissionAccess;
+
   /// No description provided for @bpMyCommissions.
   ///
   /// In en, this message translates to:
@@ -17168,6 +17174,12 @@ abstract class AppLocalizations {
   /// **'Brokerage'**
   String get bxSection;
 
+  /// No description provided for @bxListingsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings'**
+  String get bxListingsShort;
+
   /// No description provided for @bxListingsTitle.
   ///
   /// In en, this message translates to:
@@ -17515,6 +17527,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No expressions of interest yet'**
   String get bxEoisEmpty;
+
+  /// No description provided for @bxPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get bxPlace;
 
   /// No description provided for @bxArea.
   ///

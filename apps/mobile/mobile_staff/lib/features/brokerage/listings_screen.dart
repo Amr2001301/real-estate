@@ -173,56 +173,26 @@ class BxListingCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final x = listing;
-    final tone = bxListingColor(x.status, colors);
     final specs = [
       '${ltr(catalogGrouped(x.area))} ${l10n.bxSqm}',
       if (x.bedrooms != null) '${ltr('${x.bedrooms}')} ${l10n.bxBedrooms}',
       if (x.bathrooms != null) '${ltr('${x.bathrooms}')} ${l10n.bxBathrooms}',
     ].join(' · ');
-    return BxCard(
+    return BxTileCard(
       key: ValueKey('bx-listing-${x.id}'),
       onTap: onTap,
-      footer: Row(children: [
-        Icon(Icons.person_outline_rounded, size: 15, color: colors.inkMuted),
-        const SizedBox(width: 5),
-        Expanded(child: Text(x.agentName ?? l10n.bxNoAgent, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-        Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-      ]),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        BxIconTile(bxKindIcon(x.kind), AppPalette.gold500),
-        const SizedBox(width: 11),
+      icon: bxKindIcon(x.kind),
+      title: x.title,
+      subtitle: [bxKind(l10n, x.kind), if (x.place.isNotEmpty) x.place].join(' · '),
+      line: specs,
+      strip: Row(children: [
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(x.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong, height: 1.3)),
-            const SizedBox(height: 3),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: ltr(x.code), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                TextSpan(text: ' · ${bxKind(l10n, x.kind)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                if (x.place.isNotEmpty) TextSpan(text: ' · ${x.place}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Text(specs, style: TextStyle(fontSize: 12, color: colors.ink)),
-            const SizedBox(height: 7),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              CatalogBadge.status(bxListingStatus(l10n, x.status, kind: x.kind), tone),
-              const Spacer(),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    BxAmount(x.price, size: 17),
-                    if (x.kind == 'RENT') Text(' ${l10n.bxPerMonth}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
-                ),
-              ),
-            ]),
-          ]),
+          child: Text.rich(TextSpan(children: [
+            TextSpan(text: bxMoney(x.price), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            TextSpan(text: ' ${bxCurrency(context)}${x.kind == 'RENT' ? ' ${l10n.bxPerMonth}' : ''}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+          ])),
         ),
+        BxPill(bxListingStatus(l10n, x.status, kind: x.kind), bxListingColor(x.status, colors)),
       ]),
     );
   }
@@ -280,41 +250,36 @@ class _BxListingScreenState extends State<BxListingScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24),
             children: [
-              HomeListHero(back: true, title: x?.title ?? l10n.bxListingsTitle, subtitle: x == null ? null : '${ltr(x.code)} · ${bxKind(l10n, x.kind)}'),
+              HomeListHero(
+                back: true,
+                title: x?.title ?? l10n.bxListingsTitle,
+                subtitle: x == null ? null : [ltr(x.code), bxKind(l10n, x.kind)].join(' · '),
+                badge: x == null ? null : DvHeroBadge(bxListingStatus(l10n, x.status, kind: x.kind), tone: dvToneOf(bxListingTone(x.status))),
+                bottom: x == null
+                    ? null
+                    : DvHeroFigure(
+                        label: x.kind == 'RENT' ? l10n.bxRentPerMonth : l10n.bxPrice,
+                        value: bxMoney(x.price),
+                        unit: bxCurrency(context),
+                        facts: [
+                          DvHeroFact(ltr(catalogGrouped(x.area)), l10n.bxArea),
+                          if (x.bedrooms != null) DvHeroFact(ltr('${x.bedrooms}'), l10n.bxBedrooms),
+                          if (x.bathrooms != null) DvHeroFact(ltr('${x.bathrooms}'), l10n.bxBathrooms),
+                        ],
+                      ),
+              ),
               if (x == null && _failure != null)
                 ErrorState(failure: _failure, onRetry: _load)
               else if (x == null)
                 const SizedBox(height: 420, child: StaffListSkeleton(rows: 3))
               else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: homeCard(context, radius: 24),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        CatalogBadge.status(bxListingStatus(l10n, x.status, kind: x.kind), bxListingColor(x.status, colors)),
-                        const Spacer(),
-                        Text(x.kind == 'RENT' ? l10n.bxRentPerMonth : l10n.bxPrice, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ]),
-                      const SizedBox(height: 10),
-                      if (x.place.isNotEmpty)
-                        Row(children: [
-                          Icon(Icons.place_outlined, size: 16, color: AppPalette.gold500),
-                          const SizedBox(width: 5),
-                          Expanded(child: Text(x.place, style: TextStyle(fontSize: 13, color: colors.ink))),
-                        ]),
-                      const SizedBox(height: 8),
-                      Align(alignment: AlignmentDirectional.centerEnd, child: FittedBox(fit: BoxFit.scaleDown, child: BxAmount(x.price, size: 26))),
-                    ]),
-                  ),
-                ),
                 HomeSection(
                   icon: Icons.fact_check_outlined,
                   title: l10n.bxFacts,
                   child: BxFacts(rows: [
+                    if (x.place.isNotEmpty) BxFactRow(l10n.bxPlace, x.place),
                     BxFactRow(l10n.bxArea, '${ltr(catalogGrouped(x.area))} ${l10n.bxSqm}'),
-                    if (x.unitType != null) BxFactRow(l10n.bxUnitType, x.unitType!),
+                    if (x.unitType != null) BxFactRow(l10n.bxUnitType, bxUnitTypeLabel(context, x.unitType!)),
                     if (x.bedrooms != null) BxFactRow(l10n.bxBedrooms, ltr('${x.bedrooms}')),
                     if (x.bathrooms != null) BxFactRow(l10n.bxBathrooms, ltr('${x.bathrooms}')),
                     if (x.floor != null) BxFactRow(l10n.bxFloor, ltr('${x.floor}')),
@@ -360,27 +325,13 @@ class BxPersonCard extends StatelessWidget {
   final String? phone;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: homeCard(context),
-      child: Row(children: [
-        BxIconTile(Icons.person_rounded, AppPalette.gold500, size: 40),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-            if (phone != null) Text(ltr(phone!), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-          ]),
+  Widget build(BuildContext context) => DvListCard(children: [
+        DvRow(
+          icon: Icons.person_outline_rounded,
+          title: name,
+          subtitle: phone == null ? null : ltr(phone!),
+          chevron: false,
+          trailing: phone == null ? null : DvSquareAction(icon: Icons.call_rounded, gold: true, tooltip: context.l10n.bxCall, onTap: () => ContactActions.call(phone!)),
         ),
-        if (phone != null)
-          IconButton.filledTonal(
-            tooltip: context.l10n.bxCall,
-            onPressed: () => ContactActions.call(phone!),
-            icon: const Icon(Icons.call_rounded, size: 20),
-          ),
-      ]),
-    );
-  }
+      ]);
 }

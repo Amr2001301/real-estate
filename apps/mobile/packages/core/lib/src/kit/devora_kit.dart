@@ -359,7 +359,12 @@ class DvEntityCard extends StatelessWidget {
     this.onTap,
     this.inkKey,
     this.extra,
+    this.titleLines = 1,
+    this.subtitleLines = 1,
   });
+
+  final int titleLines;
+  final int subtitleLines;
 
   /// Something under the foot line (a progress bar).
   final Widget? extra;
@@ -413,10 +418,10 @@ class DvEntityCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  Text(title, maxLines: titleLines, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
                   if ((subtitle ?? '').isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                    Text(subtitle!, maxLines: subtitleLines, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
                   ],
                 ]),
               ),

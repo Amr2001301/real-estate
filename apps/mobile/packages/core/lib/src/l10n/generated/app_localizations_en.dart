@@ -8506,6 +8506,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bpPaidOutLbl => 'Paid to you';
 
   @override
+  String get bkNoCommissionAccess =>
+      'Commissions are not available for your account';
+
+  @override
   String get bpMyCommissions => 'My commissions and payouts';
 
   @override
@@ -9684,6 +9688,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bxSection => 'Brokerage';
 
   @override
+  String get bxListingsShort => 'Listings';
+
+  @override
   String get bxListingsTitle => 'Listings';
 
   @override
@@ -9869,6 +9876,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bxEoisEmpty => 'No expressions of interest yet';
+
+  @override
+  String get bxPlace => 'Location';
 
   @override
   String get bxArea => 'Area';

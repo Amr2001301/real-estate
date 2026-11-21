@@ -707,6 +707,8 @@ class HomeActions extends StatelessWidget {
                 child: InkWell(
                   key: Key('home-action-${actions[i].id}'),
                   borderRadius: BorderRadius.circular(20),
+                  hoverColor: Colors.transparent,
+                  focusColor: Colors.transparent,
                   onTap: actions[i].onTap,
                   child: Column(
                     children: [

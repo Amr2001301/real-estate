@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../dashboard/home_kit/home_kit.dart';
-import '../catalog/domain/entities/broker_project.dart';
 import '../profile/presentation/cubit/broker_profile_cubit.dart';
 import 'broker_home_data.dart';
 
@@ -57,77 +56,61 @@ class _BrokerHomeScreenState extends State<BrokerHomeScreen> {
             children: data == null
                 ? const []
                 : [
-                    HomeActions(actions: [
-                      HomeAction(
-                          id: 'lead', icon: Icons.person_add_rounded, label: l10n.shActLead, onTap: () => context.push('/broker/leads/new')),
-                      HomeAction(
-                          id: 'reservation',
-                          icon: Icons.bookmark_add_rounded,
-                          label: l10n.shActReservation,
-                          onTap: () => context.push('/broker/reservations/new')),
-                      HomeAction(
-                          id: 'projects', icon: Icons.apartment_rounded, label: l10n.navProjects, onTap: () => widget.onSwitchTab?.call(1)),
-                      if (commissions)
-                        HomeAction(
-                            id: 'commissions',
-                            icon: Icons.payments_rounded,
-                            label: l10n.bhActCommissions,
-                            onTap: () => context.push('/broker/commissions'))
-                      else
-                        HomeAction(
-                            id: 'reservations',
-                            icon: Icons.bookmarks_rounded,
-                            label: l10n.navReservations,
-                            onTap: () => widget.onSwitchTab?.call(3)),
-                    ]),
-                    _performance(context, data, commissions),
-                    HomeSection(
-                      icon: Icons.priority_high_rounded,
-                      title: l10n.bhFollow,
-                      child: HomeAttentionGrid(columns: 2, cards: [
-                        HomeAttention(
-                          id: 'leads-pending',
-                          icon: Icons.hourglass_top_rounded,
-                          tone: HomeTone.gold,
-                          count: data.leadsPending,
-                          label: l10n.bhAttLeads,
-                          hot: true,
-                          onTap: () => widget.onSwitchTab?.call(2),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
+                      child: Row(children: [
+                        Expanded(
+                          flex: 2,
+                          child: DvGoldButton(
+                            key: const Key('home-action-lead'),
+                            icon: Icons.person_add_rounded,
+                            label: l10n.shActLead,
+                            height: 50,
+                            onTap: () => context.push('/broker/leads/new'),
+                          ),
                         ),
-                        HomeAttention(
-                          id: 'reservations-pending',
-                          icon: Icons.bookmark_rounded,
-                          tone: HomeTone.sky,
-                          count: data.reservationsPending,
-                          label: l10n.bhAttReservations,
-                          onTap: () => widget.onSwitchTab?.call(3),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            key: const Key('home-action-reservation'),
+                            onPressed: () => context.push('/broker/reservations/new'),
+                            icon: const Icon(Icons.bookmark_add_rounded, size: 18),
+                            label: Text(l10n.shActReservation, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(50),
+                              foregroundColor: context.appColors.inkStrong,
+                              side: BorderSide(color: context.appColors.hairline),
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
                         ),
                       ]),
                     ),
+                    if (commissions) _commissions(context, data),
+                    DvSectionTitle(title: l10n.bhFollow),
+                    DvListCard(children: [
+                      DvRow(
+                        key: const Key('home-att-leads-pending'),
+                        icon: Icons.hourglass_top_rounded,
+                        title: l10n.bhAttLeads,
+                        trailing: DvPill('${data.leadsPending}', tone: data.leadsPending > 0 ? DvTone.warn : DvTone.neutral),
+                        onTap: () => widget.onSwitchTab?.call(2),
+                      ),
+                      DvRow(
+                        key: const Key('home-att-reservations-pending'),
+                        icon: Icons.bookmark_rounded,
+                        title: l10n.bhAttReservations,
+                        trailing: DvPill('${data.reservationsPending}', tone: data.reservationsPending > 0 ? DvTone.warn : DvTone.neutral),
+                        onTap: () => widget.onSwitchTab?.call(3),
+                      ),
+                    ]),
                     HomeSection(
                       icon: Icons.groups_rounded,
                       title: l10n.bhRecentLeads,
                       action: l10n.shAll,
                       onAction: () => widget.onSwitchTab?.call(2),
                       child: _LeadsList(leads: data.recentLeads),
-                    ),
-                    HomeSection(
-                      icon: Icons.filter_alt_rounded,
-                      title: l10n.bhFunnel,
-                      child: HomeFunnel(steps: [
-                        HomeFunnelStep(label: l10n.bhStSent, value: data.leadsSubmitted, colors: homeTaupe),
-                        HomeFunnelStep(label: l10n.bhStApproved, value: data.leadsApproved, colors: homeNavy),
-                        HomeFunnelStep(label: l10n.bhStReservations, value: data.reservations, colors: homeGold),
-                        HomeFunnelStep(label: l10n.bhStContracts, value: data.contractsSigned, colors: homeGreen),
-                        if (commissions) HomeFunnelStep(label: l10n.bhStPayouts, value: data.payoutsPaid, colors: homeAmber),
-                      ]),
-                    ),
-                    HomeSection(
-                      icon: Icons.apartment_rounded,
-                      title: l10n.bhProjects,
-                      action: l10n.shAll,
-                      onAction: () => widget.onSwitchTab?.call(1),
-                      child: _ProjectsStrip(projects: data.projects),
                     ),
                     if (data.activity.isNotEmpty)
                       HomeSection(
@@ -160,62 +143,32 @@ class _BrokerHomeScreenState extends State<BrokerHomeScreen> {
   Widget _sales(BuildContext context, BrokerHome d, bool commissions) {
     final l10n = context.l10n;
     final (value, unit) = homeCompact(d.salesGross, l10n);
-    return HomeGoalCard(
-      percent: d.approvalRate ?? 0,
-      percentLabel: l10n.bhApprovalRate,
-      icon: Icons.trending_up_rounded,
-      title: l10n.bhSalesVolume,
+    return DvHeroStats(
+      id: 'sales',
+      label: l10n.bhSalesVolume,
       value: value,
-      unit: unit,
-      trailing: '${_symbol(context)} · ${l10n.ahContractsN(d.contractsSigned)}',
-      minis: commissions
-          ? [
-              (l10n.bhMyCommissions, homeCompactText(d.commissionsNet, l10n)),
-              (l10n.bhPaidOut, homeCompactText(d.payoutsNet, l10n)),
-            ]
-          : const [],
+      unit: '$unit ${_symbol(context)}'.trim(),
+      note: l10n.ahContractsN(d.contractsSigned),
+      figures: [
+        DvStat(id: 'approval', label: l10n.bhApprovalRate, value: d.approvalRate == null ? '—' : '${d.approvalRate}%'),
+        DvStat(id: 'contract-rate', label: l10n.bhContractRate, value: _pct(d.contractRate)),
+        DvStat(id: 'units', label: l10n.bhUnitsForYou, value: '${d.availableUnits}'),
+      ],
     );
   }
 
-  Widget _performance(BuildContext context, BrokerHome d, bool commissions) {
+  /// What the broker is owed: shown only to a broker who may see commissions.
+  Widget _commissions(BuildContext context, BrokerHome d) {
     final l10n = context.l10n;
     final (pending, pUnit) = homeCompact(d.commissionsPendingNet, l10n);
-    final projectsWithUnits = d.projects.where((p) => p.$2 > 0).length;
     return HomeSection(
       icon: Icons.auto_graph_rounded,
       title: l10n.bhPerformance,
-      child: Column(children: [
-        HomeBand(figures: [
-          HomeFigure(
-            id: 'sent',
-            value: '${d.leadsSubmitted}',
-            label: l10n.bhLeadsSent,
-            hint: d.leadsPending > 0 ? l10n.bhPendingN(d.leadsPending) : l10n.bhNonePending,
-            warn: d.leadsPending > 0,
-          ),
-          HomeFigure(id: 'signed', value: '${d.contractsSigned}', label: l10n.bhSigned, hint: l10n.bhOfReservations(d.reservations)),
-          if (commissions)
-            HomeFigure(
-              id: 'pending-commission',
-              value: pending,
-              label: pUnit.isEmpty ? l10n.bhPendingCommission : l10n.bhPendingCommissionUnit(pUnit),
-              hint: l10n.bhCommissionsN(d.commissionsPending),
-            )
-          else
-            HomeFigure(
-              id: 'reservations',
-              value: '${d.reservations}',
-              label: l10n.bhReservations,
-              hint: d.reservationsPending > 0 ? l10n.bhPendingN(d.reservationsPending) : l10n.bhNonePending,
-              warn: d.reservationsPending > 0,
-            ),
-        ]),
-        HomeTiles(tiles: [
-          HomeTile(label: l10n.bhUnitsForYou, value: '${d.availableUnits}', sub: l10n.bhInProjects(projectsWithUnits)),
-          if (commissions)
-            HomeTile(label: l10n.bhPayoutRate, value: _pct(d.payoutRate), sub: l10n.bhPayoutsPaid(d.payoutsPaid)),
-          HomeTile(label: l10n.bhContractRate, value: _pct(d.contractRate), sub: l10n.bhOfBookings),
-        ]),
+      child: DvInfoCard(rows: [
+        DvInfo(l10n.bhMyCommissions, homeCompactText(d.commissionsNet, l10n)),
+        DvInfo(l10n.bhPaidOut, homeCompactText(d.payoutsNet, l10n)),
+        DvInfo(pUnit.isEmpty ? l10n.bhPendingCommission : l10n.bhPendingCommissionUnit(pUnit), pending),
+        DvInfo(l10n.bhPayoutRate, _pct(d.payoutRate)),
       ]),
     );
   }
@@ -314,85 +267,6 @@ class _StatusChip extends StatelessWidget {
 
 /// The projects open to the broker, side by side, each with its available
 /// units.
-class _ProjectsStrip extends StatelessWidget {
-  const _ProjectsStrip({required this.projects});
-  final List<(BrokerProject, int)> projects;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    if (projects.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: homeCard(context, radius: 24),
-        child: Text(l10n.bhNoProjects, style: TextStyle(color: context.appColors.inkMuted, fontSize: 13)),
-      );
-    }
-    return SizedBox(
-      height: 150,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: projects.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, i) {
-          final (p, units) = projects[i];
-          return InkWell(
-            key: Key('broker-project-${p.id}'),
-            borderRadius: BorderRadius.circular(22),
-            onTap: () => context.push('/broker/projects/${p.id}', extra: p),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: SizedBox(
-                width: 260,
-                child: Stack(fit: StackFit.expand, children: [
-                  if (p.coverImageUrl?.isNotEmpty ?? false)
-                    AppNetworkImage(url: p.coverImageUrl!)
-                  else
-                    DecoratedBox(decoration: BoxDecoration(gradient: homeNavyGradient)),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, AppPalette.navy.withValues(alpha: 0.85)],
-                      ),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    top: 10,
-                    start: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
-                      child: Text(l10n.bhUnitsAvailable(units),
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.navy)),
-                    ),
-                  ),
-                  PositionedDirectional(
-                    start: 12,
-                    end: 12,
-                    bottom: 10,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(p.name.resolve(lang),
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: homeDisplay(15, Colors.white)),
-                      if (p.city?.isNotEmpty ?? false)
-                        Row(children: [
-                          Icon(Icons.location_on_rounded, size: 13, color: AppPalette.gold300),
-                          const SizedBox(width: 3),
-                          Text(p.city!, style: const TextStyle(fontSize: 12, color: Color(0xFFDCE3EC))),
-                        ]),
-                    ]),
-                  ),
-                ]),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 
 IconData brokerActivityIcon(String type) => switch (type) {
       'LEAD_SUBMITTED' => Icons.person_add_rounded,

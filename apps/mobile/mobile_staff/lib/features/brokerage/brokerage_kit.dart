@@ -234,16 +234,9 @@ class BxFacts extends StatelessWidget {
   final List<Widget> rows;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: homeCard(context),
-        child: Column(children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: context.appColors.hairline),
-            rows[i],
-          ],
-        ]),
-      );
+  Widget build(BuildContext context) => DvInfoCard(rows: [
+        for (final r in rows.whereType<BxFactRow>()) DvInfo(r.label, r.value, strong: r.strong, color: r.valueColor),
+      ]);
 }
 
 /// The muted line under a detail page: recording and editing are on the web.
@@ -259,4 +252,139 @@ class BxWebNote extends StatelessWidget {
           Expanded(child: Text(context.l10n.bxWebOnly, style: TextStyle(fontSize: 12.5, color: context.appColors.inkMuted))),
         ]),
       );
+}
+
+/// The card of the brokerage lists: a tile at the start (navy with an icon, or
+/// soft with an initial), the title and its lines, and a soft strip under it
+/// that holds the figures.
+class BxTileCard extends StatelessWidget {
+  const BxTileCard({
+    super.key,
+    required this.title,
+    required this.strip,
+    this.icon,
+    this.initial,
+    this.subtitle,
+    this.line,
+    this.trailing,
+    this.onTap,
+    this.inkKey,
+  });
+  final Key? inkKey;
+  final String title;
+  final String? subtitle;
+  final String? line;
+  final IconData? icon;
+  final String? initial;
+  final Widget? trailing;
+  final Widget strip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final soft = initial != null;
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: inkKey,
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.hairline),
+            boxShadow: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: soft ? colors.surfaceSoft : null,
+                  gradient: soft ? null : const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF17223B), Color(0xFF0B1426)]),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: soft
+                    ? Text(initial!, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: colors.inkStrong))
+                    : Icon(icon, size: 24, color: const Color(0xFFEED7A0)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, height: 1.45, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  if ((subtitle ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle!, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                  ],
+                  if ((line ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(line!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, height: 1.4, color: colors.ink)),
+                  ],
+                ]),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ]),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(14)),
+              child: strip,
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// A small coloured state label.
+class BxPill extends StatelessWidget {
+  const BxPill(this.text, this.color, {super.key});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+        child: Text(text, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: color)),
+      );
+}
+
+/// The badge tone of a listing status, for the navy header.
+BadgeTone bxListingTone(String status) => switch (status) {
+      'AVAILABLE' => BadgeTone.success,
+      'UNDER_OFFER' => BadgeTone.warning,
+      'WITHDRAWN' => BadgeTone.error,
+      _ => BadgeTone.neutral,
+    };
+
+const _unitTypes = {
+  'apartment': ('شقة', 'Apartment'),
+  'villa': ('فيلا', 'Villa'),
+  'duplex': ('دوبلكس', 'Duplex'),
+  'penthouse': ('بنتهاوس', 'Penthouse'),
+  'studio': ('استوديو', 'Studio'),
+  'townhouse': ('تاون هاوس', 'Townhouse'),
+  'twin-house': ('توين هاوس', 'Twin house'),
+  'chalet': ('شاليه', 'Chalet'),
+  'office': ('مكتب', 'Office'),
+  'shop': ('محل', 'Shop'),
+  'clinic': ('عيادة', 'Clinic'),
+  'land': ('أرض', 'Land'),
+  'warehouse': ('مخزن', 'Warehouse'),
+};
+
+/// A unit-type code as a word (`apartment` → «شقة»); unknown codes stay as they are.
+String bxUnitTypeLabel(BuildContext context, String code) {
+  final t = _unitTypes[code.toLowerCase()];
+  if (t == null) return code;
+  return Localizations.localeOf(context).languageCode == 'ar' ? t.$1 : t.$2;
 }

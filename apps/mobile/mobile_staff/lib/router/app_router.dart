@@ -372,8 +372,11 @@ GoRouter createStaffRouter(
       ),
       GoRoute(
         path: '/broker/performance',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).mine),
+        builder: (context, _) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (ctx) => BrokersPerfCubit(BrokersPerfRepository(ctx.read<Dio>()).mine)),
+            BlocProvider(create: (ctx) => BrokerProfileCubit(GetBrokerProfile(ctx.read<BrokerProfileRepository>()))..load()),
+          ],
           child: const BrokerOwnPerformanceScreen(),
         ),
       ),
@@ -394,6 +397,7 @@ GoRouter createStaffRouter(
           providers: [
             BlocProvider(create: (ctx) => BrokerCommissionsCubit(GetBrokerCommissions(ctx.read<BrokerCommissionsRepository>()))),
             BlocProvider(create: (ctx) => BrokerPayoutsCubit(BrokerPayoutsRepository(ctx.read<Dio>()))),
+            BlocProvider(create: (ctx) => BrokerProfileCubit(GetBrokerProfile(ctx.read<BrokerProfileRepository>()))..load()),
           ],
           child: const BrokerCommissionsScreen(),
         ),

@@ -8533,6 +8533,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bpPaidOutLbl => 'صُرف لك';
 
   @override
+  String get bkNoCommissionAccess => 'العمولات غير متاحة لحسابك';
+
+  @override
   String get bpMyCommissions => 'عمولاتي وكشف الصرف';
 
   @override
@@ -9726,6 +9729,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bxSection => 'الوساطة';
 
   @override
+  String get bxListingsShort => 'الوحدات';
+
+  @override
   String get bxListingsTitle => 'الوحدات المعروضة';
 
   @override
@@ -9907,6 +9913,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bxEoisEmpty => 'لا طلبات اهتمام بعد';
+
+  @override
+  String get bxPlace => 'الموقع';
 
   @override
   String get bxArea => 'المساحة';
