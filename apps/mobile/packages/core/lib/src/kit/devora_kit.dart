@@ -573,7 +573,15 @@ class DvHeroStats extends StatelessWidget {
     this.curve = const [],
     this.curveLabel,
     this.figures = const [],
+    this.id = 'sales',
+    this.progress,
   });
+
+  /// The headline's key is `dv-stat-<id>`.
+  final String id;
+
+  /// A gold progress line under the headline (0–1).
+  final double? progress;
 
   final String label;
   final String value;
@@ -608,7 +616,7 @@ class DvHeroStats extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Expanded(
             child: FittedBox(
-              key: const Key('dv-stat-sales'),
+              key: Key('dv-stat-$id'),
               fit: BoxFit.scaleDown,
               alignment: AlignmentDirectional.centerStart,
               child: Text.rich(TextSpan(children: [
@@ -632,6 +640,19 @@ class DvHeroStats extends StatelessWidget {
         if ((note ?? '').isNotEmpty) ...[
           const SizedBox(height: 4),
           Text(note!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFFC9B27A))),
+        ],
+        if (progress != null) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 7,
+              child: Stack(children: [
+                const Positioned.fill(child: ColoredBox(color: Color(0x1FFFFFFF))),
+                FractionallySizedBox(widthFactor: progress!.clamp(0.0, 1.0), child: const DecoratedBox(decoration: BoxDecoration(gradient: dvGoldGradient), child: SizedBox.expand())),
+              ]),
+            ),
+          ),
         ],
         if (curve.length >= 2) ...[
           const SizedBox(height: 14),

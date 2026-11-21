@@ -10196,6 +10196,12 @@ abstract class AppLocalizations {
   /// **'Collection rate'**
   String get ahCollectionRate;
 
+  /// No description provided for @tgAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement'**
+  String get tgAchievement;
+
   /// No description provided for @ahNothingDue.
   ///
   /// In en, this message translates to:

@@ -294,10 +294,10 @@ class _PickRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: colors.surface,
+      color: homeField(context),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colors.hairline),
+        borderRadius: BorderRadius.circular(14),
+        side: homeFieldSide(context),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),

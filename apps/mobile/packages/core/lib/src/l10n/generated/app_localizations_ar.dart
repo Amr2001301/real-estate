@@ -5519,6 +5519,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ahCollectionRate => 'نسبة التحصيل';
 
   @override
+  String get tgAchievement => 'نسبة التحقيق';
+
+  @override
   String get ahNothingDue => 'لا شيء مستحق';
 
   @override

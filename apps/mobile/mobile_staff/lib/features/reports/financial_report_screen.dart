@@ -299,36 +299,31 @@ class _FinancialReportScreenState extends State<FinancialReportScreen> {
               else if (_failure != null && d == null)
                 ErrorState(failure: _failure, onRetry: _load)
               else if (d != null) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                  child: HomeBand(figures: [
-                    HomeFigure(
-                      id: 'value',
-                      value: homeCompact(d.contractValue, l10n).$1,
-                      label: '${l10n.frContractValue} · ${homeCompact(d.contractValue, l10n).$2}'.replaceAll(RegExp(r' · $'), ''),
-                      hint: symbol,
+                const SizedBox(height: 16),
+                DvHeroStats(
+                  id: 'collected',
+                  label: l10n.frCollected,
+                  value: homeCompact(d.collected, l10n).$1,
+                  unit: unitOf(d.collected),
+                  change: _before == null ? null : percentChange(d.collected, _before!.collected),
+                  figures: [
+                    DvStat(id: 'remaining', label: l10n.frRemaining, value: homeCompact(d.remaining, l10n).$1, unit: homeCompact(d.remaining, l10n).$2),
+                    DvStat(id: 'overdue', label: l10n.ahPfOverdue, value: homeCompact(d.overdue, l10n).$1, unit: homeCompact(d.overdue, l10n).$2, warn: d.overdue > 0),
+                    DvStat(id: 'rate', label: l10n.ahCollectionRate, value: d.collectionRate == null ? '—' : '${d.collectionRate}%', warn: d.collectionRate != null && d.collectionRate! < 70),
+                  ],
+                ),
+                HomeSection(
+                  icon: Icons.summarize_rounded,
+                  title: reportPeriodLabel(l10n, _period),
+                  child: DvInfoCard(rows: [
+                    DvInfo(l10n.frContractValue, money(d.contractValue)),
+                    DvInfo(
+                      l10n.frCollectedMonth,
+                      [money(d.collectedThisMonth), if (change(d.collectedThisMonth, _before?.collectedThisMonth).isNotEmpty) change(d.collectedThisMonth, _before?.collectedThisMonth)].join(' · '),
                     ),
-                    HomeFigure(
-                      id: 'collected',
-                      value: homeCompact(d.collectedThisMonth, l10n).$1,
-                      label: '${l10n.frCollectedMonth} · ${homeCompact(d.collectedThisMonth, l10n).$2}'.replaceAll(RegExp(r' · $'), ''),
-                      hint: change(d.collectedThisMonth, _before?.collectedThisMonth).isEmpty ? l10n.frDueMonth(money(d.dueThisMonth)) : change(d.collectedThisMonth, _before?.collectedThisMonth),
-                      warn: _before != null && d.collectedThisMonth < _before!.collectedThisMonth,
-                    ),
-                    HomeFigure(
-                      id: 'rate',
-                      value: d.collectionRate == null ? '—' : '${d.collectionRate}%',
-                      label: l10n.ahCollectionRate,
-                      hint: d.collectionRate == null ? l10n.ahNothingDue : l10n.frRateHint,
-                      warn: d.collectionRate != null && d.collectionRate! < 70,
-                    ),
+                    DvInfo(l10n.frDueMonth('').trim(), money(d.dueThisMonth)),
                   ]),
                 ),
-                HomeTiles(tiles: [
-                  HomeTile(label: l10n.frCollected, value: homeCompact(d.collected, l10n).$1, unit: unitOf(d.collected), sub: change(d.collected, _before?.collected)),
-                  HomeTile(label: l10n.frRemaining, value: homeCompact(d.remaining, l10n).$1, unit: unitOf(d.remaining), sub: ''),
-                  HomeTile(label: l10n.ahPfOverdue, value: homeCompact(d.overdue, l10n).$1, unit: unitOf(d.overdue), sub: change(d.overdue, _before?.overdue)),
-                ]),
                 if (d.aging.any((a) => a.$3 > 0))
                   HomeSection(
                     icon: Icons.hourglass_bottom_rounded,
@@ -448,29 +443,30 @@ class _Rows extends StatelessWidget {
     final max = (bars ?? const []).fold<double>(0, (m, v) => v > m ? v : m);
     return Container(
       decoration: homeCard(context, radius: 22),
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       child: Column(children: [
-        for (var i = 0; i < rows.length; i++)
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 7),
+            padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
-                Expanded(child: Text(rows[i].$1, style: TextStyle(fontSize: 13, color: colors.ink))),
-                if (rows[i].$3.isNotEmpty) ...[
-                  Text(rows[i].$3, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  const SizedBox(width: 10),
-                ],
-                Text(ltr(rows[i].$2), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                Expanded(child: Text(rows[i].$1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong))),
+                Text(ltr(rows[i].$2), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
               ]),
               if (bars != null && max > 0) ...[
-                const SizedBox(height: 5),
+                const SizedBox(height: 10),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(value: bars![i] / max, minHeight: 6, color: AppPalette.gold500, backgroundColor: colors.hairline),
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(value: bars![i] / max, minHeight: 6, color: i == 0 ? AppPalette.gold500 : const Color(0xFF1B2A48), backgroundColor: colors.surfaceSoft),
                 ),
+              ],
+              if (rows[i].$3.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(rows[i].$3, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
               ],
             ]),
           ),
+        ],
       ]),
     );
   }

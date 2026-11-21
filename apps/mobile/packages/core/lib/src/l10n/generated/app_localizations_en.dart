@@ -5550,6 +5550,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ahCollectionRate => 'Collection rate';
 
   @override
+  String get tgAchievement => 'Achievement';
+
+  @override
   String get ahNothingDue => 'Nothing due';
 
   @override

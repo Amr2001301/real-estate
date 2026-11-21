@@ -64,13 +64,16 @@ class _TeamPerformanceScreenState extends State<TeamPerformanceScreen> {
                         if (members.isEmpty)
                           EmptyState(icon: Icons.groups_rounded, title: l10n.teamPerfEmpty)
                         else ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                            child: HomeBand(figures: [
-                              HomeFigure(id: 'sales', value: total.$1, label: l10n.teamPerfTotalSales, hint: [if (total.$2.isNotEmpty) total.$2, currency].join(' ')),
-                              HomeFigure(id: 'contracts', value: '$contracts', label: l10n.targetsSignedContracts, hint: periodLabel(_period, lang)),
-                              HomeFigure(id: 'avg', value: avg == null ? '—' : ltr('${avg.round()}%'), label: l10n.teamPerfAvgAchievement, hint: periodLabel(_period, lang)),
-                            ]),
+                          const SizedBox(height: 12),
+                          DvHeroStats(
+                            id: 'sales',
+                            label: l10n.teamPerfTotalSales,
+                            value: total.$1,
+                            unit: [if (total.$2.isNotEmpty) total.$2, currency].join(' '),
+                            figures: [
+                              DvStat(id: 'contracts', label: l10n.targetsSignedContracts, value: '$contracts'),
+                              DvStat(id: 'avg', label: l10n.teamPerfAvgAchievement, value: avg == null ? '—' : '${avg.round()}%'),
+                            ],
                           ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
@@ -99,66 +102,50 @@ class _MemberCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final p = member.performance;
-    Widget chip(IconData icon, String text, {Color? bg, Color? fg}) {
-      final back = bg ?? (homeIsDark(context) ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFEEF2F7));
-      final front = fg ?? (homeIsDark(context) ? colors.inkStrong : const Color(0xFF26405F));
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(color: back, borderRadius: BorderRadius.circular(99)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: front),
-          const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: front)),
-        ]),
-      );
-    }
+    final pct = p.targetAmountPercent;
     return Container(
       key: Key('team-member-${member.salesId}'),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: homeCard(context, radius: 22),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 46,
+            height: 46,
             alignment: Alignment.center,
-            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-            child: Text(homeInitials(member.salesName), style: homeDisplay(14, AppPalette.gold300)),
+            decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+            child: Text(homeInitials(member.salesName), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(member.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
+              Text(member.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              const SizedBox(height: 3),
               if (p.hasTarget && p.targetAmount != null)
-                Text.rich(TextSpan(style: TextStyle(fontSize: 12, color: colors.inkMuted), children: [
-                  TextSpan(text: contractMoney(p.achievedAmount), style: TextStyle(fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  TextSpan(text: ' / ${contractMoney(p.targetAmount!)} $currency'),
-                ]))
+                Text('${contractMoney(p.achievedAmount)} ${l10n.tgOf('${contractMoney(p.targetAmount!)} $currency')}', style: TextStyle(fontSize: 12.5, color: colors.inkMuted))
               else
-                Text(l10n.teamTargetNoTarget, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                Text(l10n.teamTargetNoTarget, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
             ]),
           ),
-          if (p.targetAmountPercent != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: AppPalette.gold400, borderRadius: BorderRadius.circular(99)),
-              child: Text(ltr('${p.targetAmountPercent!.round()}%'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.navy)),
-            ),
+          if (pct != null) DvPill(ltr('${pct.round()}%'), tone: pct >= 60 ? DvTone.ok : DvTone.warn),
         ]),
-        if (p.targetAmountPercent != null) ...[
-          const SizedBox(height: 10),
+        if (pct != null) ...[
+          const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(99),
-            child: LinearProgressIndicator(value: (p.targetAmountPercent! / 100).clamp(0, 1), minHeight: 8, backgroundColor: homeLine(context), color: AppPalette.gold400),
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(value: (pct / 100).clamp(0, 1), minHeight: 6, backgroundColor: colors.surfaceSoft, color: AppPalette.gold500),
           ),
         ],
-        const SizedBox(height: 10),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          chip(Icons.person_rounded, '${p.leadsCount} ${l10n.tpFunnelLeads}'),
-          chip(Icons.event_rounded, '${p.visitsCount} ${l10n.tpVisits}'),
-          chip(Icons.bookmark_rounded, '${p.reservationsCount} ${l10n.tpBookings}'),
-          chip(Icons.description_rounded, '${p.signedContractsCount} ${l10n.tpContracts}', bg: homeOkFill(context), fg: homeIsDark(context) ? const Color(0xFF7FD1A0) : const Color(0xFF2F6B4A)),
-        ]),
+        Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: colors.hairline)),
+        Text(
+          [
+            '${p.leadsCount} ${l10n.tpFunnelLeads}',
+            '${p.visitsCount} ${l10n.tpVisits}',
+            '${p.reservationsCount} ${l10n.tpBookings}',
+            '${p.signedContractsCount} ${l10n.tpContracts}',
+          ].join('  ·  '),
+          style: TextStyle(fontSize: 12.5, height: 1.5, color: colors.inkMuted),
+        ),
       ]),
     );
   }

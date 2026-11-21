@@ -1875,6 +1875,7 @@
   "ahContractsN": "{n, plural, =0{لا عقود} =1{عقد واحد} =2{عقدان} few{{n} عقود} other{{n} عقدًا}}",
   "@ahContractsN": {"placeholders": {"n": {"type": "int"}}},
   "ahCollectionRate": "نسبة التحصيل",
+  "tgAchievement": "نسبة التحقيق",
   "ahNothingDue": "لا شيء مستحق",
   "ahCollected": "المحصَّل",
   "ahOverdue": "متأخر",

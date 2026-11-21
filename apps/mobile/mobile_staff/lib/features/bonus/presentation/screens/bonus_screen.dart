@@ -57,23 +57,30 @@ class _BonusScreenState extends State<BonusScreen> {
                   if (ready && all.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                        child: HomeBand(figures: [
-                          HomeFigure(id: 'total', value: total.$1, label: l10n.bnTotal, hint: unit(total.$2)),
-                          HomeFigure(id: 'pending', value: pending.$1, label: l10n.bonusPending, hint: [if (pending.$2.isNotEmpty) pending.$2, l10n.bnPendingHint].join(' · '), warn: o.pendingTotal > 0),
-                          HomeFigure(id: 'paid', value: paid.$1, label: l10n.bonusPaid, hint: [if (paid.$2.isNotEmpty) paid.$2, l10n.bnPaidHint].join(' · ')),
-                        ]),
+                        padding: const EdgeInsets.only(top: 16),
+                        child: DvHeroStats(
+                          id: 'total',
+                          label: l10n.bnTotal,
+                          value: total.$1,
+                          unit: unit(total.$2),
+                          figures: [
+                            DvStat(id: 'pending', label: l10n.bonusPending, value: pending.$1, unit: pending.$2, warn: o.pendingTotal > 0),
+                            DvStat(id: 'paid', label: l10n.bonusPaid, value: paid.$1, unit: paid.$2),
+                          ],
+                        ),
                       ),
                     ),
                     SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 14),
-                        child: HomePills(pills: [
-                          HomePill(id: 'all', label: l10n.leadsFilterAll, count: all.length, selected: _status == null, onTap: () => _pick(null)),
-                          HomePill(id: 'PENDING', label: l10n.bonusStatusPending, count: count('PENDING'), dot: catalogReserved, selected: _status == 'PENDING', onTap: () => _pick('PENDING')),
-                          HomePill(id: 'APPROVED', label: l10n.bonusStatusApproved, count: count('APPROVED'), dot: const Color(0xFF2A6FB0), selected: _status == 'APPROVED', onTap: () => _pick('APPROVED')),
-                          HomePill(id: 'PAID', label: l10n.bonusStatusPaid, count: count('PAID'), dot: catalogAvailable, selected: _status == 'PAID', onTap: () => _pick('PAID')),
-                        ]),
+                      child: DvTabs<String>(
+                        keyPrefix: 'bonus-filter',
+                        selected: _status ?? 'all',
+                        onChanged: (v) => _pick(v == 'all' ? null : v),
+                        tabs: [
+                          ('all', l10n.leadsFilterAll, all.length, false),
+                          ('PENDING', l10n.bonusStatusPending, count('PENDING'), false),
+                          ('APPROVED', l10n.bonusStatusApproved, count('APPROVED'), false),
+                          ('PAID', l10n.bonusStatusPaid, count('PAID'), false),
+                        ],
                       ),
                     ),
                   ],
@@ -85,10 +92,20 @@ class _BonusScreenState extends State<BonusScreen> {
                     _ => [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                          sliver: SliverList.separated(
-                            itemCount: shown.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 10),
-                            itemBuilder: (context, i) => BonusCard(entry: shown[i]),
+                          sliver: SliverToBoxAdapter(
+                            child: Container(
+                              decoration: homeCard(context, radius: 22),
+                              clipBehavior: Clip.antiAlias,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Column(children: [
+                                  for (final (i, e) in shown.indexed) ...[
+                                    if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: context.appColors.hairline),
+                                    BonusCard(entry: e),
+                                  ],
+                                ]),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -130,58 +147,45 @@ class BonusCard extends StatelessWidget {
       'APPROVED' => l10n.bnApprovedNote,
       _ => l10n.bnWhenSigned,
     };
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('bonus-${e.id}'),
-        onTap: e.contractId == null ? null : () => context.push('/contracts/${e.contractId}'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(icon, color: tone, size: 22),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(child: Text(e.ruleName ?? l10n.bonusTitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-                      const SizedBox(width: 6),
-                      Text.rich(TextSpan(children: [
-                        TextSpan(text: contractMoney(amount), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ])),
-                    ]),
-                    if (basis != null && pct != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%')), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ),
-                    const SizedBox(height: 5),
-                    CatalogBadge.status(label, tone, icon: icon),
-                  ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
-              child: Row(children: [
-                Text(l10n.bnPeriodLine(ltr(e.period)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                const Spacer(),
-                Flexible(child: Text(foot, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: e.status == 'PENDING' ? const Color(0xFF8A5A12) : colors.inkMuted))),
-              ]),
-            ),
+    final dv = switch (e.status) {
+      'PAID' => DvTone.ok,
+      'APPROVED' => DvTone.neutral,
+      _ => DvTone.warn,
+    };
+    return InkWell(
+      key: Key('bonus-${e.id}'),
+      onTap: e.contractId == null ? null : () => context.push('/contracts/${e.contractId}'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: colors.inkStrong, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(e.ruleName ?? l10n.bonusTitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+              if (basis != null && pct != null) ...[
+                const SizedBox(height: 3),
+                Text(l10n.bnBasisLine(ltr(contractMoney(basis)), ltr('${pct % 1 == 0 ? pct.toInt() : pct}%')), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+              ],
+              const SizedBox(height: 3),
+              Text([l10n.bnPeriodLine(ltr(e.period)), if (foot.isNotEmpty) foot].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text.rich(TextSpan(children: [
+              TextSpan(text: contractMoney(amount), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+            ])),
+            const SizedBox(height: 6),
+            DvPill(label, tone: dv, small: true),
           ]),
-        ),
+        ]),
       ),
     );
   }

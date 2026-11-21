@@ -1883,6 +1883,7 @@
   "ahContractsN": "{n, plural, =0{no contracts} =1{1 contract} other{{n} contracts}}",
   "@ahContractsN": {"placeholders": {"n": {"type": "int"}}},
   "ahCollectionRate": "Collection rate",
+  "tgAchievement": "Achievement",
   "ahNothingDue": "Nothing due",
   "ahCollected": "Collected",
   "ahOverdue": "Overdue",
