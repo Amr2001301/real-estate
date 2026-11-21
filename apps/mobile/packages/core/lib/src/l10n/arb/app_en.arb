@@ -3272,6 +3272,7 @@
   "bxLaunchesEmpty": "No launches yet",
   "bxLaunchesEmptyHint": "Launches are added from the web dashboard.",
   "bxEoisEmpty": "No expressions of interest yet",
+  "bxPlace": "Location",
   "bxArea": "Area",
   "bxSqm": "m²",
   "bxBedrooms": "Bedrooms",

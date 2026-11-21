@@ -274,16 +274,29 @@ class _BxDealScreenState extends State<BxDealScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24),
             children: [
-              HomeListHero(back: true, title: d == null ? l10n.bxDealsTitle : ltr(d.code), subtitle: d == null ? null : '${bxKind(l10n, d.kind)} · ${bxDate(context, d.closedOn)}'),
+              HomeListHero(
+                back: true,
+                title: d == null ? l10n.bxDealsTitle : ltr(d.code),
+                subtitle: d == null ? null : '${bxKind(l10n, d.kind)} · ${bxDate(context, d.closedOn)}',
+                badge: d == null ? null : DvHeroBadge(bxDealStatus(l10n, d.status), tone: d.status == 'CANCELLED' ? DvTone.bad : DvTone.ok),
+                bottom: d == null
+                    ? null
+                    : DvHeroFigure(
+                        label: l10n.bxCommission,
+                        value: bxMoney(d.commissionTotal),
+                        unit: bxCurrency(context),
+                        progress: d.status == 'CANCELLED' || d.commissionTotal <= 0 ? null : (d.commissionReceived / d.commissionTotal).clamp(0.0, 1.0),
+                        facts: [
+                          DvHeroFact(bxMoney(d.commissionReceived), l10n.bxReceived),
+                          DvHeroFact(bxMoney(d.outstanding), l10n.bxOutstanding, alert: d.outstanding > 0),
+                        ],
+                      ),
+              ),
               if (d == null && _failure != null)
                 ErrorState(failure: _failure, onRetry: _load)
               else if (d == null)
                 const SizedBox(height: 420, child: StaffListSkeleton(rows: 3))
               else ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
-                  child: _MoneyCard(deal: d),
-                ),
                 if ((_full && d.splits.isNotEmpty) || d.coBrokerName != null)
                   HomeSection(
                     icon: Icons.pie_chart_outline_rounded,
@@ -317,59 +330,6 @@ class _BxDealScreenState extends State<BxDealScreen> {
       ),
     );
   }
-}
-
-/// The commission, the collected bar, and the state.
-class _MoneyCard extends StatelessWidget {
-  const _MoneyCard({required this.deal});
-  final BxDeal deal;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final d = deal;
-    final collected = d.commissionTotal > 0 ? d.commissionReceived / d.commissionTotal : 0.0;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: homeCard(context, radius: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          CatalogBadge.status(bxDealStatus(l10n, d.status), d.status == 'CANCELLED' ? colors.error : colors.success),
-          const Spacer(),
-          Text(l10n.bxCommission, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ]),
-        const SizedBox(height: 8),
-        Align(alignment: AlignmentDirectional.centerEnd, child: FittedBox(fit: BoxFit.scaleDown, child: BxAmount(d.commissionTotal, size: 26))),
-        const SizedBox(height: 12),
-        BxProgress(value: collected, height: 8),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: _Mini(label: l10n.bxReceived, value: d.commissionReceived, color: colors.success)),
-          const SizedBox(width: 8),
-          Expanded(child: _Mini(label: l10n.bxOutstanding, value: d.outstanding, color: d.outstanding > 0 ? colors.warning : colors.inkMuted)),
-        ]),
-      ]),
-    );
-  }
-}
-
-class _Mini extends StatelessWidget {
-  const _Mini({required this.label, required this.value, required this.color});
-  final String label;
-  final double value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: context.appColors.surfaceSoft, borderRadius: BorderRadius.circular(14)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(fontSize: 12, color: context.appColors.inkMuted)),
-          const SizedBox(height: 2),
-          FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: BxAmount(value, size: 15, color: color)),
-        ]),
-      );
 }
 
 /// A staff share: who, their role and percent, the amount, and whether paid.

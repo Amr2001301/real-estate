@@ -17528,6 +17528,12 @@ abstract class AppLocalizations {
   /// **'No expressions of interest yet'**
   String get bxEoisEmpty;
 
+  /// No description provided for @bxPlace.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get bxPlace;
+
   /// No description provided for @bxArea.
   ///
   /// In en, this message translates to:

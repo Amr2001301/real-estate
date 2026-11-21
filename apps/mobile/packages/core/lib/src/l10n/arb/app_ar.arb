@@ -3264,6 +3264,7 @@
   "bxLaunchesEmpty": "لا إطلاقات بعد",
   "bxLaunchesEmptyHint": "الإطلاقات تُضاف من لوحة التحكم على الموقع.",
   "bxEoisEmpty": "لا طلبات اهتمام بعد",
+  "bxPlace": "الموقع",
   "bxArea": "المساحة",
   "bxSqm": "م²",
   "bxBedrooms": "غرف",

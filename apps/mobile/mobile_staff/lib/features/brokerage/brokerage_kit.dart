@@ -234,16 +234,9 @@ class BxFacts extends StatelessWidget {
   final List<Widget> rows;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: homeCard(context),
-        child: Column(children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: context.appColors.hairline),
-            rows[i],
-          ],
-        ]),
-      );
+  Widget build(BuildContext context) => DvInfoCard(rows: [
+        for (final r in rows.whereType<BxFactRow>()) DvInfo(r.label, r.value, strong: r.strong, color: r.valueColor),
+      ]);
 }
 
 /// The muted line under a detail page: recording and editing are on the web.
@@ -363,4 +356,35 @@ class BxPill extends StatelessWidget {
         decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
         child: Text(text, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: color)),
       );
+}
+
+/// The badge tone of a listing status, for the navy header.
+BadgeTone bxListingTone(String status) => switch (status) {
+      'AVAILABLE' => BadgeTone.success,
+      'UNDER_OFFER' => BadgeTone.warning,
+      'WITHDRAWN' => BadgeTone.error,
+      _ => BadgeTone.neutral,
+    };
+
+const _unitTypes = {
+  'apartment': ('شقة', 'Apartment'),
+  'villa': ('فيلا', 'Villa'),
+  'duplex': ('دوبلكس', 'Duplex'),
+  'penthouse': ('بنتهاوس', 'Penthouse'),
+  'studio': ('استوديو', 'Studio'),
+  'townhouse': ('تاون هاوس', 'Townhouse'),
+  'twin-house': ('توين هاوس', 'Twin house'),
+  'chalet': ('شاليه', 'Chalet'),
+  'office': ('مكتب', 'Office'),
+  'shop': ('محل', 'Shop'),
+  'clinic': ('عيادة', 'Clinic'),
+  'land': ('أرض', 'Land'),
+  'warehouse': ('مخزن', 'Warehouse'),
+};
+
+/// A unit-type code as a word (`apartment` → «شقة»); unknown codes stay as they are.
+String bxUnitTypeLabel(BuildContext context, String code) {
+  final t = _unitTypes[code.toLowerCase()];
+  if (t == null) return code;
+  return Localizations.localeOf(context).languageCode == 'ar' ? t.$1 : t.$2;
 }

@@ -9915,6 +9915,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bxEoisEmpty => 'لا طلبات اهتمام بعد';
 
   @override
+  String get bxPlace => 'الموقع';
+
+  @override
   String get bxArea => 'المساحة';
 
   @override

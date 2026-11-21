@@ -9878,6 +9878,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bxEoisEmpty => 'No expressions of interest yet';
 
   @override
+  String get bxPlace => 'Location';
+
+  @override
   String get bxArea => 'Area';
 
   @override
