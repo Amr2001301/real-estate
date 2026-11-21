@@ -275,7 +275,9 @@ class BxTileCard extends StatelessWidget {
     this.line,
     this.trailing,
     this.onTap,
+    this.inkKey,
   });
+  final Key? inkKey;
   final String title;
   final String? subtitle;
   final String? line;
@@ -293,6 +295,7 @@ class BxTileCard extends StatelessWidget {
       color: colors.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
+        key: inkKey,
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(

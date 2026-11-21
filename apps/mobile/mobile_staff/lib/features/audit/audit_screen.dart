@@ -7,6 +7,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 import '../../common/staff_list_skeleton.dart';
 import '../leads/presentation/screens/leads_screen.dart' show leadWhen;
+import 'audit_labels.dart';
 
 /// The website's «سجل التدقيق» (`/audit-logs`), read-only: who did what and
 /// when. Searching and reading are all it does; nothing here changes data.
@@ -206,26 +207,24 @@ class _EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    return InkWell(
-      key: Key('audit-${entry.id}'),
-      borderRadius: BorderRadius.circular(22),
+    final lang = Localizations.localeOf(context).languageCode;
+    final icon = switch (entry.action.toUpperCase()) {
+      'POST' => Icons.add_circle_outline_rounded,
+      'DELETE' => Icons.delete_outline_rounded,
+      'PATCH' || 'PUT' => Icons.edit_outlined,
+      _ => Icons.bolt_rounded,
+    };
+    return DvEntityCard(
+      inkKey: Key('audit-${entry.id}'),
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: homeCard(context, radius: 22),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(ltr(entry.action), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-          const SizedBox(height: 4),
-          Text(ltr(entry.entityType), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.person_outline_rounded, size: 15, color: colors.inkMuted),
-            const SizedBox(width: 6),
-            Expanded(child: Text(entry.actorName ?? l10n.audSystem, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.ink))),
-            if (entry.createdAt != null) Text(leadWhen(context, entry.createdAt!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          ]),
-        ]),
-      ),
+      icon: icon,
+      title: auditTitle(entry.action, entry.entityType, lang),
+      titleLines: 2,
+      subtitle: auditThing(entry.entityType, lang),
+      footIcon: Icons.person_outline_rounded,
+      footColor: colors.inkMuted,
+      footText: entry.actorName ?? l10n.audSystem,
+      footSub: entry.createdAt == null ? null : leadWhen(context, entry.createdAt!),
     );
   }
 }
@@ -266,10 +265,11 @@ class _EntrySheet extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
-          Text(ltr(entry.action), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          Text(auditTitle(entry.action, entry.entityType, Localizations.localeOf(context).languageCode), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           row(l10n.audActor, entry.actorName ?? l10n.audSystem),
-          row(l10n.audEntity, ltr(entry.entityType)),
+          row(l10n.audEntity, auditThing(entry.entityType, Localizations.localeOf(context).languageCode)),
+          row('API', ltr('${entry.action} ${entry.entityType}')),
           if (entry.entityId != null) row('ID', ltr(entry.entityId!)),
           if (entry.ip != null) row(l10n.audIp, ltr(entry.ip!)),
           if (entry.createdAt != null) row(l10n.audWhen, leadWhen(context, entry.createdAt!)),

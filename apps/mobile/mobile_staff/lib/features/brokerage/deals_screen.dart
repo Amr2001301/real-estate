@@ -198,20 +198,22 @@ class BxDealCard extends StatelessWidget {
     final cancelled = d.status == 'CANCELLED';
     final collected = d.commissionTotal > 0 ? d.commissionReceived / d.commissionTotal : 0.0;
     final pct = (collected * 100).round();
-    return DvEntityCard(
+    final tone = cancelled ? colors.error : (pct >= 100 ? colors.success : AppPalette.gold600);
+    return BxTileCard(
       key: ValueKey('bx-deal-${d.id}'),
       onTap: onTap,
       icon: bxKindIcon(d.kind),
       title: d.customerName,
-      subtitleLines: 2,
       subtitle: [ltr(d.code), bxKind(l10n, d.kind), d.listingTitle ?? l10n.bxNoListing].join(' · '),
-      status: cancelled ? bxDealStatus(l10n, d.status) : l10n.bxCollectedPct(pct),
-      statusColor: cancelled ? colors.error : (pct >= 100 ? colors.success : AppPalette.gold600),
-      footIcon: Icons.payments_outlined,
-      footText: '${bxMoney(d.commissionTotal)} ${bxCurrency(context)}',
-      footColor: cancelled ? colors.inkMuted : null,
-      footSub: [bxDate(context, d.closedOn), if (d.agentName != null) d.agentName!].join(' · '),
-      extra: cancelled ? null : BxProgress(value: collected),
+      line: [bxDate(context, d.closedOn), if (d.agentName != null) d.agentName!].join(' · '),
+      trailing: BxPill(cancelled ? bxDealStatus(l10n, d.status) : l10n.bxCollectedPct(pct), tone),
+      strip: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text.rich(TextSpan(children: [
+          TextSpan(text: bxMoney(d.commissionTotal), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: cancelled ? colors.inkMuted : colors.inkStrong)),
+          TextSpan(text: ' ${bxCurrency(context)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+        ])),
+        if (!cancelled) ...[const SizedBox(height: 8), BxProgress(value: collected)],
+      ]),
     );
   }
 }

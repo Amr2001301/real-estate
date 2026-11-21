@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../brokerage/brokerage_kit.dart' show BxTileCard, BxPill;
+
 import '../../../common/catalog_status_label.dart';
 import '../../../common/staff_list_skeleton.dart';
 import '../../../common/staff_share.dart';
@@ -260,36 +262,39 @@ class UnitCard extends StatelessWidget {
       if (row.floor != null) (Icons.stairs_rounded, row.floor == 0 ? l10n.cuGroundFloor : l10n.cuFloorN(ltr('${row.floor}'))),
       ?tag,
     ];
-    final specLine = [
-      if ((row.typeName ?? '').isNotEmpty) row.typeName!,
-      for (final (_, text) in specs) text,
-    ].join(' · ');
-    return DvEntityCard(
+    final priceText = row.price == null ? l10n.priceOnRequest : '${ltr(catalogGrouped(row.price!))} ${PriceFormatter.symbol(lang)}';
+    final buttons = actions ??
+        [
+          DvSquareAction(
+            icon: Icons.ios_share_rounded,
+            onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
+          ),
+          DvSquareAction(
+            key: Key('unit-calc-${row.id}'),
+            icon: Icons.calculate_rounded,
+            gold: true,
+            onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
+          ),
+        ];
+    return BxTileCard(
       inkKey: Key('unit-card-${row.id}'),
       onTap: onTap ?? () => context.push('/units/${row.id}'),
       icon: Icons.door_front_door_rounded,
       title: ltr(row.code),
-      subtitle: [if (where.isNotEmpty) where, if (specLine.isNotEmpty) specLine].join(' · '),
-      status: unitStatusLabel(l10n, row.status),
-      statusColor: color,
-      footIcon: row.reservedUntil != null ? Icons.timer_rounded : Icons.sell_outlined,
-      footColor: colors.inkStrong,
-      footText: row.price == null ? l10n.priceOnRequest : '${ltr(catalogGrouped(row.price!))} ${PriceFormatter.symbol(lang)}',
-      footSub: row.reservedUntil == null ? null : l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
-      footKey: row.reservedUntil == null ? null : Key('unit-reserved-${row.id}'),
-      actions: actions ??
-          [
-            DvSquareAction(
-              icon: Icons.ios_share_rounded,
-              onTap: () => StaffShare.unit(unitId: row.id, unitCode: row.code, projectName: row.projectName ?? '', l10n: l10n),
-            ),
-            DvSquareAction(
-              key: Key('unit-calc-${row.id}'),
-              icon: Icons.calculate_rounded,
-              gold: true,
-              onTap: () => context.push('/calculator', extra: {'price': row.price, 'projectId': row.projectId}),
-            ),
-          ],
+      subtitle: [if (where.isNotEmpty) where, if ((row.typeName ?? '').isNotEmpty) row.typeName!].join(' · '),
+      line: [for (final (_, text) in specs) text].join(' · '),
+      trailing: BxPill(unitStatusLabel(l10n, row.status), color),
+      strip: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(priceText, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            if (row.reservedUntil != null)
+              Text(l10n.cuReservedUntil(DateFormatter.dayMonth(row.reservedUntil!, languageCode: lang)),
+                  key: Key('unit-reserved-${row.id}'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+          ]),
+        ),
+        for (final a in buttons) ...[const SizedBox(width: 8), a],
+      ]),
     );
   }
 }
