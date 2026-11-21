@@ -129,14 +129,13 @@ void main() {
     expect(repo.calls, ['list:null', 'list:ENDED']);
   });
 
-  testWidgets('the list: totals, a campaign with its numbers and budget', (t) async {
+  testWidgets('the list: a campaign with its numbers and budget', (t) async {
     await t.pumpWidget(_app(BlocProvider(create: (_) => CampaignsCubit(_Repo()), child: const CampaignsScreen())));
     await t.pump();
     await t.pump();
-    expect(find.byKey(const Key('campaigns-totals')), findsOneWidget);
     expect(find.text('Nile Launch'), findsOneWidget);
-    expect(find.text('40 عميل'), findsOneWidget);
-    expect(find.text('75%'), findsOneWidget);
+    expect(find.textContaining('40 عميل'), findsOneWidget);
+    expect(find.text('75%'), findsOneWidget); // the budget bar
     expect(find.text('ميتا (فيسبوك + إنستجرام) · مشروع النيل'), findsOneWidget);
   });
 

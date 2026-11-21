@@ -358,7 +358,11 @@ class DvEntityCard extends StatelessWidget {
     this.actions = const [],
     this.onTap,
     this.inkKey,
+    this.extra,
   });
+
+  /// Something under the foot line (a progress bar).
+  final Widget? extra;
   final String title;
   final String? initials;
   final IconData? icon;
@@ -446,6 +450,7 @@ class DvEntityCard extends StatelessWidget {
                 for (final a in actions) ...[const SizedBox(width: 8), a],
               ]),
             ],
+            if (extra != null) ...[const SizedBox(height: 10), extra!],
           ]),
         ),
       ),

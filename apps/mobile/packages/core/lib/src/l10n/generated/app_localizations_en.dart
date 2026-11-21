@@ -4249,6 +4249,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceTimeLeft => 'Time left';
 
   @override
+  String get maintenanceSlaRemaining => 'Time left';
+
+  @override
   String get timeUnitDay => 'days';
 
   @override
@@ -8012,6 +8015,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get npEmailHint => 'A summary with details';
+
+  @override
+  String get npEmailShort => 'Email';
+
+  @override
+  String get npPushShort => 'Push';
 
   @override
   String get npPush => 'Phone notification';

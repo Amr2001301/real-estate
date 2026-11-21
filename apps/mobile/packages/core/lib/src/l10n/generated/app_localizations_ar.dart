@@ -4206,6 +4206,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maintenanceTimeLeft => 'الوقت المتبقي';
 
   @override
+  String get maintenanceSlaRemaining => 'المهلة المتبقية';
+
+  @override
   String get timeUnitDay => 'يوم';
 
   @override
@@ -8035,6 +8038,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get npEmailHint => 'ملخّص بالتفاصيل';
+
+  @override
+  String get npEmailShort => 'بريد';
+
+  @override
+  String get npPushShort => 'تنبيه';
 
   @override
   String get npPush => 'إشعار على الهاتف';

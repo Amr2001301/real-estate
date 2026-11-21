@@ -7952,6 +7952,12 @@ abstract class AppLocalizations {
   /// **'Time left'**
   String get maintenanceTimeLeft;
 
+  /// No description provided for @maintenanceSlaRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time left'**
+  String get maintenanceSlaRemaining;
+
   /// No description provided for @timeUnitDay.
   ///
   /// In en, this message translates to:
@@ -14221,6 +14227,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A summary with details'**
   String get npEmailHint;
+
+  /// No description provided for @npEmailShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get npEmailShort;
+
+  /// No description provided for @npPushShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Push'**
+  String get npPushShort;
 
   /// No description provided for @npPush.
   ///

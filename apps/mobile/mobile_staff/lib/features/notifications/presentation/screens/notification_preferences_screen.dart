@@ -77,51 +77,58 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
                 : prefs == null
                     ? const KitSettingsSkeleton()
                     : ListView(
-                        padding: EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 24),
+                        padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 24),
                         children: [
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                            child: Text(l10n.npHint, style: TextStyle(fontSize: 12, height: 1.6, color: colors.inkMuted)),
+                            padding: const EdgeInsets.fromLTRB(4, 14, 4, 0),
+                            child: Text(l10n.npHint, style: TextStyle(fontSize: 12.5, height: 1.6, color: colors.inkMuted)),
                           ),
-                          for (final group in prefGroups)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                              decoration: homeCard(context, radius: 22),
-                              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8, bottom: 2),
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text(groups[group]!.$1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                                    Text(groups[group]!.$2, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                                  ]),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Row(children: [
+                              const Spacer(),
+                              for (final channel in prefChannels)
+                                SizedBox(
+                                  width: 64,
+                                  child: Text(channel == 'email' ? l10n.npEmailShort : l10n.npPushShort,
+                                      textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: colors.inkMuted)),
                                 ),
-                                for (final (i, channel) in prefChannels.indexed)
-                                  Container(
-                                    decoration: BoxDecoration(border: Border(top: i == 0 ? BorderSide.none : BorderSide(color: colors.hairline))),
-                                    child: Row(children: [
-                                      Icon(channel == 'email' ? Icons.mail_rounded : Icons.notifications_active_rounded, size: 20, color: const Color(0xFF26405F)),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
-                                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                            Text(channel == 'email' ? l10n.npEmail : l10n.npPush, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                                            Text(channel == 'email' ? l10n.npEmailHint : l10n.npPushHint, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                                          ]),
+                            ]),
+                          ),
+                          Container(
+                            decoration: homeCard(context, radius: 22),
+                            child: Column(children: [
+                              for (final (i, group) in prefGroups.indexed) ...[
+                                if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                                  child: Row(children: [
+                                    Expanded(
+                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Text(groups[group]!.$1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+                                        const SizedBox(height: 2),
+                                        Text(groups[group]!.$2, style: TextStyle(fontSize: 12, height: 1.4, color: colors.inkMuted)),
+                                      ]),
+                                    ),
+                                    for (final channel in prefChannels)
+                                      SizedBox(
+                                        width: 64,
+                                        child: Center(
+                                          child: Switch(
+                                            key: Key('pref-$channel-$group'),
+                                            value: prefs[channel]![group]!,
+                                            activeThumbColor: Colors.white,
+                                            activeTrackColor: AppPalette.gold500,
+                                            inactiveTrackColor: colors.surfaceSoft,
+                                            onChanged: _saving ? null : (v) => _toggle(channel, group, v),
+                                          ),
                                         ),
                                       ),
-                                      Switch(
-                                        key: Key('pref-$channel-$group'),
-                                        value: prefs[channel]![group]!,
-                                        activeThumbColor: AppPalette.gold300,
-                                        activeTrackColor: AppPalette.navy,
-                                        onChanged: _saving ? null : (v) => _toggle(channel, group, v),
-                                      ),
-                                    ]),
-                                  ),
-                              ]),
-                            ),
+                                  ]),
+                                ),
+                              ],
+                            ]),
+                          ),
                         ],
                       ),
           ),

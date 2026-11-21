@@ -50,14 +50,6 @@ Color _warrantyColor(MaintenanceWarrantyStatus s) => switch (s) {
   MaintenanceWarrantyStatus.unknown => const Color(0xFF9CA3AF),
 };
 
-Color _priorityColor(MaintenancePriority p) => switch (p) {
-  MaintenancePriority.low => const Color(0xFF6B7280),
-  MaintenancePriority.medium => AppPalette.gold300,
-  MaintenancePriority.high => const Color(0xFFF97316),
-  MaintenancePriority.urgent => const Color(0xFFEF4444),
-  _ => const Color(0xFF6B7280),
-};
-
 Color _resolvedByColor(MaintenanceResolvedBy? by) => switch (by) {
   MaintenanceResolvedBy.both => const Color(0xFF4ADE80),
   MaintenanceResolvedBy.customer ||
@@ -103,54 +95,50 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
           builder: (context, state) {
             final r = state.detail?.request ?? widget.fallback;
             final status = r?.status;
-            final gradient = _statusGradient(
-              status ?? MaintenanceStatus.unknown,
-            );
+            final gradient = _statusGradient(status ?? MaintenanceStatus.unknown);
             final accent = _statusAccent(status ?? MaintenanceStatus.unknown);
+            final category = r?.categoryName?.resolve(lang);
+            final ready = state.status == DataStatus.success || state.status == DataStatus.empty;
+            final bar = ready && state.detail != null ? _ActionBar.maybe(context, state.detail!.request, l10n, state) : null;
 
-            return CustomScrollView(
-              slivers: [
-                // Pinned collapsible header — stays visible while scrolling.
-                SliverToBoxAdapter(
-                  child: HomeListHero(
-                    back: true,
-                    title: l10n.maintenanceCompactDetailTitle,
-                    subtitle: l10n.maintenanceDetailSubtitle,
-                    badge: status == null ? null : DvHeroBadge(maintenanceStatusLabel(context.l10n, status), tone: dvToneOf(maintenanceStatusTone(status))),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-                  sliver: switch (state.status) {
-                    DataStatus.initial ||
-                    DataStatus.loading => const SliverFillRemaining(
-                      hasScrollBody: true,
-                      child: StaffListSkeleton(rows: 5),
-                    ),
-                    DataStatus.failure => SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: ErrorState(
-                        failure: state.failure,
-                        onRetry: () =>
-                            context.read<MaintenanceDetailCubit>().load(),
+            return Column(children: [
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: HomeListHero(
+                        back: true,
+                        title: (category ?? '').isNotEmpty ? category! : l10n.maintenanceFallbackTitle,
+                        badge: status == null ? null : DvHeroBadge(maintenanceStatusLabel(context.l10n, status), tone: dvToneOf(maintenanceStatusTone(status))),
+                        subtitle: r == null
+                            ? null
+                            : [
+                                if (r.unitCode != null) ltr(r.unitCode!),
+                                if (r.priority != MaintenancePriority.unknown) maintenancePriorityLabel(context.l10n, r.priority),
+                              ].join(' · '),
                       ),
                     ),
-                    DataStatus.empty || DataStatus.success => SliverList(
-                      delegate: SliverChildListDelegate(
-                        _buildCards(
-                          context,
-                          state,
-                          l10n,
-                          lang,
-                          gradient,
-                          accent,
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(16, 4, 16, bar == null ? 40 : 24),
+                      sliver: switch (state.status) {
+                        DataStatus.initial || DataStatus.loading => const SliverFillRemaining(
+                          hasScrollBody: true,
+                          child: StaffListSkeleton(rows: 5),
                         ),
-                      ),
+                        DataStatus.failure => SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: ErrorState(failure: state.failure, onRetry: () => context.read<MaintenanceDetailCubit>().load()),
+                        ),
+                        DataStatus.empty || DataStatus.success => SliverList(
+                          delegate: SliverChildListDelegate(_buildCards(context, state, l10n, lang, gradient, accent)),
+                        ),
+                      },
                     ),
-                  },
+                  ],
                 ),
-              ],
-            );
+              ),
+              ?bar,
+            ]);
           },
         ),
       ),
@@ -173,63 +161,31 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     String fmtDate(DateTime? d) =>
         d == null ? '—' : DateFormatter.mediumDate(d, languageCode: lang);
 
+    Widget section(String title, Widget child) => Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: HomeSection(icon: Icons.circle, title: title, horizontal: 0, child: child),
+        );
+
     return [
-      // 0. SLA countdown / overdue timer — hidden once the request is resolved/closed
-      if (r.dueAt != null &&
-          r.status != MaintenanceStatus.resolved &&
-          r.status != MaintenanceStatus.closed) ...[
+      // The SLA countdown, hidden once the request is resolved/closed.
+      if (r.dueAt != null && r.status != MaintenanceStatus.resolved && r.status != MaintenanceStatus.closed) ...[
+        const SizedBox(height: 12),
         _SlaTimerCard(r: r),
-        const SizedBox(height: 12),
       ],
-
-      // 1. Issue overview card
-      _IssueCard(
-        r: r,
-        l10n: l10n,
-        lang: lang,
-        gradient: gradient,
-        accent: accent,
-        icon: icon,
-      ),
-      const SizedBox(height: 12),
-
-      // 2. Customer / unit info
-      if (r.customerName != null ||
-          r.customerPhone != null ||
-          r.unitCode != null) ...[
-        _CustomerInfoCard(r: r, l10n: l10n),
-        const SizedBox(height: 12),
-      ],
-
-      // 3. Unit location card (shown whenever there's a unit code)
-      if (r.unitCode != null) ...[
-        _LocationCard(r: r, l10n: l10n),
-        const SizedBox(height: 12),
-      ],
-
-      // 4. Workflow / SLA card
-      _WorkflowCard(r: r, l10n: l10n, lang: lang, fmtDate: fmtDate),
-      const SizedBox(height: 12),
-
-      // 5. Unified action card
-      _WorkflowActionCard(r: r, l10n: l10n, state: state, fmtDate: fmtDate),
-
-      // 6. Customer feedback (read-only)
-      if (r.customerConfirmedResolutionAt != null ||
-          r.customerRating != null) ...[
-        const SizedBox(height: 12),
-        _FeedbackCard(r: r, l10n: l10n, fmtDate: fmtDate),
-      ],
-
-      // 7. Attachments
-      if (detail.documents.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        _AttachmentsCard(
-          documents: detail.documents,
-          l10n: l10n,
-          requestId: r.id,
-        ),
-      ],
+      section(l10n.maintenanceIssueDescription, _IssueCard(r: r, l10n: l10n, lang: lang, gradient: gradient, accent: accent, icon: icon)),
+      if (r.customerName != null || r.customerPhone != null || r.unitCode != null)
+        section(l10n.maintenanceCustomerInfo, _CustomerInfoCard(r: r, l10n: l10n)),
+      if ((r.unitLat != null && r.unitLng != null) || r.unitAddress != null)
+        section(l10n.maintenanceLocationPreview, _LocationCard(r: r, l10n: l10n)),
+      section(l10n.maintenanceWorkflow, _WorkflowCard(r: r, l10n: l10n, lang: lang, fmtDate: fmtDate)),
+      // A confirmed or closed request says so here; what can still be done is
+      // in the bar under the page.
+      if (r.supervisorHasConfirmed || r.status == MaintenanceStatus.closed)
+        Padding(padding: const EdgeInsets.only(top: 12), child: _WorkflowActionCard(r: r, l10n: l10n, state: state, fmtDate: fmtDate)),
+      if (r.customerConfirmedResolutionAt != null || r.customerRating != null)
+        section(l10n.supervisorDetailFeedbackTitle, _FeedbackCard(r: r, l10n: l10n, fmtDate: fmtDate)),
+      if (detail.documents.isNotEmpty)
+        section(l10n.maintenanceAttachments, _AttachmentsCard(documents: detail.documents, l10n: l10n, requestId: r.id)),
     ];
   }
 }
@@ -269,234 +225,46 @@ class _SlaTimerCardState extends State<_SlaTimerCard> {
     final dueAt = r.dueAt!;
     final now = DateTime.now();
     final isOverdue = now.isAfter(dueAt);
-    final duration = isOverdue ? now.difference(dueAt) : dueAt.difference(now);
+    final d = isOverdue ? now.difference(dueAt) : dueAt.difference(now);
+    String two(int n) => n.toString().padLeft(2, '0');
+    final clock = '${d.inDays > 0 ? '${d.inDays}:' : ''}${two(d.inHours % 24)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
 
-    final days = duration.inDays;
-    final hours = duration.inHours % 24;
-    final minutes = duration.inMinutes % 60;
-    final seconds = duration.inSeconds % 60;
-
-    // SLA progress: 0.0 = just started, 1.0 = deadline reached
+    // 0 = just started, 1 = the deadline.
     final startAt = r.assignedAt ?? r.createdAt;
     double progress = isOverdue ? 1.0 : 0.0;
     if (startAt != null) {
-      final totalSecs = dueAt.difference(startAt).inSeconds;
-      if (totalSecs > 0) {
-        progress = (now.difference(startAt).inSeconds / totalSecs).clamp(0.0, 1.0);
-      }
+      final total = dueAt.difference(startAt).inSeconds;
+      if (total > 0) progress = (now.difference(startAt).inSeconds / total).clamp(0.0, 1.0);
     }
-
     final lang = Localizations.localeOf(context).languageCode;
-    final dueFmt = DateFormatter.mediumDate(dueAt, languageCode: lang);
-
-    // Overdue: warm orange (matches HIGH priority used elsewhere in the app)
-    const overdueAccent = Color(0xFFFF7043);
-    final accent = isOverdue ? overdueAccent : AppPalette.gold300;
-    const bgStart = Color(0xFF0E2140);
-    const bgEnd   = Color(0xFF091628);
-
+    final colors = context.appColors;
+    final tone = isOverdue ? colors.error : colors.inkStrong;
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        // Overdue: accent glow shadow + accent border
-        boxShadow: isOverdue
-            ? [
-                BoxShadow(
-                  color: overdueAccent.withValues(alpha: 0.18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-        border: isOverdue
-            ? Border.all(
-                color: overdueAccent.withValues(alpha: 0.42),
-                width: 1.5,
-              )
-            : null,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(isOverdue ? 14.5 : 16),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [bgStart, bgEnd],
-            ),
-          ),
-        child: Column(
-          children: [
-            // ── Header row ──────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: Row(
-                children: [
-                  Icon(
-                    isOverdue
-                        ? Icons.warning_amber_rounded
-                        : Icons.timer_outlined,
-                    color: accent,
-                    size: 15,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isOverdue ? context.l10n.maintenanceDeadlinePassed : context.l10n.maintenanceTimeLeft,
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    dueFmt,
-                    style: TextStyle(
-                      color: accent.withValues(alpha: 0.55),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Thin accent hairline ─────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Divider(height: 1, color: accent.withValues(alpha: 0.14)),
-            ),
-
-            // ── Timer boxes ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              child: Row(
-                children: [
-                  _TimerBox(value: days, unit: context.l10n.timeUnitDay, accent: accent),
-                  _TimerColon(accent: accent),
-                  _TimerBox(value: hours, unit: context.l10n.timeUnitHour, accent: accent),
-                  _TimerColon(accent: accent),
-                  _TimerBox(value: minutes, unit: context.l10n.timeUnitMinute, accent: accent),
-                  _TimerColon(accent: accent),
-                  _TimerBox(value: seconds, unit: context.l10n.timeUnitSecond, accent: accent),
-                ],
-              ),
-            ),
-
-            // ── SLA progress bar ─────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: accent.withValues(alpha: 0.12),
-                      valueColor: AlwaysStoppedAnimation<Color>(accent),
-                      minHeight: 5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    isOverdue
-                        ? context.l10n.maintenanceDeadlineOver
-                        : context.l10n.maintenanceDeadlineUsed((progress * 100).toStringAsFixed(0)),
-                    style: TextStyle(
-                      color: accent.withValues(alpha: 0.50),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+      key: const Key('maintenance-sla'),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: homeCard(context, radius: 22),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(
+          '${isOverdue ? context.l10n.supervisorDetailOverdueLabel : context.l10n.maintenanceSlaRemaining} · ${DateFormatter.mediumDate(dueAt, languageCode: lang)}',
+          style: TextStyle(fontSize: 12.5, color: isOverdue ? colors.error : colors.inkMuted),
         ),
-        ),   // inner gradient Container
-      ),     // ClipRRect
-    );       // outer border Container
-  }
-}
-
-class _TimerBox extends StatelessWidget {
-  const _TimerBox({
-    required this.value,
-    required this.unit,
-    required this.accent,
-  });
-  final int value;
-  final String unit;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Top accent stripe
-                Container(height: 3, color: accent),
-                Container(
-                  color: const Color(0xFF081426),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  width: double.infinity,
-                  child: Text(
-                    value.toString().padLeft(2, '0'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: accent,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        const SizedBox(height: 4),
+        Text(ltr(clock), style: TextStyle(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: tone)),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            color: isOverdue ? colors.error : AppPalette.gold500,
+            backgroundColor: colors.surfaceSoft,
           ),
-          const SizedBox(height: 7),
-          Text(
-            unit,
-            style: TextStyle(
-              color: accent.withValues(alpha: 0.65),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }
 
-class _TimerColon extends StatelessWidget {
-  const _TimerColon({required this.accent});
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
-      child: Text(
-        ':',
-        style: TextStyle(
-          color: accent.withValues(alpha: 0.70),
-          fontSize: 22,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Issue overview card ───────────────────────────────────────────────────────
 class _IssueCard extends StatelessWidget {
   const _IssueCard({
     required this.r,
@@ -515,167 +283,22 @@ class _IssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final category = r.categoryName?.resolve(lang);
-    final date = r.createdAt != null
-        ? DateFormatter.mediumDate(r.createdAt!, languageCode: lang)
-        : null;
-    final pColor = _priorityColor(r.priority);
-    final pLabel = maintenancePriorityLabel(context.l10n, r.priority);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gradient strip
-          Container(
-            height: 88,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradient,
-              ),
-            ),
-            child: Stack(
-              children: [
-                const Positioned.fill(child: _DotTexture()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Icon(icon, color: accent, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              category?.isNotEmpty == true
-                                  ? category!
-                                  : l10n.maintenanceFallbackTitle,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (r.unitCode != null)
-                              Text(
-                                context.l10n.unitTitle(r.unitCode!),
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.65),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // White body
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.maintenanceIssueDescription,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9CA3AF),
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  r.description.isNotEmpty
-                      ? r.description
-                      : l10n.supervisorNoDescription,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.55,
-                  ),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    if (r.priority != MaintenancePriority.unknown) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: pColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: pColor.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Text(
-                          pLabel,
-                          style: TextStyle(
-                            color: pColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    if (date != null) ...[
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        size: 12,
-                        color: Colors.black.withValues(alpha: 0.28),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        date,
-                        style: TextStyle(
-                          color: Colors.black.withValues(alpha: 0.40),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-          ),
+    final colors = context.appColors;
+    final date = r.createdAt != null ? DateFormatter.mediumDate(r.createdAt!, languageCode: lang) : null;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: homeCard(context, radius: 22),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          r.description.isNotEmpty ? r.description : l10n.supervisorNoDescription,
+          style: TextStyle(fontSize: 14.5, height: 1.7, color: colors.inkStrong),
+        ),
+        if (date != null) ...[
+          const SizedBox(height: 12),
+          Text(date, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
         ],
-      ),
+      ]),
     );
   }
 }
@@ -712,10 +335,11 @@ class _CustomerInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPhone = r.customerPhone != null;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        color: Colors.white,
+        color: Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -826,40 +450,15 @@ class _LocationCard extends StatelessWidget {
     final hasCoords = r.unitLat != null && r.unitLng != null;
     final address = r.unitAddress;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        color: Colors.white,
+        color: Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section header — lighter than _CardHeader to reduce visual weight
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.location_on_rounded,
-                    color: _hasLocation
-                        ? const Color(0xFF1A73E8)
-                        : const Color(0xFF9CA3AF),
-                    size: 17,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.maintenanceLocationPreview,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             if (_hasLocation) ...[
-              Divider(height: 1, color: homeLine(context)),
 
               // Address line
               if (address != null)
@@ -1089,10 +688,11 @@ class _WorkflowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        color: Colors.white,
+        color: Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1178,7 +778,10 @@ class _WorkflowCard extends StatelessWidget {
   }
 }
 
-// ── Unified workflow action card ──────────────────────────────────────────────
+// ── Workflow state + action bar ───────────────────────────────────────────────
+
+/// A confirmed or closed request, said in one line (what can still be done is
+/// in [_ActionBar]).
 class _WorkflowActionCard extends StatelessWidget {
   const _WorkflowActionCard({
     required this.r,
@@ -1191,232 +794,98 @@ class _WorkflowActionCard extends StatelessWidget {
   final MaintenanceDetailState state;
   final String Function(DateTime?) fmtDate;
 
-  List<MaintenanceTransition> get _transitions => r.allowedTransitions
-      .where((t) => t != MaintenanceTransition.reopen)
-      .toList();
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final confirmed = r.supervisorHasConfirmed;
-    final canConfirm = r.canSupervisorConfirm;
-    final isClosed = r.status == MaintenanceStatus.closed;
-    final hasAction = _transitions.isNotEmpty;
-
-    if (!confirmed && !canConfirm && !hasAction && !isClosed) {
-      return const SizedBox.shrink();
-    }
-
-    final Color? accentColor = confirmed || isClosed
-        ? const Color(0xFF4ADE80)
-        : canConfirm
-        ? AppPalette.gold400
-        : null;
-
-    final IconData headerIcon = confirmed || isClosed
-        ? Icons.verified_rounded
-        : canConfirm
-        ? Icons.admin_panel_settings_rounded
-        : Icons.update_rounded;
-
-    final String headerTitle = (confirmed || isClosed)
-        ? (isClosed && !confirmed
-              ? l10n.maintenanceClosedState
-              : l10n.supervisorDetailConfirmTitle)
-        : canConfirm
-        ? l10n.supervisorDetailConfirmTitle
-        : l10n.maintenanceUpdateStatus;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              decoration: BoxDecoration(
-                color: accentColor?.withValues(alpha: 0.07),
-                border: Border(
-                  bottom: BorderSide(color: homeLine(context)),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: accentColor != null
-                          ? accentColor.withValues(alpha: 0.15)
-                          : _navyCard,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(
-                      headerIcon,
-                      color: accentColor ?? Colors.white,
-                      size: 17,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    headerTitle,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: _body(context, confirmed, canConfirm, isClosed),
-            ),
-          ],
+    if (!confirmed && r.status != MaintenanceStatus.closed) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: homeCard(context, radius: 22),
+      child: Row(children: [
+        Icon(Icons.check_circle_rounded, color: colors.success, size: 22),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            confirmed ? '${l10n.supervisorDetailConfirmedAtPrefix} ${fmtDate(r.supervisorConfirmedResolutionAt)}' : l10n.maintenanceClosedState,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong),
+          ),
         ),
-      ),
+      ]),
+    );
+  }
+}
+
+/// What the viewer can do next, fixed under the page: the main step in gold,
+/// the rest beside it.
+class _ActionBar extends StatelessWidget {
+  const _ActionBar({required this.items, required this.working, this.hint});
+  final List<(String, IconData, bool, VoidCallback)> items;
+  final bool working;
+  final String? hint;
+
+  static Widget? maybe(BuildContext context, MaintenanceRequest r, AppLocalizations l10n, MaintenanceDetailState state) {
+    final cubit = context.read<MaintenanceDetailCubit>();
+    if (r.supervisorHasConfirmed) return null;
+    if (r.canSupervisorConfirm) {
+      return _ActionBar(
+        working: state.working,
+        hint: l10n.supervisorDetailConfirmInstruction,
+        items: [(l10n.maintenanceApproveSolution, Icons.verified_rounded, true, cubit.confirmResolution)],
+      );
+    }
+    final transitions = r.allowedTransitions.where((t) => t != MaintenanceTransition.reopen).toList();
+    if (transitions.isEmpty) return null;
+    final hasResolve = transitions.contains(MaintenanceTransition.resolve);
+    return _ActionBar(
+      working: state.working,
+      hint: hasResolve ? l10n.maintenanceActionHintInProgress : null,
+      items: [
+        for (final t in transitions)
+          (maintenanceTransitionLabel(l10n, t), maintenanceTransitionIcon(t), t == MaintenanceTransition.resolve || transitions.length == 1, () => cubit.applyTransition(t)),
+      ],
     );
   }
 
-  Widget _body(
-    BuildContext context,
-    bool confirmed,
-    bool canConfirm,
-    bool isClosed,
-  ) {
-    // 1. Already confirmed
-    if (confirmed) {
-      return Row(
-        children: [
-          const Icon(
-            Icons.check_circle_rounded,
-            color: Color(0xFF4ADE80),
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '${l10n.supervisorDetailConfirmedAtPrefix} '
-              '${fmtDate(r.supervisorConfirmedResolutionAt)}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // 2. Can confirm (resolved, not yet confirmed)
-    if (canConfirm) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.supervisorDetailConfirmInstruction,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6B7280),
-              height: 1.5,
-            ),
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    // The gold one takes the room; the others sit beside it.
+    final sorted = [...items]..sort((a, b) => (b.$3 ? 1 : 0).compareTo(a.$3 ? 1 : 0));
+    return Container(
+      key: const Key('maintenance-action-bar'),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.paddingOf(context).bottom),
+      decoration: BoxDecoration(color: colors.canvas, border: Border(top: BorderSide(color: colors.hairline))),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (hint != null) ...[
+          Text(hint!, style: TextStyle(fontSize: 12.5, height: 1.5, color: colors.inkMuted)),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: AppButton(
-              label: l10n.maintenanceApproveSolution,
-              icon: Icons.verified_rounded,
-              size: AppButtonSize.medium,
-              variant: AppButtonVariant.gold,
-              isLoading: state.working,
-              onPressed: state.working
-                  ? null
-                  : () => context
-                        .read<MaintenanceDetailCubit>()
-                        .confirmResolution(),
-            ),
-          ),
         ],
-      );
-    }
-
-    // 3. Active transitions
-    final transitions = _transitions;
-    if (transitions.isNotEmpty) {
-      final hasResolve = transitions.any(
-        (t) => t == MaintenanceTransition.resolve,
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Hint text for the in-progress resolve action
-          if (hasResolve) ...[
-            Text(
-              l10n.maintenanceActionHintInProgress,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF6B7280),
-                height: 1.5,
-              ),
+        Row(children: [
+          for (final (i, it) in sorted.indexed) ...[
+            if (i > 0) const SizedBox(width: 10),
+            Expanded(
+              flex: it.$3 ? 2 : 1,
+              child: it.$3
+                  ? DvGoldButton(label: it.$1, icon: it.$2, onTap: working ? null : it.$4)
+                  : SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: working ? null : it.$4,
+                        icon: Icon(it.$2, size: 18),
+                        label: Text(it.$1, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.inkStrong,
+                          side: BorderSide(color: colors.hairline),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
             ),
-            const SizedBox(height: 10),
           ],
-          for (final t in transitions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: SizedBox(
-                width: double.infinity,
-                child: AppButton(
-                  label: maintenanceTransitionLabel(context.l10n, t),
-                  icon: maintenanceTransitionIcon(t),
-                  size: AppButtonSize.medium,
-                  variant: t == MaintenanceTransition.resolve
-                      ? AppButtonVariant.gold
-                      : AppButtonVariant.outline,
-                  isLoading: state.working,
-                  onPressed: state.working
-                      ? null
-                      : () => context
-                            .read<MaintenanceDetailCubit>()
-                            .applyTransition(t),
-                ),
-              ),
-            ),
-        ],
-      );
-    }
-
-    // 4. Closed state
-    if (isClosed) {
-      return Row(
-        children: [
-          const Icon(
-            Icons.check_circle_rounded,
-            color: Color(0xFF4ADE80),
-            size: 20,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              l10n.maintenanceClosedState,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF4ADE80),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Text(
-      l10n.maintenanceActionUnavailable,
-      style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+        ]),
+      ]),
     );
   }
 }
@@ -1437,10 +906,11 @@ class _FeedbackCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.appColors;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        color: Colors.white,
+        color: Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1500,46 +970,14 @@ class _AttachmentsCard extends StatelessWidget {
     final imageDocs = documents.where((d) => d.isImage).toList();
     final fileDocs = documents.where((d) => !d.isImage).toList();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: homeCard(context, radius: 22),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        color: Colors.white,
+        color: Colors.transparent,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Lightweight header — smaller vertical padding than _CardHeader
-            // so the image grid starts close under the section label.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.attach_file_rounded,
-                    color: _navyCard.withValues(alpha: 0.7),
-                    size: 17,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.maintenanceAttachments,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${documents.length}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: homeLine(context)),
 
             // Image thumbnail grid
             if (imageDocs.isNotEmpty)
@@ -1962,37 +1400,9 @@ class _CardHeader extends StatelessWidget {
   final IconData icon;
   final String title;
 
+  /// The section title sits above the card now; nothing inside it.
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: homeLine(context))),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _navyCard,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, color: Colors.white, size: 17),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox(height: 4);
 }
 
 // ── Info row (lighter icon, label + value) ────────────────────────────────────
@@ -2010,47 +1420,20 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: _navyCard.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, color: _navyCard, size: 16),
-          ),
-          const SizedBox(width: 10),
+          Text(label, style: TextStyle(fontSize: 13, height: 1.45, color: colors.inkMuted)),
+          const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value,
-                  textDirection: valueDirection,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              value,
+              textDirection: valueDirection,
+              textAlign: TextAlign.end,
+              style: TextStyle(fontSize: 14, height: 1.45, fontWeight: FontWeight.w600, color: colors.inkStrong),
             ),
           ),
         ],
@@ -2122,28 +1505,3 @@ class _Stars extends StatelessWidget {
 }
 
 // ── Dot texture ───────────────────────────────────────────────────────────────
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
-    const step = 18.0;
-    for (var y = 0.0; y < size.height; y += step) {
-      for (var x = 0.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1.5, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter _) => false;
-}
