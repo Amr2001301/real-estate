@@ -197,52 +197,21 @@ class BxDealCard extends StatelessWidget {
     final d = deal;
     final cancelled = d.status == 'CANCELLED';
     final collected = d.commissionTotal > 0 ? d.commissionReceived / d.commissionTotal : 0.0;
-    return BxCard(
+    final pct = (collected * 100).round();
+    return DvEntityCard(
       key: ValueKey('bx-deal-${d.id}'),
       onTap: onTap,
-      footer: Row(children: [
-        Text(bxDate(context, d.closedOn), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        if (d.agentName != null) ...[
-          Text(' · ', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          Expanded(child: Text(d.agentName!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-        ] else
-          const Spacer(),
-        Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-      ]),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        BxIconTile(bxKindIcon(d.kind), cancelled ? colors.inkMuted : AppPalette.gold500),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(child: Text(d.customerName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong))),
-              const SizedBox(width: 6),
-              BxAmount(d.commissionTotal, color: cancelled ? colors.inkMuted : null),
-            ]),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: ltr(d.code), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                TextSpan(text: ' · ${bxKind(l10n, d.kind)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                TextSpan(text: ' · ${d.listingTitle ?? l10n.bxNoListing}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            if (cancelled)
-              CatalogBadge.status(bxDealStatus(l10n, d.status), colors.error)
-            else ...[
-              BxProgress(value: collected),
-              const SizedBox(height: 5),
-              Text(
-                '${l10n.bxCollectedPct((collected * 100).round())} · ${l10n.bxDealValue} ${bxMoney(d.dealValue)}',
-                style: TextStyle(fontSize: 12, color: colors.inkMuted),
-              ),
-            ],
-          ]),
-        ),
-      ]),
+      icon: bxKindIcon(d.kind),
+      title: d.customerName,
+      subtitleLines: 2,
+      subtitle: [ltr(d.code), bxKind(l10n, d.kind), d.listingTitle ?? l10n.bxNoListing].join(' · '),
+      status: cancelled ? bxDealStatus(l10n, d.status) : l10n.bxCollectedPct(pct),
+      statusColor: cancelled ? colors.error : (pct >= 100 ? colors.success : AppPalette.gold600),
+      footIcon: Icons.payments_outlined,
+      footText: '${bxMoney(d.commissionTotal)} ${bxCurrency(context)}',
+      footColor: cancelled ? colors.inkMuted : null,
+      footSub: [bxDate(context, d.closedOn), if (d.agentName != null) d.agentName!].join(' · '),
+      extra: cancelled ? null : BxProgress(value: collected),
     );
   }
 }
@@ -550,11 +519,16 @@ class _BxSharesScreenState extends State<BxSharesScreen> {
               else if (data != null) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                  child: HomeTiles(tiles: [
-                    HomeTile(label: l10n.bxTotalPayable, value: bxMoney(data.payable), unit: bxCurrency(context)),
-                    HomeTile(label: l10n.bxTotalAwaiting, value: bxMoney(data.awaitingCollection), unit: bxCurrency(context)),
-                    HomeTile(label: l10n.bxTotalPaid, value: bxMoney(data.paid), unit: bxCurrency(context)),
-                  ]),
+                  child: DvHeroStats(
+                    id: 'shares',
+                    label: l10n.bxTotalPayable,
+                    value: bxMoney(data.payable),
+                    unit: bxCurrency(context),
+                    figures: [
+                      DvStat(id: 'awaiting', label: l10n.bxTotalAwaiting, value: homeCompactText(data.awaitingCollection, l10n)),
+                      DvStat(id: 'paid', label: l10n.bxTotalPaid, value: homeCompactText(data.paid, l10n)),
+                    ],
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 0),
@@ -601,43 +575,18 @@ class _ShareCard extends StatelessWidget {
         : s.payable
             ? (l10n.bxSplitPayable, colors.warning)
             : (l10n.bxSplitAwaiting, colors.info);
-    return BxCard(
+    return DvEntityCard(
       key: ValueKey('bx-share-${s.split.id}'),
       onTap: onTap,
-      footer: Row(children: [
-        Text('${bxSplitRole(l10n, s.split.role)} · ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        const Spacer(),
-        Text(bxDate(context, s.closedOn), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-      ]),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        BxIconTile(Icons.payments_rounded, tone),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Text(showName && s.split.userName != null ? s.split.userName! : s.customerName,
-                    maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              ),
-              const SizedBox(width: 6),
-              BxAmount(s.split.amount),
-            ]),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: ltr(s.dealCode), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                if (showName) TextSpan(text: ' · ${s.customerName}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                TextSpan(text: ' · ${s.listingTitle ?? bxKind(l10n, s.kind)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            CatalogBadge.status(state, tone),
-          ]),
-        ),
-      ]),
+      icon: Icons.payments_rounded,
+      title: showName && s.split.userName != null ? s.split.userName! : s.customerName,
+      subtitleLines: 2,
+      subtitle: [ltr(s.dealCode), if (showName) s.customerName, s.listingTitle ?? bxKind(l10n, s.kind)].join(' · '),
+      status: state,
+      statusColor: tone,
+      footIcon: Icons.account_balance_wallet_outlined,
+      footText: '${bxMoney(s.split.amount)} ${bxCurrency(context)}',
+      footSub: '${bxSplitRole(l10n, s.split.role)} · ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))} · ${bxDate(context, s.closedOn)}',
     );
   }
 }

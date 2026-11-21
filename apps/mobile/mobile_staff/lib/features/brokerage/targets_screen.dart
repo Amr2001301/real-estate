@@ -143,21 +143,21 @@ class BxTargetGoal extends StatelessWidget {
     final l10n = context.l10n;
     final r = row;
     final (v, unit) = homeCompact(r?.commission ?? 0, l10n);
-    return HomeGoalCard(
-      percent: r != null && r.hasTarget ? (r.commissionPct ?? 0) : null,
-      percentLabel: l10n.shOfGoal,
-      icon: Icons.flag_rounded,
-      title: title ?? l10n.bxHomeGoalTitle,
+    final has = r != null && r.hasTarget;
+    return DvHeroStats(
+      id: 'goal',
+      label: title ?? l10n.bxHomeGoalTitle,
       value: v,
-      unit: unit,
-      trailing: r != null && r.hasTarget ? l10n.bxOfTarget('${homeCompactText(r.commissionTarget!, l10n)} ${bxCurrency(context)}') : '',
-      minis: r == null
+      unit: [if (unit.isNotEmpty) unit, bxCurrency(context)].join(' '),
+      note: has ? l10n.bxOfTarget('${homeCompactText(r.commissionTarget!, l10n)} ${bxCurrency(context)}') : l10n.bxNoTarget,
+      progress: has ? ((r.commissionPct ?? 0) / 100).clamp(0.0, 1.0) : null,
+      figures: r == null
           ? const []
           : [
-              (l10n.bxDealsGoal, ltr('${r.deals} / ${r.dealsTarget ?? 0}')),
-              (l10n.bxBonus, r.bonusAmount != null && r.bonusAmount! > 0 ? '${bxMoney(r.bonusAmount!)} ${bxCurrency(context)}' : '—'),
+              DvStat(id: 'pct', label: l10n.shOfGoal, value: has ? ltr('${r.commissionPct ?? 0}%') : '—'),
+              DvStat(id: 'deals', label: l10n.bxDealsGoal, value: ltr('${r.deals} / ${r.dealsTarget ?? 0}')),
+              DvStat(id: 'bonus', label: l10n.bxBonus, value: r.bonusAmount != null && r.bonusAmount! > 0 ? homeCompactText(r.bonusAmount!, l10n) : '—'),
             ],
-      emptyText: l10n.bxNoTarget,
     );
   }
 }
@@ -225,35 +225,16 @@ class _TeamRow extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final r = row;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: homeCard(context, radius: 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          BxIconTile(r.achieved ? Icons.emoji_events_rounded : Icons.person_rounded, r.achieved ? colors.success : homeIsDark(context) ? AppPalette.gold400 : AppPalette.navy, size: 38),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(r.userName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              Text(
-                r.hasTarget ? '${l10n.bxDealsGoal} ${ltr('${r.deals} / ${r.dealsTarget}')}' : l10n.bxNoTarget,
-                style: TextStyle(fontSize: 12, color: colors.inkMuted),
-              ),
-            ]),
-          ),
-          BxAmount(r.commission, size: 15),
-        ]),
-        if (r.hasTarget) ...[
-          const SizedBox(height: 10),
-          BxProgress(value: (r.commissionPct ?? 0) / 100),
-          const SizedBox(height: 6),
-          Row(children: [
-            Text(l10n.bxOfTarget('${bxMoney(r.commissionTarget!)} ${bxCurrency(context)}'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            const Spacer(),
-            CatalogBadge.status(bxBonus(l10n, r.bonus), bxBonusColor(r.bonus, colors)),
-          ]),
-        ],
-      ]),
+    return DvEntityCard(
+      icon: r.achieved ? Icons.emoji_events_rounded : Icons.person_rounded,
+      title: r.userName,
+      subtitle: r.hasTarget ? '${l10n.bxDealsGoal} ${ltr('${r.deals} / ${r.dealsTarget}')}' : l10n.bxNoTarget,
+      status: r.hasTarget ? bxBonus(l10n, r.bonus) : null,
+      statusColor: bxBonusColor(r.bonus, colors),
+      footIcon: Icons.payments_outlined,
+      footText: '${bxMoney(r.commission)} ${bxCurrency(context)}',
+      footSub: r.hasTarget ? l10n.bxOfTarget('${bxMoney(r.commissionTarget!)} ${bxCurrency(context)}') : null,
+      extra: r.hasTarget ? BxProgress(value: (r.commissionPct ?? 0) / 100) : null,
     );
   }
 }

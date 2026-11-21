@@ -173,57 +173,25 @@ class BxListingCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final x = listing;
-    final tone = bxListingColor(x.status, colors);
     final specs = [
       '${ltr(catalogGrouped(x.area))} ${l10n.bxSqm}',
       if (x.bedrooms != null) '${ltr('${x.bedrooms}')} ${l10n.bxBedrooms}',
       if (x.bathrooms != null) '${ltr('${x.bathrooms}')} ${l10n.bxBathrooms}',
     ].join(' · ');
-    return BxCard(
+    final price = '${bxMoney(x.price)} ${bxCurrency(context)}${x.kind == 'RENT' ? ' ${l10n.bxPerMonth}' : ''}';
+    return DvEntityCard(
       key: ValueKey('bx-listing-${x.id}'),
       onTap: onTap,
-      footer: Row(children: [
-        Icon(Icons.person_outline_rounded, size: 15, color: colors.inkMuted),
-        const SizedBox(width: 5),
-        Expanded(child: Text(x.agentName ?? l10n.bxNoAgent, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-        Icon(Icons.chevron_right_rounded, size: 18, color: colors.inkMuted),
-      ]),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        BxIconTile(bxKindIcon(x.kind), AppPalette.gold500),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(x.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong, height: 1.3)),
-            const SizedBox(height: 3),
-            Text.rich(
-              TextSpan(children: [
-                TextSpan(text: ltr(x.code), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                TextSpan(text: ' · ${bxKind(l10n, x.kind)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                if (x.place.isNotEmpty) TextSpan(text: ' · ${x.place}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ]),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Text(specs, style: TextStyle(fontSize: 12, color: colors.ink)),
-            const SizedBox(height: 7),
-            Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              CatalogBadge.status(bxListingStatus(l10n, x.status, kind: x.kind), tone),
-              const Spacer(),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    BxAmount(x.price, size: 17),
-                    if (x.kind == 'RENT') Text(' ${l10n.bxPerMonth}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
-                ),
-              ),
-            ]),
-          ]),
-        ),
-      ]),
+      icon: bxKindIcon(x.kind),
+      title: x.title,
+      titleLines: 2,
+      subtitleLines: 2,
+      subtitle: [ltr(x.code), bxKind(l10n, x.kind), if (x.place.isNotEmpty) x.place].join(' · '),
+      status: bxListingStatus(l10n, x.status, kind: x.kind),
+      statusColor: bxListingColor(x.status, colors),
+      footIcon: Icons.sell_outlined,
+      footText: price,
+      footSub: [specs, if (x.agentName != null) x.agentName!].join(' · '),
     );
   }
 }
