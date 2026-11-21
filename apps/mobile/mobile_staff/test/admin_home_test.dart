@@ -114,7 +114,7 @@ void main() {
     expect(h.funnel, [0, 0, 0, 0]);
   });
 
-  testWidgets('the admin sees the value, the month, actions, rankings and activity', (t) async {
+  testWidgets('the admin sees the month, what waits for a decision and the way to the reports', (t) async {
     t.view.physicalSize = const Size(390 * 3, 4200 * 3);
     t.view.devicePixelRatio = 3;
     addTearDown(t.view.reset);
@@ -139,25 +139,18 @@ void main() {
     ));
     await t.pumpAndSettle();
 
-    expect(find.text('قيمة العقود'), findsOneWidget);
+    // The month's collection on the one dark card, with the collection rate.
+    expect(find.byKey(const Key('dv-hero')), findsOneWidget);
+    expect(find.text('المحصَّل هذا الشهر'), findsOneWidget);
     expect(find.textContaining('97%'), findsOneWidget);
-    expect(find.byKey(const Key('home-action-payment')), findsOneWidget);
-    expect(find.byKey(const Key('home-action-ledger')), findsOneWidget);
-    expect(find.text('الشركة هذا الشهر'), findsOneWidget);
-    expect(find.text('محصَّل هذا الشهر (مليون)'), findsOneWidget);
-    expect(find.byKey(const Key('home-att-sign')), findsOneWidget);
-    expect(find.byKey(const Key('home-att-follow-ups')), findsOneWidget);
-    expect(find.text('مسار التحويل'), findsOneWidget);
-    expect(find.text('أكتوبر'), findsOneWidget);
-    expect(find.byKey(const Key('home-rank-r1')), findsOneWidget);
-    expect(find.textContaining('عمولة'), findsOneWidget);
-    for (final k in ['ah-project-p1', 'ah-finance-health', 'ah-cash-flow', 'ah-lead-sources']) {
-      await t.scrollUntilVisible(find.byKey(Key(k)), 300, scrollable: find.byType(Scrollable).first);
-      expect(find.byKey(Key(k)), findsOneWidget);
-    }
-    await t.scrollUntilVisible(find.text('رانيا غالي'), 300, scrollable: find.byType(Scrollable).first);
-    expect(find.text('رانيا غالي'), findsOneWidget);
-    expect(find.text('طلب زيارة'), findsOneWidget);
+    // What waits for the admin, only what is not zero.
+    expect(find.text('ينتظر قرارك'), findsOneWidget);
+    expect(find.byKey(const Key('home-await-sign')), findsOneWidget);
+    expect(find.byKey(const Key('home-await-follow-ups')), findsOneWidget);
+    // The reports live behind one row, not on the home.
+    expect(find.byKey(const Key('home-reports')), findsOneWidget);
+    expect(find.text('مسار التحويل'), findsNothing);
+    expect(find.byKey(const Key('home-rank-r1')), findsNothing);
   });
 
   test('times read as on the website', () {

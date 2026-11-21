@@ -7,10 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../../common/broker_status_label.dart';
 import '../../../../../common/lead_stage_label.dart';
 import '../../../../../common/visit_status_label.dart';
-import '../../../../leads/presentation/screens/leads_screen.dart' show leadStageColor, leadWhen;
+import '../../../../leads/presentation/screens/leads_screen.dart' show leadWhen;
 import '../../domain/entities/broker_lead.dart';
 import '../cubit/broker_lead_detail_cubit.dart';
-import 'broker_leads_screen.dart' show brokerApprovalColor;
 
 /// A broker's lead (owner-approved look, 2026-11-04), with what the broker
 /// portal's lead page shows: the approval and stage, why it was rejected,
@@ -43,9 +42,21 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
             final detail = state.data;
             final lead = detail?.lead ?? widget.fallback;
             final hero = HomeListHero(
+              key: lead == null ? null : const Key('broker-lead-card'),
               back: true,
               title: lead?.fullName ?? l10n.leadSingular,
-              subtitle: lead?.projectName,
+              badge: lead == null
+                  ? null
+                  : DvHeroBadge(
+                      brokerLeadStatusLabel(l10n, lead.approvalStatus),
+                      tone: switch (lead.approvalStatus) {
+                        'APPROVED' => DvTone.ok,
+                        'REJECTED' => DvTone.bad,
+                        _ => DvTone.warn,
+                      },
+                    ),
+              subtitle: lead == null ? null : [if ((lead.projectName ?? '').isNotEmpty) lead.projectName!, leadStageLabel(l10n, lead.stage)].join(' · '),
+              bottom: lead == null ? null : _heroBottom(context, lead),
             );
             if (detail == null) {
               return Column(children: [
@@ -67,10 +78,8 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
                 children: [
                   hero,
-                  const SizedBox(height: AppSpacing.md),
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: _ClientCard(lead: l)),
                   if (l.approvalStatus == 'REJECTED' && (l.rejectionReason ?? '').isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.md),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                       child: _RejectionBox(reason: l.rejectionReason!),
@@ -80,13 +89,14 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
                     const SizedBox(height: AppSpacing.md),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                      child: AppButton(
-                        key: const Key('broker-lead-book'),
-                        label: l10n.reservationNew,
-                        icon: Icons.bookmark_add_rounded,
-                        variant: AppButtonVariant.gold,
-                        expand: true,
-                        onPressed: () => context.push('/broker/reservations/new', extra: {'leadId': l.id}),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: DvGoldButton(
+                          key: const Key('broker-lead-book'),
+                          label: l10n.reservationNew,
+                          icon: Icons.bookmark_add_rounded,
+                          onTap: () => context.push('/broker/reservations/new', extra: {'leadId': l.id}),
+                        ),
                       ),
                     ),
                   ],
@@ -103,61 +113,31 @@ class _BrokerLeadDetailScreenState extends State<BrokerLeadDetailScreen> {
   }
 }
 
-class _ClientCard extends StatelessWidget {
-  const _ClientCard({required this.lead});
-  final BrokerLead lead;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final approval = brokerApprovalColor(lead.approvalStatus, colors);
-    return Container(
-      key: const Key('broker-lead-card'),
-      padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 54,
-            height: 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(17)),
-            child: Text(homeInitials(lead.fullName), style: homeDisplay(17, AppPalette.gold300)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(lead.fullName, style: homeDisplay(18, colors.inkStrong)),
-              const SizedBox(height: 6),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                _Pill(text: brokerLeadStatusLabel(l10n, lead.approvalStatus), color: approval),
-                _Pill(text: leadStageLabel(l10n, lead.stage), color: leadStageColor(lead.stage, colors)),
-              ]),
-            ]),
-          ),
-        ]),
-        const SizedBox(height: 12),
-        _Line(icon: Icons.badge_rounded, text: '${l10n.blRepFollows}: ${lead.assignedSalesName ?? l10n.blNoRep}'),
-        if ((lead.phone ?? '').isNotEmpty) _Line(icon: Icons.phone_rounded, text: ltr(lead.phone!)),
-        if ((lead.email ?? '').isNotEmpty) _Line(icon: Icons.alternate_email_rounded, text: lead.email!),
-        if ((lead.phone ?? '').isNotEmpty || (lead.email ?? '').isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(children: [
-            if ((lead.phone ?? '').isNotEmpty) ...[
-              Expanded(child: _Btn(icon: Icons.phone_rounded, label: l10n.ldCall, filled: true, onTap: () => ContactActions.call(lead.phone!))),
-              const SizedBox(width: 8),
-              Expanded(child: _Btn(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: lead.phone!))),
-            ],
-            if ((lead.email ?? '').isNotEmpty) ...[
-              if ((lead.phone ?? '').isNotEmpty) const SizedBox(width: 8),
-              Expanded(child: _Btn(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:${lead.email}'))),
-            ],
-          ]),
+Widget? _heroBottom(BuildContext context, BrokerLead lead) {
+  final l10n = context.l10n;
+  final phone = (lead.phone ?? '').trim();
+  final email = (lead.email ?? '').trim();
+  final reach = [if (phone.isNotEmpty) ltr(phone), if (email.isNotEmpty) email].join(' · ');
+  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+    Text(
+      '${l10n.blRepFollows}: ${lead.assignedSalesName ?? l10n.blNoRep}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 12.5, color: Color(0xFFAEB8CB)),
+    ),
+    if (reach.isNotEmpty) ...[
+      const SizedBox(height: 4),
+      Text(reach, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFFAEB8CB))),
+      const SizedBox(height: 14),
+      DvHeroButtons(buttons: [
+        if (phone.isNotEmpty) ...[
+          DvHeroButton(icon: Icons.phone_rounded, label: l10n.ldCall, gold: true, onTap: () => ContactActions.call(phone)),
+          DvHeroButton(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: phone)),
         ],
+        if (email.isNotEmpty) DvHeroButton(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:$email')),
       ]),
-    );
-  }
+    ],
+  ]);
 }
 
 class _RejectionBox extends StatelessWidget {
@@ -313,24 +293,7 @@ class _Rows extends StatelessWidget {
   final List<(String, String)> rows;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: homeCard(context, radius: 20),
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(width: 100, child: Text(rows[i].$1, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-              Expanded(child: Text(rows[i].$2, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
-            ]),
-          ),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => DvInfoCard(rows: [for (final (k, v) in rows) DvInfo(k, v)]);
 }
 
 class _Pill extends StatelessWidget {
@@ -344,52 +307,4 @@ class _Pill extends StatelessWidget {
         decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
         child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
       );
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(children: [
-          Icon(icon, size: 15, color: AppPalette.gold500),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: context.appColors.inkStrong))),
-        ]),
-      );
-}
-
-class _Btn extends StatelessWidget {
-  const _Btn({required this.icon, required this.label, required this.onTap, this.filled = false});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: filled ? AppPalette.navy : colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: filled ? AppPalette.navy : colors.hairline),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : AppPalette.navy),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : AppPalette.navy)),
-          ]),
-        ),
-      ),
-    );
-  }
 }

@@ -302,143 +302,29 @@ class _InquiryCard extends StatelessWidget {
       if (row.unitCode != null) ltr(row.unitCode!),
     ].join(' · ');
     final phone = row.phone ?? '';
-    return Container(
+    return DvEntityCard(
       key: Key('inquiry-${row.id}'),
-      padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 22),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
-            child: Icon(Icons.question_answer_rounded, size: 21, color: statusColor),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(row.name.isEmpty ? l10n.inqNoName : row.name,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-              const SizedBox(height: 3),
-              Row(children: [
-                _Pill(kindLabel, kindColor),
-                if (row.createdAt != null) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(leadWhen(context, row.createdAt!), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ),
-                ],
-              ]),
-            ]),
-          ),
-          _Pill(inquiryStatusLabel(l10n, row.status), statusColor),
-        ]),
-        const SizedBox(height: 11),
-        Text(row.message, style: TextStyle(fontSize: 13.5, height: 1.5, color: colors.ink)),
-        if (about.isNotEmpty) ...[
-          const SizedBox(height: 9),
-          Row(children: [
-            Icon(Icons.apartment_rounded, size: 15, color: colors.inkMuted),
-            const SizedBox(width: 6),
-            Expanded(child: Text(about, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-          ]),
-        ],
-        if (phone.isNotEmpty || (canAct && row.status != 'CLOSED')) ...[
-          const SizedBox(height: 12),
-          Row(children: [
-            if (canAct && row.status == 'OPEN')
-              Expanded(
-                child: _Primary(
-                  key: Key('inquiry-replied-${row.id}'),
-                  icon: Icons.mark_chat_read_rounded,
-                  label: l10n.inqMarkReplied,
-                  onTap: () => onSet('RESPONDED'),
-                ),
-              )
-            else
-              const Spacer(),
-            if (phone.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              _Act(key: Key('inquiry-call-${row.id}'), icon: Icons.phone_rounded, tooltip: l10n.contactCall, onTap: () => ContactActions.call(phone)),
-              const SizedBox(width: 8),
-              _Act(
-                  key: Key('inquiry-wa-${row.id}'),
-                  icon: Icons.chat_rounded,
-                  tooltip: l10n.contactWhatsapp,
-                  onTap: () => ContactActions.whatsApp(number: phone)),
-            ],
-            if (canAct && row.status != 'CLOSED') ...[
-              const SizedBox(width: 8),
-              _Act(key: Key('inquiry-close-${row.id}'), icon: Icons.archive_outlined, tooltip: l10n.inqClose, onTap: () => onSet('CLOSED')),
-            ],
-          ]),
-        ],
-      ]),
+      initials: homeInitials(row.name.isEmpty ? l10n.inqNoName : row.name),
+      title: row.name.isEmpty ? l10n.inqNoName : row.name,
+      subtitle: [kindLabel, if (row.createdAt != null) leadWhen(context, row.createdAt!)].join(' · '),
+      status: inquiryStatusLabel(l10n, row.status),
+      statusColor: statusColor,
+      footIcon: Icons.question_answer_outlined,
+      footColor: colors.ink,
+      footText: row.message,
+      footSub: about,
+      actions: [
+        if (canAct && row.status != 'CLOSED')
+          DvSquareAction(key: Key('inquiry-close-${row.id}'), icon: Icons.archive_outlined, tooltip: l10n.inqClose, onTap: () => onSet('CLOSED')),
+        if (phone.isNotEmpty)
+          DvSquareAction(key: Key('inquiry-wa-${row.id}'), icon: Icons.chat_outlined, color: const Color(0xFF1E7A55), tooltip: l10n.contactWhatsapp, onTap: () => ContactActions.whatsApp(number: phone)),
+        if (canAct && row.status == 'OPEN')
+          DvSquareAction(key: Key('inquiry-replied-${row.id}'), icon: Icons.mark_chat_read_rounded, gold: true, tooltip: l10n.inqMarkReplied, onTap: () => onSet('RESPONDED'))
+        else if (phone.isNotEmpty)
+          DvSquareAction(key: Key('inquiry-call-${row.id}'), icon: Icons.phone_rounded, gold: true, tooltip: l10n.contactCall, onTap: () => ContactActions.call(phone)),
+      ],
     );
   }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill(this.text, this.color);
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-      );
-}
-
-/// A square icon button for the secondary actions.
-class _Act extends StatelessWidget {
-  const _Act({super.key, required this.icon, required this.tooltip, required this.onTap});
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(13),
-        onTap: onTap,
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(color: colors.surface, border: Border.all(color: colors.hairline), borderRadius: BorderRadius.circular(13)),
-          child: Icon(icon, size: 19, color: colors.ink),
-        ),
-      ),
-    );
-  }
-}
-
-/// The one main action on a card, gold and as wide as the room allows.
-class _Primary extends StatelessWidget {
-  const _Primary({super.key, required this.icon, required this.label, required this.onTap});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        borderRadius: BorderRadius.circular(13),
-        onTap: onTap,
-        child: Container(
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(13)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 18, color: AppPalette.gold600),
-            const SizedBox(width: 7),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-          ]),
-        ),
-      );
 }
 
 class _StatusSheet extends StatefulWidget {

@@ -276,44 +276,23 @@ class _RequestCard extends StatelessWidget {
     final r = row.request;
     final title = r.categoryName?.resolve(lang) ?? l10n.mtaTitle;
     final who = [if (r.customerName != null) r.customerName!, if (r.unitCode != null) ltr(r.unitCode!)].join(' · ');
-    return InkWell(
-      key: Key('maintenance-${r.id}'),
-      borderRadius: BorderRadius.circular(22),
+    final tone = switch (r.reviewStatus) {
+      'APPROVED' => colors.success,
+      'REJECTED' => colors.error,
+      _ => colors.warning,
+    };
+    return DvEntityCard(
+      inkKey: Key('maintenance-${r.id}'),
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: homeCard(context, radius: 22),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Expanded(
-              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-            ),
-            const SizedBox(width: 8),
-            StatusBadge(label: reviewLabel(l10n, r.reviewStatus), tone: reviewTone(r.reviewStatus)),
-          ]),
-          if (who.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(who, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-          ],
-          const SizedBox(height: 8),
-          Text(r.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13.5, height: 1.5, color: colors.ink)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            StatusBadge(label: maintenanceStatusLabel(l10n, r.status), tone: maintenanceStatusTone(r.status)),
-            StatusBadge(label: maintenancePriorityLabel(l10n, r.priority), tone: maintenancePriorityTone(r.priority)),
-            if (r.createdAt != null) Text(leadWhen(context, r.createdAt!.toLocal()), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.person_outline_rounded, size: 15, color: colors.inkMuted),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(row.assignedName ?? l10n.mtaUnassigned,
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            ),
-          ]),
-        ]),
-      ),
+      icon: Icons.build_rounded,
+      title: who.isEmpty ? title : who,
+      subtitle: '$title · ${maintenanceStatusLabel(l10n, r.status)} · ${maintenancePriorityLabel(l10n, r.priority)}',
+      status: reviewLabel(l10n, r.reviewStatus),
+      statusColor: tone,
+      footIcon: Icons.notes_rounded,
+      footColor: colors.ink,
+      footText: r.description,
+      footSub: [row.assignedName ?? l10n.mtaUnassigned, if (r.createdAt != null) leadWhen(context, r.createdAt!.toLocal())].join(' · '),
     );
   }
 }
@@ -500,81 +479,61 @@ class _AdminMaintenanceDetailScreenState extends State<AdminMaintenanceDetailScr
           children: [
             HomeListHero(
               back: true,
-              title: r?.categoryName?.resolve(lang) ?? l10n.supervisorDetailTitle,
-              subtitle: r?.unitCode == null ? null : ltr(r!.unitCode!),
+              title: r?.categoryName?.resolve(lang) ?? l10n.mtaRequest,
+              badge: r == null ? null : DvHeroBadge(maintenanceStatusLabel(l10n, r.status), tone: dvToneOf(maintenanceStatusTone(r.status))),
+              subtitle: r == null
+                  ? null
+                  : [
+                      if (r.unitCode != null) ltr(r.unitCode!),
+                      maintenancePriorityLabel(l10n, r.priority),
+                      reviewLabel(l10n, r.reviewStatus),
+                    ].join(' · '),
             ),
             if (_loading)
               const SizedBox(height: 360, child: Center(child: CircularProgressIndicator()))
             else if (r == null)
               ErrorState(failure: _failure, onRetry: _load)
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: homeCard(context, radius: 22),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Wrap(spacing: 8, runSpacing: 6, children: [
-                        StatusBadge(label: reviewLabel(l10n, r.reviewStatus), tone: reviewTone(r.reviewStatus)),
-                        StatusBadge(label: maintenanceStatusLabel(l10n, r.status), tone: maintenanceStatusTone(r.status)),
-                        StatusBadge(label: maintenancePriorityLabel(l10n, r.priority), tone: maintenancePriorityTone(r.priority)),
-                      ]),
-                      const SizedBox(height: 12),
-                      Text(r.description, style: TextStyle(fontSize: 14.5, height: 1.6, color: colors.ink)),
-                    ]),
+            else ...[
+              HomeSection(
+                icon: Icons.notes_rounded,
+                title: l10n.maintenanceDescriptionLabel,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: homeCard(context, radius: 22),
+                  child: Text(r.description, style: TextStyle(fontSize: 14.5, height: 1.6, color: colors.ink)),
+                ),
+              ),
+              HomeSection(
+                icon: Icons.info_outline_rounded,
+                title: l10n.mtaDetails,
+                child: DvInfoCard(rows: [
+                  DvInfo(l10n.supervisorDetailCustomerLabel, r.customerName ?? '—'),
+                  DvInfo(
+                    l10n.supervisorDetailPhoneLabel,
+                    r.customerPhone == null ? '—' : ltr(r.customerPhone!),
+                    onTap: r.customerPhone == null ? null : () => ContactActions.call(r.customerPhone!),
                   ),
-                  const SizedBox(height: 12),
-                  _Facts(rows: [
-                    (l10n.supervisorDetailCustomerLabel, r.customerName ?? '—'),
-                    (l10n.supervisorDetailPhoneLabel, r.customerPhone == null ? '—' : ltr(r.customerPhone!)),
-                    (l10n.supervisorDetailUnitLabel, r.unitCode == null ? '—' : ltr(r.unitCode!)),
-                    (l10n.mtaAssignedTo, row!.assignedName ?? l10n.mtaUnassigned),
-                    if (r.dueAt != null) (l10n.supervisorDetailDueDateLabel, leadWhen(context, r.dueAt!.toLocal())),
-                  ]),
-                  const SizedBox(height: 12),
-                  _Actions(
-                    row: row,
-                    working: _working,
-                    onApprove: () => _run(() => widget.repository.approve(widget.id)),
-                    onReject: _reject,
-                    onAssign: _assign,
-                    onStatus: (s) => _run(() => widget.repository.setStatus(widget.id, s)),
-                  ),
+                  DvInfo(l10n.supervisorDetailUnitLabel, r.unitCode == null ? '—' : ltr(r.unitCode!)),
+                  DvInfo(l10n.mtaAssignedTo, row!.assignedName ?? l10n.mtaUnassigned),
+                  if (r.dueAt != null) DvInfo(l10n.supervisorDetailDueDateLabel, leadWhen(context, r.dueAt!.toLocal())),
                 ]),
               ),
+              HomeSection(
+                icon: Icons.settings_suggest_rounded,
+                title: l10n.mtaActionsTitle,
+                child: _Actions(
+                  row: row,
+                  working: _working,
+                  onApprove: () => _run(() => widget.repository.approve(widget.id)),
+                  onReject: _reject,
+                  onAssign: _assign,
+                  onStatus: (s) => _run(() => widget.repository.setStatus(widget.id, s)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _Facts extends StatelessWidget {
-  const _Facts({required this.rows});
-  final List<(String, String)> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: homeCard(context, radius: 22),
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) Divider(height: 1, color: colors.hairline),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 11),
-            child: Row(children: [
-              Text(rows[i].$1, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(rows[i].$2, textAlign: TextAlign.end, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              ),
-            ]),
-          ),
-        ],
-      ]),
     );
   }
 }
@@ -602,67 +561,33 @@ class _Actions extends StatelessWidget {
     final pending = r.reviewStatus == 'PENDING' || r.reviewStatus == null;
     final approved = r.reviewStatus == 'APPROVED';
     final steps = approved ? adminNextStatuses(r.status) : const <MaintenanceStatus>[];
-    final buttons = <Widget>[
+    final actions = <DvAction>[
       if (pending) ...[
-        _Btn(key: const Key('maintenance-approve'), icon: Icons.check_rounded, label: l10n.mtaApprove, primary: true, onTap: working ? null : onApprove),
-        _Btn(key: const Key('maintenance-reject'), icon: Icons.close_rounded, label: l10n.mtaReject, danger: true, onTap: working ? null : onReject),
+        DvAction(id: 'maintenance-approve', icon: Icons.check_rounded, title: l10n.mtaApprove, onTap: working ? null : onApprove),
+        DvAction(id: 'maintenance-reject', icon: Icons.close_rounded, title: l10n.mtaReject, danger: true, onTap: working ? null : onReject),
       ],
       if (approved)
-        _Btn(
-          key: const Key('maintenance-assign'),
+        DvAction(
+          id: 'maintenance-assign',
           icon: Icons.person_add_alt_1_rounded,
-          label: row.assignedId == null ? l10n.mtaAssign : l10n.mtaReassign,
+          title: row.assignedId == null ? l10n.mtaAssign : l10n.mtaReassign,
           onTap: working ? null : onAssign,
         ),
       for (final s in steps)
-        _Btn(
-          key: Key('maintenance-status-${s.wire}'),
+        DvAction(
+          id: 'maintenance-status-${s.wire}',
           icon: Icons.arrow_forward_rounded,
-          label: l10n.mtaMoveTo(maintenanceStatusLabel(l10n, s)),
+          title: l10n.mtaMoveTo(maintenanceStatusLabel(l10n, s)),
           onTap: working ? null : () => onStatus(s),
         ),
     ];
-    if (buttons.isEmpty) {
-      return Padding(padding: const EdgeInsets.all(12), child: Text(l10n.mtaNoActions, textAlign: TextAlign.center, style: TextStyle(color: context.appColors.inkMuted)));
+    if (actions.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: homeCard(context, radius: 22),
+        child: Text(l10n.mtaNoActions, style: TextStyle(color: context.appColors.inkMuted)),
+      );
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      for (final b in buttons) Padding(padding: const EdgeInsets.only(bottom: 8), child: b),
-    ]);
-  }
-}
-
-class _Btn extends StatelessWidget {
-  const _Btn({super.key, required this.icon, required this.label, required this.onTap, this.primary = false, this.danger = false});
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final bool primary;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final fg = danger ? colors.error : (primary ? AppPalette.gold600 : colors.ink);
-    return Opacity(
-      opacity: onTap == null ? 0.5 : 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: primary ? homeTint(context) : colors.surface,
-            border: Border.all(color: primary ? homeTintBorder(context) : colors.hairline),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 18, color: fg),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: fg)),
-          ]),
-        ),
-      ),
-    );
+    return DvActionCard(actions: actions);
   }
 }

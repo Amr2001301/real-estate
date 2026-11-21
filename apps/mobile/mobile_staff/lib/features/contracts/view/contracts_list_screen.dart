@@ -240,99 +240,33 @@ class ContractCardView extends StatelessWidget {
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
-    final source = row.reservationNumber == null ? l10n.kcManual : l10n.kcFromReservation(ltr(row.reservationNumber!));
     final where = [if ((row.projectName ?? '').isNotEmpty) row.projectName!, if ((row.unitCode ?? '').isNotEmpty) ltr(row.unitCode!)].join(' · ');
-    Widget mini(String k, String v) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(k, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-            ]),
-          ),
-        );
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('contract-card-${row.id}'),
-        onTap: () => context.push('$route/${row.id}'),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                  child: Text(homeInitials(row.customerName), style: homeDisplay(14, AppPalette.gold300)),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(row.customerName ?? '—',
-                            maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                      const SizedBox(width: 6),
-                      contractBadge(l10n, row),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text.rich(TextSpan(children: [
-                      TextSpan(text: ltr(row.displayNumber), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                      TextSpan(text: ' · $source', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    ])),
-                    if (where.isNotEmpty)
-                      Row(children: [
-                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                        const SizedBox(width: 3),
-                        Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-                      ]),
-                  ]),
-                ),
-              ]),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: Row(children: [
-                mini(l10n.kcValue, row.total == null ? '—' : '${contractMoney(row.total!)} $currency'),
-                const SizedBox(width: 6),
-                extraMini == null
-                    ? mini(
-                        l10n.kcPlan,
-                        row.planMonths == null
-                            ? l10n.kcNoPlan
-                            : l10n.kcPlanLine(row.planMonths!, row.planMonthly == null ? '—' : contractMoney(row.planMonthly!)),
-                      )
-                    : mini(extraMini!.$1, extraMini!.$2),
-              ]),
-            ),
-            if ((row.downPayment ?? 0) > 0 || row.signedAt != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: colors.surfaceSoft.withValues(alpha: 0.6), border: Border(top: BorderSide(color: colors.hairline))),
-                child: Row(children: [
-                  if (row.signedAt != null)
-                    Expanded(
-                      child: Text(l10n.kcSignedOn(DateFormatter.dayMonth(row.signedAt!, languageCode: lang)),
-                          style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    )
-                  else
-                    const Spacer(),
-                  if ((row.downPayment ?? 0) > 0)
-                    Text(l10n.kcDown(contractMoney(row.downPayment!)),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
-                ]),
-              ),
-          ]),
-        ),
-      ),
+    final (String status, Color statusColor) = row.cancelled
+        ? (l10n.kcCancelled, colors.error)
+        : row.signedAt != null
+            ? (l10n.kcSignedOne, colors.success)
+            : (l10n.kcUnsigned, colors.warning);
+    final plan = extraMini != null
+        ? '${extraMini!.$1} ${extraMini!.$2}'
+        : row.planMonths == null
+            ? l10n.kcNoPlan
+            : l10n.kcPlanLine(row.planMonths!, row.planMonthly == null ? '—' : contractMoney(row.planMonthly!));
+    return DvEntityCard(
+      inkKey: Key('contract-card-${row.id}'),
+      onTap: () => context.push('$route/${row.id}'),
+      initials: homeInitials(row.customerName),
+      title: row.customerName ?? '—',
+      subtitle: [ltr(row.displayNumber), if (where.isNotEmpty) where].join(' · '),
+      status: status,
+      statusColor: statusColor,
+      footIcon: Icons.payments_outlined,
+      footColor: colors.inkStrong,
+      footText: row.total == null ? '—' : '${contractMoney(row.total!)} $currency',
+      footSub: plan,
+      actions: [
+        if (row.signedAt != null)
+          Text(l10n.kcSignedOn(DateFormatter.dayMonth(row.signedAt!, languageCode: lang)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+      ],
     );
   }
 }

@@ -137,7 +137,7 @@ class _CampaignsScreenState extends State<CampaignsScreen> {
                     DataStatus.failure => [ErrorState(failure: state.failure, onRetry: cubit.load)],
                     DataStatus.empty => [EmptyState(icon: Icons.campaign_outlined, title: l10n.campaignsEmpty, message: l10n.campaignsEmptyHint)],
                     DataStatus.success => [
-                        Padding(padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0), child: _Totals(totals: state.page.totals)),
+                        const SizedBox(height: 4),
                         for (final c in state.page.items)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
@@ -199,32 +199,6 @@ class _StatusSheetState extends State<_StatusSheet> {
   }
 }
 
-// ── The band over the list: spend, leads, cost per lead, sales, cost per sale ─
-
-class _Totals extends StatelessWidget {
-  const _Totals({required this.totals});
-  final CampaignStats totals;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    HomeFigure money(String id, num? v, String label, String hint) {
-      final (n, u) = homeCompact(v ?? 0, l10n);
-      return HomeFigure(id: id, value: ltr(n), label: u.isEmpty ? label : '$label · $u', hint: hint);
-    }
-
-    return KeyedSubtree(
-      key: const Key('campaigns-totals'),
-      child: HomeBand(figures: [
-        money('spend', totals.spend, l10n.campaignsSpend, '${l10n.campaignsCpl} ${campaignMoney(totals.cpl, lang)}'),
-        HomeFigure(id: 'leads', value: _count(totals.leads), label: l10n.campaignsLeads, hint: campaignMoney(totals.cpl, lang)),
-        HomeFigure(id: 'won', value: _count(totals.won), label: l10n.campaignsWon, hint: '${l10n.campaignsCpa} ${campaignMoney(totals.cpa, lang)}'),
-      ]),
-    );
-  }
-}
-
 // ── Campaign tile ─────────────────────────────────────────────────────────────
 
 class _CampaignTile extends StatelessWidget {
@@ -237,98 +211,22 @@ class _CampaignTile extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
     final c = campaign;
-    final accent = campaignChannelColor(c.channel);
     final used = c.budgetUsed;
-
-    return GestureDetector(
-      key: ValueKey('campaign-${c.id}'),
+    return DvEntityCard(
+      inkKey: ValueKey('campaign-${c.id}'),
+      title: c.name,
+      icon: campaignChannelIcon(c.channel),
+      subtitle: [campaignChannelLabel(l10n, c.channel), if (c.projectName != null) c.projectName!].join(' · '),
+      status: campaignStatusLabel(l10n, c.status),
+      statusColor: campaignStatusColor(c.status, colors),
+      footText: [
+        l10n.campaignLeadsCount(_count(c.stats.leads)),
+        l10n.campaignWonCount(_count(c.stats.won)),
+        campaignMoney(c.stats.spend, lang),
+      ].join('  ·  '),
+      extra: used == null ? null : _BudgetBar(used: used, label: l10n.campaignBudgetOf(campaignMoney(c.budget, lang))),
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: colors.hairline),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 3,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
-                  end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
-                  colors: [accent, accent.withValues(alpha: 0.0)],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 13, AppSpacing.md, 13),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Icon(campaignChannelIcon(c.channel), color: accent, size: 22),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              c.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: colors.inkStrong, height: 1.2),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              [campaignChannelLabel(l10n, c.channel), if (c.projectName != null) c.projectName!].join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      StatusBadge(label: campaignStatusLabel(l10n, c.status), tone: campaignStatusTone(c.status)),
-                      Icon(AppIcons.chevronForward, color: AppPalette.gold400),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: [
-                      _InfoChip(icon: Icons.people_alt_outlined, text: l10n.campaignLeadsCount(_count(c.stats.leads))),
-                      _InfoChip(icon: Icons.handshake_outlined, text: l10n.campaignWonCount(_count(c.stats.won))),
-                      _InfoChip(icon: Icons.payments_outlined, text: campaignMoney(c.stats.spend, lang)),
-                      if (c.stats.cpl != null)
-                        _InfoChip(icon: Icons.person_search_outlined, text: '${l10n.campaignsCpl} ${campaignMoney(c.stats.cpl, lang)}'),
-                    ],
-                  ),
-                  if (used != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    _BudgetBar(used: used, label: l10n.campaignBudgetOf(campaignMoney(c.budget, lang))),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -343,52 +241,17 @@ class _BudgetBar extends StatelessWidget {
     final colors = context.appColors;
     final over = used > 1;
     final color = over ? colors.error : (used > 0.85 ? colors.warning : AppPalette.gold500);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-            Text(
-              '${latinDigits((used * 100).round().toString())}%',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        ClipRRect(
+    return Row(children: [
+      Expanded(
+        child: ClipRRect(
           borderRadius: BorderRadius.circular(99),
-          child: LinearProgressIndicator(
-            value: used.clamp(0, 1).toDouble(),
-            minHeight: 5,
-            color: color,
-            backgroundColor: colors.surfaceSoft,
-          ),
+          child: LinearProgressIndicator(value: used.clamp(0, 1).toDouble(), minHeight: 5, color: color, backgroundColor: colors.surfaceSoft),
         ),
-      ],
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: AppRadii.pillAll),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: colors.inkMuted),
-          const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.ink)),
-        ],
       ),
-    );
+      const SizedBox(width: 10),
+      Text('${latinDigits((used * 100).round().toString())}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      const SizedBox(width: 6),
+      Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+    ]);
   }
 }

@@ -125,8 +125,8 @@ class _VisitsScreenState extends State<VisitsScreen> {
         floatingActionButton: FloatingActionButton(
           onPressed: _create,
           tooltip: l10n.visitNew,
-          backgroundColor: AppPalette.gold400,
-          foregroundColor: AppPalette.navy,
+          backgroundColor: homeCta(context),
+          foregroundColor: homeOnCta(context),
           child: const Icon(Icons.add_rounded),
         ),
       ),
@@ -216,62 +216,19 @@ class _VisitTile extends StatelessWidget {
       if (visit.clientName != null && visit.projectName != null) visit.projectName!,
       if (visit.unitCode != null) ltr(visit.unitCode!),
     ].join(' · ');
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: Key('visit-${visit.id}'),
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => context.push('/visits/${visit.id}', extra: visit),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: homeCard(context, radius: 22),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                child: Text(homeInitials(name), style: homeDisplay(14, AppPalette.gold300)),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  if (where.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Icon(Icons.apartment_rounded, size: 14, color: colors.inkMuted),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(where, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-                    ]),
-                  ],
-                ]),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                child: Text(visitStatusLabel(l10n, visit.status), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: accent)),
-              ),
-            ]),
-            const SizedBox(height: 10),
-            Divider(height: 1, color: colors.hairline),
-            const SizedBox(height: 10),
-            Row(children: [
-              Icon(Icons.event_rounded, size: 15, color: colors.inkMuted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  visit.scheduledAt == null ? '—' : leadWhen(context, visit.scheduledAt!),
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: colors.ink),
-                ),
-              ),
-              Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
-            ]),
-          ]),
-        ),
-      ),
+    final soon = visit.scheduledAt != null && homeDay(visit.scheduledAt!) == homeDay(DateTime.now());
+    return DvEntityCard(
+      inkKey: Key('visit-${visit.id}'),
+      onTap: () => context.push('/visits/${visit.id}', extra: visit),
+      initials: homeInitials(name),
+      title: name,
+      subtitle: where,
+      status: visitStatusLabel(l10n, visit.status),
+      statusColor: accent,
+      footIcon: Icons.event_rounded,
+      footColor: soon ? colors.warning : colors.inkStrong,
+      footText: visit.scheduledAt == null ? '—' : leadWhen(context, visit.scheduledAt!),
+      actions: [DvSquareAction(icon: AppIcons.chevronForward, onTap: () => context.push('/visits/${visit.id}', extra: visit))],
     );
   }
 }

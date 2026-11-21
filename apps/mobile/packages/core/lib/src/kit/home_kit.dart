@@ -68,17 +68,26 @@ Color homeTintBorder(BuildContext context) =>
 bool homeIsDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
 
 /// A raised field or chip: white by day, the soft surface by night.
-Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors.surfaceSoft : Colors.white;
+Color homeField(BuildContext context) => (homeIsDark(context) || AppPalette.calmLight) ? context.appColors.surfaceSoft : Colors.white;
+
+/// A form field's outline: none in Devora (soft filled fields), a hairline otherwise.
+BorderSide homeFieldSide(BuildContext context) => AppPalette.calmLight ? BorderSide.none : BorderSide(color: context.appColors.hairline);
 
 /// A chosen option's fill: a cream by day, a gold wash by night.
 Color homeSelected(BuildContext context) =>
-    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : const Color(0xFFFFFCF5);
+    homeIsDark(context) ? AppPalette.gold500.withValues(alpha: 0.16) : (AppPalette.calmLight ? const Color(0xFFF2F5FA) : const Color(0xFFFFFCF5));
 
 /// A fine line or a track on a card: warm grey by day, the hairline by night.
-Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : const Color(0xFFECE4D6);
+Color homeLine(BuildContext context) => homeIsDark(context) ? context.appColors.hairline : AppPalette.lightLine;
 
 /// The page of a bottom sheet.
-Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : const Color(0xFFFBF7F0);
+Color homeSheet(BuildContext context) => homeIsDark(context) ? context.appColors.surface : AppPalette.lightSheet;
+
+/// The primary action's fill and its text: the accent with navy text, or —
+/// where the brand asks for it ([AppPalette.ctaIsPrimary]) — navy with white
+/// text on the light theme.
+Color homeCta(BuildContext context) => AppPalette.ctaIsPrimary && !homeIsDark(context) ? AppPalette.navy : AppPalette.gold400;
+Color homeOnCta(BuildContext context) => AppPalette.ctaIsPrimary && !homeIsDark(context) ? Colors.white : AppPalette.navy;
 
 /// Pale fills for a warning, a good state and a bad one (a wash of the colour by night).
 Color homeWarnFill(BuildContext context) =>
@@ -132,14 +141,15 @@ class HomePage extends StatelessWidget {
           children: [
             // The card sits over the hero's last 78px with real layout, so
             // it (and the sections under it) take taps where they are drawn.
-            if (!loading && overlap != null) HomeOverlap(overlap: 78, top: hero, bottom: overlap!) else hero,
+            hero,
+            if (!loading && overlap != null) Padding(padding: const EdgeInsets.only(top: 16), child: overlap!),
             if (failure != null && loading == false && overlap == null && children.isEmpty)
               Padding(padding: const EdgeInsets.all(AppSpacing.lg), child: ErrorState(failure: failure, onRetry: onRetry))
             else if (loading)
               // The home's own shape while it loads: its cards, as bones.
               const KitSectionsSkeleton(band: false, cards: [170, 230, 230])
             else ...[
-              if (overlap != null) const SizedBox(height: 18), // as the old -78 card over -60 sections
+              if (overlap != null) const SizedBox(height: 18),
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
             ],
           ],
@@ -151,8 +161,21 @@ class HomePage extends StatelessWidget {
 
 /// The navy header of a list page, in the homes' look: the title and a
 /// count, round actions, and what goes under (a search field, chips).
+/// A header's bottom wrapped in a bottom-only padding made room for a card
+/// drawn over the header; the Devora header has no card over it.
+Widget _unpadded(Widget w) {
+  if (w is Padding && w.padding is EdgeInsets) {
+    final e = w.padding as EdgeInsets;
+    if (e.left == 0 && e.right == 0 && e.top == 0 && e.bottom > 0 && w.child != null) return w.child!;
+  }
+  return w;
+}
+
 class HomeListHero extends StatelessWidget {
-  const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false, this.leading});
+  const HomeListHero({super.key, required this.title, this.subtitle, this.actions = const [], this.bottom, this.back = false, this.leading, this.badge});
+
+  /// A small status pill after the title (detail pages).
+  final Widget? badge;
 
   final String title;
   final String? subtitle;
@@ -168,6 +191,54 @@ class HomeListHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
+    if (AppPalette.calmLight) {
+      // Devora: a deep navy header that runs up behind the status bar, glass
+      // buttons, the title large in white, the search inside.
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+          gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF17233D), Color(0xFF0B1426), Color(0xFF080E1A)]),
+          boxShadow: [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.35), blurRadius: 30, offset: const Offset(0, 14))],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+          child: Stack(children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(center: Alignment(1, -1), radius: 1.1, colors: [Color(0x29D2AE58), Color(0x00D2AE58)]),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(18, top + 10, 18, 20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                Row(children: [
+                  if (leading != null)
+                    leading!
+                  else if (back)
+                    HomeHeroButton(icon: Icons.arrow_back_rounded, onTap: () => Navigator.of(context).maybePop()),
+                  const Spacer(),
+                  for (var i = 0; i < actions.length; i++) ...[if (i > 0) const SizedBox(width: 10), actions[i]],
+                ]),
+                const SizedBox(height: 14),
+                Row(children: [
+                  Expanded(
+                    child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 26, height: 1.3, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  if (badge != null) ...[const SizedBox(width: 10), badge!],
+                ]),
+                if ((subtitle ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFFC9B27A), fontWeight: FontWeight.w600)),
+                ],
+                if (bottom != null) ...[const SizedBox(height: 16), _unpadded(bottom!)],
+              ]),
+            ),
+          ]),
+        ),
+      );
+    }
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: Container(
@@ -223,6 +294,37 @@ class HomeHeroButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AppPalette.calmLight) {
+      final glass = DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: active ? dvGoldGradient : null,
+          color: active ? null : Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: active ? null : Border.all(color: Colors.white.withValues(alpha: 0.13)),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: SizedBox(
+              width: 42,
+              height: 42,
+              child: Stack(alignment: Alignment.center, children: [
+                Icon(icon, size: 20, color: active ? dvOnGold : Colors.white),
+                if (dot)
+                  PositionedDirectional(
+                    top: 8,
+                    end: 8,
+                    child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: Color(0xFFD2AE58), shape: BoxShape.circle)),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      );
+      return tooltip == null ? glass : Tooltip(message: tooltip!, child: glass);
+    }
     final button = Material(
       color: active ? AppPalette.gold400 : Colors.white.withValues(alpha: 0.10),
       shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: active ? 0 : 0.16))),
@@ -259,20 +361,24 @@ class HomeSearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         height: 46,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: AppPalette.calmLight ? Colors.white.withValues(alpha: 0.10) : Colors.white,
+          borderRadius: BorderRadius.circular(AppPalette.calmLight ? 15 : 16),
+          border: AppPalette.calmLight ? Border.all(color: Colors.white.withValues(alpha: 0.16)) : null,
+        ),
         child: Row(children: [
           const SizedBox(width: 12),
-          Icon(Icons.search_rounded, size: 20, color: AppPalette.navy),
+          Icon(Icons.search_rounded, size: 20, color: AppPalette.calmLight ? const Color(0xFFAEB8CB) : AppPalette.navy),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.search,
               onSubmitted: onSubmitted,
-              style: TextStyle(fontSize: 14, color: AppPalette.navy),
+              style: TextStyle(fontSize: 14, color: AppPalette.calmLight ? Colors.white : AppPalette.navy),
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF8A94A6)),
+                hintStyle: TextStyle(fontSize: 13.5, color: AppPalette.calmLight ? const Color(0xFF9AA5BA) : const Color(0xFF8A94A6)),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -451,7 +557,7 @@ class HomeGoalCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFEFE6D4)),
+        border: Border.all(color: homeLine(context)),
         boxShadow: [BoxShadow(color: AppPalette.navy.withValues(alpha: 0.16), blurRadius: 40, offset: const Offset(0, 18))],
       ),
       child: percent == null && emptyText != null
@@ -604,22 +710,39 @@ class HomeActions extends StatelessWidget {
                   onTap: actions[i].onTap,
                   child: Column(
                     children: [
-                      Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          gradient: i == 0 ? homeGoldGradient : homeNavyGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (i == 0 ? AppPalette.gold500 : AppPalette.navy).withValues(alpha: i == 0 ? 0.32 : 0.22),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+                      if (AppPalette.calmLight && !homeIsDark(context))
+                        // Light and calm: one navy tile for the main action,
+                        // white tiles with a hairline for the rest.
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: i == 0 ? homeCta(context) : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: i == 0 ? null : Border.all(color: homeLine(context)),
+                            boxShadow: [
+                              BoxShadow(color: AppPalette.navy.withValues(alpha: i == 0 ? 0.22 : 0.06), blurRadius: 16, offset: const Offset(0, 6)),
+                            ],
+                          ),
+                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? homeOnCta(context) : AppPalette.navy),
+                        )
+                      else
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            gradient: i == 0 ? homeGoldGradient : homeNavyGradient,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (i == 0 ? AppPalette.gold500 : AppPalette.navy).withValues(alpha: i == 0 ? 0.32 : 0.22),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Icon(actions[i].icon, size: 24, color: i == 0 ? AppPalette.navy : AppPalette.gold300),
                         ),
-                        child: Icon(actions[i].icon, size: 24, color: i == 0 ? AppPalette.navy : AppPalette.gold300),
-                      ),
                       const SizedBox(height: 7),
                       Text(actions[i].label,
                           textAlign: TextAlign.center,
@@ -654,18 +777,26 @@ class HomeSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: homeTint(context),
-                    border: Border.all(color: homeTintBorder(context)),
-                    borderRadius: BorderRadius.circular(9),
+                // Devora: the title alone, no icon tile.
+                if (!AppPalette.calmLight) ...[
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: homeTint(context),
+                      border: Border.all(color: homeTintBorder(context)),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, size: 16, color: AppPalette.gold500),
                   ),
-                  child: Icon(icon, size: 16, color: AppPalette.gold500),
+                  const SizedBox(width: 9),
+                ],
+                Expanded(
+                  child: Text(title,
+                      style: AppPalette.calmLight
+                          ? TextStyle(fontSize: 17, height: 1.4, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)
+                          : homeDisplay(18.5, context.appColors.inkStrong)),
                 ),
-                const SizedBox(width: 9),
-                Expanded(child: Text(title, style: homeDisplay(18.5, context.appColors.inkStrong))),
                 if (action != null)
                   InkWell(
                     onTap: onAction,
@@ -701,43 +832,68 @@ class HomeBand extends StatelessWidget {
   final List<HomeFigure> figures;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-        decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(24)),
-        child: Row(
-          children: [
-            for (var i = 0; i < figures.length; i++) ...[
-              if (i > 0) Container(width: 1, height: 60, color: Colors.white.withValues(alpha: 0.10)),
-              Expanded(
+  Widget build(BuildContext context) {
+    // Devora: the counts live on the filter pills; no figures above them.
+    if (AppPalette.calmLight) return const SizedBox.shrink();
+    return _band(context);
+  }
+
+  Widget _band(BuildContext context) {
+    final light = AppPalette.calmLight && !homeIsDark(context);
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      decoration: light
+          ? BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: homeLine(context)))
+          : BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(24)),
+      child: Row(
+        children: [
+          for (var i = 0; i < figures.length; i++) ...[
+            if (i > 0) Container(width: 1, height: 52, color: light ? homeLine(context) : Colors.white.withValues(alpha: 0.10)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Column(
                   key: Key('home-fig-${figures[i].id}'),
                   children: [
-                    FittedBox(fit: BoxFit.scaleDown, child: Text(ltr(figures[i].value), style: homeDisplay(28, Colors.white))),
+                    FittedBox(fit: BoxFit.scaleDown, child: Text(ltr(figures[i].value), style: homeDisplay(light ? 26 : 28, light ? colors.inkStrong : Colors.white))),
                     const SizedBox(height: 2),
-                    Text(figures[i].label,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: Color(0xFFC9D2DE))),
-                    const SizedBox(height: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: figures[i].warn ? AppPalette.warningLight.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(figures[i].hint,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(figures[i].label,
+                          textAlign: TextAlign.center,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
+                          style: TextStyle(fontSize: 12.5, fontWeight: light ? FontWeight.w600 : FontWeight.w400, color: light ? colors.inkMuted : const Color(0xFFC9D2DE))),
                     ),
+                    const SizedBox(height: 5),
+                    if (light)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(figures[i].hint,
+                            maxLines: 1,
+                            style: TextStyle(fontSize: 12, color: figures[i].warn ? colors.warning : colors.inkMuted.withValues(alpha: 0.85))),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: figures[i].warn ? AppPalette.warningLight.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(figures[i].hint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: figures[i].warn ? const Color(0xFFF2C77E) : const Color(0xFFDCE3EC))),
+                      ),
                   ],
                 ),
               ),
-            ],
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }
 
 class HomeTile {
@@ -1040,7 +1196,7 @@ class HomeFunnelStep {
   final List<Color> colors;
 }
 
-const homeTaupe = [Color(0xFF8A7F70), Color(0xFF6B6256)];
+const homeTaupe = [Color(0xFF9AA4B4), Color(0xFF6B7587)];
 List<Color> get homeNavy => [AppPalette.navy600, AppPalette.navy];
 List<Color> get homeGold => [AppPalette.gold300, AppPalette.gold500];
 const homeAmber = [Color(0xFFDDA14A), AppPalette.warningLight];
@@ -1226,11 +1382,14 @@ class HomeOverlap extends MultiChildRenderObjectWidget {
 
   final double overlap;
 
-  @override
-  RenderObject createRenderObject(BuildContext context) => RenderHomeOverlap(overlap);
+  // Devora: the card sits under the header with a gap, not over it.
+  double get _overlap => AppPalette.calmLight ? -16 : overlap;
 
   @override
-  void updateRenderObject(BuildContext context, RenderHomeOverlap renderObject) => renderObject.overlap = overlap;
+  RenderObject createRenderObject(BuildContext context) => RenderHomeOverlap(_overlap);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderHomeOverlap renderObject) => renderObject.overlap = _overlap;
 }
 
 class _HomeOverlapData extends ContainerBoxParentData<RenderBox> {}

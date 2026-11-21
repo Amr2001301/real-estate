@@ -167,6 +167,7 @@ String _statusLabel(AppLocalizations l10n, String s) => switch (s) {
       'APPROVED' => l10n.rpResApproved,
       'CONVERTED' => l10n.rpResConverted,
       'CANCELLED' => l10n.rpResCancelled,
+      'REJECTED' => l10n.rpResRejected,
       'EXPIRED' => l10n.rpResExpired,
       _ => s,
     };
@@ -273,30 +274,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
               else if (_failure != null && d == null)
                 ErrorState(failure: _failure, onRetry: _load)
               else if (d != null) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-                  child: HomeBand(figures: [
-                    HomeFigure(id: 'sales', value: homeCompact(d.sales, l10n).$1, label: '${l10n.rpSales} · ${homeCompact(d.sales, l10n).$2}'.replaceAll(RegExp(r' · $'), ''), hint: _vs(l10n, d.sales, _before?.sales) ?? l10n.rpAvgContract(money(d.average)), warn: _before != null && d.sales < _before!.sales),
-                    HomeFigure(id: 'contracts', value: '${d.contracts}', label: l10n.rpContracts, hint: _vs(l10n, d.contracts, _before?.contracts) ?? l10n.rpContractsHint, warn: _before != null && d.contracts < _before!.contracts),
-                    HomeFigure(
+                const SizedBox(height: 18),
+                DvHeroStats(
+                  label: l10n.rpSales,
+                  value: homeCompact(d.sales, l10n).$1,
+                  unit: '${homeCompact(d.sales, l10n).$2} $symbol'.trim(),
+                  change: _before == null ? null : percentChange(d.sales, _before!.sales),
+                  note: _before == null && d.contracts > 0 ? l10n.rpAvgContract(money(d.average)) : null,
+                  curve: [for (final t in d.trend.take(DateTime.now().month)) t.$2],
+                  curveLabel: l10n.rpTrend,
+                  figures: [
+                    DvStat(id: 'contracts', label: l10n.rpContracts, value: '${d.contracts}', warn: _before != null && d.contracts < _before!.contracts),
+                    DvStat(id: 'collected', label: l10n.rpCollected, value: homeCompact(d.collected, l10n).$1, unit: homeCompact(d.collected, l10n).$2),
+                    DvStat(
                       id: 'conversion',
-                      value: d.conversion == null ? '—' : '${d.conversion}%',
                       label: l10n.rpConversion,
-                      hint: l10n.rpConversionHint,
+                      value: d.conversion == null ? '—' : '${d.conversion}%',
                       warn: d.conversion != null && d.conversion! < 10,
                     ),
-                  ]),
+                    if (d.fees > 0) DvStat(id: 'fees', label: l10n.rpFees, value: homeCompact(d.fees, l10n).$1, unit: homeCompact(d.fees, l10n).$2),
+                  ],
                 ),
-                HomeTiles(tiles: [
-                  HomeTile(
-                    label: l10n.rpCollected,
-                    value: homeCompact(d.collected, l10n).$1,
-                    unit: '${homeCompact(d.collected, l10n).$2} $symbol'.trim(),
-                    sub: l10n.rpCollectedSub,
-                  ),
-                  if (d.fees > 0)
-                    HomeTile(label: l10n.rpFees, value: homeCompact(d.fees, l10n).$1, unit: '${homeCompact(d.fees, l10n).$2} $symbol'.trim(), sub: l10n.ahFees),
-                ]),
                 HomeSection(
                   icon: Icons.filter_alt_rounded,
                   title: l10n.ahFunnel,
@@ -322,17 +320,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 HomeSection(
                   icon: Icons.apartment_rounded,
                   title: l10n.rpProjects,
-                  child: HomeRankList(
+                  child: DvRankList(
                     empty: l10n.rpNoSales,
+                    total: d.sales,
                     rows: [
                       for (final p in d.projects)
-                        HomeRankRow(
+                        DvRankRow(
                           id: p.id,
                           title: p.name.isEmpty ? l10n.rpUnknownProject : p.name,
-                          icon: Icons.apartment_rounded,
                           subtitle: l10n.ahContractsN(p.count),
+                          amount: p.value,
                           value: homeCompact(p.value, l10n).$1,
-                          unit: '${homeCompact(p.value, l10n).$2} $symbol'.trim(),
+                          unit: homeCompact(p.value, l10n).$2,
                           onTap: p.id.isEmpty ? null : () => context.push('/projects/${p.id}'),
                         ),
                     ],
@@ -341,17 +340,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 HomeSection(
                   icon: Icons.handshake_rounded,
                   title: l10n.ahTopBrokers,
-                  child: HomeRankList(
+                  child: DvRankList(
                     empty: l10n.ahNoBrokers,
                     rows: [
                       for (final b in d.brokers)
-                        HomeRankRow(
+                        DvRankRow(
                           id: b.id,
                           title: b.name,
-                          icon: Icons.storefront_rounded,
                           subtitle: l10n.ahContractsN(b.count),
+                          amount: b.value,
                           value: homeCompact(b.value, l10n).$1,
-                          unit: '${homeCompact(b.value, l10n).$2} $symbol'.trim(),
+                          unit: homeCompact(b.value, l10n).$2,
                         ),
                     ],
                   ),
@@ -366,12 +365,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
 }
 
 /// The bookings by state, a bar split and a legend with each share.
-/// «+12% عن الفترة السابقة», or null without a comparison or a base.
-String? _vs(AppLocalizations l10n, num now, num? before) {
-  final c = before == null ? null : percentChange(now, before);
-  return c == null ? null : l10n.frVsBefore(ltr('${c > 0 ? '+' : ''}$c%'));
-}
-
 class _States extends StatelessWidget {
   const _States({required this.rows});
   final List<(String, int)> rows;

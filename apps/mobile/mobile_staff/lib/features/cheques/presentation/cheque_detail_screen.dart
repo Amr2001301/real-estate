@@ -8,7 +8,6 @@ import '../../../common/staff_list_skeleton.dart';
 import '../../contracts/view/contract_page_screen.dart' show KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../leads/presentation/follow_up_labels.dart';
-import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import '../domain/cheque.dart';
 import 'cheques_cubit.dart';
 import 'cheques_screen.dart';
@@ -53,7 +52,7 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
           builder: (context, state) {
             final c = state.cheque;
             final number = c?.number ?? row?.number;
-            final title = number != null ? '${l10n.chequeNumberLabel} ${ltr(number)}' : l10n.chequesTitle;
+            final title = number != null ? ltr(number) : l10n.chequesTitle;
             if (c == null) {
               return Column(children: [
                 HomeListHero(title: title, back: true),
@@ -75,8 +74,8 @@ class _ChequeDetailScreenState extends State<ChequeDetailScreen> {
                     label: Text(c.canDeposit ? l10n.chequeActionDeposit : l10n.chequeActionClear),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(50),
-                      backgroundColor: AppPalette.gold400,
-                      foregroundColor: AppPalette.navy,
+                      backgroundColor: homeCta(context),
+                      foregroundColor: homeOnCta(context),
                       textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     ),
@@ -102,7 +101,6 @@ class _Body extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
     final c = cheque;
-    final tone = chequeStatusColor(c.status, colors);
     final dueNow = c.dueForDeposit(DateTime.now());
     String? date(DateTime? d) => d == null ? null : followUpDate(d, lang);
     String day(DateTime? d) => d == null ? '' : DateFormatter.dayMonth(d, languageCode: lang);
@@ -123,68 +121,39 @@ class _Body extends StatelessWidget {
     ];
     final now = failed ? -1 : steps.indexWhere((s) => !s.$3);
     return ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
-      HomeOverlap(
-        overlap: 44,
-        top: HomeListHero(
-          title: title,
-          subtitle: [if ((c.customer ?? '').isNotEmpty) c.customer!, if ((c.bank ?? '').isNotEmpty) c.bank!].join(' · '),
-          back: true,
-          bottom: Padding(
-            padding: const EdgeInsets.only(bottom: 48),
-            child: Wrap(spacing: 6, runSpacing: 6, children: [
-              CatalogBadge.status(chequeStatusLabel(l10n, c.status), tone),
-              if (dueNow) CatalogBadge.glass(l10n.chequeDueForDeposit),
-            ]),
-          ),
+      HomeListHero(
+        title: title,
+        back: true,
+        badge: DvHeroBadge(
+          chequeStatusLabel(l10n, c.status),
+          tone: switch (c.status) {
+            'CLEARED' => DvTone.ok,
+            'BOUNCED' || 'REPLACED' || 'CANCELLED' => DvTone.bad,
+            'PENDING_CLEARANCE' => DvTone.warn,
+            _ => DvTone.neutral,
+          },
         ),
-        bottom: Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: homeLine(context)),
-            boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(l10n.chequeAmount, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            Text.rich(
-              key: const Key('cheque-amount'),
-              TextSpan(children: [
-                TextSpan(text: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()), style: homeDisplay(28, colors.inkStrong)),
-                TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-              ]),
+        subtitle: [if ((c.customer ?? '').isNotEmpty) c.customer!, if ((c.bank ?? '').isNotEmpty) c.bank!].join(' · '),
+        bottom: DvHeroFigure(
+          label: l10n.chequeAmount,
+          value: c.amount == null ? '—' : contractMoney(c.amount!.toDouble()),
+          unit: currency,
+          valueKey: const Key('cheque-amount'),
+          badge: dueNow ? DvHeroBadge(l10n.chequeDueForDeposit, tone: DvTone.warn) : null,
+          footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (dueLine != null) ...[
+              Text(dueLine, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: dueNow ? const Color(0xFFF29AA2) : const Color(0xFFC9B27A))),
+              const SizedBox(height: 14),
+            ],
+            DvHeroSteps(
+              keyPrefix: 'cheque-step',
+              steps: [
+                for (final (i, (label, at, done)) in steps.indexed) (label, i == now ? l10n.pmNow : at, done, failed && i == steps.length - 1),
+              ],
             ),
-            if (dueLine != null) Text(dueLine, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: dueNow ? colors.error : AppPalette.gold600)),
-            const SizedBox(height: 14),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              for (final (i, (label, at, done)) in steps.indexed)
-                Expanded(
-                  child: Column(children: [
-                    Container(
-                      key: Key('cheque-step-$i'),
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFFB3261E) : homeLine(context))),
-                        boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
-                      ),
-                      child: Icon(
-                        done ? Icons.check_rounded : (failed && i == steps.length - 1 ? Icons.close_rounded : Icons.more_horiz_rounded),
-                        size: 15,
-                        color: done || (failed && i == steps.length - 1) ? Colors.white : (i == now ? AppPalette.navy : const Color(0xFF9A9083)),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                    Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
-                ),
-            ]),
             if (c.status == 'BOUNCED' && (c.bounceReason?.trim().isNotEmpty ?? false)) ...[
               const SizedBox(height: 10),
-              Text('${l10n.chequeBounceReason}: ${c.bounceReason}', style: TextStyle(fontSize: 12, color: colors.error)),
+              Text('${l10n.chequeBounceReason}: ${c.bounceReason}', style: const TextStyle(fontSize: 12, color: Color(0xFFF29AA2))),
             ],
           ]),
         ),
@@ -202,23 +171,21 @@ class _Body extends StatelessWidget {
           (l10n.chequeRecordedBy, c.recordedBy ?? '—'),
         ]),
       ),
-      if (c.customer != null || c.contractNumber != null || c.reservationNumber != null)
+      if (c.customer != null || c.contractNumber != null || c.reservationNumber != null || c.contractId != null)
         HomeSection(
           icon: Icons.person_rounded,
           title: l10n.chequeCustomer,
-          child: Column(children: [
-            KvTable(rows: [
-              if (c.customer != null) (l10n.chequeCustomer, c.customer!),
-              if (c.contractNumber != null) (l10n.chequeContract, ltr(c.contractNumber!)),
-              if (c.reservationNumber != null) (l10n.chequeReservation, ltr(c.reservationNumber!)),
-            ]),
-            if (c.contractId != null) ...[
-              const SizedBox(height: 8),
-              ReservationLinkCard(key: const Key('cheque-open-contract'), icon: Icons.description_rounded, title: l10n.rbOpenContract, onTap: () => context.push('/contracts/${c.contractId}')),
-            ] else if (c.reservationId != null) ...[
-              const SizedBox(height: 8),
-              ReservationLinkCard(key: const Key('cheque-open-reservation'), icon: Icons.bookmark_rounded, title: l10n.chequeReservation, onTap: () => context.push('/reservations/${c.reservationId}')),
-            ],
+          child: DvInfoCard(rows: [
+            if (c.customer != null) DvInfo(l10n.chequeCustomer, c.customer!),
+            if (c.contractNumber != null)
+              DvInfo(l10n.chequeContract, ltr(c.contractNumber!),
+                  id: c.contractId == null ? null : 'cheque-open-contract', onTap: c.contractId == null ? null : () => context.push('/contracts/${c.contractId}')),
+            if (c.contractNumber == null && c.contractId != null)
+              DvInfo(l10n.chequeContract, l10n.rbOpenContract, id: 'cheque-open-contract', onTap: () => context.push('/contracts/${c.contractId}')),
+            if (c.reservationNumber != null)
+              DvInfo(l10n.chequeReservation, ltr(c.reservationNumber!),
+                  id: c.contractId != null || c.reservationId == null ? null : 'cheque-open-reservation',
+                  onTap: c.contractId != null || c.reservationId == null ? null : () => context.push('/reservations/${c.reservationId}')),
           ]),
         ),
       if (c.payments.isNotEmpty)

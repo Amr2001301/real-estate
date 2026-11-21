@@ -3506,6 +3506,18 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get visitLocation;
 
+  /// No description provided for @visitWhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get visitWhere;
+
+  /// No description provided for @visitNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit number'**
+  String get visitNumberLabel;
+
   /// No description provided for @visitNotes.
   ///
   /// In en, this message translates to:
@@ -7940,6 +7952,12 @@ abstract class AppLocalizations {
   /// **'Time left'**
   String get maintenanceTimeLeft;
 
+  /// No description provided for @maintenanceSlaRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time left'**
+  String get maintenanceSlaRemaining;
+
   /// No description provided for @timeUnitDay.
   ///
   /// In en, this message translates to:
@@ -10177,6 +10195,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collection rate'**
   String get ahCollectionRate;
+
+  /// No description provided for @tgAchievement.
+  ///
+  /// In en, this message translates to:
+  /// **'Achievement'**
+  String get tgAchievement;
 
   /// No description provided for @ahNothingDue.
   ///
@@ -14210,6 +14234,18 @@ abstract class AppLocalizations {
   /// **'A summary with details'**
   String get npEmailHint;
 
+  /// No description provided for @npEmailShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get npEmailShort;
+
+  /// No description provided for @npPushShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Push'**
+  String get npPushShort;
+
   /// No description provided for @npPush.
   ///
   /// In en, this message translates to:
@@ -16208,6 +16244,12 @@ abstract class AppLocalizations {
   /// **'Cancelled'**
   String get rpResCancelled;
 
+  /// No description provided for @rpResRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get rpResRejected;
+
   /// No description provided for @rpResExpired.
   ///
   /// In en, this message translates to:
@@ -18056,6 +18098,24 @@ abstract class AppLocalizations {
   /// **'Assigned to'**
   String get mtaAssignedTo;
 
+  /// No description provided for @mtaRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance request'**
+  String get mtaRequest;
+
+  /// No description provided for @mtaDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mtaDetails;
+
+  /// No description provided for @mtaActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get mtaActionsTitle;
+
   /// No description provided for @mtaUnassigned.
   ///
   /// In en, this message translates to:
@@ -18325,6 +18385,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No details recorded.'**
   String get audNoChanges;
+
+  /// No description provided for @dvAwaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting you'**
+  String get dvAwaiting;
+
+  /// No description provided for @dvAllClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is waiting for you'**
+  String get dvAllClear;
+
+  /// No description provided for @dvReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports & performance'**
+  String get dvReports;
+
+  /// No description provided for @dvReportsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Funnel, reps, brokers and cash flow'**
+  String get dvReportsSub;
+
+  /// No description provided for @dvCollectedMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected this month'**
+  String get dvCollectedMonth;
+
+  /// No description provided for @dvLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get dvLastMonth;
+
+  /// No description provided for @dvSignedN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} signed'**
+  String dvSignedN(int n);
+
+  /// No description provided for @dvNewLeadsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} new leads'**
+  String dvNewLeadsN(int n);
+
+  /// No description provided for @dvOverdueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{v} overdue'**
+  String dvOverdueAmount(String v);
+
+  /// No description provided for @dvCollectionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'{p}% collected'**
+  String dvCollectionPct(int p);
+
+  /// No description provided for @dvOverdueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, =0{Overdue today} =1{1 day overdue} other{{n} days overdue}}'**
+  String dvOverdueDays(int n);
+
+  /// No description provided for @dvTodayAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Today {t}'**
+  String dvTodayAt(String t);
+
+  /// No description provided for @dvNewLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead'**
+  String get dvNewLead;
+
+  /// No description provided for @dvSearchLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get dvSearchLeads;
+
+  /// No description provided for @kcCollectedOfValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected of the contract value'**
+  String get kcCollectedOfValue;
+
+  /// No description provided for @kcOfValue.
+  ///
+  /// In en, this message translates to:
+  /// **'of {v}'**
+  String kcOfValue(String v);
 }
 
 class _AppLocalizationsDelegate

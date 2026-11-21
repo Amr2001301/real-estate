@@ -1821,6 +1821,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitLocation => 'الموقع';
 
   @override
+  String get visitWhere => 'المكان';
+
+  @override
+  String get visitNumberLabel => 'رقم الزيارة';
+
+  @override
   String get visitNotes => 'ملاحظات';
 
   @override
@@ -4200,6 +4206,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maintenanceTimeLeft => 'الوقت المتبقي';
 
   @override
+  String get maintenanceSlaRemaining => 'المهلة المتبقية';
+
+  @override
   String get timeUnitDay => 'يوم';
 
   @override
@@ -5508,6 +5517,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get ahCollectionRate => 'نسبة التحصيل';
+
+  @override
+  String get tgAchievement => 'نسبة التحقيق';
 
   @override
   String get ahNothingDue => 'لا شيء مستحق';
@@ -8031,6 +8043,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get npEmailHint => 'ملخّص بالتفاصيل';
 
   @override
+  String get npEmailShort => 'بريد';
+
+  @override
+  String get npPushShort => 'تنبيه';
+
+  @override
   String get npPush => 'إشعار على الهاتف';
 
   @override
@@ -9195,6 +9213,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rpResCancelled => 'ملغى';
 
   @override
+  String get rpResRejected => 'مرفوض';
+
+  @override
   String get rpResExpired => 'منتهٍ';
 
   @override
@@ -10213,6 +10234,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mtaAssignedTo => 'المُسند إليه';
 
   @override
+  String get mtaRequest => 'طلب صيانة';
+
+  @override
+  String get mtaDetails => 'البيانات';
+
+  @override
+  String get mtaActionsTitle => 'الإجراءات';
+
+  @override
   String get mtaUnassigned => 'لم يُسند بعد';
 
   @override
@@ -10361,4 +10391,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get audNoChanges => 'لا تفاصيل مسجّلة.';
+
+  @override
+  String get dvAwaiting => 'ينتظر قرارك';
+
+  @override
+  String get dvAllClear => 'لا شيء ينتظرك الآن';
+
+  @override
+  String get dvReports => 'التقارير والأداء';
+
+  @override
+  String get dvReportsSub => 'المسار والمستشارون والوسطاء والتدفق النقدي';
+
+  @override
+  String get dvCollectedMonth => 'المحصَّل هذا الشهر';
+
+  @override
+  String get dvLastMonth => 'الشهر الماضي';
+
+  @override
+  String dvSignedN(int n) {
+    return '$n عقود موقَّعة';
+  }
+
+  @override
+  String dvNewLeadsN(int n) {
+    return '$n عملاء جدد';
+  }
+
+  @override
+  String dvOverdueAmount(String v) {
+    return 'متأخر $v';
+  }
+
+  @override
+  String dvCollectionPct(int p) {
+    return '$p% نسبة التحصيل';
+  }
+
+  @override
+  String dvOverdueDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'متأخرة $n يومًا',
+      few: 'متأخرة $n أيام',
+      two: 'متأخرة يومين',
+      one: 'متأخرة يومًا',
+      zero: 'متأخرة اليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dvTodayAt(String t) {
+    return 'اليوم $t';
+  }
+
+  @override
+  String get dvNewLead => 'عميل';
+
+  @override
+  String get dvSearchLeads => 'بحث بالاسم أو الهاتف';
+
+  @override
+  String get kcCollectedOfValue => 'المحصَّل من قيمة العقد';
+
+  @override
+  String kcOfValue(String v) {
+    return 'من $v';
+  }
 }

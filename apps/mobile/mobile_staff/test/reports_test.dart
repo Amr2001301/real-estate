@@ -54,7 +54,7 @@ void main() {
     ));
     await t.pumpAndSettle();
     expect(find.text('التقارير'), findsOneWidget);
-    expect(find.byKey(const Key('home-fig-contracts')), findsOneWidget);
+    expect(find.byKey(const Key('dv-stat-contracts')), findsOneWidget);
     expect(find.textContaining('10%'), findsWidgets);
     for (final text in ['حالات الحجوزات', 'مشروع النخيل', 'بيت الخبرة']) {
       await t.scrollUntilVisible(find.text(text), 300, scrollable: find.byType(Scrollable).first);

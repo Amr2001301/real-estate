@@ -216,21 +216,18 @@ class _BrokerBookingScreenState extends State<BrokerBookingScreen> {
             return RefreshIndicator(
               onRefresh: context.read<BrokerBookingCubit>().load,
               child: ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
-                HomeOverlap(
-                  overlap: 44,
-                  top: ReservationHeader(page: p),
-                  bottom: ReservationBookingCard(
-                    page: p,
-                    extra: c == null
-                        ? null
-                        : Row(key: const Key('broker-booking-commission'), children: [
-                            _Tile(
-                              c.pct == null ? l10n.rbCommission : l10n.rbCommissionPct(ltr('${c.pct!.toStringAsFixed(c.pct! % 1 == 0 ? 0 : 1)}%')),
-                              c.amount == null ? '—' : contractMoney(c.amount!),
-                            ),
-                            if ((r.salesName ?? '').isNotEmpty) ...[const SizedBox(width: 8), _Tile(l10n.rvConsultant, r.salesName!, small: true)],
-                          ]),
-                  ),
+                ReservationHero(
+                  page: p,
+                  facts: c == null
+                      ? const []
+                      : [
+                          DvHeroFact(
+                            c.amount == null ? '—' : contractMoney(c.amount!),
+                            c.pct == null ? l10n.rbCommission : l10n.rbCommissionPct(ltr('${c.pct!.toStringAsFixed(c.pct! % 1 == 0 ? 0 : 1)}%')),
+                            id: 'broker-booking-commission',
+                          ),
+                          if ((r.salesName ?? '').isNotEmpty) DvHeroFact(r.salesName!, l10n.rvConsultant),
+                        ],
                 ),
                 if (b.contractId != null)
                   Padding(
@@ -261,28 +258,6 @@ class _BrokerBookingScreenState extends State<BrokerBookingScreen> {
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile(this.label, this.value, {this.small = false});
-  final String label;
-  final String value;
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: small ? TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong) : homeDisplay(15, colors.inkStrong)),
-        ]),
       ),
     );
   }

@@ -28,6 +28,8 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
     context.read<TeamTargetsCubit>().load();
   }
 
+  void _showSheet2() => _showSheet();
+
   void _showSheet({SalesTarget? target}) {
     final cubit = context.read<TeamTargetsCubit>();
     showModalBottomSheet<void>(
@@ -63,7 +65,6 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
                   title: l10n.teamTargetsManageTitle,
                   subtitle: ready ? l10n.tmCountN(mine.length) : null,
                   back: true,
-                  actions: [HomeHeroButton(key: const Key('team-target-add'), icon: Icons.add_rounded, tooltip: l10n.teamTargetAdd, onTap: () => _showSheet())],
                 ),
                 Expanded(
                   child: switch (state.status) {
@@ -71,29 +72,70 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
                     DataStatus.failure => ErrorState(failure: state.failure, onRetry: cubit.load),
                     _ => RefreshIndicator(
                         onRefresh: () => cubit.load(period: period),
-                        child: ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
+                        child: ListView(padding: EdgeInsets.only(bottom: 24), children: [
                           PeriodBar(period: period, onPick: cubit.setPeriod, extra: [for (final t in state.targets) t.period]),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                            child: HomeBand(figures: [
-                              HomeFigure(id: 'count', value: '${mine.length}', label: l10n.teamTargetRegistered, hint: periodLabel(period, lang)),
-                              HomeFigure(id: 'units', value: '$units', label: l10n.teamTargetTotalUnits, hint: l10n.tmUnitsLine(units)),
-                              HomeFigure(id: 'amount', value: total.$1, label: l10n.teamTargetTotalAmount, hint: [if (total.$2.isNotEmpty) total.$2, currency].join(' ')),
-                            ]),
-                          ),
+                                          const SizedBox(height: 12),
                           if (mine.isEmpty)
                             EmptyState(icon: Icons.flag_rounded, title: l10n.teamTargetRegistered, message: l10n.tgNoTarget)
-                          else
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                              child: Column(children: [
-                                for (final t in mine)
-                                  Padding(padding: const EdgeInsets.only(bottom: 10), child: _TargetCard(target: t, saving: state.savingId == t.salesId, onEdit: () => _showSheet(target: t))),
+                          else ...[
+                            Container(
+                              key: const Key('dv-stat-amount'),
+                              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                              padding: const EdgeInsets.all(16),
+                              decoration: homeCard(context, radius: 22),
+                              child: Row(children: [
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(l10n.teamTargetTotalAmount, style: TextStyle(fontSize: 12.5, color: context.appColors.inkMuted)),
+                                    const SizedBox(height: 2),
+                                    Text.rich(TextSpan(children: [
+                                      TextSpan(text: total.$1, style: TextStyle(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
+                                      TextSpan(text: ' ${[if (total.$2.isNotEmpty) total.$2, currency].join(' ')}', style: TextStyle(fontSize: 13, color: context.appColors.inkMuted)),
+                                    ])),
+                                  ]),
+                                ),
+                                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                  Text(l10n.teamTargetTotalUnits, style: TextStyle(fontSize: 12.5, color: context.appColors.inkMuted)),
+                                  const SizedBox(height: 2),
+                                  Text(ltr('$units'), style: TextStyle(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
+                                ]),
                               ]),
                             ),
+                            HomeSection(
+                              icon: Icons.flag_rounded,
+                              title: l10n.teamTargetRegistered,
+                              child: Container(
+                                decoration: homeCard(context, radius: 22),
+                                clipBehavior: Clip.antiAlias,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: Column(children: [
+                                    for (final (i, t) in ([...mine]..sort((a, b) => (double.tryParse(b.amountTarget) ?? 0).compareTo(double.tryParse(a.amountTarget) ?? 0))).indexed) ...[
+                                      if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: context.appColors.hairline),
+                                      _TargetCard(
+                                        target: t,
+                                        top: mine.fold<double>(0, (m, x) => (double.tryParse(x.amountTarget) ?? 0) > m ? (double.tryParse(x.amountTarget) ?? 0) : m),
+                                        first: i == 0,
+                                        saving: state.savingId == t.salesId,
+                                        onEdit: () => _showSheet(target: t),
+                                      ),
+                                    ],
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ],
                         ]),
                       ),
                   },
+                ),
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + MediaQuery.paddingOf(context).bottom),
+                  decoration: BoxDecoration(color: context.appColors.canvas, border: Border(top: BorderSide(color: context.appColors.hairline))),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DvGoldButton(key: const Key('team-target-add'), icon: Icons.add_rounded, label: l10n.teamTargetAdd, height: 50, onTap: _showSheet2),
+                  ),
                 ),
               ]);
             },
@@ -105,9 +147,11 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
 }
 
 class _TargetCard extends StatelessWidget {
-  const _TargetCard({required this.target, required this.onEdit, this.saving = false});
+  const _TargetCard({required this.target, required this.onEdit, required this.top, this.first = false, this.saving = false});
   final SalesTarget target;
   final VoidCallback onEdit;
+  final double top;
+  final bool first;
   final bool saving;
 
   @override
@@ -116,39 +160,48 @@ class _TargetCard extends StatelessWidget {
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('team-target-${target.salesId}'),
-        onTap: saving ? null : onEdit,
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+    final amount = double.tryParse(target.amountTarget) ?? 0;
+    return InkWell(
+      key: Key('team-target-${target.salesId}'),
+      onTap: saving ? null : onEdit,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+              child: Text(homeInitials(target.salesName), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(target.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong))),
+            if (saving)
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Text('${contractMoney(amount)} $currency', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+          ]),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 50),
             child: Row(children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                child: Text(homeInitials(target.salesName), style: homeDisplay(14, AppPalette.gold300)),
-              ),
-              const SizedBox(width: 11),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(target.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  Text.rich(TextSpan(children: [
-                    TextSpan(text: contractMoney(double.tryParse(target.amountTarget) ?? 0), style: homeDisplay(15, colors.inkStrong)),
-                    TextSpan(text: ' $currency · ${l10n.tmUnitsLine(target.unitsTarget)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ])),
-                ]),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: top <= 0 ? 0 : (amount / top).clamp(0, 1).toDouble(),
+                    minHeight: 8,
+                    color: first ? AppPalette.gold500 : const Color(0xFF1B2A48),
+                    backgroundColor: colors.surfaceSoft,
+                  ),
+                ),
               ),
-              if (saving) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) else Icon(Icons.edit_rounded, size: 19, color: AppPalette.gold600),
+              const SizedBox(width: 10),
+              Text(l10n.tmUnitsLine(target.unitsTarget), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
-        ),
+        ]),
       ),
     );
   }
@@ -319,7 +372,7 @@ class _TargetSheetState extends State<TargetSheet> {
                       onPressed: saving ? null : _save,
                       icon: saving ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.save_rounded, size: 19),
                       label: Text(l10n.actionSave),
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: AppPalette.gold400, foregroundColor: AppPalette.navy, textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48), backgroundColor: homeCta(context), foregroundColor: homeOnCta(context), textStyle: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                     ),
                   ),
                 ]),

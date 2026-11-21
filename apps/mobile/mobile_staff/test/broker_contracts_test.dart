@@ -115,7 +115,8 @@ void main() {
     await t.pumpWidget(_app(const BrokerContractsScreen(), [BlocProvider<BrokerContractsCubit>.value(value: cubit)]));
     await t.pumpAndSettle();
     expect(find.textContaining('عمولتك'), findsNothing);
-    expect(find.text('خطة السداد'), findsNWidgets(2)); // the plan instead
+    // The plan line instead of the commission.
+    expect(find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('contract-card-')), findsNWidgets(2));
   });
 
   testWidgets('a contract: value, commission tiles, the client to call, the unit and the plan', (t) async {

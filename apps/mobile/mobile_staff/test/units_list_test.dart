@@ -93,7 +93,7 @@ void main() {
     expect(find.byKey(const Key('unit-card-u1')), findsOneWidget);
     expect(find.byKey(const Key('unit-reserved-u1')), findsOneWidget);
     expect(find.byKey(const Key('unit-reserved-u2')), findsNothing);
-    expect(find.text('الدور الأرضي'), findsNWidgets(2));
+    expect(find.textContaining('الدور الأرضي'), findsNWidgets(2));
     expect(find.textContaining('5,920,000'), findsNWidgets(2));
 
     await t.tap(find.byKey(const Key('home-pill-AVAILABLE')));

@@ -47,9 +47,12 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
             final p = state.profile;
             final client = p?.client ?? widget.fallback;
             final hero = HomeListHero(
+              key: p == null ? null : const Key('client-card'),
               back: true,
               title: client?.name ?? l10n.navClients,
+              badge: client == null ? null : DvHeroBadge(client.active ? l10n.clActive : l10n.clSuspended, tone: client.active ? DvTone.ok : DvTone.bad),
               subtitle: client == null ? null : (client.owner ? l10n.ldOwner : l10n.ldBrowser),
+              bottom: client == null ? null : _heroBottom(context, client),
             );
             if (p == null) {
               return Column(children: [
@@ -68,8 +71,6 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
                 children: [
                   hero,
-                  const SizedBox(height: AppSpacing.md),
-                  Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: _ContactCard(profile: p)),
                   HomeSection(
                     icon: Icons.manage_accounts_rounded,
                     title: l10n.clAccount,
@@ -181,6 +182,23 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
     );
   }
 
+  Widget? _heroBottom(BuildContext context, ClientRow c) {
+    final l10n = context.l10n;
+    final reach = [if ((c.phone ?? '').isNotEmpty) ltr(c.phone!), if ((c.email ?? '').isNotEmpty) c.email!].join(' · ');
+    if (reach.isEmpty) return null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+      Text(reach, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFFAEB8CB))),
+      const SizedBox(height: 14),
+      DvHeroButtons(buttons: [
+        if ((c.phone ?? '').isNotEmpty) ...[
+          DvHeroButton(icon: Icons.phone_rounded, label: l10n.ldCall, gold: true, onTap: () => ContactActions.call(c.phone!)),
+          DvHeroButton(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: c.phone!)),
+        ],
+        if ((c.email ?? '').isNotEmpty) DvHeroButton(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:${c.email}')),
+      ]),
+    ]);
+  }
+
   String _where(BuildContext context, ClientItem i) => [
         if (i.project != null) i.project!.resolve(Localizations.localeOf(context).languageCode),
         if ((i.unitCode ?? '').isNotEmpty) ltr(i.unitCode!),
@@ -213,60 +231,6 @@ String _detailLabel(AppLocalizations l10n, String key) => switch (key) {
       'homePhone' => l10n.clHomePhone,
       _ => key,
     };
-
-class _ContactCard extends StatelessWidget {
-  const _ContactCard({required this.profile});
-  final ClientProfile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final c = profile.client;
-    return Container(
-      key: const Key('client-card'),
-      padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 54,
-            height: 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(17)),
-            child: Text(homeInitials(c.name), style: homeDisplay(17, AppPalette.gold300)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(c.name, style: homeDisplay(18, colors.inkStrong)),
-              const SizedBox(height: 6),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                ClientPill(text: c.owner ? l10n.ldOwner : l10n.ldBrowser, color: c.owner ? colors.success : colors.info),
-                ClientPill(text: c.active ? l10n.clActive : l10n.clSuspended, color: c.active ? colors.success : colors.error),
-              ]),
-            ]),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        if ((c.phone ?? '').isNotEmpty) _Line(icon: Icons.phone_rounded, text: ltr(c.phone!)),
-        if ((c.email ?? '').isNotEmpty) _Line(icon: Icons.alternate_email_rounded, text: c.email!),
-        if ((c.phone ?? '').isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(child: _Btn(icon: Icons.phone_rounded, label: l10n.ldCall, filled: true, onTap: () => ContactActions.call(c.phone!))),
-            const SizedBox(width: 8),
-            Expanded(child: _Btn(icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => ContactActions.whatsApp(number: c.phone!))),
-            if ((c.email ?? '').isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Expanded(child: _Btn(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:${c.email}'))),
-            ],
-          ]),
-        ],
-      ]),
-    );
-  }
-}
 
 /// The account: status, type, registered, last sign-in, language and ID,
 /// with suspending or restoring it (as the website's account panel).
@@ -476,67 +440,5 @@ class _Rows extends StatelessWidget {
   final List<(String, String)> rows;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: homeCard(context, radius: 20),
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(width: 120, child: Text(rows[i].$1, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-              Expanded(child: Text(rows[i].$2, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
-            ]),
-          ),
-      ]),
-    );
-  }
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(children: [
-          Icon(icon, size: 15, color: AppPalette.gold500),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: context.appColors.inkStrong))),
-        ]),
-      );
-}
-
-class _Btn extends StatelessWidget {
-  const _Btn({required this.icon, required this.label, required this.onTap, this.filled = false});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool filled;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: filled ? AppPalette.navy : colors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: filled ? AppPalette.navy : colors.hairline)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : colors.inkStrong),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : colors.inkStrong)),
-          ]),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => DvInfoCard(rows: [for (final (k, v) in rows) DvInfo(k, v)]);
 }

@@ -8,6 +8,7 @@ import '../../../../common/lead_stage_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/leads_cubit.dart';
+import '../follow_up_labels.dart';
 
 export '../cubit/leads_cubit.dart' show LeadSource;
 
@@ -107,12 +108,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
   }
 
   void _showFilterSheet(BuildContext context, LeadsCubit cubit) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _LeadFilterSheet(cubit: cubit, manager: _manager),
-    );
+    showFilterSheet(context, (_) => _LeadFilterSheet(cubit: cubit, manager: _manager));
   }
 
   @override
@@ -125,21 +121,6 @@ class _LeadsScreenState extends State<LeadsScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 84),
-          child: FloatingActionButton(
-            key: const Key('leads-add'),
-            backgroundColor: AppPalette.gold400,
-            foregroundColor: AppPalette.navy,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            onPressed: () async {
-              final created = await context.push<bool>('/leads/new');
-              if (created == true && context.mounted) cubit.load();
-            },
-            tooltip: l10n.leadNew,
-            child: const Icon(Icons.person_add_rounded),
-          ),
-        ),
         body: BlocBuilder<LeadsCubit, LeadsListState>(
           builder: (context, state) {
             return RefreshIndicator(
@@ -154,25 +135,26 @@ class _LeadsScreenState extends State<LeadsScreen> {
                       subtitle: state.pipeline.isEmpty ? null : l10n.lvCountN(state.pipelineTotal),
                       actions: [
                         if (!_manager)
-                          HomeHeroButton(
-                            icon: Icons.person_rounded,
-                            active: state.mine,
-                            tooltip: l10n.lvMine,
-                            onTap: cubit.toggleMine,
-                          )
+                          HomeHeroButton(icon: Icons.person_rounded, active: state.mine, tooltip: l10n.lvMine, onTap: cubit.toggleMine)
                         else
                           // Admins and sales managers merge duplicates, as on the website.
-                          HomeHeroButton(
-                            key: const Key('leads-duplicates'),
-                            icon: Icons.content_copy_rounded,
-                            tooltip: l10n.duplicatesTitle,
-                            onTap: () => context.push('/duplicates'),
-                          ),
+                          HomeHeroButton(key: const Key('leads-duplicates'), icon: Icons.content_copy_rounded, tooltip: l10n.duplicatesTitle, onTap: () => context.push('/duplicates')),
                         HomeHeroButton(
+                          key: const Key('leads-filters'),
                           icon: Icons.tune_rounded,
                           dot: state.hasAdvancedFilters,
                           tooltip: l10n.lvFilters,
                           onTap: () => _showFilterSheet(context, cubit),
+                        ),
+                        HomeHeroButton(
+                          key: const Key('leads-add'),
+                          icon: Icons.person_add_alt_1_rounded,
+                          active: true,
+                          tooltip: l10n.leadNew,
+                          onTap: () async {
+                            final created = await context.push<bool>('/leads/new');
+                            if (created == true && context.mounted) cubit.load();
+                          },
                         ),
                       ],
                       bottom: HomeSearchField(
@@ -186,10 +168,9 @@ class _LeadsScreenState extends State<LeadsScreen> {
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(child: _Figures(state: state, manager: _manager)),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      padding: const EdgeInsets.only(top: 16, bottom: 4),
                       child: HomePills(pills: [
                         HomePill(
                           id: 'all',
@@ -260,58 +241,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
       case DataStatus.success:
         return [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
             sliver: SliverList.separated(
               itemCount: state.leads.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, i) => LeadCard(lead: state.leads[i], showRep: _manager),
             ),
           ),
         ];
     }
-  }
-}
-
-/// The navy band: the scope's leads (and how many are open), the conversion,
-/// and the unassigned queue (managers) or the overdue follow-ups (reps).
-class _Figures extends StatelessWidget {
-  const _Figures({required this.state, required this.manager});
-  final LeadsListState state;
-  final bool manager;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    if (state.pipeline.isEmpty) return const SizedBox(height: 4);
-    final rate = state.conversionRate;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 14, AppSpacing.md, 0),
-      child: HomeBand(figures: [
-        HomeFigure(id: 'total', value: '${state.pipelineTotal}', label: l10n.lvTotal, hint: l10n.lvOpenN(state.openCount)),
-        HomeFigure(
-          id: 'conversion',
-          value: rate == null ? '—' : '$rate%',
-          label: l10n.lvConversion,
-          hint: l10n.lvWonN(state.pipeline['WON'] ?? 0),
-        ),
-        if (manager)
-          HomeFigure(
-            id: 'unassigned',
-            value: '${state.unassignedCount}',
-            label: l10n.lvUnassigned,
-            hint: l10n.lvUnassignedHint,
-            warn: state.unassignedCount > 0,
-          )
-        else
-          HomeFigure(
-            id: 'overdue',
-            value: '${state.overdueFollowUps}',
-            label: l10n.lvOverdue,
-            hint: state.overdueFollowUps > 0 ? l10n.lvOverdueSome : l10n.lvOverdueNone,
-            warn: state.overdueFollowUps > 0,
-          ),
-      ]),
-    );
   }
 }
 
@@ -333,31 +271,29 @@ class LeadCard extends StatelessWidget {
     final now = DateTime.now();
     final stageColor = leadStageColor(lead.stage, colors);
     final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
-    final where = [
-      if ((project ?? '').isNotEmpty) project!,
-      if ((lead.unitCode ?? '').isNotEmpty) ltr(lead.unitCode!),
-    ].join(' · ');
     final source = lead.brokerName != null ? '${l10n.lvBroker} · ${lead.brokerName}' : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect);
+    final rep = showRep ? (lead.unassigned ? l10n.lvUnassigned : lead.assignedSalesName) : null;
+    final hasPhone = (lead.phone ?? '').isNotEmpty;
 
-    // What comes next: the follow-up, else the booked visit, else the last contact.
+    // The next step: the follow-up (its kind and when), else the booked visit,
+    // else the last contact.
+    final open = lead.stage != 'WON' && lead.stage != 'LOST';
+    final f = lead.nextActionAt;
     final (IconData nextIcon, String nextText, Color nextColor) = () {
-      final f = lead.nextActionAt;
-      if (f != null && lead.stage != 'WON' && lead.stage != 'LOST') {
+      if (f != null && open) {
+        final kind = noteKindLabel(l10n, lead.nextActionType ?? 'FOLLOW_UP');
         return switch (leadFollowState(f, now)) {
-          LeadFollowState.overdue => (Icons.alarm_rounded, l10n.lvFollowOverdue(leadWhen(context, f)), colors.error),
-          LeadFollowState.today => (Icons.alarm_rounded, l10n.lvFollowToday(DateFormatter.time(f, languageCode: lang)), colors.warning),
-          LeadFollowState.upcoming => (Icons.event_repeat_rounded, l10n.lvFollowNext(leadWhen(context, f)), AppPalette.gold600),
+          LeadFollowState.overdue => (Icons.schedule_rounded, '$kind · ${l10n.dvOverdueDays(homeDay(now).difference(homeDay(f)).inDays)}', colors.error),
+          LeadFollowState.today => (Icons.schedule_rounded, '$kind · ${l10n.dvTodayAt(DateFormatter.time(f, languageCode: lang))}', colors.warning),
+          LeadFollowState.upcoming => (Icons.event_rounded, '$kind · ${leadWhen(context, f)}', colors.inkStrong),
         };
       }
-      if (lead.upcomingVisitAt != null) {
-        return (Icons.event_rounded, l10n.lvVisit(leadWhen(context, lead.upcomingVisitAt!)), colors.info);
-      }
+      if (lead.upcomingVisitAt != null) return (Icons.event_rounded, l10n.lvVisit(leadWhen(context, lead.upcomingVisitAt!)), colors.inkStrong);
       if (lead.lastContactAt != null) {
         return (Icons.history_rounded, l10n.lvLastContact(leadWhen(context, lead.lastContactAt!, withTime: false)), colors.inkMuted);
       }
       return (Icons.history_rounded, l10n.lvNoContact, colors.inkMuted);
     }();
-    final days = lead.stageChangedAt == null ? null : homeDay(now).difference(homeDay(lead.stageChangedAt!)).inDays;
 
     return Material(
       color: colors.surface,
@@ -369,101 +305,76 @@ class LeadCard extends StatelessWidget {
           if (context.mounted) context.read<LeadsCubit>().loadSummary();
         }),
         child: Container(
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: colors.hairline),
+            boxShadow: Theme.of(context).brightness == Brightness.dark
+                ? null
+                : [BoxShadow(color: const Color(0xFF0B1426).withValues(alpha: 0.05), blurRadius: 20, offset: const Offset(0, 8))],
           ),
-          child: Column(children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                  child: Text(homeInitials(lead.fullName), style: homeDisplay(14, AppPalette.gold300)),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(lead.fullName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                        decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
-                        child: Text(leadStageLabel(l10n, lead.stage),
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: stageColor)),
-                      ),
-                    ]),
-                    if (where.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Row(children: [
-                        Icon(Icons.apartment_rounded, size: 13, color: colors.inkMuted),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(where,
-                              maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                        ),
-                      ]),
-                    ],
-                    const SizedBox(height: 6),
-                    Wrap(spacing: 6, runSpacing: 4, children: [
-                      _Tag(icon: lead.brokerName != null ? Icons.handshake_rounded : Icons.call_received_rounded, text: source),
-                      if (showRep)
-                        lead.unassigned
-                            ? _Tag(icon: Icons.person_off_rounded, text: l10n.lvUnassigned, color: AppPalette.gold600)
-                            : _Tag(icon: Icons.person_rounded, text: lead.assignedSalesName!),
-                    ]),
-                  ]),
-                ),
-              ]),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-              decoration: BoxDecoration(
-                color: colors.surfaceSoft.withValues(alpha: 0.6),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-                border: Border(top: BorderSide(color: colors.hairline)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+                child: Text(homeInitials(lead.fullName), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
               ),
-              child: Row(children: [
-                Icon(nextIcon, size: 15, color: nextColor),
-                const SizedBox(width: 5),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(nextText,
-                        key: Key('lead-next-${lead.id}'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: nextColor)),
-                    if (days != null)
-                      Text(l10n.lvInStage(days),
-                          style: TextStyle(fontSize: 12, color: days >= 14 ? colors.warning : colors.inkMuted)),
-                  ]),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(lead.fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  if ((project ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(project!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                  ],
+                ]),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: stageColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+                child: Text(leadStageLabel(l10n, lead.stage), style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: stageColor)),
+              ),
+            ]),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: colors.hairline)),
+            Row(children: [
+              Icon(nextIcon, size: 19, color: nextColor),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(nextText,
+                      key: Key('lead-next-${lead.id}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w600, color: nextColor)),
+                  const SizedBox(height: 3),
+                  Text([source, if ((rep ?? '').isNotEmpty) rep!].join(' · '),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.4, color: colors.inkMuted)),
+                ]),
+              ),
+              if (hasPhone) ...[
+                const SizedBox(width: 8),
+                _SquareAction(
+                  key: Key('lead-whatsapp-${lead.id}'),
+                  icon: Icons.chat_outlined,
+                  color: const Color(0xFF1E7A55),
+                  onTap: () => leadContact(context, lead, 'WHATSAPP'),
                 ),
-                if ((lead.phone ?? '').isNotEmpty) ...[
-                  _RoundAction(
-                    key: Key('lead-whatsapp-${lead.id}'),
-                    icon: Icons.chat_rounded,
-                    color: const Color(0xFF1E9E5A),
-                    onTap: () => leadContact(context, lead, 'WHATSAPP'),
-                  ),
-                  const SizedBox(width: 6),
-                  _RoundAction(
-                    key: Key('lead-call-${lead.id}'),
-                    icon: Icons.phone_rounded,
-                    color: AppPalette.navy,
-                    onTap: () => leadContact(context, lead, 'CALL'),
-                  ),
-                ],
-              ]),
-            ),
+                const SizedBox(width: 8),
+                _SquareAction(
+                  key: Key('lead-call-${lead.id}'),
+                  icon: Icons.phone_rounded,
+                  gold: true,
+                  onTap: () => leadContact(context, lead, 'CALL'),
+                ),
+              ],
+            ]),
           ]),
         ),
       ),
@@ -471,77 +382,37 @@ class LeadCard extends StatelessWidget {
   }
 }
 
-class _Tag extends StatelessWidget {
-  const _Tag({required this.icon, required this.text, this.color});
+/// A 40px rounded-square action: soft grey, or gold for the main one (call).
+class _SquareAction extends StatelessWidget {
+  const _SquareAction({super.key, required this.icon, required this.onTap, this.color, this.gold = false});
   final IconData icon;
-  final String text;
+  final VoidCallback onTap;
   final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = color ?? context.appColors.inkMuted;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: context.appColors.surfaceSoft,
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 12, color: c),
-        const SizedBox(width: 4),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 170),
-          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: c)),
-        ),
-      ]),
-    );
-  }
-}
-
-class _RoundAction extends StatelessWidget {
-  const _RoundAction({super.key, required this.icon, required this.color, required this.onTap});
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-        color: color.withValues(alpha: 0.10),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 18, color: color)),
-        ),
-      );
-}
-
-/// A choice in the filter sheet.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.active, required this.onTap});
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
+  final bool gold;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Material(
-      color: active ? AppPalette.navy : colors.surface,
-      shape: StadiumBorder(side: BorderSide(color: active ? AppPalette.navy : colors.hairline)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(label,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: active ? Colors.white : colors.inkStrong)),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: gold ? dvGoldGradient : null,
+        color: gold ? null : colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(13),
+          onTap: onTap,
+          child: SizedBox(width: 40, height: 40, child: Icon(icon, size: 19, color: gold ? dvOnGold : (color ?? colors.inkStrong))),
         ),
       ),
     );
   }
 }
 
+
+/// A choice in the filter sheet.
 class _ActiveFilterChips extends StatelessWidget {
   const _ActiveFilterChips({
     required this.state,
@@ -763,244 +634,100 @@ class _LeadFilterSheetState extends State<_LeadFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        bottomPad + AppSpacing.md,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colors.hairline,
-                borderRadius: AppRadii.pillAll,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Title row
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.leadsFilterSheet,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: colors.inkStrong,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _clear,
-                child: Text(
-                  l10n.leadsFilterClear,
-                  style: TextStyle(color: colors.error, fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Source picker
-          Text(
-            l10n.leadsFilterSource,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.inkMuted,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          if (_loadingSources)
-            const Center(
-              child: SizedBox(
-                height: 32,
-                width: 32,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip(
-                    label: lang == 'ar' ? 'الكل' : 'All',
-                    active: _sourceId == null,
-                    onTap: () => setState(() => _sourceId = null),
-                  ),
-                  for (final src in _sources) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _FilterChip(
-                      label: src.name,
-                      active: _sourceId == src.id,
-                      onTap: () => setState(
-                        () => _sourceId = _sourceId == src.id ? null : src.id,
-                      ),
-                    ),
+    final active = (_sourceId == null ? 0 : 1) + (_dateFrom == null && _dateTo == null ? 0 : 1) + (_salesId == null ? 0 : 1);
+    return FilterSheet(
+      title: l10n.leadsFilterSheet,
+      active: active,
+      onClear: _clear,
+      onApply: _apply,
+      applyLabel: l10n.leadsFilterApply,
+      sections: [
+        FilterSection(
+          icon: Icons.campaign_outlined,
+          title: l10n.leadsFilterSource,
+          child: _loadingSources
+              ? const Padding(padding: EdgeInsets.all(12), child: Center(child: SizedBox(height: 26, width: 26, child: CircularProgressIndicator(strokeWidth: 2))))
+              : FilterChips<String?>(
+                  keyPrefix: 'lead-source',
+                  selected: _sourceId,
+                  onSelect: (v) => setState(() => _sourceId = v),
+                  options: [
+                    FilterOption<String?>(null, lang == 'ar' ? 'الكل' : 'All'),
+                    for (final src in _sources) FilterOption<String?>(src.id, src.name),
                   ],
-                ],
+                ),
+        ),
+        FilterSection(
+          icon: Icons.date_range_rounded,
+          title: lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
+          child: Row(children: [
+            Expanded(
+              child: _DateButton(
+                label: _dateFrom ?? l10n.leadsFilterDateFrom,
+                hasValue: _dateFrom != null,
+                onTap: () => _pickDate(true),
+                onClear: _dateFrom != null ? () => setState(() => _dateFrom = null) : null,
               ),
             ),
-          const SizedBox(height: AppSpacing.md),
-
-          // Date range
-          Text(
-            lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: colors.inkMuted,
+            const SizedBox(width: 10),
+            Expanded(
+              child: _DateButton(
+                label: _dateTo ?? l10n.leadsFilterDateTo,
+                hasValue: _dateTo != null,
+                onTap: () => _pickDate(false),
+                onClear: _dateTo != null ? () => setState(() => _dateTo = null) : null,
+              ),
+            ),
+          ]),
+        ),
+        if (widget.manager && _staff.isNotEmpty)
+          FilterSection(
+            icon: Icons.badge_outlined,
+            title: l10n.lvRep,
+            child: FilterChips<String?>(
+              keyPrefix: 'lead-rep',
+              selected: _salesId,
+              onSelect: (v) => setState(() => _salesId = v),
+              options: [
+                FilterOption<String?>(null, l10n.lvAllReps),
+                for (final o in _staff) FilterOption<String?>(o.id, o.name),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Row(
-            children: [
-              Expanded(
-                child: _DateButton(
-                  label: _dateFrom ?? l10n.leadsFilterDateFrom,
-                  hasValue: _dateFrom != null,
-                  onTap: () => _pickDate(true),
-                  onClear: _dateFrom != null
-                      ? () => setState(() => _dateFrom = null)
-                      : null,
-                  colors: colors,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _DateButton(
-                  label: _dateTo ?? l10n.leadsFilterDateTo,
-                  hasValue: _dateTo != null,
-                  onTap: () => _pickDate(false),
-                  onClear: _dateTo != null
-                      ? () => setState(() => _dateTo = null)
-                      : null,
-                  colors: colors,
-                ),
-              ),
-            ],
-          ),
-          if (widget.manager && _staff.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.lvRep,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _FilterChip(
-                    label: l10n.lvAllReps,
-                    active: _salesId == null,
-                    onTap: () => setState(() => _salesId = null),
-                  ),
-                  for (final o in _staff) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _FilterChip(
-                      label: o.name,
-                      active: _salesId == o.id,
-                      onTap: () => setState(() => _salesId = _salesId == o.id ? null : o.id),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-
-          // Apply button
-          FilledButton(onPressed: _apply, child: Text(l10n.leadsFilterApply)),
-        ],
-      ),
+      ],
     );
   }
 }
 
 class _DateButton extends StatelessWidget {
-  const _DateButton({
-    required this.label,
-    required this.hasValue,
-    required this.onTap,
-    required this.colors,
-    this.onClear,
-  });
+  const _DateButton({required this.label, required this.hasValue, required this.onTap, this.onClear});
   final String label;
   final bool hasValue;
   final VoidCallback onTap;
   final VoidCallback? onClear;
-  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: hasValue
-              ? colors.brandNavy.withValues(alpha: 0.06)
-              : colors.surface,
-          border: Border.all(
-            color: hasValue
-                ? colors.brandNavy.withValues(alpha: 0.25)
-                : colors.hairline,
-          ),
-          borderRadius: AppRadii.card,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 14,
-              color: hasValue ? colors.brandNavy : colors.inkMuted,
-            ),
-            const SizedBox(width: 6),
+    final colors = context.appColors;
+    return Material(
+      color: homeField(context),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: hasValue ? AppPalette.navy : homeLine(context), width: hasValue ? 1.4 : 1)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(children: [
+            Icon(Icons.calendar_today_outlined, size: 16, color: AppPalette.gold600),
+            const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: hasValue ? colors.inkStrong : colors.inkMuted,
-                  fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text(label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: hasValue ? FontWeight.w700 : FontWeight.w500, color: hasValue ? colors.inkStrong : colors.inkMuted)),
             ),
-            if (onClear != null)
-              GestureDetector(
-                onTap: onClear,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 14,
-                  color: colors.inkMuted,
-                ),
-              ),
-          ],
+            if (onClear != null) GestureDetector(onTap: onClear, child: Icon(Icons.close_rounded, size: 16, color: colors.inkMuted)),
+          ]),
         ),
       ),
     );

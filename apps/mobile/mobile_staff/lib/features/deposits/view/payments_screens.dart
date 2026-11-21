@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../contracts/view/contract_page_screen.dart' show KvTable;
 import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import 'payments_data.dart';
@@ -292,138 +291,49 @@ class PaymentCardView extends StatelessWidget {
     String day(DateTime d) => DateFormatter.dayMonth(d, languageCode: lang);
     final kind = [paymentKind(l10n, row), if (paymentMethod(l10n, row) != null) paymentMethod(l10n, row)!].join(' · ');
     final canDecide = isAdmin && row.state == 'PENDING_REVIEW';
-
-    final List<Widget> foot = switch (row.state) {
-      'PENDING_REVIEW' => [
-          if (row.hasProof) Text(l10n.pmProofAttached, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          const Spacer(),
-          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ],
-      'CHEQUE_PENDING' => [
-          if (row.dueDate != null) Text(l10n.pmDueOn(day(row.dueDate!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          const Spacer(),
-          if (row.instrumentId != null)
-            InkWell(
-              key: Key('payment-cheque-${row.id}'),
-              onTap: () => context.push('/cheques/${row.instrumentId}'),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Text(l10n.pmOpenCheque, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                Icon(Icons.chevron_right_rounded, size: 17, color: AppPalette.gold600),
-              ]),
-            ),
-        ],
-      'REJECTED' || 'BOUNCED' => [
-          Expanded(
-            child: Text(
-              (row.rejectionReason ?? '').isNotEmpty ? l10n.pmReasonLine(row.rejectionReason!) : (row.paidAt == null ? '' : day(row.paidAt!)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, color: tone),
-            ),
-          ),
-        ],
-      _ => [
-          if (row.paidAt != null) Text(l10n.pmPaidOn(day(row.paidAt!)), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-        ],
+    final when = switch (row.state) {
+      'CHEQUE_PENDING' => row.dueDate == null ? null : l10n.pmDueOn(day(row.dueDate!)),
+      'REJECTED' || 'BOUNCED' => (row.rejectionReason ?? '').isNotEmpty ? l10n.pmReasonLine(row.rejectionReason!) : null,
+      _ => row.paidAt == null ? null : l10n.pmPaidOn(day(row.paidAt!)),
     };
-
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(22),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('payment-card-${row.id}'),
-        onTap: () => context.push('/deposits/${row.id}', extra: row),
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(22), border: Border.all(color: colors.hairline)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: tone.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                  child: Icon(icon, color: tone, size: 22),
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(row.clientName ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      ),
-                      const SizedBox(width: 6),
-                      Text.rich(TextSpan(children: [
-                        TextSpan(text: contractMoney(row.amount), style: homeDisplay(16, colors.inkStrong)),
-                        TextSpan(text: ' $currency', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ])),
-                    ]),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(children: [
-                        if (row.reference != null) TextSpan(text: ltr(row.reference!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.gold600)),
-                        if ((row.unitCode ?? '').isNotEmpty) TextSpan(text: ' · ${ltr(row.unitCode!)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 5),
-                    Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                      paymentBadge(l10n, row),
-                      Text(kind, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                    ]),
-                  ]),
-                ),
-              ]),
-            ),
-            if (canDecide)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: Row(children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      key: Key('payment-approve-${row.id}'),
-                      onPressed: working ? null : () => _decide(context, approve: true),
-                      icon: working ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check_rounded, size: 18),
-                      label: Text(l10n.paymentApprove, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(42),
-                        backgroundColor: catalogAvailable,
-                        foregroundColor: Colors.white,
-                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: Key('payment-reject-${row.id}'),
-                      onPressed: working ? null : () => _decide(context, approve: false),
-                      icon: const Icon(Icons.close_rounded, size: 18),
-                      label: Text(l10n.paymentReject, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(42),
-                        foregroundColor: colors.error,
-                        side: BorderSide(color: colors.error.withValues(alpha: 0.45), width: 1.4),
-                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
-                      ),
-                    ),
-                  ),
-                ]),
-              ),
-            if (foot.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                decoration: BoxDecoration(color: colors.surfaceSoft, border: Border(top: BorderSide(color: colors.hairline))),
-                child: Row(children: foot),
-              ),
-          ]),
-        ),
-      ),
+    return DvEntityCard(
+      inkKey: Key('payment-card-${row.id}'),
+      onTap: () => context.push('/deposits/${row.id}', extra: row),
+      icon: icon,
+      title: row.clientName ?? '—',
+      subtitle: [if (row.reference != null) ltr(row.reference!), if ((row.unitCode ?? '').isNotEmpty) ltr(row.unitCode!)].join(' · '),
+      status: paymentStateLabel(l10n, row),
+      statusColor: tone,
+      footIcon: Icons.payments_outlined,
+      footColor: colors.inkStrong,
+      footText: '${contractMoney(row.amount)} $currency',
+      footSub: [kind, ?when].join(' · '),
+      actions: [
+        if (canDecide) ...[
+          DvSquareAction(
+            key: Key('payment-reject-${row.id}'),
+            icon: Icons.close_rounded,
+            color: colors.error,
+            tooltip: l10n.paymentReject,
+            busy: working,
+            onTap: () => _decide(context, approve: false),
+          ),
+          DvSquareAction(
+            key: Key('payment-approve-${row.id}'),
+            icon: Icons.check_rounded,
+            gold: true,
+            tooltip: l10n.paymentApprove,
+            busy: working,
+            onTap: () => _decide(context, approve: true),
+          ),
+        ] else if (row.state == 'CHEQUE_PENDING' && row.instrumentId != null)
+          DvSquareAction(
+            key: Key('payment-cheque-${row.id}'),
+            icon: Icons.receipt_long_rounded,
+            tooltip: l10n.pmOpenCheque,
+            onTap: () => context.push('/cheques/${row.instrumentId}'),
+          ),
+      ],
     );
   }
 }
@@ -488,7 +398,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ]);
             }
-            final (tone, _) = paymentTone(p);
             String day(DateTime? d) => d == null ? '' : DateFormatter.dayMonth(d, languageCode: lang);
             final cheque = p.method == 'CHEQUE';
             final review = p.state == 'PENDING_REVIEW';
@@ -509,70 +418,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: RefreshIndicator(
                   onRefresh: context.read<PaymentCubit>().load,
                   child: ListView(padding: EdgeInsets.only(bottom: canDecide ? 16 : MediaQuery.paddingOf(context).bottom + 24), children: [
-                    HomeOverlap(
-                      overlap: 44,
-                      top: HomeListHero(
-                        title: paymentKind(l10n, p),
-                        subtitle: [if ((p.clientName ?? '').isNotEmpty) p.clientName!, if ((p.unitCode ?? '').isNotEmpty) ltr(p.unitCode!)].join(' · '),
-                        back: true,
-                        bottom: Padding(
-                          padding: const EdgeInsets.only(bottom: 48),
-                          child: Wrap(spacing: 6, runSpacing: 6, children: [
-                            paymentBadge(l10n, p),
-                            if (paymentMethod(l10n, p) != null) CatalogBadge.glass(paymentMethod(l10n, p)!),
-                          ]),
-                        ),
+                    HomeListHero(
+                      title: paymentKind(l10n, p),
+                      back: true,
+                      badge: DvHeroBadge(
+                        paymentStateLabel(l10n, p),
+                        tone: switch (p.state) {
+                          'COLLECTED' => DvTone.ok,
+                          'PENDING_REVIEW' => DvTone.warn,
+                          'CHEQUE_PENDING' => DvTone.neutral,
+                          _ => DvTone.bad,
+                        },
                       ),
-                      bottom: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: homeLine(context)),
-                          boxShadow: const [BoxShadow(color: Color(0x290E1626), blurRadius: 40, offset: Offset(0, 18))],
-                        ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                          Text(l10n.depositAmount, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                          Text.rich(
-                            key: const Key('payment-amount'),
-                            TextSpan(children: [
-                              TextSpan(text: contractMoney(p.amount), style: homeDisplay(28, colors.inkStrong)),
-                              TextSpan(text: ' $currency', style: TextStyle(fontSize: 13, color: colors.inkMuted)),
-                            ]),
-                          ),
+                      subtitle: [
+                        if ((p.clientName ?? '').isNotEmpty) p.clientName!,
+                        if ((p.unitCode ?? '').isNotEmpty) ltr(p.unitCode!),
+                        ?paymentMethod(l10n, p),
+                      ].join(' · '),
+                      bottom: DvHeroFigure(
+                        label: l10n.depositAmount,
+                        value: contractMoney(p.amount),
+                        unit: currency,
+                        valueKey: const Key('payment-amount'),
+                        badge: p.state == 'COLLECTED' && p.paidAt != null
+                            ? DvHeroBadge('✓ ${l10n.pmPaidOn(day(p.paidAt))}', tone: DvTone.ok)
+                            : null,
+                        footer: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                           if (p.state == 'CHEQUE_PENDING')
-                            Text(l10n.pmNotCounted, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600))
-                          else if (p.state == 'COLLECTED' && p.paidAt != null)
-                            Text('✓ ${l10n.pmPaidOn(DateFormatter.mediumDate(p.paidAt!, languageCode: lang))}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: catalogAvailable))
-                          else if ((p.rejectionReason ?? '').isNotEmpty)
-                            Text(l10n.pmReasonLine(p.rejectionReason!), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tone)),
-                          const SizedBox(height: 14),
-                          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            for (final (i, (label, at, done)) in steps.indexed)
-                              Expanded(
-                                child: Column(children: [
-                                  Container(
-                                    key: Key('payment-step-$i'),
-                                    width: 26,
-                                    height: 26,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: done ? catalogAvailable : (i == now ? AppPalette.gold400 : (failed && i == steps.length - 1 ? const Color(0xFF9A9083) : homeLine(context))),
-                                      boxShadow: i == now ? [BoxShadow(color: homeTint(context), spreadRadius: 4)] : null,
-                                    ),
-                                    child: Icon(
-                                      done ? Icons.check_rounded : (failed && i == steps.length - 1 ? Icons.close_rounded : Icons.more_horiz_rounded),
-                                      size: 15,
-                                      color: done || (failed && i == steps.length - 1) ? Colors.white : (i == now ? AppPalette.navy : const Color(0xFF9A9083)),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                                  Text(i == now ? l10n.pmNow : at, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                                ]),
-                              ),
-                          ]),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: Text(l10n.pmNotCounted, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFFC9B27A))),
+                            )
+                          else if (p.state != 'COLLECTED' && (p.rejectionReason ?? '').isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 14),
+                              child: Text(l10n.pmReasonLine(p.rejectionReason!), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFFF29AA2))),
+                            ),
+                          DvHeroSteps(
+                            keyPrefix: 'payment-step',
+                            steps: [
+                              for (final (i, (label, at, done)) in steps.indexed) (label, i == now ? l10n.pmNow : at, done, failed && i == steps.length - 1),
+                            ],
+                          ),
                         ]),
                       ),
                     ),
@@ -580,20 +467,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       HomeSection(
                         icon: Icons.receipt_long_rounded,
                         title: l10n.pmCheque,
-                        child: Column(children: [
-                          KvTable(rows: [
-                            (l10n.pmChequeNo, ltr(p.chequeNumber ?? '—')),
-                            (l10n.pmChequeState, paymentStateLabel(l10n, p)),
-                          ]),
-                          if (p.instrumentId != null) ...[
-                            const SizedBox(height: 8),
-                            ReservationLinkCard(
-                              key: const Key('payment-open-cheque'),
-                              icon: Icons.open_in_new_rounded,
-                              title: l10n.pmOpenChequePage,
-                              onTap: () => context.push('/cheques/${p.instrumentId}'),
-                            ),
-                          ],
+                        child: DvInfoCard(rows: [
+                          DvInfo(l10n.pmChequeNo, ltr(p.chequeNumber ?? '—')),
+                          DvInfo(l10n.pmChequeState, paymentStateLabel(l10n, p)),
+                          if (p.instrumentId != null)
+                            DvInfo(l10n.pmCheque, l10n.pmOpenChequePage, id: 'payment-open-cheque', onTap: () => context.push('/cheques/${p.instrumentId}')),
                         ]),
                       ),
                     if (p.hasProof)
@@ -610,22 +488,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     HomeSection(
                       icon: Icons.description_rounded,
                       title: l10n.pmContractInstallment,
-                      child: Column(children: [
-                        KvTable(rows: [
-                          (p.contractNumber != null ? l10n.pmContract : l10n.pmBooking, ltr(p.reference ?? '—')),
-                          (l10n.pmClient, p.clientName ?? '—'),
-                          if (p.dueDate != null) (l10n.pmInstallmentDue, DateFormatter.mediumDate(p.dueDate!, languageCode: lang)),
-                          if (p.installmentAmount != null) (l10n.pmInstallmentAmount, '${contractMoney(p.installmentAmount!)} $currency'),
-                        ]),
-                        if (p.contractId != null) ...[
-                          const SizedBox(height: 8),
-                          ReservationLinkCard(
-                            key: const Key('payment-open-contract'),
-                            icon: Icons.description_rounded,
-                            title: l10n.rbOpenContract,
-                            onTap: () => context.push('/contracts/${p.contractId}'),
-                          ),
-                        ],
+                      child: DvInfoCard(rows: [
+                        DvInfo(
+                          p.contractNumber != null ? l10n.pmContract : l10n.pmBooking,
+                          ltr(p.reference ?? '—'),
+                          id: p.contractId == null ? null : 'payment-open-contract',
+                          onTap: p.contractId == null ? null : () => context.push('/contracts/${p.contractId}'),
+                        ),
+                        DvInfo(l10n.pmClient, p.clientName ?? '—'),
+                        if (p.dueDate != null) DvInfo(l10n.pmInstallmentDue, DateFormatter.mediumDate(p.dueDate!, languageCode: lang)),
+                        if (p.installmentAmount != null) DvInfo(l10n.pmInstallmentAmount, '${contractMoney(p.installmentAmount!)} $currency'),
                       ]),
                     ),
                     if (p.state == 'REVERSED')

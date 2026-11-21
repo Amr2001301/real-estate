@@ -1838,6 +1838,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitLocation => 'Location';
 
   @override
+  String get visitWhere => 'Place';
+
+  @override
+  String get visitNumberLabel => 'Visit number';
+
+  @override
   String get visitNotes => 'Notes';
 
   @override
@@ -4243,6 +4249,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceTimeLeft => 'Time left';
 
   @override
+  String get maintenanceSlaRemaining => 'Time left';
+
+  @override
   String get timeUnitDay => 'days';
 
   @override
@@ -5539,6 +5548,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ahCollectionRate => 'Collection rate';
+
+  @override
+  String get tgAchievement => 'Achievement';
 
   @override
   String get ahNothingDue => 'Nothing due';
@@ -8008,6 +8020,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get npEmailHint => 'A summary with details';
 
   @override
+  String get npEmailShort => 'Email';
+
+  @override
+  String get npPushShort => 'Push';
+
+  @override
   String get npPush => 'Phone notification';
 
   @override
@@ -9157,6 +9175,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rpResCancelled => 'Cancelled';
 
   @override
+  String get rpResRejected => 'Rejected';
+
+  @override
   String get rpResExpired => 'Expired';
 
   @override
@@ -10174,6 +10195,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mtaAssignedTo => 'Assigned to';
 
   @override
+  String get mtaRequest => 'Maintenance request';
+
+  @override
+  String get mtaDetails => 'Details';
+
+  @override
+  String get mtaActionsTitle => 'Actions';
+
+  @override
   String get mtaUnassigned => 'Not assigned yet';
 
   @override
@@ -10320,4 +10350,73 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get audNoChanges => 'No details recorded.';
+
+  @override
+  String get dvAwaiting => 'Awaiting you';
+
+  @override
+  String get dvAllClear => 'Nothing is waiting for you';
+
+  @override
+  String get dvReports => 'Reports & performance';
+
+  @override
+  String get dvReportsSub => 'Funnel, reps, brokers and cash flow';
+
+  @override
+  String get dvCollectedMonth => 'Collected this month';
+
+  @override
+  String get dvLastMonth => 'Last month';
+
+  @override
+  String dvSignedN(int n) {
+    return '$n signed';
+  }
+
+  @override
+  String dvNewLeadsN(int n) {
+    return '$n new leads';
+  }
+
+  @override
+  String dvOverdueAmount(String v) {
+    return '$v overdue';
+  }
+
+  @override
+  String dvCollectionPct(int p) {
+    return '$p% collected';
+  }
+
+  @override
+  String dvOverdueDays(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n days overdue',
+      one: '1 day overdue',
+      zero: 'Overdue today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dvTodayAt(String t) {
+    return 'Today $t';
+  }
+
+  @override
+  String get dvNewLead => 'Lead';
+
+  @override
+  String get dvSearchLeads => 'Search by name or phone';
+
+  @override
+  String get kcCollectedOfValue => 'Collected of the contract value';
+
+  @override
+  String kcOfValue(String v) {
+    return 'of $v';
+  }
 }

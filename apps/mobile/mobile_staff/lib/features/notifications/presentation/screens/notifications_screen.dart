@@ -92,14 +92,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                   if (ready && all.isNotEmpty)
                     SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 14),
-                        child: HomePills(pills: [
-                          HomePill(id: 'all', label: l10n.ntAll, count: all.length, selected: _filter == _Filter.all, onTap: () => setState(() => _filter = _Filter.all)),
-                          HomePill(id: 'unread', label: l10n.ntUnread, count: unread, dot: AppPalette.gold500, selected: _filter == _Filter.unread, onTap: () => setState(() => _filter = _filter == _Filter.unread ? _Filter.all : _Filter.unread)),
-                          HomePill(id: 'finance', label: l10n.ntFinance, count: count(_Filter.finance), dot: const Color(0xFF3E7C5A), selected: _filter == _Filter.finance, onTap: () => setState(() => _filter = _filter == _Filter.finance ? _Filter.all : _Filter.finance)),
-                          HomePill(id: 'sales', label: l10n.ntSales, count: count(_Filter.sales), dot: const Color(0xFF26405F), selected: _filter == _Filter.sales, onTap: () => setState(() => _filter = _filter == _Filter.sales ? _Filter.all : _Filter.sales)),
-                        ]),
+                      child: DvTabs<_Filter>(
+                        keyPrefix: 'notifications-filter',
+                        selected: _filter,
+                        onChanged: (f) => setState(() => _filter = _filter == f ? _Filter.all : f),
+                        tabs: [
+                          (_Filter.all, l10n.ntAll, null, false),
+                          (_Filter.unread, l10n.ntUnread, unread == 0 ? null : unread, false),
+                          (_Filter.finance, l10n.ntFinance, count(_Filter.finance) == 0 ? null : count(_Filter.finance), false),
+                          (_Filter.sales, l10n.ntSales, count(_Filter.sales) == 0 ? null : count(_Filter.sales), false),
+                        ],
                       ),
                     ),
                   ...switch (state.status) {
@@ -135,26 +137,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return DateFormatter.mediumDate(d, languageCode: lang);
     }
 
-    final out = <Widget>[];
-    String? current;
+    final groups = <String, List<AppNotification>>{};
     for (final n in items) {
       final at = n.createdAt?.toLocal();
-      final day = at == null ? '' : label(at);
-      if (day != current) {
-        current = day;
-        out.add(SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 14, AppSpacing.lg, 6),
-            child: Text(day, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colors.inkMuted)),
-          ),
-        ));
-      }
-      out.add(SliverPadding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 9),
-        sliver: SliverToBoxAdapter(child: _Tile(n)),
-      ));
+      (groups[at == null ? '' : label(at)] ??= []).add(n);
     }
-    return out;
+    return [
+      for (final e in groups.entries) ...[
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 22, AppSpacing.lg, 10),
+            child: Text(e.key, style: TextStyle(fontSize: 16, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          sliver: SliverToBoxAdapter(
+            child: Container(
+              decoration: homeCard(context, radius: 22),
+              clipBehavior: Clip.antiAlias,
+              child: Material(
+                color: Colors.transparent,
+                child: Column(children: [
+                  for (var i = 0; i < e.value.length; i++) ...[
+                    if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline),
+                    _Tile(e.value[i]),
+                  ],
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ];
   }
 }
 
@@ -180,49 +195,40 @@ class _Tile extends StatelessWidget {
     final body = n.body.isNotEmpty ? n.body : (message is String ? message : null);
     final s = _style(n.templateCode);
     final unread = !n.read;
-    return Material(
-      color: unread ? homeSelected(context) : colors.surface,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: Key('notification-${n.id}'),
-        onTap: () {
-          if (unread) context.read<NotificationsCubit>().markRead(n.id);
-          final isBroker = context.read<SessionCubit>().state.role == AppRole.broker;
-          final route = staffNotificationRoute(n.templateCode, n.payload, isBroker: isBroker);
-          if (route != null) context.push(route);
-        },
-        child: DecoratedBox(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: unread ? homeTintBorder(context) : colors.hairline)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: s.color.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(14)),
-                child: Icon(s.icon, size: 21, color: s.color),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Text(title, style: TextStyle(fontSize: 13.5, fontWeight: unread ? FontWeight.w800 : FontWeight.w700, color: colors.inkStrong))),
-                    if (unread) Container(width: 9, height: 9, margin: const EdgeInsetsDirectional.only(start: 6), decoration: BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
-                  ]),
-                  if (body != null) ...[
-                    const SizedBox(height: 2),
-                    Text(body, maxLines: 3, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, height: 1.55, color: colors.inkMuted)),
-                  ],
-                  if (n.createdAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(_ago(context, n.createdAt!), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ],
-                ]),
-              ),
+    return InkWell(
+      key: Key('notification-${n.id}'),
+      onTap: () {
+        if (unread) context.read<NotificationsCubit>().markRead(n.id);
+        final isBroker = context.read<SessionCubit>().state.role == AppRole.broker;
+        final route = staffNotificationRoute(n.templateCode, n.payload, isBroker: isBroker);
+        if (route != null) context.push(route);
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
+            child: Icon(s.icon, size: 20, color: s.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: TextStyle(fontSize: 14, height: 1.5, fontWeight: unread ? FontWeight.w700 : FontWeight.w600, color: colors.inkStrong)),
+              if (body != null) ...[
+                const SizedBox(height: 3),
+                Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, height: 1.5, color: colors.inkMuted)),
+              ],
             ]),
           ),
-        ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (n.createdAt != null) Text(_ago(context, n.createdAt!), style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+            if (unread)
+              Container(width: 8, height: 8, margin: const EdgeInsets.only(top: 8), decoration: BoxDecoration(color: AppPalette.gold500, shape: BoxShape.circle)),
+          ]),
+        ]),
       ),
     );
   }

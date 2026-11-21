@@ -12,7 +12,7 @@ import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../cubit/lead_detail_cubit.dart';
 import '../follow_up_labels.dart';
-import 'leads_screen.dart' show leadFollowState, LeadFollowState, leadWhen, leadStageColor;
+import 'leads_screen.dart' show leadFollowState, LeadFollowState, leadWhen;
 import 'log_activity_screen.dart';
 import 'lost_reason_sheet.dart';
 
@@ -29,7 +29,11 @@ class LeadDetailScreen extends StatefulWidget {
   State<LeadDetailScreen> createState() => _LeadDetailScreenState();
 }
 
+enum _LeadTab { follow, links, activity }
+
 class _LeadDetailScreenState extends State<LeadDetailScreen> {
+  _LeadTab _tab = _LeadTab.follow;
+
   @override
   void initState() {
     super.initState();
@@ -47,20 +51,10 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
           listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),
           builder: (context, state) {
             final detail = state.detail;
-            final name = detail?.lead.fullName ?? widget.fallbackName ?? context.l10n.navLeads;
-            final lang = Localizations.localeOf(context).languageCode;
-            final project = detail?.lead.projectName?.resolve(lang) ?? detail?.lead.projectInterest;
-            final hero = HomeListHero(
-              back: true,
-              title: name,
-              subtitle: [
-                if ((project ?? '').isNotEmpty) project!,
-                if ((detail?.unitInterest ?? '').isNotEmpty) ltr(detail!.unitInterest!),
-              ].join(' · '),
-            );
             if (detail == null) {
+              final name = widget.fallbackName ?? context.l10n.navLeads;
               return Column(children: [
-                hero,
+                HomeListHero(back: true, title: name),
                 Expanded(
                   child: state.status == DataStatus.failure
                       ? ErrorState(failure: state.failure, onRetry: () => context.read<LeadDetailCubit>().load())
@@ -73,7 +67,7 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
               child: ListView(
                 key: const Key('lead-detail'),
                 padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 32),
-                children: [hero, ..._sections(context, state, detail)],
+                children: [_LeadHero(detail: detail, working: state.working), ..._sections(context, state, detail)],
               ),
             );
           },
@@ -85,95 +79,68 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   List<Widget> _sections(BuildContext context, LeadDetailState state, LeadDetail detail) {
     final l10n = context.l10n;
     final lead = detail.lead;
-    final cubit = context.read<LeadDetailCubit>();
     final role = context.read<SessionCubit>().state.role;
     final manager = role == AppRole.admin || role == AppRole.salesManager;
     final open = lead.stage != 'WON' && lead.stage != 'LOST';
+    final hasLinks = !state.links.isEmpty;
+    final tab = !hasLinks && _tab == _LeadTab.links ? _LeadTab.follow : _tab;
 
     return [
-      const SizedBox(height: AppSpacing.md),
-      _Pad(child: _ContactCard(detail: detail)),
-      const SizedBox(height: AppSpacing.md),
-      _Pad(
-        child: _StagePipeline(
-          currentStage: lead.stage,
-          isWorking: state.working,
-          onStageSelected: (stage) {
-            if (stage == lead.stage || state.working) return;
-            // As on the website: a lead is won only by converting its booking.
-            if (stage == 'WON') {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.ldWonByBooking)));
-              return;
-            }
-            if (stage == 'LOST') {
-              showLostReasonSheet(context, cubit);
-            } else {
-              cubit.changeStage(stage);
-            }
-          },
-        ),
-      ),
-      if (lead.stage == 'LOST') ...[
-        const SizedBox(height: AppSpacing.sm),
-        _Pad(child: _LostBox(detail: detail)),
-      ],
+      if (lead.stage == 'LOST')
+        Padding(padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0), child: _LostBox(detail: detail)),
       HomeSection(
         icon: Icons.alarm_rounded,
         title: l10n.leadNextAction,
         child: _NextFollowUp(lead: lead, open: open, working: state.working),
       ),
-      HomeSection(
-        icon: Icons.forum_rounded,
-        title: l10n.ldFollowLog,
-        child: _NotesLog(notes: detail.notes),
+      DvTabs<_LeadTab>(
+        keyPrefix: 'lead-tab',
+        selected: tab,
+        onChanged: (t) => setState(() => _tab = t),
+        tabs: [
+          (_LeadTab.follow, l10n.ldFollowLog, detail.notes.isEmpty ? null : detail.notes.length, false),
+          if (hasLinks) (_LeadTab.links, l10n.ldVisitsBookings, null, false),
+          (_LeadTab.activity, l10n.ldActivityLog, null, false),
+        ],
       ),
-      if (!state.links.isEmpty)
-        HomeSection(icon: Icons.event_note_rounded, title: l10n.ldVisitsBookings, child: _Links(links: state.links)),
-      HomeSection(
-        icon: Icons.history_rounded,
-        title: l10n.ldActivityLog,
-        child: _ActivityLog(items: detail.activities),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+        child: switch (tab) {
+          _LeadTab.follow => _NotesLog(notes: detail.notes),
+          _LeadTab.links => _Links(links: state.links),
+          _LeadTab.activity => _ActivityLog(items: detail.activities),
+        },
       ),
       HomeSection(
-        icon: Icons.badge_rounded,
-        title: l10n.ldAssignment,
-        child: _Assignment(detail: detail, manager: manager, working: state.working),
+        icon: Icons.info_outline_rounded,
+        title: l10n.ldOpportunity,
+        child: _Opportunity(detail: detail, manager: manager, working: state.working, profile: role == AppRole.admin),
       ),
-      if (detail.clientId != null)
-        HomeSection(icon: Icons.person_rounded, title: l10n.ldClient, child: _ClientCard(detail: detail, profile: role == AppRole.admin)),
-      HomeSection(icon: Icons.info_outline_rounded, title: l10n.ldOpportunity, child: _Opportunity(detail: detail)),
       if (detail.utm.isNotEmpty)
         HomeSection(
           icon: Icons.campaign_rounded,
           title: l10n.ldAds,
-          child: _Rows(rows: [for (final e in detail.utm.entries) (e.key, e.value, true)]),
+          child: DvInfoCard(rows: [for (final e in detail.utm.entries) DvInfo(e.key, ltr(e.value))]),
         ),
     ];
   }
 }
 
-class _Pad extends StatelessWidget {
-  const _Pad({required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md), child: child);
-}
-
-/// The lead with its stage, where it came from, how to reach it, and the
-/// call / WhatsApp / email buttons (a press is logged, as on the website).
-class _ContactCard extends StatelessWidget {
-  const _ContactCard({required this.detail});
+/// The navy header: the name and stage, the project and source, how to reach
+/// the lead, the stage path (a tap moves it) and call / WhatsApp / email
+/// (a press is logged, as on the website).
+class _LeadHero extends StatelessWidget {
+  const _LeadHero({required this.detail, required this.working});
   final LeadDetail detail;
+  final bool working;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final lead = detail.lead;
-    final stageColor = leadStageColor(lead.stage, colors);
     final cubit = context.read<LeadDetailCubit>();
+    final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
     final source = lead.brokerName != null ? '${l10n.lvBroker} · ${lead.brokerName}' : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect);
 
     Future<void> contact(String kind) async {
@@ -187,67 +154,46 @@ class _ContactCard extends StatelessWidget {
       kind == 'WHATSAPP' ? await ContactActions.whatsApp(number: phone) : await ContactActions.call(phone);
     }
 
-    return Container(
+    void stage(String s) {
+      if (s == lead.stage || working) return;
+      // As on the website: a lead is won only by converting its booking.
+      if (s == 'WON') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.ldWonByBooking)));
+        return;
+      }
+      s == 'LOST' ? showLostReasonSheet(context, cubit) : cubit.changeStage(s);
+    }
+
+    final reach = [if ((lead.phone ?? '').isNotEmpty) ltr(lead.phone!), if ((lead.email ?? '').isNotEmpty) lead.email!].join(' · ');
+    return HomeListHero(
       key: const Key('lead-contact-card'),
-      padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 54,
-            height: 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(17)),
-            child: Text(homeInitials(lead.fullName), style: homeDisplay(17, AppPalette.gold300)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(lead.fullName, style: homeDisplay(18, colors.inkStrong)),
-              const SizedBox(height: 6),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                _Chip(text: leadStageLabel(l10n, lead.stage), color: stageColor),
-                _Chip(text: source, color: colors.inkMuted, icon: lead.brokerName != null ? Icons.handshake_rounded : Icons.call_received_rounded),
-                if ((lead.campaignName ?? '').isNotEmpty) _Chip(text: lead.campaignName!, color: AppPalette.gold600, icon: Icons.campaign_rounded),
-              ]),
-            ]),
-          ),
-        ]),
-        if ((lead.phone ?? '').isNotEmpty || (lead.email ?? '').isNotEmpty) ...[
-          const SizedBox(height: 12),
-          if ((lead.phone ?? '').isNotEmpty) _Line(icon: Icons.phone_rounded, text: ltr(lead.phone!)),
-          if ((lead.email ?? '').isNotEmpty) _Line(icon: Icons.alternate_email_rounded, text: lead.email!),
-        ],
-        const SizedBox(height: 12),
+      back: true,
+      title: lead.fullName,
+      badge: DvHeroBadge(
+        leadStageLabel(l10n, lead.stage),
+        tone: lead.stage == 'WON' ? DvTone.ok : (lead.stage == 'LOST' ? DvTone.bad : DvTone.neutral),
+      ),
+      subtitle: [
+        if ((project ?? '').isNotEmpty) project!,
+        if ((detail.unitInterest ?? '').isNotEmpty) ltr(detail.unitInterest!),
+        source,
+      ].join(' · '),
+      bottom: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        if (reach.isNotEmpty)
+          Text(reach, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xFFAEB8CB))),
+        const SizedBox(height: 14),
+        _StageBar(current: lead.stage, working: working, onTap: stage),
+        const SizedBox(height: 16),
         Row(children: [
           if ((lead.phone ?? '').isNotEmpty) ...[
-            Expanded(
-              child: _Btn(
-                key: const Key('lead-detail-call'),
-                icon: Icons.phone_rounded,
-                label: l10n.ldCall,
-                onTap: () => contact('CALL'),
-                filled: true,
-              ),
-            ),
+            Expanded(child: DvHeroButton(key: const Key('lead-detail-call'), icon: Icons.phone_rounded, label: l10n.ldCall, gold: true, onTap: () => contact('CALL'))),
             const SizedBox(width: 8),
-            Expanded(
-              child: _Btn(
-                key: const Key('lead-detail-whatsapp'),
-                icon: Icons.chat_rounded,
-                label: l10n.ldWhatsApp,
-                onTap: () => contact('WHATSAPP'),
-              ),
-            ),
+            Expanded(child: DvHeroButton(key: const Key('lead-detail-whatsapp'), icon: Icons.chat_rounded, label: l10n.ldWhatsApp, onTap: () => contact('WHATSAPP'))),
           ],
           if ((lead.email ?? '').isNotEmpty) ...[
             if ((lead.phone ?? '').isNotEmpty) const SizedBox(width: 8),
             Expanded(
-              child: _Btn(
-                icon: Icons.mail_rounded,
-                label: l10n.ldEmail,
-                onTap: () => ContactActions.openExternal('mailto:${lead.email}'),
-              ),
+              child: DvHeroButton(icon: Icons.mail_rounded, label: l10n.ldEmail, onTap: () => ContactActions.openExternal('mailto:${lead.email}')),
             ),
           ],
         ]),
@@ -256,72 +202,100 @@ class _ContactCard extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({required this.text, required this.color, this.icon});
-  final String text;
-  final Color color;
-  final IconData? icon;
+/// The stage path as segments: done gold, the current one named in gold,
+/// a lost lead's segment red. A tap moves the lead.
+class _StageBar extends StatelessWidget {
+  const _StageBar({required this.current, required this.working, required this.onTap});
+  final String current;
+  final bool working;
+  final ValueChanged<String> onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (icon != null) ...[Icon(icon, size: 12, color: color), const SizedBox(width: 4)],
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 190),
-            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final lost = current == 'LOST';
+    final at = kLeadStages.indexOf(current);
+    return Opacity(
+      opacity: working ? 0.6 : 1,
+      child: Row(children: [
+        for (var i = 0; i < kLeadStages.length; i++)
+          Expanded(
+            child: InkWell(
+              key: Key('lead-stage-${kLeadStages[i]}'),
+              onTap: working ? null : () => onTap(kLeadStages[i]),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                child: Column(children: [
+                  Container(
+                    height: 5,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      gradient: !lost && i <= at ? dvGoldGradient : null,
+                      color: lost && i == at ? const Color(0xFFE5737D) : (!lost && i <= at ? null : const Color(0x24FFFFFF)),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      leadStageLabel(l10n, kLeadStages[i]),
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: i == at ? FontWeight.w700 : FontWeight.w500,
+                        color: i == at ? (lost ? const Color(0xFFF29AA2) : const Color(0xFFEED7A0)) : const Color(0xFFAEB8CB),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ),
           ),
-        ]),
-      );
-}
-
-class _Line extends StatelessWidget {
-  const _Line({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(children: [
-          Icon(icon, size: 15, color: AppPalette.gold500),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: context.appColors.inkStrong))),
-        ]),
-      );
+      ]),
+    );
+  }
 }
 
 class _Btn extends StatelessWidget {
-  const _Btn({super.key, required this.icon, required this.label, required this.onTap, this.filled = false});
+  const _Btn({super.key, required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  final bool filled;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: filled ? AppPalette.navy : colors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: filled ? AppPalette.navy : colors.hairline),
-      ),
+      color: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: colors.hairline)),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: SizedBox(
-          height: 44,
+          height: 48,
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, size: 17, color: filled ? AppPalette.gold300 : colors.inkStrong),
+            Icon(icon, size: 17, color: colors.inkStrong),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? Colors.white : colors.inkStrong)),
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong))),
           ]),
         ),
       ),
     );
   }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.text, required this.color});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.11), borderRadius: BorderRadius.circular(99)),
+        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: color)),
+      );
 }
 
 /// Why and when it was lost.
@@ -777,22 +751,23 @@ class _ActivityLog extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     if (items.isEmpty) return _Empty(text: l10n.ldNoActivity);
-    return HomeActivityList(items: [
+    return DvTimeline(events: [
       for (final e in items)
-        () {
-          final (text, icon, _) = leadActivityText(l10n, e, colors);
-          return HomeActivityItem(icon: icon, title: text, subtitle: '', when: e.createdAt == null ? '' : leadWhen(context, e.createdAt!));
-        }(),
+        DvEvent(leadActivityText(l10n, e, colors).$1, subtitle: e.createdAt == null ? null : leadWhen(context, e.createdAt!)),
     ]);
   }
 }
 
-/// Who owns the lead; managers and admins hand it to another rep.
-class _Assignment extends StatelessWidget {
-  const _Assignment({required this.detail, required this.manager, required this.working});
+/// The lead's details, as the website's «بيانات الفرصة», with who owns it
+/// (managers and admins hand it to another rep) and the client behind it.
+class _Opportunity extends StatelessWidget {
+  const _Opportunity({required this.detail, required this.manager, required this.working, this.profile = false});
   final LeadDetail detail;
   final bool manager;
   final bool working;
+
+  /// The client's profile opens for admins only, as on the website.
+  final bool profile;
 
   Future<void> _pick(BuildContext context) async {
     final cubit = context.read<LeadDetailCubit>();
@@ -828,363 +803,36 @@ class _Assignment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
-    final rep = detail.lead.assignedSalesName;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: homeCard(context, radius: 20),
-      child: Row(children: [
-        Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: rep == null ? colors.surfaceSoft : null,
-            gradient: rep == null ? null : homeGoldGradient,
-            shape: BoxShape.circle,
-          ),
-          child: rep == null
-              ? Icon(Icons.person_off_rounded, size: 18, color: colors.inkMuted)
-              : Text(homeInitials(rep), style: homeDisplay(13, AppPalette.navy)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(rep ?? l10n.lvUnassigned,
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: rep == null ? AppPalette.gold600 : colors.inkStrong)),
-        ),
-        if (manager)
-          TextButton.icon(
-            key: const Key('lead-reassign'),
-            onPressed: working ? null : () => _pick(context),
-            icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-            label: Text(rep == null ? l10n.ldAssign : l10n.ldReassign),
-          ),
-      ]),
-    );
-  }
-}
-
-/// The client behind the lead, with a link to their profile.
-class _ClientCard extends StatelessWidget {
-  const _ClientCard({required this.detail, this.profile = false});
-  final LeadDetail detail;
-
-  /// The client's profile opens for admins only, as on the website.
-  final bool profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lead = detail.lead;
-    final owner = detail.clientRole == 'CUSTOMER';
-    return Material(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        key: const Key('lead-client'),
-        borderRadius: BorderRadius.circular(20),
-        onTap: profile ? () => context.push('/clients/${detail.clientId}') : null,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: homeCard(context, radius: 20),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Flexible(
-                    child: Text(lead.fullName,
-                        maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  ),
-                  const SizedBox(width: 6),
-                  _Chip(text: owner ? l10n.ldOwner : l10n.ldBrowser, color: owner ? colors.success : colors.info),
-                ]),
-                if ((lead.phone ?? '').isNotEmpty) _Line(icon: Icons.phone_rounded, text: ltr(lead.phone!)),
-                if ((lead.email ?? '').isNotEmpty) _Line(icon: Icons.alternate_email_rounded, text: lead.email!),
-              ]),
-            ),
-            if (profile) ...[
-              const SizedBox(width: 8),
-              Text(l10n.ldClientProfile, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppPalette.gold600)),
-              Icon(Icons.chevron_left_rounded, size: 18, color: AppPalette.gold600),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-/// The lead's details, as the website's «بيانات الفرصة».
-class _Opportunity extends StatelessWidget {
-  const _Opportunity({required this.detail});
-  final LeadDetail detail;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
     final lead = detail.lead;
     final project = lead.projectName?.resolve(lang) ?? lead.projectInterest;
     final id = lead.id.replaceAll('-', '');
-    return _Rows(rows: [
-      if ((project ?? '').isNotEmpty) (l10n.ldProject, project!, false),
+    final rep = lead.assignedSalesName;
+    return DvInfoCard(rows: [
+      DvInfo(
+        l10n.ldAssignment,
+        rep == null ? (manager ? l10n.ldAssign : l10n.lvUnassigned) : (manager ? '$rep · ${l10n.ldReassign}' : rep),
+        id: manager ? 'lead-reassign' : null,
+        onTap: manager && !working ? () => _pick(context) : null,
+      ),
+      if (detail.clientId != null)
+        DvInfo(
+          l10n.ldClient,
+          detail.clientRole == 'CUSTOMER' ? l10n.ldOwner : l10n.ldBrowser,
+          id: 'lead-client',
+          onTap: profile ? () => context.push('/clients/${detail.clientId}') : null,
+        ),
+      if ((project ?? '').isNotEmpty) DvInfo(l10n.ldProject, project!),
       if ((detail.unitInterest ?? '').isNotEmpty)
-        (l10n.ldUnit, [ltr(detail.unitInterest!), if ((detail.unitType ?? '').isNotEmpty) detail.unitType!].join(' · '), false),
-      (l10n.ldSource, lead.brokerName != null ? l10n.lvBroker : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect), false),
-      if (lead.brokerName != null) (l10n.ldBrokerLbl, lead.brokerName!, false),
-      if ((detail.brokerAgentName ?? '').isNotEmpty) (l10n.ldBrokerAgent, detail.brokerAgentName!, false),
-      if ((lead.campaignName ?? '').isNotEmpty) (l10n.ldCampaign, lead.campaignName!, false),
-      if (lead.createdAt != null) (l10n.ldCreated, DateFormatter.mediumDate(lead.createdAt!.toLocal(), languageCode: lang), false),
-      (l10n.ldLeadId, '#${id.substring(0, id.length < 8 ? id.length : 8).toUpperCase()}', true),
+        DvInfo(l10n.ldUnit, [ltr(detail.unitInterest!), if ((detail.unitType ?? '').isNotEmpty) detail.unitType!].join(' · ')),
+      DvInfo(l10n.ldSource, lead.brokerName != null ? l10n.lvBroker : (lead.sourceName?.resolve(lang) ?? l10n.lvDirect)),
+      if (lead.brokerName != null) DvInfo(l10n.ldBrokerLbl, lead.brokerName!),
+      if ((detail.brokerAgentName ?? '').isNotEmpty) DvInfo(l10n.ldBrokerAgent, detail.brokerAgentName!),
+      if ((lead.campaignName ?? '').isNotEmpty) DvInfo(l10n.ldCampaign, lead.campaignName!),
+      if (lead.createdAt != null) DvInfo(l10n.ldCreated, DateFormatter.mediumDate(lead.createdAt!.toLocal(), languageCode: lang)),
+      DvInfo(l10n.ldLeadId, ltr('#${id.substring(0, id.length < 8 ? id.length : 8).toUpperCase()}')),
     ]);
   }
-}
-
-/// Label / value rows in a card; [ltr] values (codes, links) read left to right.
-class _Rows extends StatelessWidget {
-  const _Rows({required this.rows});
-  final List<(String, String, bool)> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: homeCard(context, radius: 20),
-      child: Column(children: [
-        for (var i = 0; i < rows.length; i++)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(border: i == 0 ? null : Border(top: BorderSide(color: colors.hairline))),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SizedBox(
-                width: 112,
-                child: Text(rows[i].$1, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-              ),
-              Expanded(
-                child: Text(rows[i].$3 ? ltr(rows[i].$2) : rows[i].$2,
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              ),
-            ]),
-          ),
-      ]),
-    );
-  }
-}
-
-// ── Stage path (kept from the previous page) ─────────────────────────────────
-
-class _StagePipeline extends StatelessWidget {
-  const _StagePipeline({
-    required this.currentStage,
-    required this.isWorking,
-    required this.onStageSelected,
-  });
-  final String currentStage;
-  final bool isWorking;
-  final ValueChanged<String> onStageSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n    = context.l10n;
-    final colors  = context.appColors;
-    final theme   = Theme.of(context);
-    final currentIndex = kLeadStages.indexOf(currentStage);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        border: Border.all(color: colors.hairline),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 3,
-                height: 16,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [AppPalette.gold300, AppPalette.gold500],
-                  ),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.leadChangeStage,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              if (isWorking)
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: AppPalette.gold400),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Row(
-                children: [
-                  for (int i = 0; i < kLeadStages.length; i++) ...[
-                    _StageNode(
-                      stage: kLeadStages[i],
-                      label: leadStageLabel(l10n, kLeadStages[i]),
-                      tone: leadStageTone(kLeadStages[i]),
-                      isCurrent: i == currentIndex,
-                      isPast: i < currentIndex,
-                      isWorking: isWorking,
-                      colors: colors,
-                      onTap: () => onStageSelected(kLeadStages[i]),
-                    ),
-                    if (i < kLeadStages.length - 1)
-                      _Connector(
-                          active: i < currentIndex, colors: colors),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StageNode extends StatelessWidget {
-  const _StageNode({
-    required this.stage,
-    required this.label,
-    required this.tone,
-    required this.isCurrent,
-    required this.isPast,
-    required this.isWorking,
-    required this.colors,
-    required this.onTap,
-  });
-  final String stage;
-  final String label;
-  final BadgeTone tone;
-  final bool isCurrent;
-  final bool isPast;
-  final bool isWorking;
-  final AppColorsExt colors;
-  final VoidCallback onTap;
-
-  Color get _color => switch (tone) {
-        BadgeTone.success => colors.success,
-        BadgeTone.warning => colors.warning,
-        BadgeTone.error   => colors.error,
-        BadgeTone.info    => colors.info,
-        BadgeTone.gold    => colors.brandGold,
-        _                 => colors.inkMuted,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final color    = _color;
-    final isActive = isCurrent || isPast;
-
-    return GestureDetector(
-      onTap: isWorking ? null : onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 68,
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              width: isCurrent ? 38 : 28,
-              height: isCurrent ? 38 : 28,
-              decoration: BoxDecoration(
-                color: isActive ? color : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isActive ? color : colors.hairline,
-                  width: isCurrent ? 2.5 : 1.5,
-                ),
-                boxShadow: isCurrent
-                    ? [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
-              ),
-              child: isActive
-                  ? Icon(
-                      isPast ? Icons.check_rounded : Icons.circle,
-                      size: isCurrent ? 17 : 11,
-                      color: Colors.white,
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 7),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: TextStyle(
-                fontSize: isCurrent ? 11 : 10,
-                fontWeight:
-                    isCurrent ? FontWeight.w700 : FontWeight.w500,
-                color: isCurrent
-                    ? color
-                    : (isPast ? colors.inkStrong : colors.inkMuted),
-                height: 1.3,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Connector extends StatelessWidget {
-  const _Connector({required this.active, required this.colors});
-  final bool active;
-  final AppColorsExt colors;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 26),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          width: 18,
-          height: 2,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(1),
-            color: active
-                ? AppPalette.gold400.withValues(alpha: 0.65)
-                : colors.hairline,
-          ),
-        ),
-      );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

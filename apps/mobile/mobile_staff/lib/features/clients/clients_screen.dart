@@ -157,78 +157,20 @@ class ClientCard extends StatelessWidget {
     final colors = context.appColors;
     final phone = client.phone ?? '';
     final contact = phone.isNotEmpty ? ltr(phone) : (client.email ?? '');
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: Key('client-${client.id}'),
-        borderRadius: BorderRadius.circular(22),
-        onTap: () => context.push('/clients/${client.id}', extra: client),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: homeCard(context, radius: 22),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                child: Text(homeInitials(client.name), style: homeDisplay(14, AppPalette.gold300)),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(client.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                  if (contact.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Row(children: [
-                      Icon(phone.isNotEmpty ? Icons.phone_outlined : Icons.mail_outline_rounded, size: 14, color: colors.inkMuted),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(contact, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-                    ]),
-                  ],
-                ]),
-              ),
-              const SizedBox(width: 8),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                ClientPill(text: client.owner ? l10n.clOwner : l10n.clBrowser, color: client.owner ? colors.success : colors.inkStrong),
-                if (!client.active) ...[
-                  const SizedBox(height: 4),
-                  ClientPill(text: l10n.clSuspended, color: colors.error),
-                ],
-              ]),
-            ]),
-            const SizedBox(height: 10),
-            Divider(height: 1, color: colors.hairline),
-            const SizedBox(height: 10),
-            Row(children: [
-              Icon(Icons.login_rounded, size: 14, color: colors.inkMuted),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  client.lastLoginAt == null ? l10n.clNeverLogged : l10n.clLastLogin(leadWhen(context, client.lastLoginAt!, withTime: false)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: colors.inkMuted),
-                ),
-              ),
-              if (phone.isNotEmpty)
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => ContactActions.call(phone),
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(color: colors.surface, border: Border.all(color: colors.hairline), borderRadius: BorderRadius.circular(12)),
-                    child: Icon(Icons.phone_rounded, size: 18, color: colors.ink),
-                  ),
-                )
-              else
-                Icon(AppIcons.chevronForward, size: 18, color: AppPalette.gold400),
-            ]),
-          ]),
-        ),
-      ),
+    return DvEntityCard(
+      inkKey: Key('client-${client.id}'),
+      onTap: () => context.push('/clients/${client.id}', extra: client),
+      initials: homeInitials(client.name),
+      title: client.name,
+      subtitle: contact,
+      status: !client.active ? l10n.clSuspended : (client.owner ? l10n.clOwner : l10n.clBrowser),
+      statusColor: !client.active ? colors.error : (client.owner ? colors.success : colors.inkMuted),
+      footIcon: Icons.login_rounded,
+      footColor: colors.inkMuted,
+      footText: client.lastLoginAt == null ? l10n.clNeverLogged : l10n.clLastLogin(leadWhen(context, client.lastLoginAt!, withTime: false)),
+      actions: [
+        if (phone.isNotEmpty) DvSquareAction(icon: Icons.phone_rounded, gold: true, tooltip: l10n.contactCall, onTap: () => ContactActions.call(phone)),
+      ],
     );
   }
 }

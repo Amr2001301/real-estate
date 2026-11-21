@@ -62,7 +62,7 @@ class FormValueBox extends StatelessWidget {
       color: homeField(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(13),
-        side: BorderSide(color: invalid ? colors.error : colors.hairline),
+        side: invalid ? BorderSide(color: colors.error) : homeFieldSide(context),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(13),
@@ -196,35 +196,19 @@ class FormBottomBar extends StatelessWidget {
           child: OutlinedButton(
             onPressed: busy ? null : () => Navigator.of(context).maybePop(),
             style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+              minimumSize: const Size.fromHeight(50),
               foregroundColor: colors.inkStrong,
-              side: BorderSide(color: AppPalette.navy, width: 1.2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              side: BorderSide(color: colors.hairline),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             child: Text(l10n.cvCancel),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           flex: 2,
-          child: FilledButton.icon(
-            key: confirmKey,
-            onPressed: busy ? null : onConfirm,
-            icon: busy
-                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy))
-                : Icon(icon, size: 19),
-            label: Text(label),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-              backgroundColor: AppPalette.gold400,
-              foregroundColor: AppPalette.navy,
-              disabledBackgroundColor: const Color(0xFFE9E3D9),
-              disabledForegroundColor: const Color(0xFF9A9083),
-              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            ),
-          ),
+          child: DvGoldButton(key: confirmKey, label: label, icon: busy ? null : icon, height: 50, onTap: busy ? null : onConfirm),
         ),
       ]),
     );

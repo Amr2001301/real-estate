@@ -392,92 +392,81 @@ class _BrokerCard extends StatelessWidget {
         : firm
             ? ltr('${amount.toStringAsFixed(amount % 1 == 0 ? 0 : 1)}%')
             : '${homeCompactText(amount, l10n)} $symbol';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: Key('broker-${tab.name}-${row.id}'),
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Container(
+    final city = (row.raw['city'] as String?) ?? '';
+    final phone = (row.raw['phone'] as String?) ?? '';
+    Widget fact(String value, String label) => Expanded(
+          child: Column(children: [
+            Text(value.isEmpty ? '—' : value, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(fontSize: 11.5, color: colors.inkMuted)),
+          ]),
+        );
+    return Container(
       decoration: homeCard(context, radius: 22),
       clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  firm
-                      ? Container(
-                          width: 44,
-                          height: 44,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(gradient: homeNavyGradient, borderRadius: BorderRadius.circular(14)),
-                          child: Text(homeInitials(row.title), style: homeDisplay(14, AppPalette.gold300)),
-                        )
-                      : Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(color: homeTint(context), border: Border.all(color: homeTintBorder(context)), borderRadius: BorderRadius.circular(14)),
-                          child: Icon(brokerTabIcon(tab), size: 21, color: AppPalette.gold500),
-                        ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(row.title.isEmpty ? '—' : row.title,
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                      if (row.subtitle.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(row.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-                      ],
-                      if (row.details.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Wrap(spacing: 12, runSpacing: 4, children: [
-                          for (final d in row.details)
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(d.$1, size: 14, color: colors.inkMuted),
-                              const SizedBox(width: 4),
-                              Text(d.$2, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                            ]),
-                        ]),
-                      ],
-                    ]),
-                  ),
-                  const SizedBox(width: 8),
-                  _Pill(brokerStatusLabel(l10n, row.status), color),
-                ]),
-                if (figure != null || row.at != null || (note != null && note.isNotEmpty)) ...[
-                  const SizedBox(height: 10),
-                  Divider(height: 1, color: colors.hairline),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    if (figure != null) ...[
-                      Text(figure, style: homeDisplay(16, colors.inkStrong)),
-                      if (firm) ...[
-                        const SizedBox(width: 6),
-                        Text(l10n.brkCommissionWord, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                      ],
-                    ],
-                    if (note != null && note.isNotEmpty) ...[
-                      if (figure != null) const SizedBox(width: 10),
-                      Flexible(
-                        child: Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: row.note == 'hold' ? colors.warning : colors.error)),
-                      ),
-                    ],
-                    const Spacer(),
-                    if (row.at != null) ...[
-                      Icon(Icons.calendar_today_rounded, size: 12, color: colors.inkMuted),
-                      const SizedBox(width: 4),
-                      Text(leadWhen(context, row.at!, withTime: false), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: Key('broker-${tab.name}-${row.id}'),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: const Color(0xFF0B1426), borderRadius: BorderRadius.circular(14)),
+                  child: firm
+                      ? Text(homeInitials(row.title), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0)))
+                      : Icon(brokerTabIcon(tab), size: 21, color: const Color(0xFFEED7A0)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(row.title.isEmpty ? '—' : row.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, height: 1.35, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                    if (firm && phone.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(ltr(phone), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+                    ] else if (row.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(row.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
                     ],
                   ]),
-                ],
+                ),
+                const SizedBox(width: 10),
+                _Pill(brokerStatusLabel(l10n, row.status), color),
               ]),
-            ),
+              if (firm) ...[
+                const SizedBox(height: 14),
+                Divider(height: 1, color: colors.hairline),
+                const SizedBox(height: 12),
+                Row(children: [
+                  fact(figure ?? '—', l10n.brkCommissionWord),
+                  fact(city, l10n.labelCity),
+                  fact(row.at == null ? '' : leadWhen(context, row.at!, withTime: false), l10n.ldCreated),
+                ]),
+                if (note != null && note.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(note, style: TextStyle(fontSize: 12, color: row.note == 'hold' ? colors.warning : colors.error)),
+                ],
+              ] else if (figure != null || row.at != null || (note != null && note.isNotEmpty)) ...[
+                const SizedBox(height: 14),
+                Divider(height: 1, color: colors.hairline),
+                const SizedBox(height: 12),
+                Row(children: [
+                  if (figure != null) Text(figure, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+                  if (note != null && note.isNotEmpty) ...[
+                    if (figure != null) const SizedBox(width: 10),
+                    Flexible(child: Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: row.note == 'hold' ? colors.warning : colors.error))),
+                  ],
+                  const Spacer(),
+                  if (row.at != null) Text(leadWhen(context, row.at!, withTime: false), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+                ]),
+              ],
+            ]),
           ),
-        ]),
-      ),
         ),
       ),
     );
@@ -492,8 +481,8 @@ class _Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-        child: Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+        child: Text(text, style: TextStyle(fontSize: 12, height: 1.4, fontWeight: FontWeight.w700, color: color)),
       );
 }
 

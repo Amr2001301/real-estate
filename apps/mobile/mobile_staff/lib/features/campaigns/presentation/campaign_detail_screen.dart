@@ -52,7 +52,19 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                 HomeListHero(
                   back: true,
                   title: c?.name ?? l10n.campaignsTitle,
-                  subtitle: c == null ? null : '${campaignChannelLabel(l10n, c.channel)} · ${campaignStatusLabel(l10n, c.status)}',
+                  badge: c == null ? null : DvHeroBadge(campaignStatusLabel(l10n, c.status), tone: dvToneOf(campaignStatusTone(c.status))),
+                  subtitle: c == null ? null : campaignChannelLabel(l10n, c.channel),
+                  bottom: c == null
+                      ? null
+                      : DvHeroFigure(
+                          label: l10n.campaignsLeads,
+                          value: latinDigits('${c.stats.leads}'),
+                          facts: [
+                            DvHeroFact(latinDigits('${c.stats.qualified}'), l10n.campaignQualified),
+                            DvHeroFact(latinDigits('${c.stats.won}'), l10n.campaignsWon),
+                            DvHeroFact(campaignMoney(c.stats.spend, Localizations.localeOf(context).languageCode), l10n.campaignsSpend),
+                          ],
+                        ),
                 ),
                 Expanded(
                   child: state.status == DataStatus.failure && c == null
@@ -84,7 +96,6 @@ class _Body extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final c = campaign;
     final s = c.stats;
-    final accent = campaignChannelColor(c.channel);
     String day(DateTime? d) => d == null ? '—' : followUpDate(d.toUtc(), lang);
     final rows = <(String, String)>[
       (l10n.campaignChannel, campaignChannelLabel(l10n, c.channel)),
@@ -107,80 +118,16 @@ class _Body extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, MediaQuery.paddingOf(context).bottom + 40),
       children: [
-        // ── What it brought ───────────────────────────────────────────────
-        _Card(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)),
-                    child: Icon(campaignChannelIcon(c.channel), color: accent, size: 20),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      campaignChannelLabel(l10n, c.channel),
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong),
-                    ),
-                  ),
-                  StatusBadge(label: campaignStatusLabel(l10n, c.status), tone: campaignStatusTone(c.status)),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: AppSpacing.xs,
-                crossAxisSpacing: AppSpacing.xs,
-                childAspectRatio: 1.45,
-                children: [
-                  _Stat(label: l10n.campaignsLeads, value: latinDigits('${s.leads}')),
-                  _Stat(label: l10n.campaignQualified, value: latinDigits('${s.qualified}')),
-                  _Stat(label: l10n.campaignsWon, value: latinDigits('${s.won}'), color: colors.success),
-                  _Stat(label: l10n.campaignsSpend, value: campaignMoney(s.spend, lang)),
-                  _Stat(label: l10n.campaignsCpl, value: campaignMoney(s.cpl, lang)),
-                  _Stat(label: l10n.campaignsCpa, value: campaignMoney(s.cpa, lang)),
-                ],
-              ),
-              if (s.lost > 0) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(l10n.campaignLostCount(latinDigits('${s.lost}')), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-              ],
-            ],
+        if (s.lost > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Text(l10n.campaignLostCount(latinDigits('${s.lost}')), style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-
-        // ── The campaign ──────────────────────────────────────────────────
-        _Card(
-          child: Column(
-            children: [
-              for (var i = 0; i < rows.length; i++) ...[
-                if (i > 0) Divider(height: 1, color: colors.hairline),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(width: 110, child: Text(rows[i].$1, style: TextStyle(fontSize: 13, color: colors.inkMuted))),
-                      Expanded(
-                        child: Text(
-                          rows[i].$2,
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: colors.inkStrong),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+        DvInfoCard(rows: [
+          ...[for (final (k, v) in rows) DvInfo(k, v)],
+          DvInfo(l10n.campaignsCpl, campaignMoney(s.cpl, lang)),
+          DvInfo(l10n.campaignsCpa, campaignMoney(s.cpa, lang)),
+        ]),
 
         // ── Where its leads came from ─────────────────────────────────────
         if (full && c.platforms.any((p) => p.platform != null)) ...[
@@ -250,35 +197,6 @@ class _Body extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text(l10n.campaignOnDashboard, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
       ],
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, this.color});
-  final String label;
-  final String value;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          const SizedBox(height: 3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: AlignmentDirectional.centerStart,
-            child: Text(value, style: homeDisplay(16, color ?? colors.inkStrong)),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -10,20 +10,36 @@ import 'package:google_fonts/google_fonts.dart';
 /// NOTE (production): `google_fonts` fetches + caches these at runtime. Before
 /// release, bundle the licensed font files into assets for offline guarantees.
 abstract final class AppTypography {
+  /// The staff app's one Arabic family.
+  static void useNotoKufi() => arabicOverride = GoogleFonts.notoKufiArabic;
+
+  /// One family for Arabic body and headings (the staff app sets Noto Kufi
+  /// Arabic); null keeps IBM Plex Sans Arabic + Tajawal.
+  static TextStyle Function({double? fontSize, FontWeight? fontWeight, double? height, double? letterSpacing, Color? color})? arabicOverride;
+
   static String bodyFamilyFor({required bool isArabic}) => (isArabic
-          ? GoogleFonts.ibmPlexSansArabic()
+          ? (arabicOverride?.call() ?? GoogleFonts.ibmPlexSansArabic())
           : GoogleFonts.inter())
       .fontFamily!;
 
-  static String get displayFamily => GoogleFonts.tajawal().fontFamily!;
+  static String get displayFamily => (arabicOverride?.call() ?? GoogleFonts.tajawal()).fontFamily!;
 
   static TextTheme textTheme({
     required bool isArabic,
     required Color ink,
     required Color inkMuted,
   }) {
-    final body = isArabic ? GoogleFonts.ibmPlexSansArabic : GoogleFonts.inter;
-    final display = GoogleFonts.tajawal;
+    final o = arabicOverride;
+    final body = isArabic
+        ? (o != null
+            ? ({double? fontSize, FontWeight? fontWeight, double? height, Color? color}) =>
+                o(fontSize: fontSize, fontWeight: fontWeight, height: height, color: color)
+            : GoogleFonts.ibmPlexSansArabic)
+        : GoogleFonts.inter;
+    final display = o != null
+        ? ({double? fontSize, FontWeight? fontWeight, double? height, double? letterSpacing, Color? color}) =>
+            o(fontSize: fontSize, fontWeight: fontWeight, height: height, letterSpacing: letterSpacing, color: color)
+        : GoogleFonts.tajawal;
 
     TextStyle d(double size, FontWeight w, {double height = 1.15}) => display(
           fontSize: size,
