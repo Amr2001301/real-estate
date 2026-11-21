@@ -592,7 +592,7 @@ class _ShareCard extends StatelessWidget {
       strip: Row(children: [
         BxPill(state, tone),
         const SizedBox(width: 8),
-        Expanded(child: Text('${bxSplitRole(l10n, s.split.role)} ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))} · ${bxDate(context, s.closedOn)}', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+        Expanded(child: Text('${bxSplitRole(l10n, s.split.role)} ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))}', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
       ]),
     );
   }
