@@ -157,93 +157,106 @@ class _DevicesCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    return _Card(
-      key: const Key('security-devices'),
-      icon: Icons.devices_rounded,
-      title: l10n.securityDevices,
-      subtitle: l10n.securityDevicesHint,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < state.sessions.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: colors.hairline),
-            Builder(builder: (context) {
-              final s = state.sessions[i];
-              final seen = s.lastSeenAt ?? s.createdAt;
-              return Padding(
-                key: ValueKey('session-${s.id}'),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: (s.current ? colors.success : colors.inkMuted).withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(deviceIcon(s.kind), size: 19, color: s.current ? colors.success : colors.inkMuted),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  deviceLabel(l10n, s),
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkStrong),
-                                ),
-                              ),
-                              if (s.current) ...[
-                                const SizedBox(width: 6),
-                                StatusBadge(label: l10n.securityThisDevice, tone: BadgeTone.success),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            [
-                              if (seen != null) l10n.securityLastSeen(followUpWhen(seen, l10n, lang)),
-                              if (s.ip != null) '\u2066${s.ip}\u2069',
-                            ].join(' · '),
-                            style: TextStyle(fontSize: 12, color: colors.inkMuted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!s.current)
-                      TextButton(
-                        key: ValueKey('session-out-${s.id}'),
-                        onPressed: state.busy ? null : () => _signOut(context, s),
-                        style: TextButton.styleFrom(foregroundColor: colors.error),
-                        child: Text(l10n.securitySignOut),
-                      ),
-                  ],
-                ),
-              );
-            }),
-          ],
-          if (state.otherDevices > 0) ...[
-            const SizedBox(height: AppSpacing.xs),
-            OutlinedButton.icon(
-              key: const Key('security-sign-out-others'),
-              onPressed: state.busy ? null : () => _signOutOthers(context),
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: Text(l10n.securitySignOutOthers),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: colors.error,
-                side: BorderSide(color: colors.error.withValues(alpha: 0.4)),
-                minimumSize: const Size.fromHeight(46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.md)),
+    final today = homeDay(DateTime.now());
+    String dayLabel(DateTime? d) {
+      if (d == null) return '—';
+      final diff = today.difference(homeDay(d.toLocal())).inDays;
+      if (diff == 0) return l10n.ntToday;
+      if (diff == 1) return l10n.ntYesterday;
+      return DateFormatter.mediumDate(d.toLocal(), languageCode: lang);
+    }
+
+    final groups = <String, List<DeviceSession>>{};
+    for (final s in state.sessions) {
+      (groups[dayLabel(s.lastSeenAt ?? s.createdAt)] ??= []).add(s);
+    }
+    Widget row(DeviceSession s) {
+      final seen = s.lastSeenAt ?? s.createdAt;
+      return Padding(
+        key: ValueKey('session-${s.id}'),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(deviceLabel(l10n, s), overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong)),
+              const SizedBox(height: 3),
+              Text(
+                [
+                  if (seen != null) DateFormatter.time(seen.toLocal(), languageCode: lang),
+                  if (s.ip != null) '\u2066${s.ip}\u2069',
+                ].join(' · '),
+                style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
               ),
+            ]),
+          ),
+          if (s.current)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(color: colors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+              child: Text(l10n.securityThisDevice, style: TextStyle(fontSize: 11.5, height: 1.4, fontWeight: FontWeight.w700, color: colors.success)),
+            )
+          else
+            TextButton(
+              key: ValueKey('session-out-${s.id}'),
+              onPressed: state.busy ? null : () => _signOut(context, s),
+              style: TextButton.styleFrom(foregroundColor: colors.error, padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 36)),
+              child: Text(l10n.securitySignOut, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
-          ],
+        ]),
+      );
+    }
+
+    return Column(
+      key: const Key('security-devices'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+          child: Text(l10n.securityDevices, style: TextStyle(fontSize: 17, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+        ),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: colors.success.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(18)),
+          child: Row(children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: colors.success.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.shield_outlined, size: 20, color: colors.success),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(l10n.securityDevicesHint, style: TextStyle(fontSize: 12.5, height: 1.6, color: colors.inkStrong))),
+          ]),
+        ),
+        for (final e in groups.entries) ...[
+          Padding(padding: const EdgeInsets.fromLTRB(4, 18, 4, 8), child: Text(e.key, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: colors.inkMuted))),
+          Container(
+            decoration: homeCard(context, radius: 22),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: [
+              for (final (i, s) in e.value.indexed) ...[
+                if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: colors.hairline),
+                row(s),
+              ],
+            ]),
+          ),
         ],
-      ),
+        if (state.otherDevices > 0) ...[
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            key: const Key('security-sign-out-others'),
+            onPressed: state.busy ? null : () => _signOutOthers(context),
+            icon: const Icon(Icons.logout_rounded, size: 18),
+            label: Text(l10n.securitySignOutOthers),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.error,
+              side: BorderSide(color: colors.error.withValues(alpha: 0.35)),
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -817,41 +830,27 @@ class _Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: homeCard(context, radius: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(color: homeTint(context), borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, size: 19, color: AppPalette.gold600),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: c.inkStrong)),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle!, style: TextStyle(fontSize: 12.5, height: 1.5, color: c.inkMuted)),
-                    ],
-                  ],
-                ),
-              ),
-              ?trailing,
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          child,
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: TextStyle(fontSize: 17, height: 1.4, fontWeight: FontWeight.w700, color: c.inkStrong)),
+                if (subtitle != null) Text(subtitle!, style: TextStyle(fontSize: 12.5, height: 1.5, color: c.inkMuted)),
+              ]),
+            ),
+            ?trailing,
+          ]),
+        ),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: homeCard(context, radius: 22),
+          child: child,
+        ),
+      ],
     );
   }
 }

@@ -138,6 +138,36 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                           ]),
                       ]),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
+                      child: Container(
+                        decoration: homeCard(context, radius: 18),
+                        clipBehavior: Clip.antiAlias,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            key: const Key('bc-estimate'),
+                            onTap: s.previewing || !a.complete ? null : cubit.estimate,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+                              child: Row(children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
+                                  child: s.previewing
+                                      ? const Padding(padding: EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2))
+                                      : Icon(Icons.groups_rounded, size: 20, color: colors.inkStrong),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(l10n.bcEstimate, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: a.complete ? colors.inkStrong : colors.inkMuted))),
+                                Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
+                              ]),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     HomeSection(
                       icon: Icons.edit_rounded,
                       title: l10n.bcContent,
@@ -258,39 +288,16 @@ class _BroadcastScreenState extends State<BroadcastScreen> {
                 Container(
                   padding: EdgeInsets.fromLTRB(16, 10, 16, 10 + MediaQuery.paddingOf(context).bottom),
                   decoration: BoxDecoration(color: colors.canvas, border: Border(top: BorderSide(color: colors.hairline))),
-                  child: Row(children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('bc-estimate'),
-                        onPressed: s.previewing || !a.complete ? null : cubit.estimate,
-                        icon: s.previewing ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.calculate_rounded, size: 18),
-                        label: Text(l10n.bcEstimate, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          foregroundColor: colors.inkStrong,
-                          side: BorderSide(color: AppPalette.navy, width: 1.2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
-                        ),
-                      ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DvGoldButton(
+                      key: const Key('bc-send'),
+                      icon: s.sending ? null : Icons.send_rounded,
+                      label: p != null && p.recipients > 0 && needEstimate ? l10n.bcSendN(p.recipients) : l10n.bcSend,
+                      height: 50,
+                      onTap: s.canSend ? cubit.send : null,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FilledButton.icon(
-                        key: const Key('bc-send'),
-                        onPressed: s.canSend ? cubit.send : null,
-                        icon: s.sending ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.navy)) : const Icon(Icons.send_rounded, size: 18),
-                        label: Text(p != null && p.recipients > 0 && needEstimate ? l10n.bcSendN(p.recipients) : l10n.bcSend, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          backgroundColor: homeCta(context),
-                          foregroundColor: homeOnCta(context),
-                          textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                        ),
-                      ),
-                    ),
-                  ]),
+                  ),
                 ),
               ]),
             ),
