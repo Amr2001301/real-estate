@@ -109,18 +109,25 @@ class BxLaunchCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final x = launch;
-    return DvEntityCard(
+    Widget fig(String label, String value) => Expanded(
+          child: Column(children: [
+            Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            const SizedBox(height: 2),
+            Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+          ]),
+        );
+    return BxTileCard(
       key: ValueKey('bx-launch-${x.id}'),
       onTap: onTap,
       icon: Icons.rocket_launch_rounded,
       title: x.name,
-      titleLines: 2,
-      subtitle: [x.developerName, if (x.projectName != null && x.projectName != x.name) x.projectName!].join(' · '),
-      status: bxLaunchStatus(l10n, x.status),
-      statusColor: bxLaunchColor(x.status, colors),
-      footIcon: Icons.event_outlined,
-      footText: x.launchDate != null ? l10n.bxLaunchOn(bxDate(context, x.launchDate)) : null,
-      footSub: [l10n.bxPaidN(x.paid), l10n.bxPendingN(x.pending), l10n.bxAllocatedN(x.allocated)].join(' · '),
+      subtitle: [x.developerName, if (x.launchDate != null) bxDate(context, x.launchDate)].join(' · '),
+      trailing: BxPill(bxLaunchStatus(l10n, x.status), bxLaunchColor(x.status, colors)),
+      strip: Row(children: [
+        fig(l10n.bxEoiAmount, homeCompactText(x.eoiAmount, l10n)),
+        fig(l10n.bxEois, ltr('${x.total}')),
+        fig(l10n.bxHeld, homeCompactText(x.held, l10n)),
+      ]),
     );
   }
 }

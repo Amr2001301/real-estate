@@ -178,20 +178,22 @@ class BxListingCard extends StatelessWidget {
       if (x.bedrooms != null) '${ltr('${x.bedrooms}')} ${l10n.bxBedrooms}',
       if (x.bathrooms != null) '${ltr('${x.bathrooms}')} ${l10n.bxBathrooms}',
     ].join(' · ');
-    final price = '${bxMoney(x.price)} ${bxCurrency(context)}${x.kind == 'RENT' ? ' ${l10n.bxPerMonth}' : ''}';
-    return DvEntityCard(
+    return BxTileCard(
       key: ValueKey('bx-listing-${x.id}'),
       onTap: onTap,
       icon: bxKindIcon(x.kind),
       title: x.title,
-      titleLines: 2,
-      subtitleLines: 2,
-      subtitle: [ltr(x.code), bxKind(l10n, x.kind), if (x.place.isNotEmpty) x.place].join(' · '),
-      status: bxListingStatus(l10n, x.status, kind: x.kind),
-      statusColor: bxListingColor(x.status, colors),
-      footIcon: Icons.sell_outlined,
-      footText: price,
-      footSub: [specs, if (x.agentName != null) x.agentName!].join(' · '),
+      subtitle: [bxKind(l10n, x.kind), if (x.place.isNotEmpty) x.place].join(' · '),
+      line: specs,
+      strip: Row(children: [
+        Expanded(
+          child: Text.rich(TextSpan(children: [
+            TextSpan(text: bxMoney(x.price), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            TextSpan(text: ' ${bxCurrency(context)}${x.kind == 'RENT' ? ' ${l10n.bxPerMonth}' : ''}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+          ])),
+        ),
+        BxPill(bxListingStatus(l10n, x.status, kind: x.kind), bxListingColor(x.status, colors)),
+      ]),
     );
   }
 }

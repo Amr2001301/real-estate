@@ -575,18 +575,25 @@ class _ShareCard extends StatelessWidget {
         : s.payable
             ? (l10n.bxSplitPayable, colors.warning)
             : (l10n.bxSplitAwaiting, colors.info);
-    return DvEntityCard(
+    final who = showName && s.split.userName != null ? s.split.userName! : s.customerName;
+    return BxTileCard(
       key: ValueKey('bx-share-${s.split.id}'),
       onTap: onTap,
-      icon: Icons.payments_rounded,
-      title: showName && s.split.userName != null ? s.split.userName! : s.customerName,
-      subtitleLines: 2,
+      initial: who.isEmpty ? '•' : who.characters.first,
+      title: who,
       subtitle: [ltr(s.dealCode), if (showName) s.customerName, s.listingTitle ?? bxKind(l10n, s.kind)].join(' · '),
-      status: state,
-      statusColor: tone,
-      footIcon: Icons.account_balance_wallet_outlined,
-      footText: '${bxMoney(s.split.amount)} ${bxCurrency(context)}',
-      footSub: '${bxSplitRole(l10n, s.split.role)} · ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))} · ${bxDate(context, s.closedOn)}',
+      trailing: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: bxMoney(s.split.amount), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+          TextSpan(text: '\n${bxCurrency(context)}', style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+        ]),
+        textAlign: TextAlign.end,
+      ),
+      strip: Row(children: [
+        BxPill(state, tone),
+        const SizedBox(width: 8),
+        Expanded(child: Text('${bxSplitRole(l10n, s.split.role)} ${l10n.bxSharePct(ltr('${_pct(s.split.sharePct)}%'))} · ${bxDate(context, s.closedOn)}', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
+      ]),
     );
   }
 }
