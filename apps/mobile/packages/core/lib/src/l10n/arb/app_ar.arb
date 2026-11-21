@@ -2819,6 +2819,7 @@
   "bpPendingLbl": "معلّقة",
   "bpPendingNote": "تُصرف بعد التعاقد",
   "bpPaidOutLbl": "صُرف لك",
+  "bkNoCommissionAccess": "العمولات غير متاحة لحسابك",
   "bpMyCommissions": "عمولاتي وكشف الصرف",
   "bpTeam": "فريقك",
   "bpProjectLine": "{city} · {n} عقود",

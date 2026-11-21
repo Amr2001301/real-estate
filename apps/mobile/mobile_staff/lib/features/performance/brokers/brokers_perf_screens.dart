@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
 import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
+import '../../broker/profile/presentation/cubit/broker_profile_cubit.dart';
 import 'brokers_perf_data.dart';
 
 /// «أداء الوسطاء» for the admin (design bp1, owner-approved 2026-11-05): the
@@ -111,9 +112,10 @@ class _BrokerOwnPerformanceScreenState extends State<BrokerOwnPerformanceScreen>
           ),
           HomeSection(icon: Icons.filter_alt_rounded, title: l10n.bpFunnelMine, child: PerfFunnel(summary: s)),
           if (p.trend.isNotEmpty) HomeSection(icon: Icons.trending_up_rounded, title: l10n.bpTrendMine, child: PerfTrend(buckets: p.trend)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
-            child: ReservationLinkCard(key: const Key('broker-perf-commissions'), icon: Icons.payments_rounded, title: l10n.bpMyCommissions, onTap: () => context.push('/broker/commissions')),
+          if (context.watch<BrokerProfileCubit>().state.data?.canViewCommissions ?? false)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
+              child: ReservationLinkCard(key: const Key('broker-perf-commissions'), icon: Icons.payments_rounded, title: l10n.bpMyCommissions, onTap: () => context.push('/broker/commissions')),
           ),
           if (p.projects.isNotEmpty) HomeSection(icon: Icons.apartment_rounded, title: l10n.bpByProject, child: PerfProjects(projects: p.projects)),
           if (p.brokers.isNotEmpty)

@@ -8,6 +8,7 @@ import '../../../../../common/staff_list_skeleton.dart';
 import '../../../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../domain/entities/broker_commission.dart';
 import '../../view/broker_payouts_data.dart';
+import '../../../profile/presentation/cubit/broker_profile_cubit.dart';
 import '../cubit/broker_commissions_cubit.dart';
 
 /// «عمولاتي» for the broker (the same look as the rep's dues, owner-approved
@@ -92,7 +93,7 @@ class _BrokerCommissionsScreenState extends State<BrokerCommissionsScreen> {
                       ],
                       ...switch (state.status) {
                         DataStatus.initial || DataStatus.loading when all.isEmpty => [const SliverToBoxAdapter(child: SizedBox(height: 500, child: StaffListSkeleton()))],
-                        DataStatus.failure when all.isEmpty => [SliverToBoxAdapter(child: ErrorState(failure: state.failure, onRetry: cubit.load))],
+                        DataStatus.failure when all.isEmpty => [SliverToBoxAdapter(child: (context.read<BrokerProfileCubit>().state.data?.canViewCommissions == false ? EmptyState(icon: Icons.lock_outline_rounded, title: l10n.bkNoCommissionAccess) : ErrorState(failure: state.failure, onRetry: cubit.load)))],
                         DataStatus.empty when all.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.payments_rounded, title: l10n.brokerCommissionsEmptyTitle, message: l10n.brokerCommissionsEmptyMessage))],
                         _ when state.commissions.isEmpty => [SliverToBoxAdapter(child: EmptyState(icon: Icons.filter_list_off_rounded, title: l10n.pmNoMatch))],
                         _ => [

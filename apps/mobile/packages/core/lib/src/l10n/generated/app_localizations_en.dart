@@ -8506,6 +8506,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bpPaidOutLbl => 'Paid to you';
 
   @override
+  String get bkNoCommissionAccess =>
+      'Commissions are not available for your account';
+
+  @override
   String get bpMyCommissions => 'My commissions and payouts';
 
   @override

@@ -2827,6 +2827,7 @@
   "bpPendingLbl": "Pending",
   "bpPendingNote": "Paid after the contract",
   "bpPaidOutLbl": "Paid to you",
+  "bkNoCommissionAccess": "Commissions are not available for your account",
   "bpMyCommissions": "My commissions and payouts",
   "bpTeam": "Your team",
   "bpProjectLine": "{city} · {n} contracts",

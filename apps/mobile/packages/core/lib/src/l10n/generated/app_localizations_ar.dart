@@ -8533,6 +8533,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bpPaidOutLbl => 'صُرف لك';
 
   @override
+  String get bkNoCommissionAccess => 'العمولات غير متاحة لحسابك';
+
+  @override
   String get bpMyCommissions => 'عمولاتي وكشف الصرف';
 
   @override

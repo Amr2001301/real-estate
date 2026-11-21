@@ -15092,6 +15092,12 @@ abstract class AppLocalizations {
   /// **'Paid to you'**
   String get bpPaidOutLbl;
 
+  /// No description provided for @bkNoCommissionAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions are not available for your account'**
+  String get bkNoCommissionAccess;
+
   /// No description provided for @bpMyCommissions.
   ///
   /// In en, this message translates to:
