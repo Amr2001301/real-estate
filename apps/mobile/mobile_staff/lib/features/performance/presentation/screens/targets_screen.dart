@@ -54,15 +54,20 @@ class _TargetsScreenState extends State<TargetsScreen> {
                         HomeSection(
                           icon: Icons.insights_rounded,
                           title: l10n.tgPeriodActivity,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: homeCard(context, radius: 22),
-                            child: Row(children: [
-                              _Stat('${p.leadsCount}', l10n.dashboardLeads),
-                              _Stat('${p.visitsCount}', l10n.navVisits),
-                              _Stat('${p.reservationsCount}', l10n.navReservations),
-                              _Stat('${p.signedContractsCount}', l10n.targetsSignedContracts),
-                            ]),
+                          child: GridView.count(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            childAspectRatio: 2.5,
+                            children: [
+                              _Stat(Icons.person_outline_rounded, '${p.leadsCount}', l10n.dashboardLeads),
+                              _Stat(Icons.event_rounded, '${p.visitsCount}', l10n.navVisits),
+                              _Stat(Icons.bookmark_outline_rounded, '${p.reservationsCount}', l10n.navReservations),
+                              _Stat(Icons.description_outlined, '${p.signedContractsCount}', l10n.targetsSignedContracts),
+                            ],
                           ),
                         ),
                         if (state.targets.isNotEmpty)
@@ -139,38 +144,79 @@ class _Progress extends StatelessWidget {
       );
     }
     final left = (p.targetAmount ?? 0) - p.achievedAmount;
-    final pct = p.targetAmountPercent;
-    return KeyedSubtree(
+    final pct = (p.targetAmountPercent ?? 0).clamp(0, 100).toDouble();
+    Widget row(String k, String v) => Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(children: [
+            Expanded(child: Text(k, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
+            Text(v, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+          ]),
+        );
+    return Container(
       key: const Key('targets-progress'),
-      child: DvHeroStats(
-        id: 'sales',
-        label: l10n.tgSales,
-        value: contractMoney(p.achievedAmount),
-        unit: l10n.tgOf('${contractMoney(p.targetAmount ?? 0)} $currency'),
-        progress: pct == null ? null : pct / 100,
-        figures: [
-          DvStat(id: 'units', label: l10n.tgUnitsSold, value: l10n.tgUnitsOf(p.achievedUnits, p.targetUnits ?? 0)),
-          if (left > 0) DvStat(id: 'left', label: l10n.tgRemaining, value: contractMoney(left)),
-          if (pct != null) DvStat(id: 'pct', label: l10n.tgAchievement, value: '${pct.round()}%'),
-        ],
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      padding: const EdgeInsets.all(18),
+      decoration: homeCard(context, radius: 22),
+      child: Row(children: [
+        SizedBox(
+          width: 104,
+          height: 104,
+          child: Stack(alignment: Alignment.center, children: [
+            SizedBox(
+              width: 104,
+              height: 104,
+              child: CircularProgressIndicator(value: pct / 100, strokeWidth: 11, strokeCap: StrokeCap.round, color: AppPalette.gold500, backgroundColor: colors.surfaceSoft),
+            ),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(ltr('${pct.round()}%'), key: const Key('dv-stat-pct'), style: TextStyle(fontSize: 24, height: 1.1, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+              Text(l10n.tgAchievement, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
+            ]),
+          ]),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(l10n.tgSales, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+            const SizedBox(height: 2),
+            Text(contractMoney(p.achievedAmount), key: const Key('dv-stat-sales'), style: TextStyle(fontSize: 26, height: 1.2, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            Text(l10n.tgOf('${contractMoney(p.targetAmount ?? 0)} $currency'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+            Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: colors.hairline)),
+            row(l10n.tgUnitsSold, l10n.tgUnitsOf(p.achievedUnits, p.targetUnits ?? 0)),
+            if (left > 0) row(l10n.tgRemaining, contractMoney(left)),
+          ]),
+        ),
+      ]),
     );
   }
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.value, this.label);
+  const _Stat(this.icon, this.value, this.label);
+  final IconData icon;
   final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Expanded(
-      child: Column(children: [
-        Text(ltr(value), style: TextStyle(fontSize: 22, height: 1.2, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-        const SizedBox(height: 4),
-        Text(label, maxLines: 2, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, height: 1.3, color: colors.inkMuted)),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: homeCard(context, radius: 18),
+      child: Row(children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, size: 19, color: colors.inkStrong),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text(ltr(value), style: TextStyle(fontSize: 20, height: 1.1, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            const SizedBox(height: 2),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
+          ]),
+        ),
       ]),
     );
   }

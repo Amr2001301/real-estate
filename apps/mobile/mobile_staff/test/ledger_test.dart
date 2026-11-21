@@ -90,7 +90,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dv-stat-net')), findsOneWidget);
-    expect(find.text('لصالح الشركة'), findsOneWidget);
+    expect(find.textContaining('لصالح الشركة'), findsOneWidget);
     expect(find.byKey(const Key('dv-stat-receivables')), findsOneWidget);
     expect(find.byKey(const Key('dv-stat-payables')), findsOneWidget);
     expect(find.text('أقساط العقود'), findsOneWidget);

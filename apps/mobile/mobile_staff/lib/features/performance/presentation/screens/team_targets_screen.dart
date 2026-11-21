@@ -28,6 +28,8 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
     context.read<TeamTargetsCubit>().load();
   }
 
+  void _showSheet2() => _showSheet();
+
   void _showSheet({SalesTarget? target}) {
     final cubit = context.read<TeamTargetsCubit>();
     showModalBottomSheet<void>(
@@ -63,7 +65,6 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
                   title: l10n.teamTargetsManageTitle,
                   subtitle: ready ? l10n.tmCountN(mine.length) : null,
                   back: true,
-                  actions: [HomeHeroButton(key: const Key('team-target-add'), icon: Icons.add_rounded, tooltip: l10n.teamTargetAdd, onTap: () => _showSheet())],
                 ),
                 Expanded(
                   child: switch (state.status) {
@@ -71,32 +72,49 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
                     DataStatus.failure => ErrorState(failure: state.failure, onRetry: cubit.load),
                     _ => RefreshIndicator(
                         onRefresh: () => cubit.load(period: period),
-                        child: ListView(padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24), children: [
+                        child: ListView(padding: EdgeInsets.only(bottom: 24), children: [
                           PeriodBar(period: period, onPick: cubit.setPeriod, extra: [for (final t in state.targets) t.period]),
-                          const SizedBox(height: 12),
-                          DvHeroStats(
-                            id: 'amount',
-                            label: l10n.teamTargetTotalAmount,
-                            value: total.$1,
-                            unit: [if (total.$2.isNotEmpty) total.$2, currency].join(' '),
-                            figures: [
-                              DvStat(id: 'count', label: l10n.teamTargetRegistered, value: '${mine.length}'),
-                              DvStat(id: 'units', label: l10n.teamTargetTotalUnits, value: '$units'),
-                            ],
-                          ),
+                                          const SizedBox(height: 12),
                           if (mine.isEmpty)
                             EmptyState(icon: Icons.flag_rounded, title: l10n.teamTargetRegistered, message: l10n.tgNoTarget)
-                          else
+                          else ...[
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                              decoration: homeCard(context, radius: 22),
+                              clipBehavior: Clip.antiAlias,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: Column(children: [
+                                  for (final (i, t) in mine.indexed) ...[
+                                    if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: context.appColors.hairline),
+                                    _TargetCard(target: t, saving: state.savingId == t.salesId, onEdit: () => _showSheet(target: t)),
+                                  ],
+                                ]),
+                              ),
+                            ),
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(AppSpacing.md, 12, AppSpacing.md, 0),
-                              child: Column(children: [
-                                for (final t in mine)
-                                  Padding(padding: const EdgeInsets.only(bottom: 10), child: _TargetCard(target: t, saving: state.savingId == t.salesId, onEdit: () => _showSheet(target: t))),
+                              key: const Key('dv-stat-amount'),
+                              padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                              child: Row(children: [
+                                Expanded(child: Text(l10n.teamTargetTotalAmount, style: TextStyle(fontSize: 13, color: context.appColors.inkMuted))),
+                                Text(
+                                  '${total.$1} ${[if (total.$2.isNotEmpty) total.$2, currency].join(' ')} · ${l10n.tmUnitsLine(units)}',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appColors.inkStrong),
+                                ),
                               ]),
                             ),
+                          ],
                         ]),
                       ),
                   },
+                ),
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + MediaQuery.paddingOf(context).bottom),
+                  decoration: BoxDecoration(color: context.appColors.canvas, border: Border(top: BorderSide(color: context.appColors.hairline))),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DvGoldButton(key: const Key('team-target-add'), icon: Icons.add_rounded, label: l10n.teamTargetAdd, height: 50, onTap: _showSheet2),
+                  ),
                 ),
               ]);
             },
