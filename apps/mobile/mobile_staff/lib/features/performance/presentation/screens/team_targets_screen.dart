@@ -79,29 +79,50 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
                             EmptyState(icon: Icons.flag_rounded, title: l10n.teamTargetRegistered, message: l10n.tgNoTarget)
                           else ...[
                             Container(
-                              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                              decoration: homeCard(context, radius: 22),
-                              clipBehavior: Clip.antiAlias,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: Column(children: [
-                                  for (final (i, t) in mine.indexed) ...[
-                                    if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: context.appColors.hairline),
-                                    _TargetCard(target: t, saving: state.savingId == t.salesId, onEdit: () => _showSheet(target: t)),
-                                  ],
-                                ]),
-                              ),
-                            ),
-                            Padding(
                               key: const Key('dv-stat-amount'),
-                              padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+                              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                              padding: const EdgeInsets.all(16),
+                              decoration: homeCard(context, radius: 22),
                               child: Row(children: [
-                                Expanded(child: Text(l10n.teamTargetTotalAmount, style: TextStyle(fontSize: 13, color: context.appColors.inkMuted))),
-                                Text(
-                                  '${total.$1} ${[if (total.$2.isNotEmpty) total.$2, currency].join(' ')} · ${l10n.tmUnitsLine(units)}',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: context.appColors.inkStrong),
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(l10n.teamTargetTotalAmount, style: TextStyle(fontSize: 12.5, color: context.appColors.inkMuted)),
+                                    const SizedBox(height: 2),
+                                    Text.rich(TextSpan(children: [
+                                      TextSpan(text: total.$1, style: TextStyle(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
+                                      TextSpan(text: ' ${[if (total.$2.isNotEmpty) total.$2, currency].join(' ')}', style: TextStyle(fontSize: 13, color: context.appColors.inkMuted)),
+                                    ])),
+                                  ]),
                                 ),
+                                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                  Text(l10n.teamTargetTotalUnits, style: TextStyle(fontSize: 12.5, color: context.appColors.inkMuted)),
+                                  const SizedBox(height: 2),
+                                  Text(ltr('$units'), style: TextStyle(fontSize: 28, height: 1.2, fontWeight: FontWeight.w700, color: context.appColors.inkStrong)),
+                                ]),
                               ]),
+                            ),
+                            HomeSection(
+                              icon: Icons.flag_rounded,
+                              title: l10n.teamTargetRegistered,
+                              child: Container(
+                                decoration: homeCard(context, radius: 22),
+                                clipBehavior: Clip.antiAlias,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: Column(children: [
+                                    for (final (i, t) in ([...mine]..sort((a, b) => (double.tryParse(b.amountTarget) ?? 0).compareTo(double.tryParse(a.amountTarget) ?? 0))).indexed) ...[
+                                      if (i > 0) Divider(height: 1, thickness: 1, indent: 16, endIndent: 16, color: context.appColors.hairline),
+                                      _TargetCard(
+                                        target: t,
+                                        top: mine.fold<double>(0, (m, x) => (double.tryParse(x.amountTarget) ?? 0) > m ? (double.tryParse(x.amountTarget) ?? 0) : m),
+                                        first: i == 0,
+                                        saving: state.savingId == t.salesId,
+                                        onEdit: () => _showSheet(target: t),
+                                      ),
+                                    ],
+                                  ]),
+                                ),
+                              ),
                             ),
                           ],
                         ]),
@@ -126,9 +147,11 @@ class _TeamTargetsScreenState extends State<TeamTargetsScreen> {
 }
 
 class _TargetCard extends StatelessWidget {
-  const _TargetCard({required this.target, required this.onEdit, this.saving = false});
+  const _TargetCard({required this.target, required this.onEdit, required this.top, this.first = false, this.saving = false});
   final SalesTarget target;
   final VoidCallback onEdit;
+  final double top;
+  final bool first;
   final bool saving;
 
   @override
@@ -137,42 +160,48 @@ class _TargetCard extends StatelessWidget {
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
     final currency = PriceFormatter.symbol(lang);
-    return Container(
-      decoration: homeCard(context, radius: 22),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: Key('team-target-${target.salesId}'),
-          onTap: saving ? null : onEdit,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+    final amount = double.tryParse(target.amountTarget) ?? 0;
+    return InkWell(
+      key: Key('team-target-${target.salesId}'),
+      onTap: saving ? null : onEdit,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
+              child: Text(homeInitials(target.salesName), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text(target.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong))),
+            if (saving)
+              const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Text('${contractMoney(amount)} $currency', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+          ]),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 50),
             child: Row(children: [
-              Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(color: Color(0xFF0B1426), shape: BoxShape.circle),
-                child: Text(homeInitials(target.salesName), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFEED7A0))),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(target.salesName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${contractMoney(double.tryParse(target.amountTarget) ?? 0)} $currency · ${l10n.tmUnitsLine(target.unitsTarget)}',
-                    style: TextStyle(fontSize: 12.5, color: colors.inkMuted),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: top <= 0 ? 0 : (amount / top).clamp(0, 1).toDouble(),
+                    minHeight: 8,
+                    color: first ? AppPalette.gold500 : const Color(0xFF1B2A48),
+                    backgroundColor: colors.surfaceSoft,
                   ),
-                ]),
+                ),
               ),
-              if (saving)
-                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              else
-                DvSquareAction(icon: Icons.edit_rounded, onTap: onEdit),
+              const SizedBox(width: 10),
+              Text(l10n.tmUnitsLine(target.unitsTarget), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
             ]),
           ),
-        ),
+        ]),
       ),
     );
   }

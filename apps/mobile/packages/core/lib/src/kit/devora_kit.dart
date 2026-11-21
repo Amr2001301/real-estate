@@ -1373,3 +1373,64 @@ DvTone dvToneOf(BadgeTone t) => switch (t) {
       BadgeTone.warning => DvTone.warn,
       _ => DvTone.neutral,
     };
+
+/// A donut of parts (value, colour) with something in the middle.
+class DvDonut extends StatelessWidget {
+  const DvDonut({super.key, required this.parts, this.size = 112, this.stroke = 16, this.center});
+  final List<(double, Color)> parts;
+  final double size;
+  final double stroke;
+  final Widget? center;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(alignment: Alignment.center, children: [
+        CustomPaint(size: Size.square(size), painter: _DonutPainter(parts, stroke, context.appColors.surfaceSoft)),
+        if (center != null) center!,
+      ]),
+    );
+  }
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter(this.parts, this.stroke, this.track);
+  final List<(double, Color)> parts;
+  final double stroke;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(stroke / 2, stroke / 2, size.width - stroke, size.height - stroke);
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..color = track;
+    canvas.drawArc(rect, 0, 6.2831853, false, base);
+    final total = parts.fold<double>(0, (a, p) => a + p.$1);
+    if (total <= 0) return;
+    var start = -1.5707963;
+    for (final p in parts) {
+      if (p.$1 <= 0) continue;
+      final sweep = 6.2831853 * p.$1 / total;
+      final gap = parts.where((x) => x.$1 > 0).length > 1 ? 0.04 : 0.0;
+      canvas.drawArc(
+        rect,
+        start,
+        (sweep - gap).clamp(0.01, 6.3),
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke
+          ..strokeCap = StrokeCap.butt
+          ..color = p.$2,
+      );
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) => old.parts != parts || old.stroke != stroke;
+}

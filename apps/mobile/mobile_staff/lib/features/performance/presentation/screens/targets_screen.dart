@@ -54,20 +54,20 @@ class _TargetsScreenState extends State<TargetsScreen> {
                         HomeSection(
                           icon: Icons.insights_rounded,
                           title: l10n.tgPeriodActivity,
-                          child: GridView.count(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 10,
-                            crossAxisSpacing: 10,
-                            childAspectRatio: 2.5,
-                            children: [
-                              _Stat(Icons.person_outline_rounded, '${p.leadsCount}', l10n.dashboardLeads),
-                              _Stat(Icons.event_rounded, '${p.visitsCount}', l10n.navVisits),
-                              _Stat(Icons.bookmark_outline_rounded, '${p.reservationsCount}', l10n.navReservations),
-                              _Stat(Icons.description_outlined, '${p.signedContractsCount}', l10n.targetsSignedContracts),
-                            ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: homeCard(context, radius: 22),
+                            child: IntrinsicHeight(
+                              child: Row(children: [
+                                _Stat('${p.leadsCount}', l10n.dashboardLeads),
+                                VerticalDivider(width: 1, color: colors.hairline),
+                                _Stat('${p.visitsCount}', l10n.navVisits),
+                                VerticalDivider(width: 1, color: colors.hairline),
+                                _Stat('${p.reservationsCount}', l10n.navReservations),
+                                VerticalDivider(width: 1, color: colors.hairline),
+                                _Stat('${p.signedContractsCount}', l10n.targetsSignedContracts),
+                              ]),
+                            ),
                           ),
                         ),
                         if (state.targets.isNotEmpty)
@@ -144,46 +144,55 @@ class _Progress extends StatelessWidget {
       );
     }
     final left = (p.targetAmount ?? 0) - p.achievedAmount;
-    final pct = (p.targetAmountPercent ?? 0).clamp(0, 100).toDouble();
-    Widget row(String k, String v) => Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(children: [
-            Expanded(child: Text(k, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-            Text(v, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+    final unitsLeft = (p.targetUnits ?? 0) - p.achievedUnits;
+    Widget block(Key? key, String title, String of, double? pct, Color color, String? remaining, Key pctKey) {
+      final v = (pct ?? 0).clamp(0, 100).toDouble();
+      return Padding(
+        key: key,
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Expanded(child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.inkStrong))),
+            Text(of, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
           ]),
-        );
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(value: v / 100, minHeight: 10, color: color, backgroundColor: colors.surfaceSoft),
+          ),
+          const SizedBox(height: 8),
+          Row(children: [
+            Text(ltr('${v.round()}%'), key: pctKey, style: TextStyle(fontSize: 20, height: 1.2, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            const Spacer(),
+            if (remaining != null) Text('${l10n.tgRemaining} $remaining', style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
+          ]),
+        ]),
+      );
+    }
+
     return Container(
       key: const Key('targets-progress'),
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      padding: const EdgeInsets.all(18),
       decoration: homeCard(context, radius: 22),
-      child: Row(children: [
-        SizedBox(
-          width: 104,
-          height: 104,
-          child: Stack(alignment: Alignment.center, children: [
-            SizedBox(
-              width: 104,
-              height: 104,
-              child: CircularProgressIndicator(value: pct / 100, strokeWidth: 11, strokeCap: StrokeCap.round, color: AppPalette.gold500, backgroundColor: colors.surfaceSoft),
-            ),
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(ltr('${pct.round()}%'), key: const Key('dv-stat-pct'), style: TextStyle(fontSize: 24, height: 1.1, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-              Text(l10n.tgAchievement, style: TextStyle(fontSize: 11, color: colors.inkMuted)),
-            ]),
-          ]),
+      child: Column(children: [
+        block(
+          const Key('dv-stat-sales'),
+          l10n.tgSales,
+          '${contractMoney(p.achievedAmount)} ${l10n.tgOf('${contractMoney(p.targetAmount ?? 0)} $currency')}',
+          p.targetAmountPercent,
+          AppPalette.gold500,
+          left > 0 ? contractMoney(left) : null,
+          const Key('dv-stat-pct'),
         ),
-        const SizedBox(width: 18),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(l10n.tgSales, style: TextStyle(fontSize: 12.5, color: colors.inkMuted)),
-            const SizedBox(height: 2),
-            Text(contractMoney(p.achievedAmount), key: const Key('dv-stat-sales'), style: TextStyle(fontSize: 26, height: 1.2, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-            Text(l10n.tgOf('${contractMoney(p.targetAmount ?? 0)} $currency'), style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-            Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Divider(height: 1, color: colors.hairline)),
-            row(l10n.tgUnitsSold, l10n.tgUnitsOf(p.achievedUnits, p.targetUnits ?? 0)),
-            if (left > 0) row(l10n.tgRemaining, contractMoney(left)),
-          ]),
+        Divider(height: 1, color: colors.hairline),
+        block(
+          const Key('dv-stat-units'),
+          l10n.tgUnitsSold,
+          l10n.tgUnitsOf(p.achievedUnits, p.targetUnits ?? 0),
+          p.targetUnitsPercent,
+          const Color(0xFF1B2A48),
+          unitsLeft > 0 ? l10n.targetsUnitsN(unitsLeft) : null,
+          const Key('dv-stat-units-pct'),
         ),
       ]),
     );
@@ -191,31 +200,20 @@ class _Progress extends StatelessWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.icon, this.value, this.label);
-  final IconData icon;
+  const _Stat(this.value, this.label);
   final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: homeCard(context, radius: 18),
-      child: Row(children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(color: colors.surfaceSoft, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, size: 19, color: colors.inkStrong),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text(ltr(value), style: TextStyle(fontSize: 20, height: 1.1, fontWeight: FontWeight.w700, color: colors.inkStrong)),
-            const SizedBox(height: 2),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-          ]),
+    return Expanded(
+      child: Column(children: [
+        Text(ltr(value), style: TextStyle(fontSize: 21, height: 1.2, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+        const SizedBox(height: 3),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(label, maxLines: 2, textAlign: TextAlign.center, style: TextStyle(fontSize: 11.5, height: 1.3, color: colors.inkMuted)),
         ),
       ]),
     );
