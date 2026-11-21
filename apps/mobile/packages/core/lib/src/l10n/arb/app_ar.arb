@@ -3201,6 +3201,7 @@
   "planBalloonRow": "دفعة كل {n} شهور ({count})",
   "@planBalloonRow": { "placeholders": { "n": { "type": "int" }, "count": { "type": "int" } } },
   "bxSection": "الوساطة",
+  "bxListingsShort": "الوحدات",
   "bxListingsTitle": "الوحدات المعروضة",
   "bxListingsDesc": "وحدات المطوّرين وعقارات الملاك",
   "bxDealsTitle": "الصفقات",

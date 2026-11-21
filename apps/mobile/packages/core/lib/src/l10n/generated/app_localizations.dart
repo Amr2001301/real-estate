@@ -17174,6 +17174,12 @@ abstract class AppLocalizations {
   /// **'Brokerage'**
   String get bxSection;
 
+  /// No description provided for @bxListingsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings'**
+  String get bxListingsShort;
+
   /// No description provided for @bxListingsTitle.
   ///
   /// In en, this message translates to:

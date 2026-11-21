@@ -9729,6 +9729,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get bxSection => 'الوساطة';
 
   @override
+  String get bxListingsShort => 'الوحدات';
+
+  @override
   String get bxListingsTitle => 'الوحدات المعروضة';
 
   @override

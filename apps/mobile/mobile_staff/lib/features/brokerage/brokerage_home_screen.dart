@@ -107,7 +107,7 @@ class _BrokerageHomeScreenState extends State<BrokerageHomeScreen> {
             : [
                 HomeActions(actions: [
                   HomeAction(id: 'add-lead', icon: Icons.person_add_rounded, label: l10n.shActLead, onTap: () => context.push('/leads/new')),
-                  HomeAction(id: 'listings', icon: Icons.home_work_rounded, label: l10n.bxListingsTitle, onTap: () => context.push('/bx/listings')),
+                  HomeAction(id: 'listings', icon: Icons.home_work_rounded, label: l10n.bxListingsShort, onTap: () => context.push('/bx/listings')),
                   HomeAction(id: 'deals', icon: Icons.handshake_rounded, label: l10n.bxDealsTitle, onTap: () => context.push('/bx/deals')),
                   HomeAction(id: 'launches', icon: Icons.rocket_launch_rounded, label: l10n.bxLaunchesTitle, onTap: () => context.push('/bx/launches')),
                 ]),

@@ -3209,6 +3209,7 @@
   "planBalloonRow": "Payment every {n} months ({count})",
   "@planBalloonRow": { "placeholders": { "n": { "type": "int" }, "count": { "type": "int" } } },
   "bxSection": "Brokerage",
+  "bxListingsShort": "Listings",
   "bxListingsTitle": "Listings",
   "bxListingsDesc": "Developers' units and owners' properties",
   "bxDealsTitle": "Deals",

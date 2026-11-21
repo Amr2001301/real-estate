@@ -9688,6 +9688,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bxSection => 'Brokerage';
 
   @override
+  String get bxListingsShort => 'Listings';
+
+  @override
   String get bxListingsTitle => 'Listings';
 
   @override
