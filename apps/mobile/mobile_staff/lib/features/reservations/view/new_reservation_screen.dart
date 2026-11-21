@@ -422,8 +422,8 @@ InputDecoration _deco(BuildContext context, String? hint) => InputDecoration(
       filled: true,
       fillColor: homeField(context),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: homeFieldSide(context)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: homeFieldSide(context)),
     );
 
 /// Four bars, each filled once its part of the form is done.
@@ -478,7 +478,7 @@ class _Picked extends StatelessWidget {
     final colors = context.appColors;
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: homeField(context), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.navy, width: 1.5)),
+      decoration: BoxDecoration(color: homeField(context), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppPalette.gold500, width: 1.5)),
       child: Row(children: [
         Container(
           width: 38,
@@ -533,7 +533,7 @@ class _PlanCard extends StatelessWidget {
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: selected ? Border.all(color: AppPalette.navy, width: 6) : Border.all(color: homeLine(context), width: 2),
+                  border: selected ? Border.all(color: AppPalette.gold500, width: 6) : Border.all(color: homeLine(context), width: 2),
                 ),
               ),
               const SizedBox(width: 10),

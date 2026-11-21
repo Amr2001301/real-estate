@@ -111,8 +111,8 @@ class _ManualContractScreenState extends State<ManualContractScreen> {
         filled: true,
         fillColor: homeField(context),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: BorderSide(color: context.appColors.hairline)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: homeFieldSide(context)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(13), borderSide: homeFieldSide(context)),
       );
 
   @override
@@ -329,8 +329,8 @@ class _PickSheetState extends State<PickSheet> {
                 filled: true,
                 fillColor: homeField(context),
                 isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: colors.hairline)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: colors.hairline)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: homeFieldSide(context)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: homeFieldSide(context)),
               ),
             ),
           ),

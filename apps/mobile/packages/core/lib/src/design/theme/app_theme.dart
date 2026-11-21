@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 import '../../branding/brand_tokens.dart';
+import '../tokens/app_colors.dart';
 import '../tokens/app_radii.dart';
 import '../tokens/app_spacing.dart';
 import '../tokens/app_typography.dart';
@@ -105,23 +106,24 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? ext.surfaceSoft : ext.surface,
+        fillColor: (isDark || AppPalette.calmLight) ? ext.surfaceSoft : ext.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm + 2,
         ),
         hintStyle: textTheme.bodyMedium?.copyWith(color: ext.inkMuted),
         labelStyle: textTheme.labelLarge?.copyWith(color: ext.inkMuted),
+        // Devora: soft filled fields with no outline; gold when focused.
         border: OutlineInputBorder(
-          borderRadius: AppRadii.input,
-          borderSide: BorderSide(color: ext.hairline),
+          borderRadius: AppPalette.calmLight ? BorderRadius.circular(14) : AppRadii.input,
+          borderSide: AppPalette.calmLight ? BorderSide.none : BorderSide(color: ext.hairline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadii.input,
-          borderSide: BorderSide(color: ext.hairline),
+          borderRadius: AppPalette.calmLight ? BorderRadius.circular(14) : AppRadii.input,
+          borderSide: AppPalette.calmLight ? BorderSide.none : BorderSide(color: ext.hairline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadii.input,
+          borderRadius: AppPalette.calmLight ? BorderRadius.circular(14) : AppRadii.input,
           borderSide: BorderSide(color: ext.brandGold, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(

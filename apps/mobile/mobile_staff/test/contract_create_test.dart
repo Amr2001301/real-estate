@@ -108,7 +108,7 @@ void main() {
     await t.pumpWidget(_app(ConvertReservationScreen(reservationId: 'r1', repository: repo)));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('convert-unpaid')), findsOneWidget);
-    expect(t.widget<ButtonStyleButton>(find.byKey(const Key('convert-confirm'))).enabled, isFalse);
+    expect(t.widget<DvGoldButton>(find.byKey(const Key('convert-confirm'))).onTap, isNull);
   });
 
   testWidgets('a paid booking: the plan, then convert opens the new contract', (t) async {

@@ -29,6 +29,29 @@ class AppFormSection extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
 
+    // Devora: the title above a plain white card, no number, no gold line.
+    if (AppPalette.calmLight) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontSize: 17, height: 1.4, fontWeight: FontWeight.w700, color: colors.inkStrong)),
+            if (subtitle.isNotEmpty) Text(subtitle, style: TextStyle(fontSize: 12.5, height: 1.5, color: colors.inkMuted)),
+          ]),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: colors.hairline),
+            boxShadow: const [BoxShadow(color: Color(0x0A0B1426), blurRadius: 18, offset: Offset(0, 6))],
+          ),
+          child: child,
+        ),
+      ]);
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,

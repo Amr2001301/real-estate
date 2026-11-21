@@ -328,7 +328,7 @@ class DvGoldButton extends StatelessWidget {
                 height: height,
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [
                   if (icon != null) ...[Icon(icon, size: 19, color: dvOnGold), const SizedBox(width: 8)],
-                  Text(label, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: dvOnGold)),
+                  Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: dvOnGold))),
                 ]),
               ),
             ),

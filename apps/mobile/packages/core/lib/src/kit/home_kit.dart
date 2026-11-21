@@ -68,7 +68,10 @@ Color homeTintBorder(BuildContext context) =>
 bool homeIsDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
 
 /// A raised field or chip: white by day, the soft surface by night.
-Color homeField(BuildContext context) => homeIsDark(context) ? context.appColors.surfaceSoft : Colors.white;
+Color homeField(BuildContext context) => (homeIsDark(context) || AppPalette.calmLight) ? context.appColors.surfaceSoft : Colors.white;
+
+/// A form field's outline: none in Devora (soft filled fields), a hairline otherwise.
+BorderSide homeFieldSide(BuildContext context) => AppPalette.calmLight ? BorderSide.none : BorderSide(color: context.appColors.hairline);
 
 /// A chosen option's fill: a cream by day, a gold wash by night.
 Color homeSelected(BuildContext context) =>

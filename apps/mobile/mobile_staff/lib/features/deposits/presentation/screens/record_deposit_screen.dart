@@ -123,7 +123,6 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: l10n.depositAmount,
-                  border: const OutlineInputBorder(),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return l10n.validationRequired;
@@ -139,7 +138,6 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: l10n.depositPaymentDate,
-                    border: const OutlineInputBorder(),
                     suffixIcon: const Icon(Icons.calendar_today_rounded),
                   ),
                   child: Text(
