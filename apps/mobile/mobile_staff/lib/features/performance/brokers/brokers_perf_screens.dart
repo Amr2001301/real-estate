@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../common/staff_list_skeleton.dart';
-import '../../contracts/view/contracts_list_screen.dart' show contractMoney;
 import '../../reservations/view/reservation_page_screen.dart' show ReservationLinkCard;
 import 'brokers_perf_data.dart';
 
@@ -93,51 +92,28 @@ class _BrokerOwnPerformanceScreenState extends State<BrokerOwnPerformanceScreen>
         final s = p.summary;
         final sales = homeCompact(s.salesGross, l10n);
         final com = homeCompact(s.commissionsNet, l10n);
-        final pend = homeCompactText(s.commissionsPendingNet, l10n);
         final paidOut = s.payoutsTotalNet;
-        Widget line(String t, String sub, double v, {Color? color}) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 9),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(t, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: colors.inkStrong)),
-                    Text(sub, style: TextStyle(fontSize: 12, color: colors.inkMuted)),
-                  ]),
-                ),
-                Text(contractMoney(v), style: homeDisplay(15, color ?? colors.inkStrong)),
-              ]),
-            );
         return [
           if ((p.brokerName ?? '').isNotEmpty)
             Padding(padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 12, AppSpacing.lg, 0), child: Text(p.brokerName!, style: TextStyle(fontSize: 12.5, color: colors.inkMuted))),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.md, 0),
-            child: HomeBand(figures: [
-              HomeFigure(id: 'sales', value: sales.$1, label: l10n.bpMineSales, hint: [if (sales.$2.isNotEmpty) sales.$2, currency].join(' ')),
-              HomeFigure(id: 'com', value: com.$1, label: l10n.bpMineCom, hint: l10n.bpPendingOf(pend), warn: s.commissionsPendingNet > 0),
-              HomeFigure(id: 'signed', value: '${s.contractsSigned}', label: l10n.bpSigned, hint: l10n.bpMineContractsHint(s.reservations)),
-            ]),
+          const SizedBox(height: 14),
+          DvHeroStats(
+            id: 'com',
+            label: l10n.bpMineCom,
+            value: com.$1,
+            unit: [if (com.$2.isNotEmpty) com.$2, currency].join(' '),
+            note: '${l10n.bpMineSales}: ${sales.$1} ${[if (sales.$2.isNotEmpty) sales.$2, currency].join(' ')}',
+            figures: [
+              DvStat(id: 'pending', label: l10n.bpPendingLbl, value: homeCompact(s.commissionsPendingNet, l10n).$1, unit: homeCompact(s.commissionsPendingNet, l10n).$2, warn: s.commissionsPendingNet > 0),
+              DvStat(id: 'paid', label: l10n.bpPaidOutLbl, value: homeCompact(paidOut, l10n).$1, unit: homeCompact(paidOut, l10n).$2),
+              DvStat(id: 'signed', label: l10n.bpSigned, value: '${s.contractsSigned}'),
+            ],
           ),
           HomeSection(icon: Icons.filter_alt_rounded, title: l10n.bpFunnelMine, child: PerfFunnel(summary: s)),
           if (p.trend.isNotEmpty) HomeSection(icon: Icons.trending_up_rounded, title: l10n.bpTrendMine, child: PerfTrend(buckets: p.trend)),
-          HomeSection(
-            icon: Icons.payments_rounded,
-            title: l10n.bpCommissionsBlock,
-            child: Column(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: homeCard(context, radius: 22),
-                child: Column(children: [
-                  line(l10n.bpNetCommissions, l10n.bpNetHint, s.commissionsNet),
-                  Divider(height: 1, color: colors.hairline),
-                  line(l10n.bpPendingLbl, l10n.bpPendingNote, s.commissionsPendingNet, color: const Color(0xFF8A5A12)),
-                  Divider(height: 1, color: colors.hairline),
-                  line(l10n.bpPaidOutLbl, '${s.payoutsPaid}', paidOut, color: const Color(0xFF2F6B4A)),
-                ]),
-              ),
-              const SizedBox(height: 8),
-              ReservationLinkCard(key: const Key('broker-perf-commissions'), icon: Icons.payments_rounded, title: l10n.bpMyCommissions, onTap: () => context.push('/broker/commissions')),
-            ]),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 16, AppSpacing.md, 0),
+            child: ReservationLinkCard(key: const Key('broker-perf-commissions'), icon: Icons.payments_rounded, title: l10n.bpMyCommissions, onTap: () => context.push('/broker/commissions')),
           ),
           if (p.projects.isNotEmpty) HomeSection(icon: Icons.apartment_rounded, title: l10n.bpByProject, child: PerfProjects(projects: p.projects)),
           if (p.brokers.isNotEmpty)
@@ -234,37 +210,27 @@ class PerfFunnel extends StatelessWidget {
       (l10n.bpSigned, summary.contractsSigned, const Color(0xFF3E7C5A)),
       (l10n.bpPaidCom, summary.commissionPaidContracts, const Color(0xFF3E7C5A)),
     ];
-    final max = rows.map((r) => r.$2).fold<int>(1, (a, b) => b > a ? b : a);
     return Container(
       key: const Key('perf-funnel'),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: homeCard(context, radius: 22),
-      child: Column(children: [
-        for (final (label, v, color) in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              SizedBox(width: 92, child: Text(label, style: TextStyle(fontSize: 12, color: colors.inkMuted))),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, box) => Container(
-                    height: 26,
-                    alignment: AlignmentDirectional.centerStart,
-                    decoration: BoxDecoration(color: homeLine(context), borderRadius: BorderRadius.circular(9)),
-                    child: Container(
-                      width: (box.maxWidth * (v / max)).clamp(28, box.maxWidth),
-                      height: 26,
-                      alignment: AlignmentDirectional.centerStart,
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(9)),
-                      child: Text('$v', style: homeDisplay(13, color == AppPalette.gold500 ? AppPalette.navy : Colors.white)),
-                    ),
-                  ),
+      child: IntrinsicHeight(
+        child: Row(children: [
+          for (final (i, (label, v, color)) in rows.indexed) ...[
+            if (i > 0) VerticalDivider(width: 1, color: colors.hairline),
+            Expanded(
+              child: Column(children: [
+                Text(ltr('$v'), style: TextStyle(fontSize: 21, height: 1.2, fontWeight: FontWeight.w700, color: color == AppPalette.gold500 ? AppPalette.gold600 : colors.inkStrong)),
+                const SizedBox(height: 3),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Text(label, maxLines: 2, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, height: 1.3, color: colors.inkMuted)),
                 ),
-              ),
-            ]),
-          ),
-      ]),
+              ]),
+            ),
+          ],
+        ]),
+      ),
     );
   }
 }

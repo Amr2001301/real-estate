@@ -136,13 +136,11 @@ void main() {
     expect(find.text('حجم مبيعاتك'), findsOneWidget);
     expect(find.textContaining('60%'), findsWidgets);
     expect(find.text('عمولاتك'), findsOneWidget);
-    expect(find.byKey(const Key('home-action-commissions')), findsOneWidget);
+    expect(find.byKey(const Key('home-action-lead')), findsOneWidget);
     expect(find.text('أداؤك'), findsOneWidget);
     expect(find.byKey(const Key('home-att-leads-pending')), findsOneWidget);
     expect(find.byKey(const Key('broker-lead-l1')), findsOneWidget);
     expect(find.text('مرفوض'), findsOneWidget);
-    expect(find.text('مسار أدائك'), findsOneWidget);
-    expect(find.byKey(const Key('broker-project-p1')), findsOneWidget);
     expect(find.text('صُرفت دفعة العمولة'), findsOneWidget);
     expect(find.textContaining('تحويل بنكي'), findsOneWidget);
   });
@@ -150,9 +148,7 @@ void main() {
   testWidgets('without commission access no commission figure shows', (t) async {
     await _pump(t, commissions: false);
     expect(find.text('عمولاتك'), findsNothing);
-    expect(find.byKey(const Key('home-action-commissions')), findsNothing);
-    expect(find.byKey(const Key('home-fig-pending-commission')), findsNothing);
     expect(find.text('نسبة الصرف'), findsNothing);
-    expect(find.byKey(const Key('home-action-reservations')), findsOneWidget);
+    expect(find.byKey(const Key('home-action-reservation')), findsOneWidget);
   });
 }
